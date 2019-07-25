@@ -28,6 +28,9 @@ type ControlPlaneConfig struct {
 	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
 	LoadBalancerProvider string `json:"loadBalancerProvider"`
 
+	// Zone is the OpenStack zone.
+	Zone string `json:"zone"`
+
 	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
 	// +optional
 	CloudControllerManager *CloudControllerManagerConfig `json:"cloudControllerManager,omitempty"`

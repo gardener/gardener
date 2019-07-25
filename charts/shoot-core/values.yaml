@@ -32,21 +32,3 @@ metrics-server:
     metrics-server: image-repository:image-tag
 podsecuritypolicies:
   allowPrivilegedContainers: false
-csi-alicloud:
-  images:
-    csi-node-driver-registrar: image-repository:image-tag
-    csi-plugin-alicloud: image-repository:image-tag
-  credential:
-    accessKeyID: keyID
-    accessKeySecret: secret
-  kubernetesVersion: v1.14.0
-  enabled: false
-csi-packet:
-  images:
-    csi-node-driver-registrar: image-repository:image-tag
-    packet-storage-interface: image-repository:image-tag
-  credential:
-    apiToken: apiToken
-    projectID: projectID
-  kubernetesVersion: v1.13.0
-  enabled: false

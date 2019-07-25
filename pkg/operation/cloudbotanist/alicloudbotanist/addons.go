@@ -18,21 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// DeployKube2IAMResources - Not needed on Alicloud
-func (b *AlicloudBotanist) DeployKube2IAMResources() error {
-	return nil
-}
-
-// DestroyKube2IAMResources - Not needed on Alicloud
-func (b *AlicloudBotanist) DestroyKube2IAMResources() error {
-	return nil
-}
-
-// GenerateKube2IAMConfig - Not needed on Alicloud.
-func (b *AlicloudBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(map[string]interface{}{
@@ -42,26 +27,6 @@ func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{},
 			},
 		},
 	}, b.Shoot.NginxIngressEnabled()), nil
-}
-
-// GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
-func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"StorageClasses": []map[string]interface{}{
-			{
-				"Name":           "default",
-				"IsDefaultClass": true,
-				"Provisioner":    "diskplugin.csi.alibabacloud.com",
-				"Parameters": map[string]interface{}{
-					"csi.storage.k8s.io/fstype": "ext4",
-					"type":                      "cloud_ssd",
-					"readOnly":                  "false",
-					"encrypted":                 "true",
-				},
-			},
-		},
-	}, nil
-
 }
 
 // GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for alicloud

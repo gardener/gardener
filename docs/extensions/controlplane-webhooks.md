@@ -24,26 +24,26 @@ You can install 3 different kinds of controlplane webhooks:
 * `Seed`, or `controlplaneexposure` webhooks apply changes needed by the Seed cloud provider, for example annotations on the `kube-apiserver` service to ensure cloud-specific load balancers are correctly provisioned for a service of type `LoadBalancer`. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
 * `Backup`, or `controlplanebackup` webhooks apply changes needed by the `etcd` backup cloud provider, for example injecting the `backup-restore` sidecar container in the `etcd-*` StatefulSets. Such webhooks should only operate on Shoot namespaces labeled with `backup.gardener.cloud/provider=<provider>`.
 
-The labels `shoot.gardener.cloud/provider` and `shoot.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace. 
+The labels `shoot.gardener.cloud/provider` and `shoot.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace.
 
 ## Contract Specification
 
-This section specifies the contract that Gardener and webhooks should adhere to in order to ensure smooth interoperability. Note that this contract can't be specified formally and is therefore easy to violate, especially by Gardener. The Gardener team will nevertheless do its best to adhere to this contract in the future and to ensure via additional measures (tests, validations) that it's not unintentionally broken. If it needs to be changed intentionally, this can only happen after proper communication has taken place to ensure that the affected provider webhooks could be adapted to work with the new version of the contract. 
+This section specifies the contract that Gardener and webhooks should adhere to in order to ensure smooth interoperability. Note that this contract can't be specified formally and is therefore easy to violate, especially by Gardener. The Gardener team will nevertheless do its best to adhere to this contract in the future and to ensure via additional measures (tests, validations) that it's not unintentionally broken. If it needs to be changed intentionally, this can only happen after proper communication has taken place to ensure that the affected provider webhooks could be adapted to work with the new version of the contract.
 
-**Note:** The contract described below may not necessarily be what Gardener does currently (as of May 2019). Rather, it reflects the target state after changes for [Gardener extensibility](overview.md) have been introduced. 
+**Note:** The contract described below may not necessarily be what Gardener does currently (as of May 2019). Rather, it reflects the target state after changes for [Gardener extensibility](overview.md) have been introduced.
 
 ### kube-apiserver
 
 To deploy kube-apiserver, Gardener **shall** create a deployment and a service both named `kube-apiserver` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
-The pod template of the `kube-apiserver` deployment **shall** contain a container named `kube-apiserver`. 
+The pod template of the `kube-apiserver` deployment **shall** contain a container named `kube-apiserver`.
 
 The `command` field of the `kube-apiserver` container **shall** contain the [kube-apiserver command line](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/). It **shall** contain a number of provider-independent flags that should be ignored by webhooks, such as:
 
 * admission plugins (`--enable-admission-plugins`, `--disable-admission-plugins`)
 * secure communications (`--etcd-cafile`, `--etcd-certfile`, `--etcd-keyfile`, ...)
 * audit log (`--audit-log-*`)
-* ports (`--insecure-port`, `--secure-port`) 
+* ports (`--insecure-port`, `--secure-port`)
 
 The kube-apiserver command line **shall not** contain any provider-specific flags, such as:
 
@@ -53,13 +53,13 @@ The kube-apiserver command line **shall not** contain any provider-specific flag
 These flags can be added by webhooks if needed.
 
 The kube-apiserver command line **may** contain a number of additional provider-independent flags. In general, webhooks should ignore these unless they are known to interfere with the desired kube-apiserver behavior for the specific provider. Among the flags to be considered are:
-                                        
+
 * `--endpoint-reconciler-type`
 * `--feature-gates`
 
-The `--enable-admission-plugins` flag **may** contain admission plugins that are not compatible with CSI plugins such as `PersistentVolumeLabel`. Webhooks should therefore ensure that such admission plugins are either explicitly enabled (if CSI plugins are not used) or disabled (otherwise). 
+The `--enable-admission-plugins` flag **may** contain admission plugins that are not compatible with CSI plugins such as `PersistentVolumeLabel`. Webhooks should therefore ensure that such admission plugins are either explicitly enabled (if CSI plugins are not used) or disabled (otherwise).
 
-The `env` field of the `kube-apiserver` container **shall not** contain any provider-specific environment variables (so it will be empty). If any provider-specific environment variables are needed, they should be added by webhooks. 
+The `env` field of the `kube-apiserver` container **shall not** contain any provider-specific environment variables (so it will be empty). If any provider-specific environment variables are needed, they should be added by webhooks.
 
 The `volumes` field of the pod template of the `kube-apiserver` deployment, and respectively the `volumeMounts` field of the `kube-apiserver` container **shall not** contain any provider-specific `Secret` or `ConfigMap` resources. If such resources should be mounted as volumes, this should be done by webhooks.
 
@@ -69,7 +69,7 @@ The `kube-apiserver` service **shall** be of type `LoadBalancer` but **shall not
 
 To deploy kube-controller-manager, Gardener **shall** create a deployment named `kube-controller-manager` in the Shoot namespace. It can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
-The pod template of the `kube-controller-manager` deployment **shall** contain a container named `kube-controller-manager`. 
+The pod template of the `kube-controller-manager` deployment **shall** contain a container named `kube-controller-manager`.
 
 The `command` field of the `kube-controller-manager` container **shall** contain the [kube-controller-manager command line](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/). It **shall** contain a number of provider-independent flags that should be ignored by webhooks, such as:
 
@@ -79,7 +79,7 @@ The `command` field of the `kube-controller-manager` container **shall** contain
 * cluster CIDR and identity (`--cluster-cidr`, `--cluster-name`)
 * sync settings (`--concurrent-deployment-syncs`, `--concurrent-replicaset-syncs`)
 * horizontal pod autoscaler (`--horizontal-pod-autoscaler-*`)
-* ports (`--port`, `--secure-port`) 
+* ports (`--port`, `--secure-port`)
 
 The kube-controller-manager command line **shall not** contain any provider-specific flags, such as:
 
@@ -91,10 +91,10 @@ The kube-controller-manager command line **shall not** contain any provider-spec
 These flags can be added by webhooks if needed.
 
 The kube-controller-manager command line **may** contain a number of additional provider-independent flags. In general, webhooks should ignore these unless they are known to interfere with the desired kube-controller-manager behavior for the specific provider. Among the flags to be considered are:
-                                        
+
 * `--feature-gates`
 
-The `env` field of the `kube-controller-manager` container **shall not** contain any provider-specific environment variables (so it will be empty). If any provider-specific environment variables are needed, they should be added by webhooks. 
+The `env` field of the `kube-controller-manager` container **shall not** contain any provider-specific environment variables (so it will be empty). If any provider-specific environment variables are needed, they should be added by webhooks.
 
 The `volumes` field of the pod template of the `kube-controller-manager` deployment, and respectively the `volumeMounts` field of the `kube-controller-manager` container **shall not** contain any provider-specific `Secret` or `ConfigMap` resources. If such resources should be mounted as volumes, this should be done by webhooks.
 
@@ -102,7 +102,7 @@ The `volumes` field of the pod template of the `kube-controller-manager` deploym
 
 To deploy kube-scheduler, Gardener **shall** create a deployment named `kube-scheduler` in the Shoot namespace. It can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
-The pod template of the `kube-scheduler` deployment **shall** contain a container named `kube-scheduler`. 
+The pod template of the `kube-scheduler` deployment **shall** contain a container named `kube-scheduler`.
 
 The `command` field of the `kube-scheduler` container **shall** contain the [kube-scheduler command line](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/). It **shall** contain a number of provider-independent flags that should be ignored by webhooks, such as:
 
@@ -115,7 +115,7 @@ The kube-scheduler command line **may** contain additional provider-independent 
 
 * `--feature-gates`
 
-The kube-scheduler command line can't contain provider-specific flags, and it makes no sense to specify provider-specific environment variables or mount provider-specific `Secret` or `ConfigMap` resources as volumes. 
+The kube-scheduler command line can't contain provider-specific flags, and it makes no sense to specify provider-specific environment variables or mount provider-specific `Secret` or `ConfigMap` resources as volumes.
 
 ### etcd-main and etcd-events
 

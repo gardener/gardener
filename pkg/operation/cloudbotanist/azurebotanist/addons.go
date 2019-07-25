@@ -16,64 +16,6 @@ package azurebotanist
 
 import "github.com/gardener/gardener/pkg/operation/common"
 
-// DeployKube2IAMResources - Not needed on Azure
-func (b *AzureBotanist) DeployKube2IAMResources() error {
-	return nil
-}
-
-// DestroyKube2IAMResources - Not needed on Azure.
-func (b *AzureBotanist) DestroyKube2IAMResources() error {
-	return nil
-}
-
-// GenerateKube2IAMConfig - Not needed on Azure.
-func (b *AzureBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
-// GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
-func (b *AzureBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"StorageClasses": []map[string]interface{}{
-			{
-				"Name":           "default",
-				"IsDefaultClass": true,
-				"Provisioner":    "kubernetes.io/azure-disk",
-				"Parameters": map[string]interface{}{
-					"storageaccounttype": "Standard_LRS",
-					"kind":               "managed",
-				},
-			},
-			{
-				"Name":           "managed-standard-hdd",
-				"IsDefaultClass": false,
-				"Provisioner":    "kubernetes.io/azure-disk",
-				"Parameters": map[string]interface{}{
-					"storageaccounttype": "Standard_LRS",
-					"kind":               "managed",
-				},
-			},
-			{
-				"Name":           "managed-premium-ssd",
-				"IsDefaultClass": false,
-				"Provisioner":    "kubernetes.io/azure-disk",
-				"Parameters": map[string]interface{}{
-					"storageaccounttype": "Premium_LRS",
-					"kind":               "managed",
-				},
-			},
-			{
-				"Name":           "files",
-				"IsDefaultClass": false,
-				"Provisioner":    "kubernetes.io/azure-file",
-				"Parameters": map[string]interface{}{
-					"skuName": "Standard_LRS",
-				},
-			},
-		},
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AzureBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil

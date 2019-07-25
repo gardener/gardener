@@ -77,6 +77,7 @@ func GardenV1beta1ShootToOpenStackV1alpha1ControlPlaneConfig(shoot *gardenv1beta
 			Kind:       controlPlaneConfig,
 		},
 		LoadBalancerProvider:   shoot.Spec.Cloud.OpenStack.LoadBalancerProvider,
+		Zone:                   shoot.Spec.Cloud.OpenStack.Zones[0],
 		CloudControllerManager: cloudControllerManager,
 	}, nil
 }

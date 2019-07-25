@@ -26,7 +26,7 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gardener/controller-manager-library v0.0.0-20190418145731-83f4bac4b55f // indirect
 	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
-	github.com/gardener/gardener-extensions v0.0.0-20190620142130-227adb277fa4
+	github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5
 	github.com/gardener/gardener-resource-manager v0.0.0-20190627140746-b43a76cdf9a7
 	github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a
 	github.com/ghodss/yaml v1.0.0
@@ -113,7 +113,7 @@ require (
 replace (
 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.12+incompatible
 	github.com/gardener/external-dns-management => github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03 // 0.1.0
-	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20190620142130-227adb277fa4
+	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5
 	github.com/gardener/gardener-resource-manager => github.com/gardener/gardener-resource-manager v0.0.0-20190627140746-b43a76cdf9a7
 	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a // 0.14.0
 	github.com/onsi/ginkgo => github.com/onsi/ginkgo v1.8.0

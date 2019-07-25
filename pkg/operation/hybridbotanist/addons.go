@@ -20,29 +20,38 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	resourcesvalpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *HybridBotanist) DeployManagedResources(ctx context.Context) error {
 	type chartRenderFunc func() (*chartrenderer.RenderedChart, error)
 
+	// Delete legacy storage classes managed resource (no longer needed because the provider extension
+	// controllers are now responsible for deploying the shoot storage classes).
+	// This code can be removed in a future Gardener version.
+	if err := b.K8sSeedClient.Client().Delete(ctx, &resourcesvalpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "storageclasses"}}); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
 	var (
 		labels = map[string]string{
 			common.ShootNoCleanup: "true",
 		}
 		charts = map[string]chartRenderFunc{
-			"storageclasses":               b.generateStorageClassesChart,
 			"shoot-cloud-config-execution": b.generateCloudConfigExecutionChart,
 			"shoot-core":                   b.generateCoreAddonsChart,
 			"addons":                       b.generateOptionalAddonsChart,
@@ -190,11 +199,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	newVpnShootSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vpn-shoot",
@@ -214,11 +218,10 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
 		"coredns":             coreDNS,
-		fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName()): csiPlugin,
-		"kube-proxy":     kubeProxy,
-		"vpn-shoot":      vpnShoot,
-		"calico":         calico,
-		"metrics-server": metricsServer,
+		"kube-proxy":          kubeProxy,
+		"vpn-shoot":           vpnShoot,
+		"calico":              calico,
+		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
@@ -230,10 +233,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
 	kubeLegoConfig, err := b.Botanist.GenerateKubeLegoConfig()
-	if err != nil {
-		return nil, err
-	}
-	kube2IAMConfig, err := b.ShootCloudBotanist.GenerateKube2IAMConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -272,10 +271,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	kube2IAM, err := b.InjectShootShootImages(kube2IAMConfig, common.Kube2IAMImageName)
-	if err != nil {
-		return nil, err
-	}
 	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
 	if err != nil {
 		return nil, err
@@ -285,21 +280,20 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
+	// kube2iam is deprecated and will be removed in the future.
+	kube2IAM := common.GenerateAddonConfig(nil, false)
+	if b.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS {
+		kube2IAMConfig, err := awsbotanist.GenerateKube2IAMConfig(b.Operation)
+		if err != nil {
+			return nil, err
+		}
+		kube2IAM = kube2IAMConfig
+	}
+
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
 	})
-}
-
-// generateStorageClassesChart renders the gardener-resource-manager configuration for the storage classes. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *HybridBotanist) generateStorageClassesChart() (*chartrenderer.RenderedChart, error) {
-	config, err := b.ShootCloudBotanist.GenerateStorageClassesConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-storageclasses"), "storageclasses", metav1.NamespaceSystem, config)
 }

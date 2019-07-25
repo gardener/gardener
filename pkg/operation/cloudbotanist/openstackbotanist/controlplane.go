@@ -18,11 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *OpenStackBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	containerName := "containerName"
