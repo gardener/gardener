@@ -1,0 +1,406 @@
+{{- $prefix := (randAlpha 5 | lower) -}}
+apiVersion: testmachinery.sapcloud.io/v1beta1
+kind: Testrun
+metadata:
+  name: {{ .Values.testrunName }}
+  namespace: default
+  annotations:
+    purpose: full-gardener
+spec:
+
+  ttlSecondsAfterFinished: 172800 # 2 days
+
+  locationSets:
+  - name: default
+    default: true
+    locations: []
+
+  - name: upgraded
+    locations:
+    - type: git
+      repo: https://github.com/gardener/garden-setup.git
+      revision: master
+
+  - name: tm
+    locations:
+    - type: git
+      repo: https://github.com/gardener/test-infra.git
+      revision: master
+
+
+  # Global config available to every test task in all phases (testFlow and onExit)
+  config:
+  - name: GARDENER_PREFIX
+    type: env
+    value: {{ $prefix }}
+  - name: PROJECT_NAMESPACE
+    type: env
+    value: garden-core
+
+  # the execution flow:
+  testflow:
+  - name: prepare-host
+    definition:
+      name: tm-scheduler-lock-gke
+      locationSet: tm
+
+  - name: create-garden
+    dependsOn: [ prepare-host ]
+    annotations:
+      purpose: beta
+    definition:
+      name: create-garden
+      location: default
+      config:
+{{ toYaml .Values.garden.credentials.config | indent 6 }}
+
+  - name: create-shoot-gcp
+    dependsOn: [ create-garden ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: gcp-14-{{ $prefix }}
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: gcp
+      - name: SECRET_BINDING
+        type: env
+        value: core-gcp-gcp
+      - name: REGION
+        type: env
+        value: europe-west1
+      - name: ZONE
+        type: env
+        value: europe-west1-b
+
+  - name: create-shoot-aws
+    dependsOn: [ create-garden ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: aws-14-{{ $prefix }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: aws
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SEED
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: aws
+      - name: SECRET_BINDING
+        type: env
+        value: core-aws-aws
+      - name: REGION
+        type: env
+        value: eu-west-1
+      - name: ZONE
+        type: env
+        value: eu-west-1b
+
+  - name: create-shoot-az
+    dependsOn: [ create-garden ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SEED
+        type: env
+        value: gcp
+      - name: SHOOT_NAME
+        type: env
+        value: az-14-{{ $prefix }}
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: azure
+      - name: CLOUDPROFILE
+        type: env
+        value: azure
+      - name: SECRET_BINDING
+        type: env
+        value: core-azure-azure
+      - name: REGION
+        type: env
+        value: westeurope
+
+  - name: upgrade-garden
+    dependsOn: [ create-shoot-gcp, create-shoot-aws, create-shoot-az ]
+    definition:
+      name: upgrade-garden
+      locationSet: upgraded
+      config:
+      - name: GARDENER_IMAGE_TAG
+        type: env
+        value: {{ .Values.gardener.upgraded.tag }}
+      - name: GARDENER_COMMIT
+        type: env
+        value: {{ .Values.gardener.upgraded.commit }}
+{{ toYaml .Values.garden.credentials.config | indent 6 }}
+
+  - name: reconcile-shoots
+    dependsOn: [ upgrade-garden ]
+    definition:
+      name: reconcile-shoots
+      locationSet: upgraded
+      config:
+      - name: GARDENER_VERSION
+        type: env
+        value: {{ .Values.gardener.upgraded.tag }}
+
+  - name: tests-aws
+    dependsOn: [ reconcile-shoots ]
+    artifactsFrom: create-shoot-aws
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+      config:
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SHOOT_NAME
+        type: env
+        value: aws-14-{{ $prefix }}
+
+  - name: delete-shoot-aws
+    dependsOn: [ tests-aws ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: aws-14-{{ $prefix }}
+
+  - name: tests-gcp
+    dependsOn: [ reconcile-shoots ]
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+      config:
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SHOOT_NAME
+        type: env
+        value: gcp-14-{{ $prefix }}
+  - name: delete-shoot-gcp
+    dependsOn: [ tests-gcp ]
+    definition:
+      name: delete-shoot
+      locationSet: default
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: gcp-14-{{ $prefix }}
+
+  - name: tests-az
+    dependsOn: [ reconcile-shoots ]
+    artifactsFrom: create-shoot-az
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+      config:
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SHOOT_NAME
+        type: env
+        value: az-14-{{ $prefix }}
+
+  - name: delete-shoot-az
+    dependsOn: [ tests-az ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: az-14-{{ $prefix }}
+
+  - name: create-shoot-gcp-upgrade
+    dependsOn: [ reconcile-shoots ]
+    definition:
+      name: create-shoot
+      locationSet: upgraded
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: gcp-14-{{ randAlpha 5 | lower }}
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: gcp
+      - name: SECRET_BINDING
+        type: env
+        value: core-gcp-gcp
+      - name: REGION
+        type: env
+        value: europe-west1
+      - name: ZONE
+        type: env
+        value: europe-west1-b
+  - name: tests-gcp-upgrade
+    dependsOn: [ create-shoot-gcp-upgrade ]
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+  - name: delete-shoot-gcp-upgraded
+    dependsOn: [ tests-gcp-upgrade ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+
+  - name: create-shoot-aws-upgraded
+    dependsOn: [ reconcile-shoots ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: aws-14-{{ randAlpha 5 | lower }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: aws
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SEED
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: aws
+      - name: SECRET_BINDING
+        type: env
+        value: core-aws-aws
+      - name: REGION
+        type: env
+        value: eu-west-1
+      - name: ZONE
+        type: env
+        value: eu-west-1b
+  - name: tests-aws-upgraded
+    dependsOn: [ create-shoot-aws-upgraded ]
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+  - name: delete-shoot-aws-upgraded
+    dependsOn: [ tests-aws-upgraded ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+
+  - name: create-shoot-az-upgraded
+    dependsOn: [ reconcile-shoots ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SEED
+        type: env
+        value: gcp
+      - name: SHOOT_NAME
+        type: env
+        value: az-14-{{ randAlpha 5 | lower }}
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: azure
+      - name: CLOUDPROFILE
+        type: env
+        value: azure
+      - name: SECRET_BINDING
+        type: env
+        value: core-azure-azure
+      - name: REGION
+        type: env
+        value: westeurope
+  - name: tests-az-upgraded
+    dependsOn: [ create-shoot-az-upgraded ]
+    definition:
+      label: default
+      locationSet: upgraded
+      continueOnError: true
+  - name: delete-shoot-az-upgraded
+    dependsOn: [ tests-az-upgraded ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+
+  - name: delete-garden
+    dependsOn: [ delete-shoot-aws, delete-shoot-gcp, delete-shoot-az, delete-shoot-gcp-upgraded, delete-shoot-aws-upgraded, delete-shoot-az-upgraded ]
+    definition:
+      name: delete-garden
+      locationSet: upgraded
+      config:
+{{ toYaml .Values.garden.credentials.config | indent 6 }}
+
+  - name: reset-host
+    dependsOn: [ delete-garden ]
+    definition:
+      name: tm-scheduler-release-gke
+      locationSet: tm
+      config:
+      - name: CLEAN
+        type: env
+        value: "false"
+
+  onExit:
+  - name: clean-gardener
+    useGlobalArtifacts: true
+    definition:
+      name: clean-gardener
+      locationSet: tm
+      condition: error
+
+  - name: delete-garden
+    dependsOn: [ clean-gardener ]
+    useGlobalArtifacts: true
+    definition:
+      name: delete-garden
+      condition: error
+      config:
+{{ toYaml .Values.garden.credentials.config | indent 6 }}
+
+  - name: reset-host
+    dependsOn: [ delete-garden ]
+    useGlobalArtifacts: true
+    definition:
+      name: tm-scheduler-release-gke
+      locationSet: tm
+      condition: error
+      config:
+      - name: CLEAN
+        type: env
+        value: "true"

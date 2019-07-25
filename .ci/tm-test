@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -e
+
+export SOURCE_PATH="$(readlink -f "$(dirname ${0})/..")"
+
+TESTRUN_CHART=""
+TM_LANDSCAPE="external"
+LANDSCAPE=""
+ARGUMENTS=""
+
+ARGOUI_ENDPOINT=""
+S3_ENDPOINT=""
+KIBANA_ENDPOINT=""
+
+
+for i in "$@"
+do
+echo $i
+case $i in
+        -tm-chart=*|--tm-chart=*)
+        TESTRUN_CHART="${i#*=}"
+        shift
+    ;;
+        -tm-landscape=*|--tm-landscape=*)
+        TM_LANDSCAPE="${i#*=}"
+        shift
+    ;;
+        -landscape=*|--landscape=*)
+        LANDSCAPE="${i#*=}"
+        shift
+    ;;
+        --)
+        ARGUMENTS="${@:2}"
+        break
+    ;;
+    *)
+        # unknown option
+        echo "Unknown option ${i#*=}"
+        exit 1
+    ;;
+esac
+done
+
+if [[ $TESTRUN_CHART == "" ]]; then
+    echo "Required parameter: -tm-chart"
+    exit 1
+fi
+if [[ $TM_LANDSCAPE == "" ]]; then
+    echo "Required parameter: -tm-landscape : external | internal"
+    exit 1
+fi
+if [[ $LANDSCAPE == "" ]]; then
+    echo "Required parameter: -landscape"
+    exit 1
+fi
+
+if [[ $TM_LANDSCAPE == "external" ]]; then
+    TM_CONFIG_NAME=testmachinery
+    S3_ENDPOINT="storage.googleapis.com"
+fi
+
+NEW_GARDENER_VERSION="$(cat $SOURCE_PATH/VERSION)"
+NEW_GARDENERT_COMMIT="$(git rev-parse HEAD)"
+
+echo "Testmachinery config name: ${TM_CONFIG_NAME}"
+echo "Testmachinery landscape: ${TM_LANDSCAPE}"
+echo "Arguments: ${ARGUMENTS}"
+echo "Gardener Version: ${NEW_GARDENER_VERSION}"
+echo "Gardener Commit: ${NEW_GARDENERT_COMMIT}"
+
+mkdir -p /tm
+TM_CLUSTER=/tm/kubeconfig
+/cc/utils/cli.py config attribute --cfg-type kubernetes --cfg-name $TM_CONFIG_NAME --key kubeconfig > $TM_CLUSTER
+
+TESTRUN_CHART_PATH="$SOURCE_PATH/.ci/testruns/$TESTRUN_CHART"
+COMPONENT_DESCRIPTOR_PATH="$COMPONENT_DESCRIPTOR_DIR/component_descriptor"
+
+export KUBECONFIG=$TM_CLUSTER
+kubectl cluster-info
+
+# timeout to 6h
+/testrunner run-full \
+    --tm-kubeconfig-path=$TM_CLUSTER \
+    --timeout=21600 \
+    --interval=60 \
+    --es-config-name=sap_internal \
+    --s3-endpoint=$S3_ENDPOINT \
+    --s3-ssl=true \
+    --testruns-chart-path=$TESTRUN_CHART_PATH \
+    --set=gardener.upgraded.commit=$NEW_GARDENERT_COMMIT,gardener.upgraded.tag=$NEW_GARDENER_VERSION \
+    --component-descriptor-path=$OUT_PATH/previous_component_descriptor.yaml \
+    --upgraded-component-descriptor-path=$COMPONENT_DESCRIPTOR_PATH \
+    $ARGUMENTS
