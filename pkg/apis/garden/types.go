@@ -102,6 +102,8 @@ type MachineImage struct {
 	Name string
 	// Version is the version of the image.
 	Version string
+	// ProviderConfig is the configuration passed to extension resource.
+	ProviderConfig *gardencore.ProviderConfig
 }
 
 // AzureProfile defines certain constraints and definitions for the Azure cloud.
