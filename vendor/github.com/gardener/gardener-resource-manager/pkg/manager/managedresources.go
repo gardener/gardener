@@ -66,7 +66,7 @@ func (m *ManagedResource) WithInjectedLabels(labelsToInject map[string]string) *
 func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	resource := &resourcesv1alpha1.ManagedResource{ObjectMeta: m.resource.ObjectMeta}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, m.client, m.resource, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, m.client, resource, func() error {
 		resource.Spec.SecretRefs = m.resource.Spec.SecretRefs
 		resource.Spec.InjectLabels = m.resource.Spec.InjectLabels
 		return nil

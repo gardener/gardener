@@ -55,6 +55,7 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{ObjectMeta: s.secret.ObjectMeta}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
+		secret.Type = s.secret.Type
 		secret.Data = s.secret.Data
 		return nil
 	})
