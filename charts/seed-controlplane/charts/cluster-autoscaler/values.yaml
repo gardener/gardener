@@ -14,6 +14,9 @@ workerPools:
 
 metricsPort: 8085
 
-flags:
-- name: foo
-  value: bar
+scaleDownUnneededTime: 30m0s
+scaleDownDelayAfterAdd: 1h0m0s
+# scaleDownUtilizationThreshold: foo
+# scaleDownDelayAfterFailure: foo
+# scaleDownDelayAfterDelete: foo
+# scanInterval: foo

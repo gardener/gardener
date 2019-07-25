@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -187,21 +186,6 @@ func (b *Botanist) DeleteBackupInfrastructure() error {
 	return client.IgnoreNotFound(err)
 }
 
-// Supported CA flags
-const (
-	scaleDownUtilizationThresholdFlag = "scale-down-utilization-threshold"
-	scaleDownUnneededTimeFlag         = "scale-down-unneeded-time"
-	scaleDownDelayAfterAddFlag        = "scale-down-delay-after-add"
-	scaleDownDelayAfterFailureFlag    = "scale-down-delay-after-failure"
-	scaleDownDelayAfterDeleteFlag     = "scale-down-delay-after-delete"
-	scanIntervalFlag                  = "scan-interval"
-)
-
-var (
-	scaleDownUnneededTimeDefault  = metav1.Duration{Duration: 30 * time.Minute}
-	scaleDownDelayAfterAddDefault = metav1.Duration{Duration: 60 * time.Minute}
-)
-
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
 // for automatically scaling the worker pools of the Shoot.
 func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
@@ -223,19 +207,6 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		})
 	}
 
-	var flags []map[string]interface{}
-	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
-		flags = appendOrDefaultFlag(flags, scaleDownUtilizationThresholdFlag, clusterAutoscalerConfig.ScaleDownUtilizationThreshold, nil)
-		flags = appendOrDefaultFlag(flags, scaleDownUnneededTimeFlag, clusterAutoscalerConfig.ScaleDownUnneededTime, scaleDownUnneededTimeDefault)
-		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterAddFlag, clusterAutoscalerConfig.ScaleDownDelayAfterAdd, scaleDownDelayAfterAddDefault)
-		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterFailureFlag, clusterAutoscalerConfig.ScaleDownDelayAfterFailure, nil)
-		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterDeleteFlag, clusterAutoscalerConfig.ScaleDownDelayAfterDelete, nil)
-		flags = appendOrDefaultFlag(flags, scanIntervalFlag, clusterAutoscalerConfig.ScanInterval, nil)
-	} else { // add defaults in case no ClusterAutoscaler section was found in the manifest
-		flags = appendOrDefaultFlag(flags, scaleDownUnneededTimeFlag, nil, scaleDownUnneededTimeDefault)
-		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterAddFlag, nil, scaleDownDelayAfterAddDefault)
-	}
-
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
@@ -245,7 +216,27 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		},
 		"replicas":    b.Shoot.GetReplicas(1),
 		"workerPools": workerPools,
-		"flags":       flags,
+	}
+
+	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
+		if val := clusterAutoscalerConfig.ScaleDownUtilizationThreshold; val != nil {
+			defaultValues["scaleDownUtilizationThreshold"] = *val
+		}
+		if val := clusterAutoscalerConfig.ScaleDownUnneededTime; val != nil {
+			defaultValues["scaleDownUnneededTime"] = *val
+		}
+		if val := clusterAutoscalerConfig.ScaleDownDelayAfterAdd; val != nil {
+			defaultValues["scaleDownDelayAfterAdd"] = *val
+		}
+		if val := clusterAutoscalerConfig.ScaleDownDelayAfterFailure; val != nil {
+			defaultValues["scaleDownDelayAfterFailure"] = *val
+		}
+		if val := clusterAutoscalerConfig.ScaleDownDelayAfterDelete; val != nil {
+			defaultValues["scaleDownDelayAfterDelete"] = *val
+		}
+		if val := clusterAutoscalerConfig.ScanInterval; val != nil {
+			defaultValues["scanInterval"] = *val
+		}
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.ClusterAutoscalerImageName)
@@ -254,36 +245,6 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, nil, values)
-}
-
-func mkFlag(name string, value interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"name":  name,
-		"value": marshalFlagValue(value),
-	}
-}
-
-func marshalFlagValue(value interface{}) interface{} {
-	switch v := value.(type) {
-	case metav1.Duration:
-		return v.Duration.String()
-	default:
-		rv := reflect.ValueOf(value)
-		if rv.Type().Kind() == reflect.Ptr {
-			return marshalFlagValue(rv.Elem().Interface())
-		}
-		return v
-	}
-}
-
-func appendOrDefaultFlag(flags []map[string]interface{}, flagName string, value, defaultValue interface{}) []map[string]interface{} {
-	if value == nil {
-		if defaultValue == nil {
-			return flags
-		}
-		value = defaultValue
-	}
-	return append(flags, mkFlag(flagName, value))
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
