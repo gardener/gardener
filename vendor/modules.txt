@@ -83,7 +83,7 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
-# github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5 => github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5
+# github.com/gardener/gardener-extensions v0.0.0-20190725050243-a80ef643c64b => github.com/gardener/gardener-extensions v0.0.0-20190725050243-a80ef643c64b
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1

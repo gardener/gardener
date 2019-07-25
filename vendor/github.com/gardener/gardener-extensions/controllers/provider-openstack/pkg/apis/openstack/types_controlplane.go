@@ -30,10 +30,33 @@ type ControlPlaneConfig struct {
 
 	// Zone is the OpenStack zone.
 	Zone string
+	// FloatingPoolClasses available for a dedicated Shoot.
+	LoadBalancerClasses []LoadBalancerClass
 
 	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
-	// +optional
 	CloudControllerManager *CloudControllerManagerConfig
+}
+
+const (
+	// DefaultLoadBalancerClass defines the default load balancer class.
+	DefaultLoadBalancerClass = "default"
+	// PrivateLoadBalancerClass defines the load balancer class used to default the private load balancers.
+	PrivateLoadBalancerClass = "private"
+	// VPNLoadBalancerClass defines the floating pool class used by the VPN service.
+	VPNLoadBalancerClass = "vpn"
+)
+
+// LoadBalancerClass defines a restricted network setting for generic LoadBalancer classes usable in CloudProfiles.
+type LoadBalancerClass struct {
+	// Name is the name of the LB class
+	Name string
+	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
+	FloatingSubnetID *string
+	// FloatingNetworkID is the network ID of the floating network pool.
+	FloatingNetworkID *string
+	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
+	// configuration is done.
+	SubnetID *string
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
