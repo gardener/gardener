@@ -16,14 +16,15 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -179,4 +180,30 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 	defer cancel()
 
 	return WaitUntilResourceDeleted(ctx, c, obj, 5*time.Second)
+}
+
+// GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
+// (ip address or hostname). It returns the value of the technical name whereby it always prefers the IP address (if given)
+// over the hostname. It also returns the list of all load balancer ingresses.
+func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace, name string) (string, error) {
+	service := &corev1.Service{}
+	if err := client.Get(ctx, Key(namespace, name), service); err != nil {
+		return "", err
+	}
+
+	var (
+		serviceStatusIngress = service.Status.LoadBalancer.Ingress
+		length               = len(serviceStatusIngress)
+	)
+
+	switch {
+	case length == 0:
+		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
+	case serviceStatusIngress[length-1].IP != "":
+		return serviceStatusIngress[length-1].IP, nil
+	case serviceStatusIngress[length-1].Hostname != "":
+		return serviceStatusIngress[length-1].Hostname, nil
+	}
+
+	return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
 }

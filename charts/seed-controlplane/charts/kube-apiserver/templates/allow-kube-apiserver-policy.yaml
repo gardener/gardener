@@ -3,7 +3,7 @@ kind: NetworkPolicy
 metadata:
   annotations:
     gardener.cloud/description: |
-      Allows Ingress to the Shoot's Kuberntes API Server from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed'
+      Allows Ingress to the Shoot's Kubernetes API Server from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed'
       and Prometheus, and Egress to etcd pods.
   name: allow-kube-apiserver
   namespace: {{ .Release.Namespace }}

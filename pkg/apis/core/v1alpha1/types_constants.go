@@ -110,4 +110,36 @@ const (
 	SeedProvider = "seed.gardener.cloud/provider"
 	// ShootProvider is used to identify the shoot provider.
 	ShootProvider = "shoot.gardener.cloud/provider"
+
+	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
+	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
+	// LabelNetworkPolicyToDNS allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed' to DNS running in 'kube-system'.
+	// In practice, most of the Pods which require network Egress need this label.
+	LabelNetworkPolicyToDNS = "networking.gardener.cloud/to-dns"
+	// LabelNetworkPolicyToPrivateNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-private-networks=allowed' to the
+	// private networks (RFC1918), Carrier-grade NAT (RFC6598) except for cloudProvider's specific metadata service IP, seed networks,
+	// shoot networks.
+	LabelNetworkPolicyToPrivateNetworks = "networking.gardener.cloud/to-private-networks"
+	// LabelNetworkPolicyToPublicNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-public-networks=allowed' to all public
+	// network IPs, except for private networks (RFC1918), carrier-grade NAT (RFC6598), cloudProvider's specific metadata service IP.
+	// In practice, this blocks Egress traffic to all networks in the Seed cluster and only traffic to public IPv4 addresses.
+	LabelNetworkPolicyToPublicNetworks = "networking.gardener.cloud/to-public-networks"
+	// LabelNetworkPolicyToSeedAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes
+	// API Server.
+	LabelNetworkPolicyToSeedAPIServer = "networking.gardener.cloud/to-seed-apiserver"
+	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
+	// Kubernetes API Server.
+	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
+	// LabelNetworkPolicyToAll disables all Ingress and Egress traffic into/from this namespace when set to "disallowed".
+	LabelNetworkPolicyToAll = "networking.gardener.cloud/to-all"
+	// LabelNetworkPolicyToElasticSearch allows Ingress to the ElasticSearch API pods labeled with 'networking.gardener.cloud/to-elasticsearch=allowed',
+	// and fluentd in 'garden' namespace.
+	LabelNetworkPolicyToElasticSearch = "networking.gardener.cloud/to-elasticsearch"
+	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
+	// named 'metrics' in the PodSpecification.
+	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
+	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
+	LabelNetworkPolicyAllowed = "allowed"
+	// LabelNetworkPolicyDisallowed is a constant for disallowing a network policy.
+	LabelNetworkPolicyDisallowed = "disallowed"
 )

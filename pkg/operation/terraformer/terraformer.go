@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -347,10 +348,10 @@ func (t *Terraformer) addNetworkPolicyLabels(labels map[string]string) map[strin
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels["networking.gardener.cloud/to-dns"] = "allowed"
-	labels["networking.gardener.cloud/to-private-networks"] = "allowed"
-	labels["networking.gardener.cloud/to-public-networks"] = "allowed"
-	labels["networking.gardener.cloud/to-seed-apiserver"] = "allowed"
+	labels[gardencorev1alpha1.LabelNetworkPolicyToDNS] = gardencorev1alpha1.LabelNetworkPolicyAllowed
+	labels[gardencorev1alpha1.LabelNetworkPolicyToPrivateNetworks] = gardencorev1alpha1.LabelNetworkPolicyAllowed
+	labels[gardencorev1alpha1.LabelNetworkPolicyToPublicNetworks] = gardencorev1alpha1.LabelNetworkPolicyAllowed
+	labels[gardencorev1alpha1.LabelNetworkPolicyToSeedAPIServer] = gardencorev1alpha1.LabelNetworkPolicyAllowed
 
 	return labels
 }

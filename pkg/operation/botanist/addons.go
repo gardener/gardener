@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,7 +32,7 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 		return b.DestroyIngressDNSRecord(ctx)
 	}
 
-	loadBalancerIngress, err := common.GetLoadBalancerIngress(ctx, b.K8sShootClient.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller")
+	loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sShootClient.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller")
 	if err != nil {
 		return err
 	}

@@ -15,50 +15,26 @@
 package common_test
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
-
-	"github.com/gardener/gardener/pkg/version"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/golang/mock/gomock"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/gardener/gardener/pkg/version"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("common", func() {
-	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-	)
-
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("utils", func() {
 		Describe("#ComputeClusterIP", func() {
 			It("should return a cluster IP as string", func() {
@@ -207,83 +183,6 @@ var _ = Describe("common", func() {
 		Entry("with special characters", "foo", `C*ko4P++$"x`, `"$++*ab*$c4k`),
 		Entry("with special characters", "foo", "P+*4", `P*$8uOkv6+4`),
 	)
-
-	Describe("#GetLoadBalancerIngress", func() {
-		var (
-			namespace = "foo"
-			name      = "bar"
-			key       = kutil.Key(namespace, name)
-		)
-
-		It("should return an unexpected client error", func() {
-			ctx := context.TODO()
-			expectedErr := fmt.Errorf("unexpected")
-
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).Return(expectedErr)
-
-			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeIdenticalTo(expectedErr))
-		})
-
-		It("should return an error because no ingresses found", func() {
-			ctx := context.TODO()
-
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{}))
-
-			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
-
-			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)"))
-		})
-
-		It("should return an ip address", func() {
-			var (
-				ctx        = context.TODO()
-				expectedIP = "1.2.3.4"
-			)
-
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: expectedIP}}
-				return nil
-			})
-
-			ingress, err := GetLoadBalancerIngress(ctx, c, namespace, name)
-
-			Expect(ingress).To(Equal(expectedIP))
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an hostname address", func() {
-			var (
-				ctx              = context.TODO()
-				expectedHostname = "cluster.local"
-			)
-
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{Hostname: expectedHostname}}
-				return nil
-			})
-
-			ingress, err := GetLoadBalancerIngress(ctx, c, namespace, name)
-
-			Expect(ingress).To(Equal(expectedHostname))
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error if neither ip nor hostname were set", func() {
-			ctx := context.TODO()
-
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
-				return nil
-			})
-
-			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
-
-			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`"))
-		})
-	})
 
 	DescribeTable("#GetDomainInfoFromAnnotations",
 		func(annotations map[string]string, expectedProvider, expectedDomain, expectedErr gomegatypes.GomegaMatcher) {

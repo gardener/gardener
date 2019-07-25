@@ -757,4 +757,82 @@ var _ = Describe("kubernetes", func() {
 		Entry("< 63 chars", "foo", "foo"),
 		Entry("= 63 chars", strings.Repeat("a", 63), strings.Repeat("a", 63)),
 		Entry("> 63 chars", strings.Repeat("a", 64), strings.Repeat("a", 63)))
+
+	Describe("#GetLoadBalancerIngress", func() {
+		var (
+			namespace = "foo"
+			name      = "bar"
+			key       = Key(namespace, name)
+		)
+
+		It("should return an unexpected client error", func() {
+			ctx := context.TODO()
+			expectedErr := fmt.Errorf("unexpected")
+
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).Return(expectedErr)
+
+			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeIdenticalTo(expectedErr))
+		})
+
+		It("should return an error because no ingresses found", func() {
+			ctx := context.TODO()
+
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{}))
+
+			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
+
+			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)"))
+		})
+
+		It("should return an ip address", func() {
+			var (
+				ctx        = context.TODO()
+				expectedIP = "1.2.3.4"
+			)
+
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: expectedIP}}
+				return nil
+			})
+
+			ingress, err := GetLoadBalancerIngress(ctx, c, namespace, name)
+
+			Expect(ingress).To(Equal(expectedIP))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an hostname address", func() {
+			var (
+				ctx              = context.TODO()
+				expectedHostname = "cluster.local"
+			)
+
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{Hostname: expectedHostname}}
+				return nil
+			})
+
+			ingress, err := GetLoadBalancerIngress(ctx, c, namespace, name)
+
+			Expect(ingress).To(Equal(expectedHostname))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error if neither ip nor hostname were set", func() {
+			ctx := context.TODO()
+
+			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
+				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
+				return nil
+			})
+
+			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
+
+			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`"))
+		})
+	})
+
 })
