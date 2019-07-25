@@ -27,9 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +38,6 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -380,41 +377,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	// If shoot is hibernated we don't want the HPA to interfer with our scaling decisions.
-	if b.Shoot.IsHibernated {
-		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      gardencorev1alpha1.DeploymentNameKubeAPIServer,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		if err := b.K8sSeedClient.Client().Delete(context.TODO(), hpa, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer, values, nil); err != nil {
-		return err
-	}
-
-	// Delete old network policies. This code can be removed in a future version.
-	for _, name := range []string{
-		"kube-apiserver-deny-blacklist",
-		"kube-apiserver-allow-dns",
-		"kube-apiserver-allow-etcd",
-		"kube-apiserver-allow-gardener-admission-controller",
-	} {
-		networkPolicy := &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		if err := b.K8sSeedClient.Client().Delete(context.TODO(), networkPolicy, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer, values, nil)
 }
 
 func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) {
