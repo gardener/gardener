@@ -17,6 +17,8 @@ package health_test
 import (
 	"testing"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -289,6 +291,83 @@ var _ = Describe("health", func() {
 					},
 				},
 			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
+		)
+	})
+
+	Context("CheckExtensionObject", func() {
+		DescribeTable("extension objects",
+			func(obj extensionsv1alpha1.Object, match types.GomegaMatcher) {
+				Expect(health.CheckExtensionObject(obj)).To(match)
+			},
+			Entry("healthy",
+				&extensionsv1alpha1.Infrastructure{
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1alpha1.LastOperation{
+								State: gardencorev1alpha1.LastOperationStateSucceeded,
+							},
+						},
+					},
+				},
+				Succeed()),
+			Entry("generation outdated",
+				&extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1alpha1.LastOperation{
+								State: gardencorev1alpha1.LastOperationStateSucceeded,
+							},
+						},
+					},
+				},
+				HaveOccurred()),
+			Entry("gardener operation ongoing",
+				&extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
+						},
+					},
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1alpha1.LastOperation{
+								State: gardencorev1alpha1.LastOperationStateSucceeded,
+							},
+						},
+					},
+				},
+				HaveOccurred()),
+			Entry("last error non-nil",
+				&extensionsv1alpha1.Infrastructure{
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastError: &gardencorev1alpha1.LastError{
+								Description: "something happened",
+							},
+							LastOperation: &gardencorev1alpha1.LastOperation{
+								State: gardencorev1alpha1.LastOperationStateSucceeded,
+							},
+						},
+					},
+				},
+				HaveOccurred()),
+			Entry("no last operation",
+				&extensionsv1alpha1.Infrastructure{},
+				HaveOccurred()),
+			Entry("last operation not succeeded",
+				&extensionsv1alpha1.Infrastructure{
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1alpha1.LastOperation{
+								State: gardencorev1alpha1.LastOperationStateError,
+							},
+						},
+					},
+				},
+				HaveOccurred()),
 		)
 	})
 })

@@ -1,5 +1,7 @@
 # General conventions
 
+Gardener dictates the time of reconciliation for resources of the API group `extensions.gardener.cloud`. It does that by annotating the respected resource with `gardener.cloud/operation: reconcile`. Extension controllers react to this annotation and start reconciling the resource. They have to remove this annotation as soon as they begin with their reconcile operation and maintain the `status` of the extension resource accordingly.
+
 All the extensions that are registered to Gardener are deployed to the seed clusters (at the moment, every extension is installed to every seed cluster, however, in the future Gardener will be more smart to determine which extensions needs to be placed into which seed).
 
 Some of these extensions might need to create global resources in the seed (e.g., `ClusterRole`s), i.e., it's important to have a naming scheme to avoid conflicts as it cannot be checked or validated upfront that two extensions don't use the same names.

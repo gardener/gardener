@@ -18,11 +18,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -53,6 +54,8 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 
 		fns = append(fns, func(ctx context.Context) error {
 			return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
+				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig
 				return nil
@@ -74,33 +77,20 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 			namespace = extension.Namespace
 		)
 		fns = append(fns, func(ctx context.Context) error {
-			var lastError *gardencorev1alpha1.LastError
-
 			if err := retry.UntilTimeout(ctx, DefaultInterval, shoot.ExtensionDefaultTimeout, func(ctx context.Context) (bool, error) {
 				req := &extensionsv1alpha1.Extension{}
 				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(namespace, name), req); err != nil {
 					return retry.SevereError(err)
 				}
 
-				if lastErr := req.Status.LastError; lastErr != nil {
-					b.Logger.Errorf("Extension %s/%s did not get ready yet, lastError is: %s", namespace, name, lastErr.Description)
-					lastError = lastErr
+				if err := health.CheckExtensionObject(req); err != nil {
+					b.Logger.WithError(err).Errorf("Extension %s/%s did not get ready yet", namespace, name)
+					return retry.MinorError(err)
 				}
 
-				if req.Status.LastOperation != nil &&
-					req.Status.LastOperation.State == corev1alpha1.LastOperationStateSucceeded &&
-					req.Status.ObservedGeneration == req.Generation {
-					return retry.Ok()
-				}
-
-				b.Logger.Infof("Waiting for extension %s/%s to be ready...", namespace, name)
-				return retry.MinorError(wrapWithLastError(fmt.Errorf("extension %s/%s is not yet ready", namespace, name), lastError))
+				return retry.Ok()
 			}); err != nil {
-				message := fmt.Sprintf("Failed waiting for extension %s is ready", name)
-				if lastError != nil {
-					return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
-				}
-				return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+				return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("failed waiting for extension %s to be ready: %v", name, err))
 			}
 			return nil
 		})

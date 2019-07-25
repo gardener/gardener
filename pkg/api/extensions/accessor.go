@@ -61,14 +61,34 @@ type unstructuredLastOperationAccessor struct {
 	*unstructured.Unstructured
 }
 
+type unstructuredLastErrorAccessor struct {
+	*unstructured.Unstructured
+}
+
 type unstructuredSpecAccessor struct {
 	*unstructured.Unstructured
+}
+
+func nestedStringSlice(obj map[string]interface{}, fields ...string) []string {
+	v, ok, err := unstructured.NestedStringSlice(obj, fields...)
+	if err != nil || !ok {
+		return nil
+	}
+	return v
 }
 
 func nestedString(obj map[string]interface{}, fields ...string) string {
 	v, ok, err := unstructured.NestedString(obj, fields...)
 	if err != nil || !ok {
 		return ""
+	}
+	return v
+}
+
+func nestedInt64(obj map[string]interface{}, fields ...string) int64 {
+	v, ok, err := unstructured.NestedInt64(obj, fields...)
+	if err != nil || !ok {
+		return 0
 	}
 	return v
 }
@@ -129,6 +149,48 @@ func (u unstructuredStatusAccessor) GetLastOperation() extensionsv1alpha1.LastOp
 		return nil
 	}
 	return unstructuredLastOperationAccessor{u.Unstructured}
+}
+
+// GetObservedGeneration implements Status.
+func (u unstructuredStatusAccessor) GetObservedGeneration() int64 {
+	return nestedInt64(u.Object, "status", "observedGeneration")
+}
+
+// GetDescription implements LastError.
+func (u unstructuredLastErrorAccessor) GetDescription() string {
+	return nestedString(u.Object, "status", "lastError", "description")
+}
+
+// GetCodes implements LastError.
+func (u unstructuredLastErrorAccessor) GetCodes() []gardencorev1alpha1.ErrorCode {
+	codeStrings := nestedStringSlice(u.Object, "status", "lastError", "codes")
+	var codes []gardencorev1alpha1.ErrorCode
+	for _, codeString := range codeStrings {
+		codes = append(codes, gardencorev1alpha1.ErrorCode(codeString))
+	}
+	return codes
+}
+
+// GetLastUpdateTime implements LastError.
+func (u unstructuredLastErrorAccessor) GetLastUpdateTime() *metav1.Time {
+	s, ok, err := unstructured.NestedString(u.Object, "status", "lastError", "lastUpdateTime")
+	if err != nil || !ok {
+		return nil
+	}
+
+	var timestamp metav1.Time
+	if err := timestamp.UnmarshalQueryParameter(s); err != nil {
+		return nil
+	}
+	return &timestamp
+}
+
+// GetLastError implements Status.
+func (u unstructuredStatusAccessor) GetLastError() extensionsv1alpha1.LastError {
+	if _, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastError"); err != nil || !ok {
+		return nil
+	}
+	return unstructuredLastErrorAccessor{u.Unstructured}
 }
 
 // GetExtensionStatus implements Object.
