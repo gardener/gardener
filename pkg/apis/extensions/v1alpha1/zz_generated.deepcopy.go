@@ -1269,6 +1269,11 @@ func (in *WorkerStatus) DeepCopyInto(out *WorkerStatus) {
 		*out = make([]MachineDeployment, len(*in))
 		copy(*out, *in)
 	}
+	if in.ProviderStatus != nil {
+		in, out := &in.ProviderStatus, &out.ProviderStatus
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

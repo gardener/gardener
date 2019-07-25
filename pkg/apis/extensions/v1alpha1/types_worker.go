@@ -148,6 +148,9 @@ type WorkerStatus struct {
 	// MachineDeployments is a list of created machine deployments. It will be used to e.g. configure
 	// the cluster-autoscaler properly.
 	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty"`
+	// ProviderStatus contains provider-specific output for this worker.
+	// +optional
+	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }
 
 // MachineDeployment is a created machine deployment.
