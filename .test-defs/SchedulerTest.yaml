@@ -6,7 +6,8 @@ spec:
   description: Tests the scheduler.
 
   activeDeadlineSeconds: 5400
-
+  behavior:
+  - serial
   config:
   - name: GO111MODULE
     value: "on"
