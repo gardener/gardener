@@ -113,6 +113,9 @@ type MachineImage struct {
 	Name string `json:"name"`
 	// Version is the version of the image.
 	Version string `json:"version"`
+	// ProviderConfig is the configuration passed to extension resource.
+	// +optional
+	ProviderConfig *gardencorev1alpha1.ProviderConfig `json:"providerConfig,omitempty"`
 }
 
 // AzureProfile defines certain constraints and definitions for the Azure cloud.

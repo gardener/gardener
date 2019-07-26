@@ -4358,10 +4358,18 @@ func schema_pkg_apis_garden_v1beta1_MachineImage(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to extension resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 				},
 				Required: []string{"name", "version"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
 	}
 }
 

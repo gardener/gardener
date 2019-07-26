@@ -3101,6 +3101,7 @@ func Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garde
 func autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Version = in.Version
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
@@ -3112,6 +3113,7 @@ func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *
 func autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Version = in.Version
+	out.ProviderConfig = (*v1alpha1.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 

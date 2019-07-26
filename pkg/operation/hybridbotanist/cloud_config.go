@@ -35,6 +35,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	yaml "gopkg.in/yaml.v2"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -66,11 +68,11 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 // and original configuration will be generated and stored in the shoot specific cloud config map for later usage.
 func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	var (
-		machineTypes     = b.Shoot.GetMachineTypesFromCloudProfile()
-		machineImageName = b.Shoot.GetMachineImage().Name
+		machineTypes = b.Shoot.GetMachineTypesFromCloudProfile()
+		machineImage = b.Shoot.GetMachineImage()
 	)
 
-	downloaderConfig := b.generateDownloaderConfig(machineImageName)
+	downloaderConfig := b.generateDownloaderConfig(machineImage.Name)
 	originalConfig, err := b.generateOriginalConfig()
 	if err != nil {
 		return err
@@ -93,7 +95,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 
 		go func(worker gardenv1beta1.Worker) {
 			defer wg.Done()
-			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImageName, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
+			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImage, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
 			results <- &oscOutput{worker.Name, cloudConfig, err}
 		}(worker)
 	}
@@ -165,19 +167,30 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName string, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.MachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 	)
 
 	downloaderConfig["secretName"] = secretName
+
+	var customization = map[string]interface{}{}
+	if machineImage.ProviderConfig != nil {
+		err := yaml.Unmarshal(machineImage.ProviderConfig.Raw, &customization)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	originalConfig["osc"] = map[string]interface{}{
-		"type":                 machineImageName,
+		"type":                 machineImage.Name,
 		"purpose":              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		"reloadConfigFilePath": common.CloudConfigFilePath,
 		"secretName":           secretName,
+		"customization":        customization,
 	}
+
 	originalConfig["worker"] = map[string]interface{}{
 		"name":                        worker.Name,
 		"evictionHardMemoryAvailable": evictionHardMemoryAvailable,
