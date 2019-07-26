@@ -55,9 +55,9 @@ var (
 func init() {
 	testLogger = logger.NewLogger("debug")
 
-	shootName = os.Getenv("SHOOT_NAME_SCHEDULER")
+	shootName = os.Getenv("SHOOT_NAME")
 	if shootName == "" {
-		testLogger.Fatalf("EnvVar 'SHOOT_NAME_SCHEDULER' needs to be specified")
+		testLogger.Fatalf("EnvVar 'SHOOT_NAME' needs to be specified")
 	}
 	projectNamespace = os.Getenv("PROJECT_NAMESPACE")
 	if projectNamespace == "" {
