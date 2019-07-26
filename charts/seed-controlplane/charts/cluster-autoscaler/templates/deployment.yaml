@@ -53,6 +53,24 @@ spec:
         {{- range $key, $flag := .Values.flags }}
         - --{{ $flag.name }}={{ $flag.value }}
         {{- end }}
+        {{- if .Values.scaleDownUtilizationThreshold }}
+        - --scale-down-utilization-threshold={{ .Values.scaleDownUtilizationThreshold }}
+        {{- end }}
+        {{- if .Values.scaleDownUnneededTime }}
+        - --scale-down-unneeded-time={{ .Values.scaleDownUnneededTime }}
+        {{- end }}
+        {{- if .Values.scaleDownDelayAfterAdd }}
+        - --scale-down-delay-after-add={{ .Values.scaleDownDelayAfterAdd }}
+        {{- end }}
+        {{- if .Values.scaleDownDelayAfterFailure }}
+        - --scale-down-delay-after-failure={{ .Values.scaleDownDelayAfterFailure }}
+        {{- end }}
+        {{- if .Values.scaleDownDelayAfterDelete }}
+        - --scale-down-delay-after-delete={{ .Values.scaleDownDelayAfterDelete }}
+        {{- end }}
+        {{- if .Values.scanInterval }}
+        - --scan-interval={{ .Values.scanInterval }}
+        {{- end }}
         - --v=2
         env:
         - name: CONTROL_NAMESPACE
