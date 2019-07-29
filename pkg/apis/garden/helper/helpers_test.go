@@ -152,4 +152,89 @@ var _ = Describe("helper", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Describe("#DetermineLatestMachineImage for images with different names", func() {
+		It("should return the Machine Images containing the latest image version", func() {
+			images := []garden.MachineImage{
+				{
+					Name: "coreos",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: "1.1",
+						},
+						{
+							Version: "0.0.2",
+						},
+						{
+							Version: "0.0.1",
+						},
+					},
+				},
+
+				{
+					Name: "xy",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: "2.1",
+						},
+						{
+							Version: "1.0.0",
+						},
+						{
+							Version: "1.0.1",
+						},
+					},
+				},
+			}
+
+			latestImages, err := DetermineLatestMachineImageVersions(images)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(latestImages).ToNot(BeNil())
+			Expect(latestImages).ToNot(BeEmpty())
+			Expect(latestImages).To(HaveLen(2))
+
+			Expect(latestImages["xy"]).To(Equal(
+				garden.MachineImageVersion{
+					Version: "2.1",
+				},
+			))
+
+			Expect(latestImages["coreos"]).To(Equal(
+				garden.MachineImageVersion{
+					Version: "1.1",
+				},
+			))
+		})
+
+		It("should return an error for invalid semVerVersion", func() {
+			images := []garden.MachineImage{
+				{
+					Name: "coreos",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: "1.1",
+						},
+						{
+							Version: "0.0.2",
+						},
+						{
+							Version: "0.0.1",
+						},
+					},
+				},
+				{
+					Name: "xy",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: "0.xx.0",
+						},
+					},
+				},
+			}
+
+			_, err := DetermineLatestMachineImageVersions(images)
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })

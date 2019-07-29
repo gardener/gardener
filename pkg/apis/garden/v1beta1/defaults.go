@@ -130,7 +130,8 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		obj.Spec.Maintenance = &Maintenance{
 			AutoUpdate: &MaintenanceAutoUpdate{
-				KubernetesVersion: trueVar,
+				KubernetesVersion:   trueVar,
+				MachineImageVersion: &trueVar,
 			},
 			TimeWindow: &MaintenanceTimeWindow{
 				Begin: mt.Begin().Formatted(),
@@ -140,8 +141,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 	} else {
 		if obj.Spec.Maintenance.AutoUpdate == nil {
 			obj.Spec.Maintenance.AutoUpdate = &MaintenanceAutoUpdate{
-				KubernetesVersion: trueVar,
+				KubernetesVersion:   trueVar,
+				MachineImageVersion: &trueVar,
 			}
+		}
+
+		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
+			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = &trueVar
 		}
 
 		if obj.Spec.Maintenance.TimeWindow == nil {

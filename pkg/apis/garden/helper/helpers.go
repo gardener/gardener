@@ -16,6 +16,8 @@ package helper
 
 import (
 	"errors"
+	"fmt"
+	"github.com/Masterminds/semver"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 )
@@ -96,4 +98,38 @@ func DetermineCloudProviderInShoot(cloudObj garden.Cloud) (garden.CloudProvider,
 		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/packet")
 	}
 	return cloud, nil
+}
+
+// DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
+func DetermineLatestMachineImageVersions(images []garden.MachineImage) (map[string]garden.MachineImageVersion, error) {
+	resultMapVersions := make(map[string]garden.MachineImageVersion)
+
+	for _, image := range images {
+		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image)
+		if err != nil {
+			return nil, err
+		}
+		resultMapVersions[image.Name] = latestMachineImageVersion
+	}
+	return resultMapVersions, nil
+}
+
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
+func DetermineLatestMachineImageVersion(image garden.MachineImage) (garden.MachineImageVersion, error) {
+	var (
+		latestSemVerVersion       *semver.Version
+		latestMachineImageVersion garden.MachineImageVersion
+	)
+
+	for _, imageVersion := range image.Versions {
+		v, err := semver.NewVersion(imageVersion.Version)
+		if err != nil {
+			return garden.MachineImageVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
+		}
+		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
+			latestSemVerVersion = v
+			latestMachineImageVersion = imageVersion
+		}
+	}
+	return latestMachineImageVersion, nil
 }

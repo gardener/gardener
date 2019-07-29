@@ -26,7 +26,8 @@ spec:
       - name: haproxy
       machineImages:
       - name: coreos
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to OpenStack Glance image names for this CloudProfile must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: medium_2_4

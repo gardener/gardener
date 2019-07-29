@@ -267,7 +267,7 @@ func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
 }
 
 // GetMachineImage returns the name of the used machine image.
-func (s *Shoot) GetMachineImage() *gardenv1beta1.MachineImage {
+func (s *Shoot) GetMachineImage() *gardenv1beta1.ShootMachineImage {
 	return helper.GetMachineImageFromShoot(s.CloudProvider, s.Info)
 }
 

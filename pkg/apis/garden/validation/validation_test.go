@@ -119,7 +119,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateCloudProfile(cloudProfile)
 
-			Expect(len(errorList)).To(Equal(2))
+			Expect(errorList).To(HaveLen(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -145,8 +145,11 @@ var _ = Describe("validation", func() {
 								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "some-machineimage",
-										Version: "1.2.3",
+										Name: "some-machineimage",
+										Versions: []garden.MachineImageVersion{
+											{
+												Version: "1.2.3"},
+										},
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -161,7 +164,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateCloudProfile(awsCloudProfile)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
@@ -169,7 +172,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateCloudProfile(awsCloudProfile)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.caBundle"),
@@ -182,7 +185,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
@@ -194,7 +197,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
@@ -208,7 +211,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
@@ -218,18 +221,25 @@ var _ = Describe("validation", func() {
 				It("should forbid duplicate names in list of machine images", func() {
 					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:    "some-machineimage",
-							Version: "3.4.5",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.6"},
+							},
 						},
 						{
-							Name:    "some-machineimage",
-							Version: "3.4.5",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.5",
+								},
+							},
 						},
 					}
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeDuplicate),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
@@ -245,11 +255,82 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
-					}))
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
+					}))))
+				})
+
+				It("should forbid nonSemVer machine image versions", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1].versions[0].version", fldPath)),
+						}))))
+				})
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("xy"),
+					}))))
 				})
 			})
 
@@ -259,7 +340,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -285,7 +366,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
+					Expect(errorList).To(HaveLen(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
@@ -311,7 +392,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
@@ -337,7 +418,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
@@ -355,7 +436,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
@@ -367,7 +448,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
@@ -395,8 +476,8 @@ var _ = Describe("validation", func() {
 								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "some-machineimage",
-										Version: "version-1.6.4",
+										Name:     "some-machineimage",
+										Versions: []garden.MachineImageVersion{{Version: "1.6.4"}},
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -425,7 +506,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
@@ -437,7 +518,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
@@ -451,7 +532,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
@@ -461,18 +542,25 @@ var _ = Describe("validation", func() {
 				It("should forbid duplicate names in list of machine images", func() {
 					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:    "some-machineimage",
-							Version: "some-name",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.6"},
+							},
 						},
 						{
-							Name:    "some-machineimage",
-							Version: "some-name",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.5",
+								},
+							},
 						},
 					}
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeDuplicate),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
@@ -481,16 +569,19 @@ var _ = Describe("validation", func() {
 
 				It("should forbid machine images with empty image names", func() {
 					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.MachineImage{
-						{
-							Name: "some-machineimage",
-						},
+						{},
 					}
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
+					Expect(errorList).To(HaveLen(2))
+
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].name", fldPath)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
 					}))))
 				})
 			})
@@ -501,7 +592,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -527,7 +618,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
+					Expect(errorList).To(HaveLen(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
@@ -549,7 +640,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
@@ -575,7 +666,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
@@ -593,7 +684,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.countFaultDomains", fldPath)),
@@ -610,7 +701,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.countFaultDomains[0].region", fldPath)),
@@ -628,7 +719,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.countUpdateDomains", fldPath)),
@@ -645,7 +736,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.countUpdateDomains[0].region", fldPath)),
@@ -673,8 +764,8 @@ var _ = Describe("validation", func() {
 								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "some-machineimage",
-										Version: "v-1.6.4",
+										Name:     "some-machineimage",
+										Versions: []garden.MachineImageVersion{{Version: "1.6.4"}},
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -692,7 +783,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
@@ -704,7 +795,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
@@ -718,7 +809,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
@@ -728,18 +819,25 @@ var _ = Describe("validation", func() {
 				It("should forbid duplicate names in list of machine images", func() {
 					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:    "some-machineimage",
-							Version: "some-image",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.6"},
+							},
 						},
 						{
-							Name:    "some-machineimage",
-							Version: "some-image",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.5",
+								},
+							},
 						},
 					}
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeDuplicate),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
@@ -755,11 +853,81 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
-					}))
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
+					}))))
+				})
+
+				It("should forbid nonSemVer machine image versions", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1].versions[0].version", fldPath)),
+						}))))
+				})
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("xy"),
+					}))))
 				})
 			})
 
@@ -769,7 +937,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -795,7 +963,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
+					Expect(errorList).To(HaveLen(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
@@ -821,7 +989,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
@@ -847,7 +1015,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
@@ -865,7 +1033,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
@@ -877,7 +1045,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
@@ -916,8 +1084,8 @@ var _ = Describe("validation", func() {
 
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "some-machineimage",
-										Version: "v-1.6.4",
+										Name:     "some-machineimage",
+										Versions: []garden.MachineImageVersion{{Version: "1.6.4"}},
 									},
 								},
 								MachineTypes: openStackMachineTypesConstraint,
@@ -935,7 +1103,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.floatingPools", fldPath)),
@@ -951,7 +1119,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.floatingPools[0].name", fldPath)),
@@ -965,7 +1133,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
@@ -977,7 +1145,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
@@ -991,7 +1159,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.loadBalancerProviders", fldPath)),
@@ -1007,7 +1175,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.loadBalancerProviders[0].name", fldPath)),
@@ -1021,7 +1189,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
@@ -1031,18 +1199,25 @@ var _ = Describe("validation", func() {
 				It("should forbid duplicate names in list of machine images", func() {
 					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:    "some-machineimage",
-							Version: "some-image",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.6"},
+							},
 						},
 						{
-							Name:    "some-machineimage",
-							Version: "some-image",
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "3.4.5",
+								},
+							},
 						},
 					}
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeDuplicate),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
@@ -1058,11 +1233,82 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
-					}))
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
+					}))))
+				})
+
+				It("should forbid nonSemVer machine image versions", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xz",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1].versions[0].version", fldPath)),
+						}))))
+				})
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("xy"),
+					}))))
 				})
 			})
 
@@ -1072,7 +1318,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -1098,7 +1344,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(6))
+					Expect(errorList).To(HaveLen(6))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].volumeType", fldPath)),
@@ -1132,7 +1378,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
@@ -1144,7 +1390,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
@@ -1162,7 +1408,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.keyStoneURL", fldPath)),
@@ -1176,7 +1422,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.dhcpDomain", fldPath)),
@@ -1213,8 +1459,8 @@ var _ = Describe("validation", func() {
 								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "some-machineimage",
-										Version: "v.vhd",
+										Name:     "some-machineimage",
+										Versions: []garden.MachineImageVersion{{Version: "1.0.0"}},
 									},
 								},
 								MachineTypes: []garden.AlicloudMachineType{
@@ -1251,7 +1497,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateCloudProfile(alicloudProfile)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
@@ -1259,7 +1505,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateCloudProfile(alicloudProfile)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.caBundle"),
@@ -1272,7 +1518,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
@@ -1284,7 +1530,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
@@ -1298,23 +1544,95 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
 					}))
 				})
 
-				It("should forbid empty machine image version", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].Version = ""
+				It("should forbid empty machine image versions slice", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].Versions = []garden.MachineImageVersion{}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
-					}))
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
+						})),
+					))
+				})
+				It("should forbid nonSemVer machine image versions", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1].versions[0].version", fldPath)),
+						}))))
+				})
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("xy"),
+					}))))
 				})
 			})
 
@@ -1324,7 +1642,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -1359,7 +1677,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
+					Expect(errorList).To(HaveLen(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
@@ -1395,7 +1713,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].zones[0]", fldPath)),
@@ -1409,7 +1727,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
@@ -1442,7 +1760,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
@@ -1468,7 +1786,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
+					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].zones[0]", fldPath)),
@@ -1482,7 +1800,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(3))
+					Expect(errorList).To(HaveLen(3))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
@@ -1494,7 +1812,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
+					Expect(errorList).To(HaveLen(4))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
@@ -1523,8 +1841,8 @@ var _ = Describe("validation", func() {
 								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.MachineImage{
 									{
-										Name:    "Container Linux - Stable",
-										Version: "d61c3912-8422-4daf-835e-854efa0062e4",
+										Name:     "Container Linux - Stable",
+										Versions: []garden.MachineImageVersion{{Version: "2135.5.0"}},
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -1590,14 +1908,89 @@ var _ = Describe("validation", func() {
 					}))))
 				})
 
-				It("should forbid empty machine image version", func() {
-					packetProfile.Spec.Packet.Constraints.MachineImages[0].Version = ""
+				It("should forbid empty machine image versions slice", func() {
+					packetProfile.Spec.Packet.Constraints.MachineImages[0].Versions = []garden.MachineImageVersion{}
 
 					errorList := ValidateCloudProfile(packetProfile)
 
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(HaveLen(1))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].versions", fldPath)),
+						})),
+					))
+				})
+
+				It("should forbid nonSemVer machine image versions", func() {
+					packetProfile.Spec.Packet.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(HaveLen(2))
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1].versions[0].version", fldPath)),
+						}))))
+				})
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					packetProfile.Spec.Packet.Constraints.MachineImages = []garden.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.MachineImageVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(HaveLen(2))
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
+						"Detail": ContainSubstring("xy"),
 					}))))
 				})
 			})
@@ -1708,7 +2101,7 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(packetProfile)
 
-					Expect(len(errorList)).To(Equal(2))
+					Expect(errorList).To(HaveLen(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
@@ -1935,7 +2328,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSeed(seed)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 
 		It("should forbid Seed resources with empty metadata", func() {
@@ -1943,7 +2336,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateSeed(seed)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -1955,7 +2348,7 @@ var _ = Describe("validation", func() {
 				common.AnnotatePersistentVolumeMinimumSize: "10Gix",
 			}
 			errorList := ValidateSeed(seed)
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
@@ -1970,7 +2363,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateSeed(seed)
 
-			Expect(len(errorList)).To(Equal(8))
+			Expect(errorList).To(HaveLen(8))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.profile"),
@@ -2071,7 +2464,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateQuota(quota)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 
 		It("should forbid Quota specification with empty or invalid keys", func() {
@@ -2081,7 +2474,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateQuota(quota)
 
-			Expect(len(errorList)).To(Equal(5))
+			Expect(errorList).To(HaveLen(5))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -2124,7 +2517,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 
 		It("should forbid empty SecretBinding resources", func() {
@@ -2133,7 +2526,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(len(errorList)).To(Equal(3))
+			Expect(errorList).To(HaveLen(3))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -2155,7 +2548,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("quotas[0].name"),
@@ -2172,7 +2565,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-			Expect(len(errorList)).To(Equal(2))
+			Expect(errorList).To(HaveLen(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("secretRef"),
@@ -2648,7 +3041,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("metadata.name"),
@@ -2663,7 +3056,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(3))
+			Expect(errorList).To(HaveLen(3))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -2724,7 +3117,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(4))
+			Expect(errorList).To(HaveLen(4))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.profile"),
@@ -2815,7 +3208,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 
 		Context("AWS specific validation", func() {
@@ -3049,7 +3442,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
@@ -3072,7 +3465,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
@@ -3090,7 +3483,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(errorList).To(HaveLen(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3137,7 +3530,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
@@ -3174,7 +3567,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
@@ -3186,7 +3579,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3204,7 +3597,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3216,7 +3609,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
@@ -3231,7 +3624,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
@@ -3248,7 +3641,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
@@ -3290,7 +3683,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid specifying a resource group configuration", func() {
@@ -3298,7 +3691,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup.name", fldPath)),
@@ -3312,7 +3705,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.name", fldPath)),
@@ -3449,7 +3842,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
@@ -3472,7 +3865,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
@@ -3490,7 +3883,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(errorList).To(HaveLen(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3537,7 +3930,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
@@ -3560,7 +3953,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -3574,7 +3967,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
@@ -3592,7 +3985,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
@@ -3604,7 +3997,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3622,7 +4015,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3639,7 +4032,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(3))
+				Expect(errorList).To(HaveLen(3))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup", fldPath)),
@@ -3660,7 +4053,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
@@ -3807,7 +4200,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
@@ -3830,7 +4223,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
@@ -3848,7 +4241,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(errorList).To(HaveLen(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3895,7 +4288,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
@@ -3918,7 +4311,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -3932,7 +4325,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
@@ -3944,7 +4337,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3962,7 +4355,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -3974,7 +4367,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
@@ -3989,7 +4382,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
@@ -4006,7 +4399,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
@@ -4050,7 +4443,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			Context("CIDR", func() {
@@ -4199,7 +4592,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
@@ -4222,7 +4615,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
@@ -4240,7 +4633,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(errorList).To(HaveLen(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4287,7 +4680,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
@@ -4310,7 +4703,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -4324,7 +4717,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
@@ -4336,7 +4729,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4354,7 +4747,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4366,7 +4759,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
@@ -4381,7 +4774,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
@@ -4398,7 +4791,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
@@ -4439,7 +4832,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			Context("CIDR", func() {
@@ -4526,7 +4919,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(errorList).To(HaveLen(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4666,7 +5059,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid invalid floating pool name configuration", func() {
@@ -4674,7 +5067,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.floatingPoolName", fldPath)),
@@ -4686,7 +5079,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.loadBalancerProvider", fldPath)),
@@ -4779,7 +5172,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
@@ -4798,7 +5191,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
@@ -4814,7 +5207,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(5))
+				Expect(errorList).To(HaveLen(5))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4849,7 +5242,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
@@ -4868,7 +5261,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid too long worker names", func() {
@@ -4880,7 +5273,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4896,7 +5289,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -4908,7 +5301,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
@@ -4923,7 +5316,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
@@ -4940,7 +5333,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
@@ -5093,7 +5486,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.requiredClaims"),
@@ -5108,7 +5501,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 		})
 
@@ -5118,7 +5511,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid specifying admission plugins without a name", func() {
@@ -5130,7 +5523,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
@@ -5229,7 +5622,7 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(5 * time.Minute)
 
 				errorList := ValidateShoot(shoot)
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 		})
 
@@ -5307,7 +5700,7 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Kubernetes.Version = "1.14.1"
 				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
 				errorList := ValidateShoot(shoot)
-				Expect(len(errorList)).To(Equal(2))
+				Expect(errorList).To(HaveLen(2))
 			})
 		})
 
@@ -5354,7 +5747,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.kubernetes.version"),
@@ -5366,7 +5759,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(2))
+			Expect(errorList).To(HaveLen(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.kubernetes.version"),
@@ -5383,7 +5776,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.kubernetes.version"),
@@ -5396,7 +5789,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.kubernetes.version"),
@@ -5409,7 +5802,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.maintenance"),
@@ -5421,7 +5814,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.maintenance.autoUpdate"),
@@ -5433,7 +5826,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.maintenance.timeWindow"),
@@ -5482,7 +5875,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 		})
 
@@ -5495,7 +5888,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec"),
@@ -5513,7 +5906,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 	})
 
@@ -5538,7 +5931,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid changing the uid", func() {
@@ -5548,7 +5941,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("status.uid"),
@@ -5563,7 +5956,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid changing the technical id", func() {
@@ -5573,7 +5966,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
-				Expect(len(errorList)).To(Equal(1))
+				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("status.technicalID"),
@@ -5604,7 +5997,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(HaveLen(0))
 		})
 
 		It("should forbid BackupInfrastructure resources with empty metadata", func() {

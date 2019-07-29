@@ -15,8 +15,8 @@
 package cmd
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/test/integration/framework"
@@ -48,8 +48,8 @@ func UpdateWorkerZone(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.Cl
 // UpdateMachineImage updates the machine image name and version of a shoot if a image is provided.
 func UpdateMachineImage(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.CloudProvider, image, version string) error {
 	if image != "" {
-		machineImage := &gardenv1beta1.MachineImage{
-			Name: image,
+		machineImage := &gardenv1beta1.ShootMachineImage{
+			Name:    image,
 			Version: version,
 		}
 		switch cloudprovider {
@@ -172,7 +172,7 @@ func UpdateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastru
 }
 
 // GetBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
-func GetBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
+func GetBackupInfrastructureOfShoot(ctx context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
 	backups := &gardenv1beta1.BackupInfrastructureList{}
 	err := shootGardenerTest.GardenClient.Client().List(ctx, backups, client.InNamespace(shootObject.Namespace))
 	if err != nil {

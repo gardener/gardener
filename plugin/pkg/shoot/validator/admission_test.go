@@ -61,6 +61,10 @@ var _ = Describe("validator", func() {
 			baseDomain           = "example.com"
 			trueVar              = true
 
+			validMachineImageName         = "some-machineimage"
+			validMachineImageVersions     = []garden.MachineImageVersion{{Version: "0.0.1"}}
+			validShootMachineImageVersion = "0.0.1"
+
 			seedPodsCIDR     = gardencore.CIDR("10.241.128.0/17")
 			seedServicesCIDR = gardencore.CIDR("10.241.0.0/17")
 			seedNodesCIDR    = gardencore.CIDR("10.240.0.0/16")
@@ -142,7 +146,7 @@ var _ = Describe("validator", func() {
 			shoot.Spec.Cloud.OpenStack = nil
 		})
 
-		// The verification of protection is independent of the Cloud Provider (being checked before). We  picked AWS.
+		// The verification of protection is independent of the Cloud Provider (being checked before). We use AWS.
 		Context("VALIDATION: Shoot references a Seed already -  validate user provided seed regarding protection", func() {
 			var (
 				falseVar   = false
@@ -159,8 +163,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "ami-12345678",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -209,9 +213,9 @@ var _ = Describe("validator", func() {
 					},
 				}
 				zones        = []string{"europe-a"}
-				machineImage = &garden.MachineImage{
-					Name:    "some-machineimage",
-					Version: "ami-12345678",
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
 				}
 				awsCloud = &garden.AWSCloud{}
 			)
@@ -511,8 +515,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "1.2.3",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -561,9 +565,9 @@ var _ = Describe("validator", func() {
 					},
 				}
 				zones        = []string{"europe-a"}
-				machineImage = &garden.MachineImage{
-					Name:    "some-machineimage",
-					Version: "1.2.3",
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
 				}
 				awsCloud = &garden.AWSCloud{}
 			)
@@ -757,10 +761,47 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.AWS.MachineImage = &garden.MachineImage{
+				shoot.Spec.Cloud.AWS.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.AWS.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.AWS.Constraints.MachineImages = append(cloudProfile.Spec.AWS.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -882,8 +923,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "1.2.3",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -1028,11 +1069,48 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
-			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Azure.MachineImage = &garden.MachineImage{
+			It(" ", func() {
+				shoot.Spec.Cloud.Azure.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.Azure.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.Azure.Constraints.MachineImages = append(cloudProfile.Spec.Azure.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1129,8 +1207,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "core-1.2.3",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -1268,10 +1346,47 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.GCP.MachineImage = &garden.MachineImage{
+				shoot.Spec.Cloud.GCP.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.GCP.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.GCP.Constraints.MachineImages = append(cloudProfile.Spec.GCP.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1354,8 +1469,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "core-1.2.3",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -1479,10 +1594,47 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Packet.MachineImage = &garden.MachineImage{
+				shoot.Spec.Cloud.Packet.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.Packet.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.Packet.Constraints.MachineImages = append(cloudProfile.Spec.Packet.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1575,8 +1727,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "core-1.2.3",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.OpenStackMachineType{
@@ -1753,10 +1905,47 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.MachineImage{
+				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.OpenStack.Constraints.MachineImages = append(cloudProfile.Spec.OpenStack.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1818,8 +2007,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.MachineImage{
 							{
-								Name:    "some-machineimage",
-								Version: "abcd.vhd",
+								Name:     validMachineImageName,
+								Versions: validMachineImageVersions,
 							},
 						},
 						MachineTypes: []garden.AlicloudMachineType{
@@ -1967,10 +2156,47 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.MachineImage{
+				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.ShootMachineImage{
 					Name:    "not-supported",
 					Version: "not-supported",
 				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.Alicloud.Constraints.MachineImages = append(cloudProfile.Spec.Alicloud.Constraints.MachineImages, garden.MachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.MachineImageVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.MachineImage{
+					Name: "other-image-name",
+					Versions: []garden.MachineImageVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

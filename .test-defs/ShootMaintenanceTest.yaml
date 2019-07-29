@@ -1,0 +1,16 @@
+kind: TestDefinition
+metadata:
+  name: shoot-maintenance-test
+spec:
+  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com
+  description: Tests the shoot machine image maintenance.
+
+  activeDeadlineSeconds: 5400
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/shoot-maintenance
+
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0

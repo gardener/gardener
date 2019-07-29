@@ -86,7 +86,6 @@ type OperatingSystemConfigSpec struct {
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
-
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
