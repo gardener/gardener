@@ -20,7 +20,7 @@ spec:
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
       -kubeconfig-path=$TM_KUBECONFIG_PATH/gardener.config
       -kubeconfig-path-externalcluster=$TM_KUBECONFIG_PATH/shoot.config
-      -plant-path=$GOPATH/src/github.com/gardener/gardener/example/100-plant.yaml
+      -plant-path=$(realpath ./example/100-plant.yaml)
       -plant-test-namespace=$PROJECT_NAMESPACE
 
   image: golang:1.12.7
