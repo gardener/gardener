@@ -241,7 +241,12 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 		return err
 	}
 
-	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(time.Duration(*cleanOptions.FinalizeGracePeriod)*time.Second).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
+	gracePeriod := time.Second
+	if cleanOptions != nil && cleanOptions.FinalizeGracePeriod != nil {
+		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriod)
+	}
+
+	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
 		withFinalizers := obj.DeepCopyObject()
 		acc.SetFinalizers(nil)
 		return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
