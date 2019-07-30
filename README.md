@@ -29,9 +29,9 @@ Conformance test results of latest stable Gardener release, transparently visibl
 | **Alicloud** | N/A | [![Gardener v1.14 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.14%20Alibaba%20Cloud/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.14%20Alibaba%20Cloud) | [![Gardener v1.13 Conformance Tests](https://testgrid.k8s.io/q/summary/conformance-gardener/Gardener,%20v1.13%20Alibaba%20Cloud/tests_status?style=svg)](https://testgrid.k8s.io/conformance-gardener#Gardener,%20v1.13%20Alibaba%20Cloud) | N/A | N/A | N/A 
 | **Packet**<sup>1</sup> | | | | | |
 
-<sup>1</sup> to be determined ([PR #916](https://github.com/gardener/gardener/pull/916))
+<sup>1</sup> will be available in near future
 
-Besides the conformance tests, many more e2e tests are executed on a daily basis. Access to results of these additional e2e tests, will be provided in the near future.
+Besides the conformance tests, over 400 additional e2e tests are executed on a daily basis. Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
 
 ## To start using or developing the Gardener locally
 
