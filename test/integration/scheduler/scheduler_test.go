@@ -88,7 +88,7 @@ var _ = Describe("Scheduler testing", func() {
 		shootGardenerTest, err := NewShootGardenerTest(*kubeconfig, shoot, schedulerOperationsTestLogger)
 		Expect(err).To(BeNil())
 
-		schedulerGardenerTest, err = NewGardenSchedulerTest(ctx, shootGardenerTest)
+		schedulerGardenerTest, err = NewGardenSchedulerTest(ctx, shootGardenerTest, *kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 		schedulerGardenerTest.ShootGardenerTest.Shoot.Namespace = *schedulerTestNamespace
 	}, InitializationTimeout)

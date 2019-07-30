@@ -17,6 +17,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -40,9 +41,16 @@ import (
 const configurationFileName = "schedulerconfiguration.yaml"
 
 // NewGardenSchedulerTest creates a new SchedulerGardenerTest by retrieving the ConfigMap containing the Scheduler Configuration & parsing the Scheduler Configuration
-func NewGardenSchedulerTest(ctx context.Context, shootGardenTest *ShootGardenerTest) (*SchedulerGardenerTest, error) {
+func NewGardenSchedulerTest(ctx context.Context, shootGardenTest *ShootGardenerTest, hostKubeconfigPath string) (*SchedulerGardenerTest, error) {
+	k8sHostClient, err := kubernetes.NewClientFromFile("", hostKubeconfigPath, client.Options{
+		Scheme: kubernetes.ShootScheme,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	schedulerConfigurationConfigMap := &corev1.ConfigMap{}
-	if err := shootGardenTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapNamespace, Name: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapName}, schedulerConfigurationConfigMap); err != nil {
+	if err := k8sHostClient.Client().Get(ctx, client.ObjectKey{Namespace: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapNamespace, Name: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapName}, schedulerConfigurationConfigMap); err != nil {
 		return nil, err
 	}
 

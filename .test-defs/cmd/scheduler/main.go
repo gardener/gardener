@@ -122,6 +122,7 @@ func init() {
 func main() {
 	ctx := context.Background()
 	defer ctx.Done()
+	hostConfigPath := fmt.Sprintf("%s/host.config", kubeconfigPath)
 	gardenerConfigPath := fmt.Sprintf("%s/gardener.config", kubeconfigPath)
 
 	shootGardenerTest, err := framework.NewShootGardenerTest(gardenerConfigPath, nil, testLogger)
@@ -158,7 +159,7 @@ func main() {
 
 	shootGardenerTest.Shoot = shootObject
 
-	schedulerGardenerTest, err := framework.NewGardenSchedulerTest(ctx, shootGardenerTest)
+	schedulerGardenerTest, err := framework.NewGardenSchedulerTest(ctx, shootGardenerTest, hostConfigPath)
 	if err != nil {
 		testLogger.Fatalf("Failed to create an new Gardener Scheduler test '%v'", err)
 	}
