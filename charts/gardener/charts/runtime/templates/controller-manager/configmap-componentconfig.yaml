@@ -65,6 +65,9 @@ data:
         {{- if .Values.global.controller.config.controllers.shoot.respectSyncPeriodOverwrite }}
         respectSyncPeriodOverwrite: {{ .Values.global.controller.config.controllers.shoot.respectSyncPeriodOverwrite }}
         {{- end }}
+        {{- if .Values.global.controller.config.controllers.shoot.reconcileInMaintenanceOnly }}
+        reconcileInMaintenanceOnly: {{ .Values.global.controller.config.controllers.shoot.reconcileInMaintenanceOnly }}
+        {{- end }}
         {{- if .Values.global.controller.config.controllers.shoot.retrySyncPeriod }}
         retrySyncPeriod: {{ .Values.global.controller.config.controllers.shoot.retrySyncPeriod }}
         {{- end }}

@@ -175,6 +175,8 @@ global:
           concurrentSyncs: 20
           syncPeriod: 1h
           retryDuration: 24h
+          respectSyncPeriodOverwrite: false
+          reconcileInMaintenanceOnly: false
         shootCare:
           concurrentSyncs: 5
           syncPeriod: 30s
