@@ -62,7 +62,7 @@ def supports_component(component_descriptor: ComponentDescriptor, name: str, ver
     return False
 
 latest_gardener_release = version.find_latest_version(get_releases("gardener", "gardener"))
-if latest_gardener_release:
+if not latest_gardener_release:
     print("No latest gardener version found")
     exit(1)
 
@@ -78,7 +78,7 @@ for release in gardensetup_releases:
     except:
         pass
 
-if supported_releases:
+if not supported_releases:
     print("No supported garden-setup versions found")
     exit(1)
 
