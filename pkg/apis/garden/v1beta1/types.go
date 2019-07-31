@@ -1011,6 +1011,11 @@ type Worker struct {
 	Name string `json:"name"`
 	// MachineType is the machine type of the worker group.
 	MachineType string `json:"machineType"`
+	// ShootMachineImage holds information about the machine image to use for all workers.
+	// It will default to the latest version of the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	// +optional
+	MachineImage *ShootMachineImage `json:"machineImage,omitempty"`
 	// AutoScalerMin is the minimum number of VMs to create.
 	AutoScalerMin int `json:"autoScalerMin"`
 	// AutoScalerMin is the maximum number of VMs to create.

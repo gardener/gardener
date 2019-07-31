@@ -1559,6 +1559,12 @@ func schema_pkg_apis_garden_v1beta1_AWSWorker(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -1647,7 +1653,7 @@ func schema_pkg_apis_garden_v1beta1_AWSWorker(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -2156,6 +2162,12 @@ func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -2244,7 +2256,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -2606,6 +2618,12 @@ func schema_pkg_apis_garden_v1beta1_AzureWorker(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -2694,7 +2712,7 @@ func schema_pkg_apis_garden_v1beta1_AzureWorker(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -3557,6 +3575,12 @@ func schema_pkg_apis_garden_v1beta1_GCPWorker(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -3645,7 +3669,7 @@ func schema_pkg_apis_garden_v1beta1_GCPWorker(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -5187,6 +5211,12 @@ func schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -5261,7 +5291,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -5484,6 +5514,12 @@ func schema_pkg_apis_garden_v1beta1_PacketWorker(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -5572,7 +5608,7 @@ func schema_pkg_apis_garden_v1beta1_PacketWorker(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -6626,6 +6662,12 @@ func schema_pkg_apis_garden_v1beta1_Worker(ref common.ReferenceCallback) common.
 							Format:      "",
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
+						},
+					},
 					"autoScalerMin": {
 						SchemaProps: spec.SchemaProps{
 							Description: "AutoScalerMin is the minimum number of VMs to create.",
@@ -6700,7 +6742,7 @@ func schema_pkg_apis_garden_v1beta1_Worker(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

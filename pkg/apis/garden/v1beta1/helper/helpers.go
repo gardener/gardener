@@ -17,9 +17,10 @@ package helper
 import (
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"sort"
 	"strings"
+
+	"github.com/Masterminds/semver"
 
 	"strconv"
 
@@ -159,8 +160,8 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 	return workers
 }
 
-// GetMachineImageFromShoot returns the machine image used in a shoot manifest, however, it requires the cloud provider as input.
-func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) *gardenv1beta1.ShootMachineImage {
+// GetDefaultMachineImageFromShoot returns the machine image used in a shoot manifest, however, it requires the cloud provider as input.
+func GetDefaultMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) *gardenv1beta1.ShootMachineImage {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return shoot.Spec.Cloud.AWS.MachineImage
@@ -178,14 +179,48 @@ func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *
 	return nil
 }
 
-// GetShootMachineImage returns the machine image used in a shoot manifest.
-func GetShootMachineImage(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.ShootMachineImage, error) {
+// GetMachineImagesFromShoot returns the machine images used in a shoot manifest, however, it requires the cloudprovider as input.
+func GetMachineImagesFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) []*gardenv1beta1.ShootMachineImage {
+	machineImages := []*gardenv1beta1.ShootMachineImage{}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, worker := range shoot.Spec.Cloud.AWS.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, worker := range shoot.Spec.Cloud.Azure.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, worker := range shoot.Spec.Cloud.GCP.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range shoot.Spec.Cloud.Alicloud.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		for _, worker := range shoot.Spec.Cloud.OpenStack.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, worker := range shoot.Spec.Cloud.Packet.Workers {
+			machineImages = append(machineImages, worker.MachineImage)
+		}
+	}
+
+	return machineImages
+}
+
+// GetShootMachineImages returns the machine image used in a shoot manifest.
+func GetShootMachineImages(shoot *gardenv1beta1.Shoot) ([]*gardenv1beta1.ShootMachineImage, error) {
 	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetMachineImageFromShoot(cloudProvider, shoot), nil
+	return GetMachineImagesFromShoot(cloudProvider, shoot), nil
 }
 
 // GetMachineTypesFromCloudProfile retrieves list of machine types from cloud profile
@@ -255,7 +290,7 @@ func SetMachineImages(profile *gardenv1beta1.CloudProfile, images []gardenv1beta
 	return nil
 }
 
-// SetMachineImages sets imageVersions to the matching imageName in the machineImages.
+// SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
 func SetMachineImageVersionsToMachineImage(machineImages []gardenv1beta1.MachineImage, imageName string, imageVersions []gardenv1beta1.MachineImageVersion) ([]gardenv1beta1.MachineImage, error) {
 	for index, image := range machineImages {
 		if strings.ToLower(image.Name) == strings.ToLower(imageName) {
@@ -305,7 +340,7 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 	return cloud, nil
 }
 
-// DetermineMachineImageForName finds the cloud specific machine image in the <cloudProfile> for the given <name> and
+// DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
 func DetermineMachineImageForName(cloudProfile gardenv1beta1.CloudProfile, name string) (bool, gardenv1beta1.MachineImage, error) {
@@ -323,8 +358,8 @@ func DetermineMachineImageForName(cloudProfile gardenv1beta1.CloudProfile, name 
 	return false, gardenv1beta1.MachineImage{}, nil
 }
 
-// UpdateMachineImage updates the machine image for the given cloud provider.
-func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage *gardenv1beta1.ShootMachineImage) func(*gardenv1beta1.Cloud) {
+// UpdateDefaultMachineImage updates the default machine image.
+func UpdateDefaultMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage *gardenv1beta1.ShootMachineImage) func(*gardenv1beta1.Cloud) {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = machineImage }
@@ -338,6 +373,74 @@ func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage 
 		return func(s *gardenv1beta1.Cloud) { s.Packet.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderAlicloud:
 		return func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = machineImage }
+	}
+
+	return nil
+}
+
+// UpdateMachineImages updates the machine images for the given cloud provider.
+func UpdateMachineImages(cloudProvider gardenv1beta1.CloudProvider, machineImages []*gardenv1beta1.ShootMachineImage) func(*gardenv1beta1.Cloud) {
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.AWS.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.AWS.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.Azure.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.Azure.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.GCP.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.GCP.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.OpenStack.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.OpenStack.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.Packet.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.Packet.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		return func(s *gardenv1beta1.Cloud) {
+			for _, machineImage := range machineImages {
+				for idx, worker := range s.Alicloud.Workers {
+					if machineImage.Name == worker.MachineImage.Name {
+						s.Alicloud.Workers[idx].MachineImage = machineImage
+					}
+				}
+			}
+		}
 	}
 
 	return nil

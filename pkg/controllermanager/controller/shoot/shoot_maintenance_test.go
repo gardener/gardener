@@ -14,9 +14,10 @@
 package shoot_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
@@ -88,11 +89,12 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 		})
 	})
-	Describe("MaintainMachineImage", func() {
+	Describe("MaintainMachineImages", func() {
 		var (
-			shootCurrentImage *gardenv1beta1.ShootMachineImage
-			cloudProfile      *gardenv1beta1.CloudProfile
-			shoot             *gardenv1beta1.Shoot
+			shootCurrentImage    *gardenv1beta1.ShootMachineImage
+			cloudProfile         *gardenv1beta1.CloudProfile
+			shoot                *gardenv1beta1.Shoot
+			machineCurrentImages []*gardenv1beta1.ShootMachineImage
 		)
 
 		BeforeEach(func() {
@@ -100,6 +102,8 @@ var _ = Describe("Shoot Maintenance", func() {
 				Name:    "CoreOs",
 				Version: "1.0.0",
 			}
+
+			machineCurrentImages = []*gardenv1beta1.ShootMachineImage{shootCurrentImage}
 
 			cloudProfile = &gardenv1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
@@ -137,35 +141,43 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 		})
-		It("should determine that the shoots machine image must be maintained - ForceUpdate", func() {
+		It("should determine that the shoot worker machine images must be maintained - ForceUpdate", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = &falseVar
 			cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Cloud.GCP = &gardenv1beta1.GCPCloud{MachineImage: shootCurrentImage}
-			hasToBeMaintained, image, err := MaintainMachineImage(shoot, cloudProfile, shootCurrentImage)
+			defaultImage, workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+
 			Expect(err).To(BeNil())
-			Expect(hasToBeMaintained).To(Equal(trueVar))
-			Expect(image.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
-			Expect(image.Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
+			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
+			Expect(defaultImage.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
+			Expect(defaultImage.Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
 		})
 
-		It("should determine that the shoots machine image must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the apiserver)", func() {
+		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the apiserver)", func() {
 			shoot.Spec.Cloud.GCP = &gardenv1beta1.GCPCloud{MachineImage: shootCurrentImage}
-			hasToBeMaintained, image, err := MaintainMachineImage(shoot, cloudProfile, shootCurrentImage)
+			defaultImage, workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+
 			Expect(err).To(BeNil())
-			Expect(hasToBeMaintained).To(Equal(trueVar))
-			Expect(image.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
-			Expect(image.Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
+			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
+			Expect(defaultImage.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
+			Expect(defaultImage.Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[1].Version))
 		})
 
-		It("should determine that the shoots machine image must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
+		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = &falseVar
 			shoot.Spec.Cloud.GCP = &gardenv1beta1.GCPCloud{MachineImage: shootCurrentImage}
-			hasToBeMaintained, _, err := MaintainMachineImage(shoot, cloudProfile, shootCurrentImage)
+			defaultImage, workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+
 			Expect(err).To(BeNil())
-			Expect(hasToBeMaintained).To(Equal(falseVar))
+			Expect(len(workerImages)).To(Equal(0))
+			Expect(defaultImage).To(BeNil())
 		})
 
-		It("should determine that the shoots machine image must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
+		It("should determine that the shoot worker machine images must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
 			cloudProfile.Spec.GCP.Constraints.MachineImages = []gardenv1beta1.MachineImage{
 				{
 					Name: "CoreOs",
@@ -178,18 +190,20 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 			shoot.Spec.Cloud.GCP = &gardenv1beta1.GCPCloud{MachineImage: shootCurrentImage}
+			defaultImage, workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
 
-			hasToBeMaintained, image, err := MaintainMachineImage(shoot, cloudProfile, shootCurrentImage)
 			Expect(err).To(BeNil())
-			Expect(hasToBeMaintained).To(Equal(trueVar))
-			Expect(image.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
-			Expect(image.Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[0].Version))
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
+			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Versions[0].Version))
+			Expect(defaultImage.Name).To(Equal(cloudProfile.Spec.GCP.Constraints.MachineImages[0].Name))
 		})
 
 		It("should return an error - cloud profile has no matching (machineImage.name) machine image defined", func() {
 			cloudProfile.Spec.GCP.Constraints.MachineImages = cloudProfile.Spec.GCP.Constraints.MachineImages[1:]
 			shoot.Spec.Cloud.GCP = &gardenv1beta1.GCPCloud{MachineImage: shootCurrentImage}
-			_, _, err := MaintainMachineImage(shoot, cloudProfile, shootCurrentImage)
+			_, _, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+
 			Expect(err).NotTo(BeNil())
 		})
 	})

@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -80,6 +81,13 @@ type ShootMaintenanceTest struct {
 	CloudProfile      *gardenv1beta1.CloudProfile
 	ShootMachineImage gardenv1beta1.ShootMachineImage
 	CloudProvider     gardenv1beta1.CloudProvider
+}
+
+// WorkerGardenerTest represents an instance of worker tests which contains a shoot test & adds the worker configuration
+type WorkerGardenerTest struct {
+	ShootGardenerTest *ShootGardenerTest
+	CloudProfile      *v1beta1.CloudProfile
+	ShootClient       kubernetes.Interface
 }
 
 // PlantTest represents an instance of shoot tests which entails all necessary data
