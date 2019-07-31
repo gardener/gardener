@@ -192,6 +192,7 @@ spec:
 
   - name: tests-gcp
     dependsOn: [ reconcile-shoots ]
+    artifactsFrom: create-shoot-gcp
     definition:
       label: default
       locationSet: upgraded
