@@ -60,7 +60,7 @@ if [[ $TM_LANDSCAPE == "external" ]]; then
 fi
 
 NEW_GARDENER_VERSION="$(cat $SOURCE_PATH/VERSION)"
-NEW_GARDENERT_COMMIT="$(git rev-parse HEAD)"
+NEW_GARDENERT_COMMIT="$(git --git-dir=$SOURCE_PATH/.git rev-parse HEAD)"
 
 echo "Testmachinery config name: ${TM_CONFIG_NAME}"
 echo "Testmachinery landscape: ${TM_LANDSCAPE}"

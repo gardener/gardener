@@ -52,6 +52,9 @@ spec:
       name: create-garden
       location: default
       config:
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
 {{ toYaml .Values.garden.credentials.config | indent 6 }}
 
   - name: create-shoot-gcp
@@ -359,8 +362,40 @@ spec:
       name: delete-shoot
       locationSet: upgraded
 
-  - name: delete-garden
+  - name: scheduler-test
     dependsOn: [ delete-shoot-aws, delete-shoot-gcp, delete-shoot-az, delete-shoot-gcp-upgraded, delete-shoot-aws-upgraded, delete-shoot-az-upgraded ]
+    definition:
+      name: scheduler-test
+      locationSet: upgraded
+      continueOnError: true
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: aws-scheduler
+      - name: CLOUDPROVIDER
+        type: env
+        value: aws
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SEED
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: aws
+      - name: SECRET_BINDING
+        type: env
+        value: core-aws-aws
+      - name: REGION
+        type: env
+        value: eu-west-1
+      - name: ZONE
+        type: env
+        value: eu-west-1b
+
+  - name: delete-garden
+    dependsOn: [ scheduler-test ]
     definition:
       name: delete-garden
       locationSet: upgraded
