@@ -221,8 +221,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
 	if err := kutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.GardenerRole, common.GardenRoleExtension)
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.ControllerRegistrationName, controllerRegistration.Name)
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, gardencorev1alpha1.GardenRole, gardencorev1alpha1.GardenRoleExtension)
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, gardencorev1alpha1.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil
 	}); err != nil {
 		return err

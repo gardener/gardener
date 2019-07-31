@@ -124,8 +124,8 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 			OwnerReferences: ownerReferences,
 			Annotations:     annotations,
 			Labels: map[string]string{
-				common.GardenRole:   common.GardenRoleSeed,
-				common.GardenerRole: common.GardenRoleSeed,
+				common.GardenRole:             common.GardenRoleSeed,
+				gardencorev1alpha1.GardenRole: common.GardenRoleSeed,
 			},
 		},
 		Spec: gardenv1beta1.SeedSpec{

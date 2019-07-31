@@ -104,6 +104,11 @@ const (
 	// operation.
 	GardenerOperationReconcile = "reconcile"
 
+	// GardenRole is a constant for a label that describes a role.
+	GardenRole = "gardener.cloud/role"
+	// GardenRoleExtension is a constant for a label that describes the 'extensions' role.
+	GardenRoleExtension = "extension"
+
 	// BackupProvider is used to identify the backup provider.
 	BackupProvider = "backup.gardener.cloud/provider"
 	// SeedProvider is used to identify the seed provider.
@@ -142,4 +147,27 @@ const (
 	LabelNetworkPolicyAllowed = "allowed"
 	// LabelNetworkPolicyDisallowed is a constant for disallowing a network policy.
 	LabelNetworkPolicyDisallowed = "disallowed"
+
+	// LabelApp is a constant for a label key.
+	LabelApp = "app"
+	// LabelRole is a constant for a label key.
+	LabelRole = "role"
+	// LabelKubernetes is a constant for a label for Kubernetes workload.
+	LabelKubernetes = "kubernetes"
+	// LabelAPIServer is a constant for a label for the kube-apiserver.
+	LabelAPIServer = "apiserver"
+	// LabelAPIServer is a constant for a label for the kube-controller-manager.
+	LabelControllerManager = "controller-manager"
+	// LabelAPIServer is a constant for a label for the kube-scheduler.
+	LabelScheduler = "scheduler"
+
+	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
+	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
+	// OperatingSystemConfigFilePathKernelSettings is a constant for a path to a file in the operating system config that contains some general kernel settings.
+	OperatingSystemConfigFilePathKernelSettings = "/etc/sysctl.d/99-k8s-general.conf"
+	// OperatingSystemConfigFilePathKubeletConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
+	OperatingSystemConfigFilePathKubeletConfig = "/var/lib/kubelet/config/kubelet"
+
+	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
+	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
 )

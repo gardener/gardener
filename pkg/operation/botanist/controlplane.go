@@ -63,7 +63,7 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
 			common.GardenRole:                 common.GardenRoleShoot,
-			common.GardenerRole:               common.GardenRoleShoot,
+			gardencorev1alpha1.GardenRole:     common.GardenRoleShoot,
 			common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
 			gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
 			gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),

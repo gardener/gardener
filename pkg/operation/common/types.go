@@ -73,9 +73,6 @@ const (
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
 
-	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
-	ControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
-
 	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	// deprecated
@@ -142,18 +139,11 @@ const (
 	// GardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	GardenRole = "garden.sapcloud.io/role"
 
-	// GardenerRole is the key for an annotation on a Kubernetes object indicating what it is used for with the new
-	// naming scheme.
-	GardenerRole = "gardener.cloud/role"
-
 	// GardenRoleShoot is the value of the GardenRole key indicating type 'shoot'.
 	GardenRoleShoot = "shoot"
 
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
-
-	// GardenRoleExtension is the value of the GardenRole key indicating type 'extension'.
-	GardenRoleExtension = "extension"
 
 	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.
 	GardenRoleControlPlane = "controlplane"
