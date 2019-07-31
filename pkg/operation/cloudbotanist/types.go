@@ -26,8 +26,4 @@ type CloudBotanist interface {
 	// Control Plane
 	GenerateEtcdBackupConfig() (map[string][]byte, error)
 	DeployCloudSpecificControlPlane() error
-
-	// Addons
-	GenerateNginxIngressConfig() (map[string]interface{}, error)
-	GenerateVPNShootConfig() (map[string]interface{}, error)
 }

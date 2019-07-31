@@ -767,3 +767,23 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 
 	return nil
 }
+
+// DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order
+// to ensure that they exist in a cluster/reconcile them in case somebody changed something.
+func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
+	var name = "gardener-resource-manager"
+
+	defaultValues := map[string]interface{}{
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-" + name: b.CheckSums[name],
+		},
+		"replicas": b.Shoot.GetReplicas(1),
+	}
+
+	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, values, nil)
+}

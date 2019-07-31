@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hybridbotanist
+package botanist
 
 import (
 	"context"
@@ -21,11 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -33,17 +28,18 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	yaml "gopkg.in/yaml.v2"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,7 +62,7 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 
 // ComputeShootOperatingSystemConfig generates the shoot operating system configuration. Both, the downloader
 // and original configuration will be generated and stored in the shoot specific cloud config map for later usage.
-func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
+func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error {
 	var (
 		machineTypes = b.Shoot.GetMachineTypesFromCloudProfile()
 	)
@@ -124,7 +120,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	return nil
 }
 
-func (b *HybridBotanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
+func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
 	return map[string]interface{}{
 		"type":    machineImageName,
 		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
@@ -132,7 +128,7 @@ func (b *HybridBotanist) generateDownloaderConfig(machineImageName string) map[s
 	}
 }
 
-func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error) {
+func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	var (
 		serviceNetwork = b.Shoot.GetServiceNetwork()
 
@@ -172,7 +168,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *Botanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
@@ -214,7 +210,7 @@ func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []g
 	return &shoot.CloudConfig{Downloader: *downloader, Original: *original}, nil
 }
 
-func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
+func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
 	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
 		return nil, err
 	}
@@ -250,7 +246,7 @@ func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, na
 
 // generateCloudConfigExecutionChart renders the gardener-resource-manager configuration for the cloud config user data.
 // After that it creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedChart, error) {
+func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedChart, error) {
 	bootstrapTokenSecret, err := b.computeBootstrapToken()
 	if err != nil {
 		return nil, err
@@ -292,7 +288,7 @@ func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.Ren
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 
-func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err error) {
+func (b *Botanist) computeBootstrapToken() (secret *corev1.Secret, err error) {
 	var (
 		tokenID    = utils.ComputeSHA256Hex([]byte(time.Now().Format("2006-01-02")))[:6]
 		secretName = bootstraptokenutil.BootstrapTokenSecretName(tokenID)
