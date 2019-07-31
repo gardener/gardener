@@ -262,6 +262,16 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           botanist.WaitUntilManagedResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
+		destroyControlPlane = g.Add(flow.Task{
+			Name:         "Destroying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlane),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+		})
+		waitUntilControlPlaneDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been destroyed",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+		})
 
 		syncPointCleaned = flow.NewTaskIDs(
 			cleanupWebhooks,
@@ -270,22 +280,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			waitUntilWorkerDeleted,
 			deleteManagedResources,
 			waitUntilManagedResourcesDeleted,
+			destroyControlPlane,
+			waitUntilControlPlaneDeleted,
 		)
 
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilWorkerDeleted),
-		})
-		destroyControlPlane = g.Add(flow.Task{
-			Name:         "Destroying Shoot control plane",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlane),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deleteKubeAPIServer),
-		})
-		waitUntilControlPlaneDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneDeleted),
-			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
 		destroyNginxIngressResources = g.Add(flow.Task{
