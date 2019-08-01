@@ -8,12 +8,18 @@ metadata:
     app: kubernetes
     role: apiserver
 spec:
+  minReadySeconds: 30
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: kubernetes
       role: apiserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -101,6 +107,13 @@ spec:
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         - --v=2
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 5
         livenessProbe:
           httpGet:
             scheme: HTTPS
