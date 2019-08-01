@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -207,7 +208,7 @@ func determineBestSeedCandidate(shoot *gardenv1beta1.Shoot, shootList []*gardenv
 	}
 
 	if candidates == nil {
-		return nil, errors.New("found %d possible seed cluster(s), however none have a disjoint network")
+		return nil, fmt.Errorf("found %d possible seed cluster(s), however none have a disjoint network", len(old))
 	}
 
 	var (
