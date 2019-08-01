@@ -153,7 +153,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployControlPlane = g.Add(flow.Task{
@@ -178,7 +178,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
@@ -193,7 +193,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		rewriteSecrets = g.Add(flow.Task{
 			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
-			Fn:           flow.TaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged).DoIf(enableEtcdEncryption && !o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged).DoIf(enableEtcdEncryption && !o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, createOrUpdateEtcdEncryptionConfiguration),
 		})
 		_ = g.Add(flow.Task{
@@ -223,7 +223,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
-			Fn:           flow.TaskFn(hybridBotanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(hybridBotanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, computeShootOSConfig),
 		})
 		deployWorker = g.Add(flow.Task{
@@ -250,7 +250,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
-			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilWorkerReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
@@ -275,7 +275,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
-			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		deployExtensionResource = g.Add(flow.Task{
@@ -382,6 +382,7 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.Seed = o.Seed.Info.Name
+			shoot.Status.IsHibernated = &o.Shoot.HibernationEnabled
 			shoot.Status.LastError = nil
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           operationType,

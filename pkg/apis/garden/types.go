@@ -643,6 +643,8 @@ type ShootStatus struct {
 	// Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
 	Seed string
+	// IsHibernated indicates whether the Shoot is currently hibernated.
+	IsHibernated *bool
 	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
 	// basically everything that is related to this particular Shoot.
 	TechnicalID string
@@ -1102,8 +1104,8 @@ const (
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
-	// Enabled is true if Shoot is hibernated, false otherwise.
-	Enabled bool
+	// Enabled is true if the Shoot's desired state is hibernated, false otherwise.
+	Enabled *bool
 	// Schedules determines the hibernation schedules.
 	Schedules []HibernationSchedule
 }

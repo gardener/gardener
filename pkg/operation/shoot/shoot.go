@@ -80,7 +80,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 		InternalClusterDomain: ConstructInternalClusterDomain(shoot.Name, projectName, internalDomain),
 		ExternalClusterDomain: ConstructExternalClusterDomain(shoot),
 
-		IsHibernated:           helper.IsShootHibernated(shoot),
+		HibernationEnabled:     helper.HibernationIsEnabled(shoot),
 		WantsClusterAutoscaler: false,
 
 		Extensions: extensions,
@@ -310,7 +310,7 @@ func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
 
 // GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.
 func (s *Shoot) GetReplicas(wokenUp int) int {
-	if s.IsHibernated {
+	if s.HibernationEnabled {
 		return 0
 	}
 	return wokenUp

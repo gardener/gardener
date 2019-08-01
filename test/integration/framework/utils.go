@@ -249,10 +249,10 @@ func shootIsScheduledSuccessfully(newSpec *gardenv1beta1.ShootSpec) bool {
 
 func setHibernation(shoot *gardenv1beta1.Shoot, hibernated bool) {
 	if shoot.Spec.Hibernation != nil {
-		shoot.Spec.Hibernation.Enabled = hibernated
+		shoot.Spec.Hibernation.Enabled = &hibernated
 	}
 	shoot.Spec.Hibernation = &gardenv1beta1.Hibernation{
-		Enabled: hibernated,
+		Enabled: &hibernated,
 	}
 }
 

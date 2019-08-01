@@ -40,7 +40,7 @@ type Shoot struct {
 	WantsClusterAutoscaler bool
 	WantsAlertmanager      bool
 	IgnoreAlerts           bool
-	IsHibernated           bool
+	HibernationEnabled     bool
 
 	CloudConfigMap       map[string]CloudConfig
 	Extensions           map[string]Extension

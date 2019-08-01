@@ -179,7 +179,7 @@ func (o *Operation) InitializeShootClients() error {
 		return nil
 	}
 
-	if o.Shoot.IsHibernated {
+	if o.Shoot.HibernationEnabled {
 		controlPlaneHibernated, err := o.controlPlaneHibernated()
 		if err != nil {
 			return err

@@ -28,7 +28,7 @@ const DNSPurposeIngress = "ingress"
 
 // EnsureIngressDNSRecord creates the respective wildcard DNS record for the nginx-ingress-controller.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	if !b.Shoot.NginxIngressEnabled() || b.Shoot.IsHibernated {
+	if !b.Shoot.NginxIngressEnabled() || b.Shoot.HibernationEnabled {
 		return b.DestroyIngressDNSRecord(ctx)
 	}
 

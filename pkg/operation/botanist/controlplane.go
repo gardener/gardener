@@ -64,7 +64,7 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 		namespace.Labels = map[string]string{
 			common.GardenRole:                 common.GardenRoleShoot,
 			gardencorev1alpha1.GardenRole:     common.GardenRoleShoot,
-			common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
+			common.ShootHibernated:            strconv.FormatBool(b.Shoot.HibernationEnabled),
 			gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
 			gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
 			gardencorev1alpha1.ShootProvider:  string(b.Shoot.CloudProvider),
@@ -534,11 +534,11 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		"curator": map[string]interface{}{
 			"hourly": map[string]interface{}{
 				"schedule": fmt.Sprintf("%d * * * *", ct.Minute()),
-				"suspend":  b.Shoot.IsHibernated,
+				"suspend":  b.Shoot.HibernationEnabled,
 			},
 			"daily": map[string]interface{}{
 				"schedule": fmt.Sprintf("%d 0,6,12,18 * * *", ct.Minute()%54+5),
-				"suspend":  b.Shoot.IsHibernated,
+				"suspend":  b.Shoot.HibernationEnabled,
 			},
 			"sgUsername": "curator",
 			"sgPassword": string(sgCuratorPassword),
