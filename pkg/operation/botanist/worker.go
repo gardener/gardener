@@ -50,8 +50,8 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
-		machineImage = b.Shoot.GetMachineImage()
-		pools        []extensionsv1alpha1.WorkerPool
+
+		pools []extensionsv1alpha1.WorkerPool
 	)
 
 	for _, worker := range b.Shoot.GetWorkers() {
@@ -65,6 +65,11 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Type: volumeType,
 				Size: volumeSize,
 			}
+		}
+
+		machineImage := worker.MachineImage
+		if machineImage == nil {
+			machineImage = b.Shoot.GetDefaultMachineImage()
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{

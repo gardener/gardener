@@ -126,7 +126,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		cloudProfileCleanupNeeded = true
 
 		// set integration test machineImage to shoot
-		updateImage := helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+		updateImage := helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
 		Expect(updateImage).NotTo(BeNil())
 		updateImage(&shoot.Spec.Cloud)
 
@@ -185,7 +185,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
 
 		// reset machine image from latest version to dummy version
-		updateImage := helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+		updateImage := helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
 		Expect(updateImage).NotTo(BeNil())
 
 		// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)
@@ -204,7 +204,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		integrationTestShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = &falseVar
 
 		// reset machine image from latest version to dummy version
-		updateImage = helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+		updateImage = helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
 		Expect(updateImage).NotTo(BeNil())
 
 		// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)

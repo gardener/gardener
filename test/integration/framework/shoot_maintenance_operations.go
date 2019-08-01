@@ -17,10 +17,11 @@ package framework
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +45,7 @@ func NewShootMaintenanceTest(ctx context.Context, shootGardenTest *ShootGardener
 	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 
 	// get machine image of shoot
-	shootCurrentMachineImage := helper.GetMachineImageFromShoot(cloudProvider, shoot)
+	shootCurrentMachineImage := helper.GetDefaultMachineImageFromShoot(cloudProvider, shoot)
 	if shootCurrentMachineImage == nil {
 		return nil, fmt.Errorf("could not determine shoots machine image ")
 	}
@@ -132,7 +133,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedMaintenance(ctx context.Context, t
 			return false, err
 		}
 
-		shootMachineImage := helper.GetMachineImageFromShoot(cloudProvider, shoot)
+		shootMachineImage := helper.GetDefaultMachineImageFromShoot(cloudProvider, shoot)
 		if apiequality.Semantic.DeepEqual(*shootMachineImage, targetMachineImage) && imageUpdateRequired {
 			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - received machine image update")
 			return true, nil

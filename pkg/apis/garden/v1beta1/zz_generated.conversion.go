@@ -4660,6 +4660,7 @@ func Convert_garden_VolumeType_To_v1beta1_VolumeType(in *garden.VolumeType, out 
 func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
 	out.Name = in.Name
 	out.MachineType = in.MachineType
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	out.AutoScalerMin = in.AutoScalerMin
 	out.AutoScalerMax = in.AutoScalerMax
 	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/util/intstr.IntOrString vs k8s.io/apimachinery/pkg/util/intstr.IntOrString)
@@ -4673,6 +4674,7 @@ func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker,
 func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
 	out.Name = in.Name
 	out.MachineType = in.MachineType
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	out.AutoScalerMin = in.AutoScalerMin
 	out.AutoScalerMax = in.AutoScalerMax
 	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/util/intstr.IntOrString vs *k8s.io/apimachinery/pkg/util/intstr.IntOrString)

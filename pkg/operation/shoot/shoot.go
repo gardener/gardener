@@ -266,9 +266,14 @@ func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
 	return *k8sNetworks.Nodes
 }
 
-// GetMachineImage returns the name of the used machine image.
-func (s *Shoot) GetMachineImage() *gardenv1beta1.ShootMachineImage {
-	return helper.GetMachineImageFromShoot(s.CloudProvider, s.Info)
+// GetDefaultMachineImage returns the name of the used machine image.
+func (s *Shoot) GetDefaultMachineImage() *gardenv1beta1.ShootMachineImage {
+	return helper.GetDefaultMachineImageFromShoot(s.CloudProvider, s.Info)
+}
+
+// GetMachineImages returns the name of the used machine image.
+func (s *Shoot) GetMachineImages() []*gardenv1beta1.ShootMachineImage {
+	return helper.GetMachineImagesFromShoot(s.CloudProvider, s.Info)
 }
 
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.

@@ -262,6 +262,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.AWS.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.AWS.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.AWS.Workers[idx].MachineImage = shoot.Spec.Cloud.AWS.MachineImage
+			}
+		}
+
 		allErrs = validateAWS(validationContext)
 
 	case garden.CloudProviderAzure:
@@ -272,6 +279,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.Azure.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.Azure.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.Azure.Workers[idx].MachineImage = shoot.Spec.Cloud.Azure.MachineImage
+			}
+		}
+
 		allErrs = validateAzure(validationContext)
 
 	case garden.CloudProviderGCP:
@@ -282,6 +296,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.GCP.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.GCP.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.GCP.Workers[idx].MachineImage = shoot.Spec.Cloud.GCP.MachineImage
+			}
+		}
+
 		allErrs = validateGCP(validationContext)
 
 	case garden.CloudProviderOpenStack:
@@ -292,6 +313,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.OpenStack.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.OpenStack.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.OpenStack.Workers[idx].MachineImage = shoot.Spec.Cloud.OpenStack.MachineImage
+			}
+		}
+
 		allErrs = validateOpenStack(validationContext)
 
 	case garden.CloudProviderPacket:
@@ -302,6 +330,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.Packet.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.Packet.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.Packet.Workers[idx].MachineImage = shoot.Spec.Cloud.Packet.MachineImage
+			}
+		}
+
 		allErrs = validatePacket(validationContext)
 
 	case garden.CloudProviderAlicloud:
@@ -312,6 +347,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 			shoot.Spec.Cloud.Alicloud.MachineImage = image
 		}
+
+		for idx, worker := range shoot.Spec.Cloud.Alicloud.Workers {
+			if worker.MachineImage == nil {
+				shoot.Spec.Cloud.Alicloud.Workers[idx].MachineImage = shoot.Spec.Cloud.Alicloud.MachineImage
+			}
+		}
+
 		allErrs = validateAlicloud(validationContext)
 	}
 
@@ -367,6 +409,9 @@ func validateAWS(c *validationContext) field.ErrorList {
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.AWS.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
 		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.AWS.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
+		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.AWS.Constraints.VolumeTypes, worker.VolumeType, oldWorker.VolumeType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volumeType"), worker.VolumeType, validVolumeTypes))
 		}
@@ -417,6 +462,9 @@ func validateAzure(c *validationContext) field.ErrorList {
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.Azure.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
 		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Azure.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
+		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.Azure.Constraints.VolumeTypes, worker.VolumeType, oldWorker.VolumeType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volumeType"), worker.VolumeType, validVolumeTypes))
 		}
@@ -463,6 +511,9 @@ func validateGCP(c *validationContext) field.ErrorList {
 		idxPath := path.Child("workers").Index(i)
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.GCP.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
+		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.GCP.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
 		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.GCP.Constraints.VolumeTypes, worker.VolumeType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volumeType"), worker.VolumeType, validVolumeTypes))
@@ -514,6 +565,9 @@ func validatePacket(c *validationContext) field.ErrorList {
 		idxPath := path.Child("workers").Index(i)
 		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.Packet.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
+		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Packet.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
 		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.Packet.Constraints.VolumeTypes, worker.VolumeType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volumeType"), worker.VolumeType, validVolumeTypes))
@@ -572,6 +626,9 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 		if ok, validMachineTypes := validateOpenStackMachineTypes(c.cloudProfile.Spec.OpenStack.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
 		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.OpenStack.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
+		}
 	}
 
 	for i, zone := range c.shoot.Spec.Cloud.OpenStack.Zones {
@@ -619,6 +676,9 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 		idxPath := path.Child("workers").Index(i)
 		if ok, validMachineTypes := validateAlicloudMachineTypes(c.cloudProfile.Spec.Alicloud.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
+		}
+		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Alicloud.Constraints.MachineImages, worker.MachineImage, oldWorker.MachineImage); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineImage"), worker.MachineImage, validMachineImages))
 		}
 		if ok, machineType, validZones := validateAlicloudMachineTypesAvailableInZones(c.cloudProfile.Spec.Alicloud.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType, c.shoot.Spec.Cloud.Alicloud.Zones); !ok {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("machineType"), worker.MachineType, fmt.Sprintf("only zones %v define machine type %s", validZones, machineType)))
@@ -947,7 +1007,7 @@ func getDefaultMachineImage(machineImages []garden.MachineImage) (*garden.ShootM
 }
 
 func validateMachineImagesConstraints(constraints []garden.MachineImage, image, oldImage *garden.ShootMachineImage) (bool, []string) {
-	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+	if oldImage == nil || apiequality.Semantic.DeepEqual(*image, *oldImage) {
 		return true, nil
 	}
 

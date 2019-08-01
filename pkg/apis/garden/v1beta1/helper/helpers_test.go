@@ -115,9 +115,9 @@ var _ = Describe("helper", func() {
 		}
 	)
 
-	DescribeTable("#GetMachineImageFromShoot",
+	DescribeTable("#GetDefaultMachineImageFromShoot",
 		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected *gardenv1beta1.ShootMachineImage) {
-			Expect(GetMachineImageFromShoot(cloudProvider, shoot)).To(Equal(expected))
+			Expect(GetDefaultMachineImageFromShoot(cloudProvider, shoot)).To(Equal(expected))
 		},
 		Entry("AWS",
 			gardenv1beta1.CloudProviderAWS,

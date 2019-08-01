@@ -69,10 +69,8 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	var (
 		machineTypes = b.Shoot.GetMachineTypesFromCloudProfile()
-		machineImage = b.Shoot.GetMachineImage()
 	)
 
-	downloaderConfig := b.generateDownloaderConfig(machineImage.Name)
 	originalConfig, err := b.generateOriginalConfig()
 	if err != nil {
 		return err
@@ -95,6 +93,13 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 
 		go func(worker gardenv1beta1.Worker) {
 			defer wg.Done()
+			machineImage := worker.MachineImage
+			if machineImage == nil {
+				machineImage = b.Shoot.GetDefaultMachineImage()
+			}
+
+			machineImageName := machineImage.Name
+			downloaderConfig := b.generateDownloaderConfig(machineImageName)
 			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImage, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
 			results <- &oscOutput{worker.Name, cloudConfig, err}
 		}(worker)

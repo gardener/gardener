@@ -44,22 +44,23 @@ const (
 // CreateShootTestArtifacts creates the necessary artifacts for a shoot tests including a random integration test name and
 // a shoot object which is read from the resources directory
 func CreateShootTestArtifacts(shootTestYamlPath, prefix string, clearDNS bool) (string, *v1beta1.Shoot, error) {
-	integrationTestName, err := generateRandomShootName(prefix)
-	if err != nil {
-		return "", nil, err
-	}
-
 	shoot := &v1beta1.Shoot{}
 	if err := ReadObject(shootTestYamlPath, shoot); err != nil {
 		return "", nil, err
 	}
 
-	shoot.Name = integrationTestName
+	if len(shoot.Name) == 0 {
+		integrationTestName, err := generateRandomShootName(prefix)
+		if err != nil {
+			return "", nil, err
+		}
+		shoot.Name = integrationTestName
+	}
 
 	if clearDNS {
 		shoot.Spec.DNS = v1beta1.DNS{}
 	}
-	return integrationTestName, shoot, nil
+	return shoot.Name, shoot, nil
 }
 
 func generateRandomShootName(prefix string) (string, error) {

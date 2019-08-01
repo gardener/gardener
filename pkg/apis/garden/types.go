@@ -938,6 +938,10 @@ type Worker struct {
 	Name string
 	// MachineType is the machine type of the worker group.
 	MachineType string
+	// ShootMachineImage holds information about the machine image to use for all workers.
+	// It will default to the latest version of the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	MachineImage *ShootMachineImage
 	// AutoScalerMin is the minimum number of VMs to create.
 	AutoScalerMin int
 	// AutoScalerMin is the maximum number of VMs to create.

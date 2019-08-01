@@ -225,7 +225,17 @@ func (b *Botanist) RequiredExtensionsExist() error {
 func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 	requiredExtensions := make(map[string]sets.String)
 
-	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = sets.NewString(string(b.Shoot.GetMachineImage().Name))
+	machineImagesSet := sets.NewString()
+	machineImages := b.Shoot.GetMachineImages()
+	for _, machineImage := range machineImages {
+		if machineImage == nil {
+			machineImage = b.Shoot.GetDefaultMachineImage()
+		}
+
+		machineImagesSet.Insert(string(machineImage.Name))
+	}
+
+	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = machineImagesSet
 
 	if b.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
 		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
