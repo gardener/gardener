@@ -11,6 +11,9 @@ spec:
     secretBindingRef:
       name: core-packet
     packet:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2079.3.0
       workers:
       - name: small
         machineType: c1.small
@@ -20,6 +23,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2079.3.0
       # labels:
       #   key: value
       # annotations:

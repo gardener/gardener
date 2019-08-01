@@ -61,6 +61,9 @@ spec:
       name: ${value("spec.cloud.secretBindingRef.name", "core-" + cloud)}
     % if cloud == "aws":
     aws:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2023.5.0
       networks:
         vpc:<% vpcID = value("spec.cloud.aws.networks.vpc.id", ""); vpcCIDR = value("spec.cloud.aws.networks.vpc.cidr", "10.250.0.0/16") %> # specify either 'id' or 'cidr'
           % if vpcID != "":
@@ -85,6 +88,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:
@@ -105,6 +111,9 @@ spec:
     # resourceGroup:
     #   name: mygroup
       % endif
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2023.5.0
       networks:
         vnet:<% vnetName = value("spec.cloud.azure.networks.vnet.name", ""); vnetCIDR = value("spec.cloud.azure.networks.vnet.cidr", "10.250.0.0/16") %> # specify either 'name' or 'cidr'
           % if vnetName != "":
@@ -127,6 +136,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:
@@ -139,6 +151,9 @@ spec:
     % endif
     % if cloud == "alicloud":
     alicloud:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos-alicloud
+    #   version: 2023.5.0
       networks:
         vpc:<% vpcID = value("spec.cloud.alicloud.networks.vpc.id", ""); vpcCIDR = value("spec.cloud.alicloud.networks.vpc.cidr", "10.250.0.0/16") %> # specify either 'id' or 'cidr'
           % if vpcID != "":
@@ -161,6 +176,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos-alicloud
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:
@@ -174,6 +192,9 @@ spec:
     % endif
     % if cloud == "packet":
     packet:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2079.3.0
       workers:<% workers=value("spec.cloud.packet.workers", []) %>
       % if workers != []:
       ${yaml.dump(workers, width=10000, default_flow_style=None)}
@@ -186,6 +207,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2079.3.0
       # labels:
       #   key: value
       # annotations:
@@ -199,6 +223,9 @@ spec:
     % endif
     % if cloud == "gcp":
     gcp:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2023.5.0
       networks:<% vpcName = value("spec.cloud.gcp.networks.vpc.name", "") %>
       % if vpcName != "":
         vpc:
@@ -221,6 +248,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:
@@ -236,6 +266,9 @@ spec:
     openstack:
       loadBalancerProvider: ${value("spec.cloud.openstack.loadBalancerProvider", "haproxy")}
       floatingPoolName: ${value("spec.cloud.openstack.floatingPoolName", "MY-FLOATING-POOL")}
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2023.5.0
       networks:<% routerID = value("spec.cloud.openstack.networks.router.id", "") %>
       % if routerID != "":
         router:
@@ -255,6 +288,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:

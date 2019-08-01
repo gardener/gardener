@@ -11,6 +11,9 @@ spec:
     secretBindingRef:
       name: core-alicloud
     alicloud:
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos-alicloud
+    #   version: 2023.5.0
       networks:
         vpc: # specify either 'id' or 'cidr'
           # id: vpc-123456
@@ -25,6 +28,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos-alicloud
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:

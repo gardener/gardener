@@ -13,6 +13,9 @@ spec:
     openstack:
       loadBalancerProvider: haproxy
       floatingPoolName: MY-FLOATING-POOL
+    # machineImage: # this machine image is default machine image for all worker pools
+    #   name: coreos
+    #   version: 2023.5.0
       networks:
       # router:
       #   id: 1234
@@ -24,6 +27,9 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # machineImage:
+      #   name: coreos
+      #   version: 2023.5.0
       # labels:
       #   key: value
       # annotations:
