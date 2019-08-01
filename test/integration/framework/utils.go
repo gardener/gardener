@@ -24,7 +24,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -118,7 +118,7 @@ func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, use
 	return nil
 }
 
-func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *v1beta1.Shoot) error {
+func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *gardenv1beta1.Shoot) error {
 	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
 	if err != nil {
 		return fmt.Errorf("failed to patch bytes")
@@ -138,7 +138,7 @@ func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, n
 }
 
 // ShootCreationCompleted checks if a shoot is successfully reconciled.
-func ShootCreationCompleted(newShoot *v1beta1.Shoot) bool {
+func ShootCreationCompleted(newShoot *gardenv1beta1.Shoot) bool {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
 		return false
 	}
@@ -240,11 +240,20 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 	return false
 }
 
-func shootIsScheduledSuccessfully(newSpec *v1beta1.ShootSpec) bool {
+func shootIsScheduledSuccessfully(newSpec *gardenv1beta1.ShootSpec) bool {
 	if newSpec.Cloud.Seed != nil {
 		return true
 	}
 	return false
+}
+
+func setHibernation(shoot *gardenv1beta1.Shoot, hibernated bool) {
+	if shoot.Spec.Hibernation != nil {
+		shoot.Spec.Hibernation.Enabled = hibernated
+	}
+	shoot.Spec.Hibernation = &gardenv1beta1.Hibernation{
+		Enabled: hibernated,
+	}
 }
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.

@@ -177,6 +177,78 @@ func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 	return nil
 }
 
+// HibernateShoot hibernates the test shoot
+func (s *ShootGardenerTest) HibernateShoot(ctx context.Context) error {
+	shoot, err := s.GetShoot(ctx)
+	if err != nil {
+		return err
+	}
+	s.Shoot = shoot
+
+	// return if the shoot is already hibernated
+	if s.Shoot.Spec.Hibernation != nil && s.Shoot.Spec.Hibernation.Enabled {
+		return nil
+	}
+
+	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		setHibernation(s.Shoot, true)
+
+		err = s.GardenClient.Client().Update(ctx, s.Shoot)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	err = s.WaitForShootToBeReconciled(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.Logger.Infof("Shoot %s was hibernated successfully!", s.Shoot.Name)
+	return nil
+}
+
+// WakeUpShoot wakes up the test shoot from hibernation
+func (s *ShootGardenerTest) WakeUpShoot(ctx context.Context) error {
+	shoot, err := s.GetShoot(ctx)
+	if err != nil {
+		return err
+	}
+	s.Shoot = shoot
+
+	// return if the shoot is already running
+	if s.Shoot.Spec.Hibernation == nil || !s.Shoot.Spec.Hibernation.Enabled {
+		return nil
+	}
+
+	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		setHibernation(s.Shoot, false)
+
+		err = s.GardenClient.Client().Update(ctx, s.Shoot)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	err = s.WaitForShootToBeReconciled(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.Logger.Infof("Shoot %s has been woken up successfully!", s.Shoot.Name)
+	return nil
+}
+
 // RemoveShootAnnotation removes an annotation with key <annotationKey> from a shoot object
 func (s *ShootGardenerTest) RemoveShootAnnotation(ctx context.Context, annotationKey string) error {
 	shootCopy := s.Shoot.DeepCopy()
