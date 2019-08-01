@@ -1,0 +1,23 @@
+kind: TestDefinition
+metadata:
+  name: wakeup-shoot
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the wake up of a hibernated shoot.
+
+  activeDeadlineSeconds: 1800
+
+  config:
+  - name: GO111MODULE
+    value: "on"
+    type: env
+
+  command: [bash, -c]
+  args:
+  - >-
+    go run -mod=vendor ./.test-defs/cmd/wakeup-shoot
+    --shoot-name=$SHOOT_NAME
+    --project-namespace=$PROJECT_NAMESPACE
+    --kubeconfig="$TM_KUBECONFIG_PATH/gardener.config"
+
+  image: golang:1.12.7
