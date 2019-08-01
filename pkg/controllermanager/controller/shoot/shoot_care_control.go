@@ -123,6 +123,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)
+
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
 	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector, nil)
@@ -218,7 +219,7 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 		}
 	}()
 
-	if botanist.Shoot.Info.Status.IsHibernated == nil || !*botanist.Shoot.Info.Status.IsHibernated {
+	if !botanist.Shoot.HibernationEnabled && (botanist.Shoot.Info.Status.IsHibernated == nil || !*botanist.Shoot.Info.Status.IsHibernated) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
