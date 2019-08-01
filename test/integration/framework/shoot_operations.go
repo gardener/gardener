@@ -186,7 +186,7 @@ func (s *ShootGardenerTest) HibernateShoot(ctx context.Context) error {
 	s.Shoot = shoot
 
 	// return if the shoot is already hibernated
-	if s.Shoot.Spec.Hibernation != nil && s.Shoot.Spec.Hibernation.Enabled {
+	if s.Shoot.Spec.Hibernation != nil && *s.Shoot.Spec.Hibernation.Enabled {
 		return nil
 	}
 
@@ -222,7 +222,7 @@ func (s *ShootGardenerTest) WakeUpShoot(ctx context.Context) error {
 	s.Shoot = shoot
 
 	// return if the shoot is already running
-	if s.Shoot.Spec.Hibernation == nil || !s.Shoot.Spec.Hibernation.Enabled {
+	if s.Shoot.Spec.Hibernation == nil || !*s.Shoot.Spec.Hibernation.Enabled {
 		return nil
 	}
 

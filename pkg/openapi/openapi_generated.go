@@ -3747,7 +3747,7 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled is true if Shoot is hibernated, false otherwise.",
+							Description: "Enabled is true if the Shoot's desired state is hibernated, false otherwise.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -3766,7 +3766,6 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"enabled"},
 			},
 		},
 		Dependencies: []string{
@@ -6544,6 +6543,13 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 						SchemaProps: spec.SchemaProps{
 							Description: "Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"hibernated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IsHibernated indicates whether the Shoot is currently hibernated.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},

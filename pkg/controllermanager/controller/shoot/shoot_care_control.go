@@ -218,7 +218,7 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 		}
 	}()
 
-	if !botanist.Shoot.IsHibernated {
+	if botanist.Shoot.Info.Status.IsHibernated == nil || !*botanist.Shoot.Info.Status.IsHibernated {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

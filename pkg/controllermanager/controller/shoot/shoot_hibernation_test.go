@@ -56,6 +56,7 @@ var _ = Describe("Shoot Hibernation", func() {
 		ctrl.Finish()
 	})
 
+	trueVar := true
 	Context("HibernationSchedule", func() {
 		Describe("#GroupHibernationSchedulesByLocation", func() {
 			It("should group the hibernation schedules with the same location together", func() {
@@ -96,7 +97,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					shoot = gardenv1beta1.Shoot{
 						Spec: gardenv1beta1.ShootSpec{
 							Hibernation: &gardenv1beta1.Hibernation{
-								Enabled: true,
+								Enabled: &trueVar,
 								Schedules: []gardenv1beta1.HibernationSchedule{
 									{
 										Start:    &start,
@@ -123,7 +124,7 @@ var _ = Describe("Shoot Hibernation", func() {
 				gomock.InOrder(
 					newCronWithLocation.EXPECT().Do(location).Return(cr),
 
-					cr.EXPECT().Schedule(startSched, NewHibernationJob(c, LocationLogger(logger, location), &shoot, true)),
+					cr.EXPECT().Schedule(startSched, NewHibernationJob(c, LocationLogger(logger, location), &shoot, trueVar)),
 					cr.EXPECT().Schedule(endSched, NewHibernationJob(c, LocationLogger(logger, location), &shoot, false)),
 				)
 
@@ -228,7 +229,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					gardenIface = mockgardenv1beta1.NewMockGardenV1beta1Interface(ctrl)
 					shootIface  = mockgardenv1beta1.NewMockShootInterface(ctrl)
 					logger      = utils.NewNopLogger()
-					enabled     = true
+					enabled     = trueVar
 
 					namespace = "foo"
 					name      = "bar"
@@ -253,7 +254,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
 					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardenv1beta1.Shoot{})).Do(func(actual *gardenv1beta1.Shoot) {
 						Expect(actual.Spec.Hibernation).To(Equal(&gardenv1beta1.Hibernation{
-							Enabled: enabled,
+							Enabled: &enabled,
 						}))
 					}),
 				)

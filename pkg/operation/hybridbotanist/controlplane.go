@@ -151,7 +151,7 @@ func (b *HybridBotanist) DeployETCD() error {
 			etcd["metrics"] = "extensive"
 		}
 
-		if b.Shoot.IsHibernated {
+		if b.Shoot.HibernationEnabled {
 			statefulset := &appsv1.StatefulSet{}
 			if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
 				return err
@@ -307,7 +307,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = *replicas
 		}
 		// If the shoot is hibernated then we want to keep the number of replicas (scale down happens later).
-		if b.Shoot.IsHibernated && (replicas == nil || *replicas == 0) {
+		if b.Shoot.HibernationEnabled && (replicas == nil || *replicas == 0) {
 			defaultValues["replicas"] = 0
 		}
 
@@ -440,7 +440,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"objectCount": b.Shoot.GetNodeCount(),
 	}
 
-	if b.Shoot.IsHibernated {
+	if b.Shoot.HibernationEnabled {
 		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager)
 		if err != nil {
 			return err

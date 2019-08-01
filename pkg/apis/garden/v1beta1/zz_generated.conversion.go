@@ -2931,7 +2931,7 @@ func Convert_garden_HelmTiller_To_v1beta1_HelmTiller(in *garden.HelmTiller, out 
 }
 
 func autoConvert_v1beta1_Hibernation_To_garden_Hibernation(in *Hibernation, out *garden.Hibernation, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Schedules = *(*[]garden.HibernationSchedule)(unsafe.Pointer(&in.Schedules))
 	return nil
 }
@@ -2942,7 +2942,7 @@ func Convert_v1beta1_Hibernation_To_garden_Hibernation(in *Hibernation, out *gar
 }
 
 func autoConvert_garden_Hibernation_To_v1beta1_Hibernation(in *garden.Hibernation, out *Hibernation, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Schedules = *(*[]HibernationSchedule)(unsafe.Pointer(&in.Schedules))
 	return nil
 }
@@ -4603,6 +4603,7 @@ func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out 
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed
+	out.IsHibernated = (*bool)(unsafe.Pointer(in.IsHibernated))
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
 	return nil
@@ -4623,6 +4624,7 @@ func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatu
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed
+	out.IsHibernated = (*bool)(unsafe.Pointer(in.IsHibernated))
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
 	return nil

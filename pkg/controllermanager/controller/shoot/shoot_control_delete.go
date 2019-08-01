@@ -168,10 +168,9 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Name: "Deploying Shoot certificates / keys",
 			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
 		})
-
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
-			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated != nil && *o.Shoot.Info.Status.IsHibernated || o.Shoot.Info.Status.IsHibernated == nil && o.Shoot.HibernationEnabled) && cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 
@@ -259,7 +258,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
-			Fn:           botanist.WaitUntilManagedResourcesDeleted,
+			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
 		destroyControlPlane = g.Add(flow.Task{

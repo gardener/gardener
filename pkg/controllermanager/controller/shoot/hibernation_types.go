@@ -103,7 +103,7 @@ func (h *hibernationJob) Run() {
 			if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
 				return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
 			}
-			shoot.Spec.Hibernation.Enabled = h.enabled
+			shoot.Spec.Hibernation.Enabled = &h.enabled
 			return shoot, nil
 		})
 	if err != nil {

@@ -35,19 +35,19 @@ var (
 )
 
 var _ = Describe("helper", func() {
-	DescribeTable("#IsShootHibernated",
+	DescribeTable("#HibernationIsEnabled",
 		func(shoot *gardenv1beta1.Shoot, hibernated bool) {
-			Expect(IsShootHibernated(shoot)).To(Equal(hibernated))
+			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))
 		},
 		Entry("no hibernation section", &gardenv1beta1.Shoot{}, false),
 		Entry("hibernation.enabled = false", &gardenv1beta1.Shoot{
 			Spec: gardenv1beta1.ShootSpec{
-				Hibernation: &gardenv1beta1.Hibernation{Enabled: false},
+				Hibernation: &gardenv1beta1.Hibernation{Enabled: &falseVar},
 			},
 		}, false),
 		Entry("hibernation.enabled = true", &gardenv1beta1.Shoot{
 			Spec: gardenv1beta1.ShootSpec{
-				Hibernation: &gardenv1beta1.Hibernation{Enabled: true},
+				Hibernation: &gardenv1beta1.Hibernation{Enabled: &trueVar},
 			},
 		}, true),
 	)

@@ -80,9 +80,9 @@ func GetShootCloudProvider(shoot *gardenv1beta1.Shoot) (gardenv1beta1.CloudProvi
 	return DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 }
 
-// IsShootHibernated checks if the given shoot is hibernated.
-func IsShootHibernated(shoot *gardenv1beta1.Shoot) bool {
-	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled
+// HibernationIsEnabled checks if the given shoot's desired state is hibernated.
+func HibernationIsEnabled(shoot *gardenv1beta1.Shoot) bool {
+	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
 }
 
 // ShootWantsClusterAutoscaler checks if the given Shoot needs a cluster autoscaler.
