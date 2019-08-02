@@ -96,7 +96,7 @@ github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azur
 github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp
 github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet
-# github.com/gardener/gardener-resource-manager v0.0.0-20190725100506-b1e07bafe746 => github.com/gardener/gardener-resource-manager v0.0.0-20190725100506-b1e07bafe746
+# github.com/gardener/gardener-resource-manager v0.0.0-20190802142246-6b2029430332 => github.com/gardener/gardener-resource-manager v0.0.0-20190802142246-6b2029430332
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/manager
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
@@ -418,10 +418,10 @@ k8s.io/api/apps/v1
 k8s.io/api/admission/v1beta1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/policy/v1beta1
+k8s.io/api/autoscaling/v2beta1
 k8s.io/api/batch/v1
 k8s.io/api/batch/v1beta1
 k8s.io/api/extensions/v1beta1
-k8s.io/api/autoscaling/v2beta1
 k8s.io/api/networking/v1
 k8s.io/api/apps/v1beta1
 k8s.io/api/apps/v1beta2
