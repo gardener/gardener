@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Shoot Node stats",
+  "description": "Details about Shoot worker nodes.",
   "editable": true,
   "gnetId": 2115,
   "graphTooltip": 0,
@@ -308,7 +308,7 @@
           "label": "Pods",
           "logBase": 1,
           "max": "110",
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -532,117 +532,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Shows the size of the node's filesystem, how much space is free and how much space is available to non-root users.",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 21
-      },
-      "id": 73,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(node_filesystem_size_bytes{mountpoint=\"/\",node=~\"$Node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Size",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(node_filesystem_free_bytes{mountpoint=\"/\",node=~\"$Node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Free",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(node_filesystem_avail_bytes{mountpoint=\"/\",node=~\"$Node\"})   ",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Available",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Node Filesystem ($Node)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": "prometheus",
       "decimals": 2,
       "description": "Shows the node's network I/O pressure.",
       "editable": true,
       "error": false,
-      "fill": 7,
+      "fill": 1,
       "grid": {},
       "gridPos": {
-        "h": 5,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 29
+        "y": 21
       },
       "height": "200px",
       "id": 32,
@@ -737,12 +638,111 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Shows the size of the node's filesystem, how much space is free and how much space is available to non-root users.",
+      "fill": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 73,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(node_filesystem_size_bytes{mountpoint=\"/\",node=~\"$Node\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Size",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(node_filesystem_free_bytes{mountpoint=\"/\",node=~\"$Node\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Free",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(node_filesystem_avail_bytes{mountpoint=\"/\",node=~\"$Node\"})   ",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Available",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Node Filesystem Size ($Node)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 29
       },
       "id": 69,
       "panels": [
@@ -762,7 +762,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 35
+            "y": 30
           },
           "height": "",
           "id": 23,
@@ -869,7 +869,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 42
+            "y": 37
           },
           "height": "",
           "id": 67,
@@ -965,13 +965,12 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
+  "refresh": "1m",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [
-    "kubernetes",
-    "shoot",
-    "workload"
+    "workload",
+    "shoot"
   ],
   "templating": {
     "list": [
@@ -1036,24 +1035,25 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
+      "5s",
+      "10s",
       "30s",
       "1m",
       "5m",
       "15m",
       "30m",
-      "1h",
-      "2h",
-      "1d"
+      "1h"
     ],
     "time_options": [
       "5m",
       "15m",
       "1h",
+      "3h",
       "6h",
       "12h",
       "24h",
@@ -1063,7 +1063,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Shoot Node Details",
-  "uid": "shoot-nodes",
+  "title": "Node Details",
+  "uid": "node-details",
   "version": 1
-}
+} 

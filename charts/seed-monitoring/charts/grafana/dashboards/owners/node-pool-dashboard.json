@@ -1,8 +1,9 @@
+
 {
   "annotations": {
     "list": []
   },
-  "editable": true,
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
   "iteration": 1560432099527,
@@ -16,7 +17,7 @@
       "description": "Shows the average CPU usage of all nodes in the selected worker group(s).",
       "fill": 0,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 0,
         "y": 0
@@ -76,7 +77,7 @@
           "label": "Cores",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -101,7 +102,7 @@
       "description": "Shows the memory usage of all nodes in the selected worker group(s).",
       "fill": 0,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 12,
         "y": 0
@@ -160,9 +161,9 @@
         {
           "format": "bytes",
           "label": "Memory",
-          "logBase": 2,
+          "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -171,7 +172,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -188,10 +189,10 @@
       "description": "Shows the number of nodes of selected worker groups in the cluster over time.",
       "fill": 0,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 7
       },
       "id": 6,
       "legend": {
@@ -275,10 +276,10 @@
       "description": "Shows the average number of pods running on each node of the selected worker group(s).",
       "fill": 0,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 7
       },
       "id": 12,
       "legend": {
@@ -337,7 +338,7 @@
           "label": "Pods",
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -362,7 +363,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 14
       },
       "id": 4,
       "links": [
@@ -610,12 +611,12 @@
       "type": "table"
     }
   ],
+  "refresh": "1m",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [
-    "kubernetes",
-    "shoot",
-    "workload"
+    "workload",
+    "shoot"
   ],
   "templating": {
     "list": [
@@ -649,7 +650,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -661,24 +662,23 @@
       "5m",
       "15m",
       "30m",
-      "1h",
-      "2h",
-      "1d"
+      "1h"
     ],
     "time_options": [
       "5m",
       "15m",
       "1h",
+      "3h",
       "6h",
       "12h",
       "24h",
       "2d",
       "7d",
-      "30d"
+      "14d"
     ]
   },
-  "timezone": "",
-  "title": "Nodes Overview",
-  "uid": "WgUnKwMZk",
+  "timezone": "browser",
+  "title": "Node/Worker Pool Overview",
+  "uid": "node-worker-pool-overview",
   "version": 1
 }
