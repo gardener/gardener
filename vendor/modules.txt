@@ -418,10 +418,10 @@ k8s.io/api/apps/v1
 k8s.io/api/admission/v1beta1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/policy/v1beta1
+k8s.io/api/autoscaling/v2beta1
 k8s.io/api/batch/v1
 k8s.io/api/batch/v1beta1
 k8s.io/api/extensions/v1beta1
-k8s.io/api/autoscaling/v2beta1
 k8s.io/api/networking/v1
 k8s.io/api/apps/v1beta1
 k8s.io/api/apps/v1beta2
@@ -809,7 +809,7 @@ k8s.io/client-go/listers/storage/v1beta1
 # k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70 => k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70
 k8s.io/cluster-bootstrap/token/api
 k8s.io/cluster-bootstrap/token/util
-# k8s.io/code-generator v0.0.0-00010101000000-000000000000 => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
+# k8s.io/code-generator v0.0.0-20190311093542-50b561225d70 => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
 k8s.io/code-generator/cmd/client-gen
 k8s.io/code-generator/cmd/conversion-gen
 k8s.io/code-generator/cmd/deepcopy-gen
