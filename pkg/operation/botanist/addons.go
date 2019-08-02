@@ -138,7 +138,10 @@ func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
 
 // DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResources(ctx context.Context) error {
-	type chartRenderFunc func() (*chartrenderer.RenderedChart, error)
+	type managedResourceOptions struct {
+		keepObjects     bool
+		chartRenderFunc func() (*chartrenderer.RenderedChart, error)
+	}
 
 	// Delete legacy storage classes managed resource (no longer needed because the provider extension
 	// controllers are now responsible for deploying the shoot storage classes).
@@ -151,15 +154,16 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 		labels = map[string]string{
 			common.ShootNoCleanup: "true",
 		}
-		charts = map[string]chartRenderFunc{
-			"shoot-cloud-config-execution": b.generateCloudConfigExecutionChart,
-			"shoot-core":                   b.generateCoreAddonsChart,
-			"addons":                       b.generateOptionalAddonsChart,
+		charts = map[string]managedResourceOptions{
+			"shoot-cloud-config-execution": managedResourceOptions{false, b.generateCloudConfigExecutionChart},
+			"shoot-core":                   managedResourceOptions{false, b.generateCoreAddonsChart},
+			"shoot-core-namespaces":        managedResourceOptions{true, b.generateCoreNamespacesChart},
+			"addons":                       managedResourceOptions{false, b.generateOptionalAddonsChart},
 		}
 	)
 
-	for name, renderFunc := range charts {
-		renderedChart, err := renderFunc()
+	for name, options := range charts {
+		renderedChart, err := options.chartRenderFunc()
 		if err != nil {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
@@ -184,6 +188,7 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			WithNamespacedName(b.Shoot.SeedNamespace, name).
 			WithSecretRef(secretName).
 			WithInjectedLabels(labels).
+			KeepObjects(options.keepObjects).
 			Reconcile(ctx); err != nil {
 			return err
 		}
@@ -308,7 +313,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
@@ -320,6 +325,16 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
+		},
+	})
+}
+
+// generateCoreNamespacesChart renders the gardener-resource-manager configuration for the core namespaces. After that it
+// creates a ManagedResource CRD that references the rendered manifests and creates it.
+func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, error) {
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
+		"labels": map[string]string{
+			gardencorev1alpha1.GardenerPurpose: metav1.NamespaceSystem,
 		},
 	})
 }
