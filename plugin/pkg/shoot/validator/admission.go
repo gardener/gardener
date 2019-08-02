@@ -264,7 +264,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.AWS.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.AWS.Workers[idx].MachineImage = shoot.Spec.Cloud.AWS.MachineImage
 			}
 		}
@@ -281,7 +281,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.Azure.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.Azure.Workers[idx].MachineImage = shoot.Spec.Cloud.Azure.MachineImage
 			}
 		}
@@ -298,7 +298,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.GCP.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.GCP.Workers[idx].MachineImage = shoot.Spec.Cloud.GCP.MachineImage
 			}
 		}
@@ -315,7 +315,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.OpenStack.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.OpenStack.Workers[idx].MachineImage = shoot.Spec.Cloud.OpenStack.MachineImage
 			}
 		}
@@ -332,7 +332,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.Packet.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.Packet.Workers[idx].MachineImage = shoot.Spec.Cloud.Packet.MachineImage
 			}
 		}
@@ -349,7 +349,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		for idx, worker := range shoot.Spec.Cloud.Alicloud.Workers {
-			if worker.MachineImage == nil {
+			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.Alicloud.Workers[idx].MachineImage = shoot.Spec.Cloud.Alicloud.MachineImage
 			}
 		}
