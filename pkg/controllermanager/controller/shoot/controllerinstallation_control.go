@@ -160,7 +160,7 @@ func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationO
 }
 
 func (c *defaultControllerInstallationControl) isDependentOnResource(resources map[string]string, shoot *gardenv1beta1.Shoot) bool {
-	machineImages, err := helper.GetShootMachineImages(shoot)
+	machineImages, err := helper.GetMachineImagesFromShoot(shoot)
 	if err != nil {
 		return false
 	}

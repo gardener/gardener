@@ -37,8 +37,8 @@ func NewWorkerGardenerTest(ctx context.Context, shootGardenTest *ShootGardenerTe
 	}, nil
 }
 
-//GetShootMachineImages returns the MachineImages specified in the Shoot spec
-func (s *WorkerGardenerTest) GetShootMachineImages() ([]gardenv1beta1.ShootMachineImage, error) {
+// GetMachineImagesFromShoot returns the MachineImages specified in the Shoot spec
+func (s *WorkerGardenerTest) GetMachineImagesFromShoot() ([]gardenv1beta1.ShootMachineImage, error) {
 	cloudProvider, err := s.GetCloudProvider()
 	if err != nil {
 		s.ShootGardenerTest.Logger.Infof("Can not get CloudProvider")
@@ -50,27 +50,39 @@ func (s *WorkerGardenerTest) GetShootMachineImages() ([]gardenv1beta1.ShootMachi
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.AWS.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	case gardenv1beta1.CloudProviderAzure:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Azure.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	case gardenv1beta1.CloudProviderGCP:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.GCP.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	case gardenv1beta1.CloudProviderAlicloud:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Alicloud.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.OpenStack.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	case gardenv1beta1.CloudProviderPacket:
 		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Packet.Workers {
-			machineImages = append(machineImages, *worker.MachineImage)
+			if worker.MachineImage != nil {
+				machineImages = append(machineImages, *worker.MachineImage)
+			}
 		}
 	}
 

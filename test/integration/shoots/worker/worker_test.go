@@ -81,7 +81,7 @@ var _ = Describe("Worker Suite", func() {
 	)
 
 	areThereMoreThanOneMachineImageInShoot := func(s *WorkerGardenerTest) bool {
-		machineImages, err := s.GetShootMachineImages()
+		machineImages, err := s.GetMachineImagesFromShoot()
 		Expect(err).NotTo(HaveOccurred())
 
 		firstMachineImage := machineImages[0]

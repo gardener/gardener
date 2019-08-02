@@ -273,7 +273,7 @@ func (s *Shoot) GetDefaultMachineImage() *gardenv1beta1.ShootMachineImage {
 
 // GetMachineImages returns the name of the used machine image.
 func (s *Shoot) GetMachineImages() []*gardenv1beta1.ShootMachineImage {
-	return helper.GetMachineImagesFromShoot(s.CloudProvider, s.Info)
+	return helper.GetMachineImagesFromShootForCloudProvider(s.CloudProvider, s.Info)
 }
 
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.
