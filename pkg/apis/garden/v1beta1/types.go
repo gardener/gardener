@@ -1380,6 +1380,9 @@ type KubeControllerManagerConfig struct {
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	// +optional
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig `json:"horizontalPodAutoscaler,omitempty"`
+	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
+	// +optional
+	NodeCIDRMaskSize *int `json:"nodeCIDRMaskSize,omitempty"`
 }
 
 // GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.

@@ -3095,6 +3095,7 @@ func autoConvert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerMan
 		return err
 	}
 	out.HorizontalPodAutoscalerConfig = (*garden.HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
+	out.NodeCIDRMaskSize = (*int)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	return nil
 }
 
@@ -3108,6 +3109,7 @@ func autoConvert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerMan
 		return err
 	}
 	out.HorizontalPodAutoscalerConfig = (*HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
+	out.NodeCIDRMaskSize = (*int)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	return nil
 }
 

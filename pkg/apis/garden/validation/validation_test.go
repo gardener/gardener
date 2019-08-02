@@ -3003,6 +3003,7 @@ var _ = Describe("validation", func() {
 							},
 						},
 						KubeControllerManager: &garden.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: makeIntPointer(22),
 							HorizontalPodAutoscalerConfig: &garden.HorizontalPodAutoscalerConfig{
 								DownscaleDelay: makeDurationPointer(15 * time.Minute),
 								SyncPeriod:     makeDurationPointer(30 * time.Second),
@@ -5626,6 +5627,61 @@ var _ = Describe("validation", func() {
 			})
 		})
 
+		Context("KubeControllerManager configuration validation", func() {
+			It("should fail updating immutable fields", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(24)
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(22)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should succeed not changing immutable fields", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(24)
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(24)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(32)
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+				}))))
+			})
+
+			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(0)
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+				}))))
+			})
+
+			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeIntPointer(22)
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+
 		Context("KubeProxy validation", func() {
 			BeforeEach(func() {
 				shoot.Spec.Kubernetes.KubeProxy = &garden.KubeProxyConfig{}
@@ -6063,6 +6119,11 @@ func makeDurationPointer(d time.Duration) *metav1.Duration {
 
 func makeFloat64Pointer(f float64) *float64 {
 	ptr := f
+	return &ptr
+}
+
+func makeIntPointer(i int) *int {
+	ptr := i
 	return &ptr
 }
 

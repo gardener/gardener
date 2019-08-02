@@ -64,6 +64,9 @@ spec:
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
         - --controllers=*,bootstrapsigner,tokencleaner
+        {{- if .Values.nodeCIDRMaskSize }}
+        - --node-cidr-mask-size={{ .Values.nodeCIDRMaskSize }}
+        {{- end }}
         - --cluster-cidr={{ .Values.podNetwork }}
         - --cluster-name={{ .Values.clusterName }}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt

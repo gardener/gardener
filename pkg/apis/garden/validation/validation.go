@@ -1444,7 +1444,22 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
+	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+	return allErrs
+}
 
+func validateKubeControllerManagerConfiguration(newConfig, oldConfig *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	var newSize *int
+	var oldSize *int
+	if newConfig != nil {
+		newSize = newConfig.NodeCIDRMaskSize
+	}
+	if oldConfig != nil {
+		oldSize = oldConfig.NodeCIDRMaskSize
+	}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSize, oldSize, fldPath.Child("nodeCIDRMaskSize"))...)
 	return allErrs
 }
 
@@ -1697,6 +1712,11 @@ func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeCon
 		allErrs = append(allErrs, field.Invalid(fldPath, kubernetesVersion, err.Error()))
 	}
 	if kcm != nil {
+		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
+			if *maskSize < 16 || *maskSize > 28 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
+			}
+		}
 		if hpa := kcm.HorizontalPodAutoscalerConfig; hpa != nil {
 			fldPath = fldPath.Child("horizontalPodAutoscaler")
 
