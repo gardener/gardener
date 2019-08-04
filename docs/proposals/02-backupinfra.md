@@ -168,7 +168,7 @@ Here CloudProfileController will interpret this spec as follows:
 
 Following diagram represent overall flow in details:
 
-![sequence-diagram](Backup-Infrastructure-Provisioning-sequence-diagram.svg)
+![sequence-diagram](02-backupinfra-provisioning-sequence-diagram.svg)
 
 #### Reconciliation
 
@@ -181,7 +181,7 @@ Reconciliation on backup entry in seed cluster mostly comes in picture at the ti
 
 ### Alternative
 
-![sequence-diagram](Backup-Infrastructure-Provisioning-with-deletion-job.svg)
+![sequence-diagram](02-backupinfra-provisioning-with-deletion-job.svg)
 
 ## Discussion points / variations
 ### Manual vs dynamic bucket creation
@@ -228,7 +228,7 @@ controllers:
 - Scale up etcd-main with new config.
 - Destroy Old bucket and old backup namespace. It can be immediate or preferrably __lazy__ deletion.
 
-![backup-migration-sequence-diagram](./Backup-Migration.svg)
+![backup-migration-sequence-diagram](./02-backupinfra-migration.svg)
 
 ### Legacy Mode alternative
 - If Backup namespace present in seed cluster, then follow the legacy approach.
