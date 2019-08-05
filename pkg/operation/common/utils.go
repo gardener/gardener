@@ -451,12 +451,12 @@ func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) bool
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
-// IsUpToDate checks whether the Shoot's generation has changed or if the LastOperation status
-// is not Succeeded.
-func IsUpToDate(shoot *gardenv1beta1.Shoot) bool {
+// IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
+// is Succeeded.
+func IsObservedAtLatestGenerationAndSucceeded(shoot *gardenv1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
-	return shoot.Generation != shoot.Status.ObservedGeneration ||
-		(lastOperation != nil && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded)
+	return shoot.Generation == shoot.Status.ObservedGeneration &&
+		(lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded)
 }
 
 // SyncPeriodOfShoot determines the sync period of the given shoot.
