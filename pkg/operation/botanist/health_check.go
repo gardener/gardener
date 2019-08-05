@@ -797,7 +797,7 @@ func NewHealthChecker(conditionThresholds map[gardencorev1alpha1.ConditionType]t
 }
 
 func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMappings map[gardencorev1alpha1.ConditionType]time.Duration, apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition, gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
-	if b.Shoot.HibernationEnabled {
+	if b.Shoot.HibernationEnabled || (b.Shoot.Info.Status.IsHibernated != nil && *b.Shoot.Info.Status.IsHibernated) {
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
@@ -885,7 +885,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 
 // MonitoringHealthChecks performs the monitoring related health checks.
 func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
-	if b.Shoot.HibernationEnabled || (b.Shoot.Info.Status.IsHibernated != nil && *b.Shoot.Info.Status.IsHibernated) {
+	if b.Shoot.HibernationEnabled {
 		return shootHibernatedCondition(inactiveAlerts)
 	}
 	if err := b.InitializeMonitoringClient(); err != nil {
