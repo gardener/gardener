@@ -193,17 +193,17 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod),
-		cleanResourceFn(c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
