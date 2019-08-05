@@ -20,13 +20,20 @@
 * [`Cluster` resource](extensions/cluster.md)
 * Extension points
   * [General conventions](extensions/conventions.md)
+  * [Trigger for reconcile operations](extensions/reconcile-trigger.md)
+  * [Deploy resources into the shoot cluster](extensions/managedresources.md)
+  * [Shoot resource customization webhooks](extensions/shoot-webhooks.md)
   * DNS providers
     * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
   * IaaS/Cloud providers
+    * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
+    * [`ControlPlane` resource](extensions/controlplane.md)
     * [`Infrastructure` resource](extensions/infrastructure.md)
     * [`Worker` resource](extensions/worker.md)
   * Operating systems
     * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
+  * Other extensions
+    * [`Extension` resource](extensions/extension.md)
 
 ## Deployment
 

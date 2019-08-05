@@ -93,16 +93,7 @@ You can take a look at the below referenced example implementation for the Azure
 Some providers might require further information that is not provider specific but already part of the shoot resource.
 One example for this is the [GCP infrastructure controller](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-gcp/pkg/controller/infrastructure) which needs the pod and the service network of the cluster in order to prepare and configure the infrastructure correctly.
 As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
-They are part of the [`Cluster` extension resource](../cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
-
-## Special annotations that need to be respected
-
-Back then, when all infrastructure specifics were still in-tree, we have introduced a mechanism to only execute the infrastructure reconciliation during the maintenance time window (see [#528](https://github.com/gardener/gardener/pull/528)).
-The motivation for this was to drastically reduce the number of calls against the provider APIs.
-This behavior should be adapted by all infrastructure extensions now.
-Gardener will write the `gardener.cloud/operation=reconcile` annotation to the `Infrastructure` resource if the shoot is maintained.
-If the infrastructure has already been successfully created this annotation should be respected, i.e. if it does not exist the extension controller shall not reconcile.
-You can take a look at [this code](https://github.com/gardener/gardener-extensions/blob/master/pkg/controller/infrastructure/predicate.go#L79-L87) to see the conditions when the reconciliation is permitted.
+They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
 
 ## References and additional resources
 

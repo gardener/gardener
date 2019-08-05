@@ -34,9 +34,7 @@ func NewSecret(client client.Client) *Secret {
 	return &Secret{
 		client:    client,
 		keyValues: make(map[string]string),
-		secret: &corev1.Secret{
-			Type: corev1.SecretTypeOpaque,
-		},
+		secret:    &corev1.Secret{},
 	}
 }
 
@@ -55,7 +53,7 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{ObjectMeta: s.secret.ObjectMeta}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
-		secret.Type = s.secret.Type
+		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = s.secret.Data
 		return nil
 	})
