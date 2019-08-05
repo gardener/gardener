@@ -299,16 +299,16 @@ var _ = Describe("common", func() {
 			BeTrue()),
 	)
 
-	DescribeTable("#IsUpToDate",
+	DescribeTable("#IsObservedAtLatestGenerationAndSucceeded",
 		func(shoot *gardenv1beta1.Shoot, match gomegatypes.GomegaMatcher) {
-			Expect(IsUpToDate(shoot)).To(match)
+			Expect(IsObservedAtLatestGenerationAndSucceeded(shoot)).To(match)
 		},
 
 		Entry("not at observed generation",
 			&gardenv1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 			},
-			BeTrue()),
+			BeFalse()),
 		Entry("last operation state not succeeded",
 			&gardenv1beta1.Shoot{
 				Status: gardenv1beta1.ShootStatus{
@@ -317,7 +317,7 @@ var _ = Describe("common", func() {
 					},
 				},
 			},
-			BeTrue()),
+			BeFalse()),
 		Entry("observed at latest generation and no last operation state",
 			&gardenv1beta1.Shoot{},
 			BeFalse()),
@@ -329,7 +329,7 @@ var _ = Describe("common", func() {
 					},
 				},
 			},
-			BeFalse()),
+			BeTrue()),
 	)
 
 	DescribeTable("#SyncPeriodOfShoot",

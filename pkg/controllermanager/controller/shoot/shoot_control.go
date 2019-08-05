@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 
 	"github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -213,16 +215,35 @@ func (c *Controller) deleteShoot(shoot *gardenv1beta1.Shoot, o *operation.Operat
 
 func (c *Controller) reconcileShoot(shoot *gardenv1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
 	var (
-		operationType       = gardencorev1alpha1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
-		failedOrIgnored     = common.IsShootFailed(shoot) || common.ShouldIgnoreShoot(c.respectSyncPeriodOverwrite(), shoot)
-		reconcileNotAllowed = c.reconcileInMaintenanceOnly() && (!common.IsUpToDate(shoot) && !common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot))
-		allowedToUpdate     = !failedOrIgnored && !reconcileNotAllowed
+		operationType                              = gardencorev1alpha1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
+		failed                                     = common.IsShootFailed(shoot)
+		ignored                                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
+		failedOrIgnored                            = failed || ignored
+		reconcileInMaintenanceOnly                 = c.reconcileInMaintenanceOnly()
+		isUpToDate                                 = common.IsObservedAtLatestGenerationAndSucceeded(shoot)
+		isNowInEffectiveShootMaintenanceTimeWindow = common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
+		reconcileAllowed                           = !reconcileInMaintenanceOnly || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow
+		allowedToUpdate                            = !failedOrIgnored && reconcileAllowed
 	)
+	o.Logger.WithFields(logrus.Fields{
+		"operationType":              operationType,
+		"respectSyncPeriodOverwrite": respectSyncPeriodOverwrite,
+		"failed":                     failed,
+		"ignored":                    ignored,
+		"failedOrIgnored":            failedOrIgnored,
+		"reconcileInMaintenanceOnly": reconcileInMaintenanceOnly,
+		"isUpToDate":                 isUpToDate,
+		"isNowInEffectiveShootMaintenanceTimeWindow": isNowInEffectiveShootMaintenanceTimeWindow,
+		"reconcileAllowed":                           reconcileAllowed,
+		"allowedToUpdate":                            allowedToUpdate,
+	}).Info("Checking if Shoot can be reconciled")
 
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardenv1beta1.EventOperationPending, message)
 		if !allowedToUpdate {
+			o.Logger.WithError(err).Infof("Not allowed to update shoot with error")
 			return reconcile.Result{}, err
 		}
 
@@ -234,9 +255,8 @@ func (c *Controller) reconcileShoot(shoot *gardenv1beta1.Shoot, o *operation.Ope
 		return reconcile.Result{}, nil
 	}
 
-	if reconcileNotAllowed {
+	if !reconcileAllowed {
 		durationUntilNextSync := c.durationUntilNextShootSync(shoot)
-		o.Logger.Infof("Not allowed to reconcile Shoot now, will reconcile in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
 		message := fmt.Sprintf("Scheduled next queuing time for Shoot in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
 		c.recorder.Event(shoot, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
