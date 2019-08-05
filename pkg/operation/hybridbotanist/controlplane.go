@@ -247,6 +247,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"shootNetworks": map[string]interface{}{
 			"service": b.Shoot.GetServiceNetwork(),
+			"pod":     b.Shoot.GetPodNetwork(),
+			"node":    b.Shoot.GetNodeNetwork(),
 		},
 		"seedNetworks": map[string]interface{}{
 			"service": b.Seed.Info.Spec.Networks.Services,
