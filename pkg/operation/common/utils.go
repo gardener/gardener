@@ -525,3 +525,24 @@ func GetPersistentVolumeProvider(seed *gardenv1beta1.Seed) string {
 func GardenEtcdEncryptionSecretKey(shootNamespace, shootName string) client.ObjectKey {
 	return kutil.Key(shootNamespace, fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName))
 }
+
+// ReadServiceAccountSigningKeySecret reads the signing key secret to extract the signing key.
+// It errors if there is no value at ServiceAccountSigningKeySecretDataKey.
+func ReadServiceAccountSigningKeySecret(secret *corev1.Secret) (string, error) {
+	data, ok := secret.Data[ServiceAccountSigningKeySecretDataKey]
+	if !ok {
+		return "", fmt.Errorf("no signing key secret in secret %s/%s at .Data.%s", secret.Namespace, secret.Name, ServiceAccountSigningKeySecretDataKey)
+	}
+
+	return string(data), nil
+}
+
+// GetServiceAccountSigningKeySecret gets the signing key from the secret with the given name and namespace.
+func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, shootNamespace, secretName string) (string, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, kutil.Key(shootNamespace, secretName), secret); err != nil {
+		return "", err
+	}
+
+	return ReadServiceAccountSigningKeySecret(secret)
+}

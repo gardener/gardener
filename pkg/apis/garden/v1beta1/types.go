@@ -1326,6 +1326,29 @@ type KubeAPIServerConfig struct {
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	// +optional
 	AuditConfig *AuditConfig `json:"auditConfig,omitempty"`
+	// ServiceAccountConfig contains configuration settings for the service account handling
+	// of the kube-apiserver.
+	// +optional
+	ServiceAccountConfig *ServiceAccountConfig `json:"serviceAccountConfig,omitempty"`
+	// APIAudiences are the identifiers of the API. The service account token authenticator will
+	// validate that tokens used against the API are bound to at least one of these audiences.
+	// If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single
+	// element list containing the issuer URL.
+	// +optional
+	APIAudiences []string `json:"apiAudiences,omitempty"`
+}
+
+// ServiceAccountConfig is the kube-apiserver configuration for service accounts.
+type ServiceAccountConfig struct {
+	// Issuer is the identifier of the service account token issuer. The issuer will assert this
+	// identifier in "iss" claim of issued tokens. This value is a string or URI.
+	// +optional
+	Issuer *string `json:"issuer,omitempty"`
+	// SigningKeySecret is a reference to a secret that contains the current private key of the
+	// service account token issuer. The issuer will sign issued ID tokens with this private key.
+	// (Requires the 'TokenRequest' feature gate.)
+	// +optional
+	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecretName,omitempty"`
 }
 
 // AuditConfig contains settings for audit of the api server

@@ -87,6 +87,12 @@ spec:
   #     SomeKubernetesFeature: true
   #   runtimeConfig:
   #     scheduling.k8s.io/v1alpha1: true
+  #-#-# requires TokenRequest feature gate
+  #-#-# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  #   serviceAccountConfig:
+  #     issuer: "https://johndoe-openstack.garden-dev.example.com"
+  #     signingKeySecretName: "service-account-signing-key"
+  #   apiAudiences: ["some", "audiences"]
   #   oidcConfig:
   #     caBundle: |
   #       -----BEGIN CERTIFICATE-----

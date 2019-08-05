@@ -90,3 +90,24 @@ rules:
 - level: None
 {{- end -}}
 {{- end -}}
+
+{{- define "kube-apiserver.serviceAccountConfig" -}}
+{{- if .Values.serviceAccountConfig }}
+{{- if .Values.serviceAccountConfig.issuer }}
+- --service-account-issuer={{ .Values.serviceAccountConfig.issuer }}
+{{- end }}
+{{- if .Values.serviceAccountConfig.signingKey }}
+- --service-account-signing-key-file=/srv/kubernetes/service-account-signing-key/signing-key
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{- define "kube-apiserver.apiAudiences" -}}
+{{- if .Values.apiAudiences }}
+{{- if semverCompare "< 1.13" .Values.kubernetesVersion }}
+- --service-account-api-audiences={{ .Values.apiAudiences | join "," }}
+{{- else }}
+- --api-audiences={{ .Values.apiAudiences | join "," }}
+{{- end }}
+{{- end -}}
+{{- end -}}

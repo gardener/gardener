@@ -507,6 +507,9 @@ const (
 
 	// VpaExporterImageName is the name of the vpa-exporter image
 	VpaExporterImageName = "vpa-exporter"
+
+	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
+	ServiceAccountSigningKeySecretDataKey = "signing-key"
 )
 
 var (
