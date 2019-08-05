@@ -196,6 +196,12 @@ spec:
           value: "true"
         - name: OPENVPN_PORT
           value: "4314"
+        - name: SERVICE_NETWORK
+          value: {{ .Values.shootNetworks.service }}
+        - name: POD_NETWORK
+          value: {{ .Values.shootNetworks.pod }}
+        - name: NODE_NETWORK
+          value: {{ .Values.shootNetworks.node }}
         ports:
         - name: tcp-tunnel
           containerPort: 1194
