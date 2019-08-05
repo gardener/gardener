@@ -1,4 +1,4 @@
-# Controlplane Customization Webhooks
+# Controlplane customization webhooks
 
 Gardener creates the Shoot controlplane in several steps of the Shoot flow. At different point of this flow, it:
 
@@ -130,6 +130,10 @@ The `volumeClaimTemplates` section of these 2 StatefulSets **shall** contain a t
 ### cloud-controller-manager
 
 Gardener **shall not** deploy a cloud-controller-manager. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
+
+### CSI controllers
+
+Gardener **shall not** deploy a CSI controller. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
 
 ### kubelet
 
