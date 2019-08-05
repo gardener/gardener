@@ -98,7 +98,7 @@ require (
 	k8s.io/apiserver v0.0.0-20190313205120-8b27c41bdbb1
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70
-	k8s.io/code-generator v0.0.0-00010101000000-000000000000
+	k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
 	k8s.io/component-base v0.0.0-20190314000054-4a91899592f4
 	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
 	k8s.io/helm v2.7.2+incompatible
@@ -125,7 +125,7 @@ replace (
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190313205120-8b27c41bdbb1 // kubernetes-1.14.0
 	k8s.io/client-go => k8s.io/client-go v11.0.0+incompatible // kubernetes-1.14.0
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70 // kubernetes-1.14.0
-	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70 // kubernetes-1.14.0
+	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70 // kubernetes-1.14.4
 	k8s.io/component-base => k8s.io/component-base v0.0.0-20190314000054-4a91899592f4 // kubernetes-1.14.0
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/klog => k8s.io/klog v0.1.0
