@@ -68,9 +68,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         - 1.12.10
         - 1.11.10
         - 1.10.13
@@ -172,9 +172,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         - 1.12.10
         - 1.11.10
         - 1.10.13
@@ -273,9 +273,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         - 1.12.10
         - 1.11.10
         - 1.10.13
@@ -366,9 +366,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -451,9 +451,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         % endif
       machineImages:<% machineImages=value("spec.packet.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -539,9 +539,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.15.1
-        - 1.14.4
-        - 1.13.8
+        - 1.15.2
+        - 1.14.5
+        - 1.13.9
         - 1.12.10
         - 1.11.10
         - 1.10.13

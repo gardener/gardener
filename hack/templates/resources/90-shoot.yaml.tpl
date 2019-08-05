@@ -25,22 +25,22 @@
   kubernetesVersion=""
   if cloud == "aws":
     region="eu-west-1"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
   elif cloud == "azure" or cloud == "az":
     region="westeurope"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
   elif cloud == "gcp":
     region="europe-west1"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
   elif cloud == "alicloud":
     region="cn-beijing"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
   elif cloud == "packet":
     region="ewr1"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
-    kubernetesVersion="1.15.1"
+    kubernetesVersion="1.15.2"
 %>---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
