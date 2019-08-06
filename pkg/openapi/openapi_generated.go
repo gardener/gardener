@@ -4058,6 +4058,13 @@ func schema_pkg_apis_garden_v1beta1_KubeControllerManagerConfig(ref common.Refer
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig"),
 						},
 					},
+					"nodeCIDRMaskSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},

@@ -457,6 +457,10 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		if controllerManagerConfig.HorizontalPodAutoscalerConfig != nil {
 			defaultValues["horizontalPodAutoscaler"] = controllerManagerConfig.HorizontalPodAutoscalerConfig
 		}
+
+		if controllerManagerConfig.NodeCIDRMaskSize != nil {
+			defaultValues["nodeCIDRMaskSize"] = *controllerManagerConfig.NodeCIDRMaskSize
+		}
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)

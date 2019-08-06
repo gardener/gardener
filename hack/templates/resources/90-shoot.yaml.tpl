@@ -360,6 +360,8 @@ spec:
   # kubeControllerManager:
   #   featureGates:
   #     SomeKubernetesFeature: true
+  # The NodeCIRDMaskSize field is immutable due to https://github.com/kubernetes/kubernetes/issues/70957
+  #   nodeCIDRMaskSize: 24
   #   horizontalPodAutoscaler:
   #     syncPeriod: 30s
   #     tolerance: 0.1
