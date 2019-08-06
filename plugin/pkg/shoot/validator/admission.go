@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"time"
 
@@ -137,6 +138,21 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 	// Ignore updates to shoot status or other subresources
 	if a.GetSubresource() != "" {
 		return nil
+	}
+
+	// Ignore updates if shoot spec hasn't changed
+	if a.GetOperation() == admission.Update {
+		newShoot, ok := a.GetObject().(*garden.Shoot)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+		}
+		oldShoot, ok := a.GetOldObject().(*garden.Shoot)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
+		}
+		if reflect.DeepEqual(newShoot.Spec, oldShoot.Spec) {
+			return nil
+		}
 	}
 
 	shoot, ok := a.GetObject().(*garden.Shoot)
