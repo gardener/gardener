@@ -34,7 +34,7 @@ type ChartApplier interface {
 	ApplyChartInNamespaceWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error
 	ApplyChartInNamespace(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
 
-	DeleteChart(ctx context.Context, chartPath, namespace, name string) error
+	DeleteChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
 }
 
 // chartApplier is a structure that contains a chart renderer and a manifest applier.
@@ -104,8 +104,8 @@ func (c *chartApplier) ApplyChartInNamespace(ctx context.Context, chartPath, nam
 // DeleteChart takes a path to a chart <chartPath>, name of the release <name>,
 // release's namespace <namespace> and renders the template.
 // The resulting manifest will be deleted from the cluster the Kubernetes client has been created for.
-func (c *chartApplier) DeleteChart(ctx context.Context, chartPath, namespace, name string) error {
-	manifestReader, err := c.manifestReader(chartPath, namespace, name, nil, nil)
+func (c *chartApplier) DeleteChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
+	manifestReader, err := c.manifestReader(chartPath, namespace, name, defaultValues, additionalValues)
 	if err != nil {
 		return err
 	}
