@@ -126,8 +126,8 @@ func (q *QuotaValidator) ValidateInitialization() error {
 	return nil
 }
 
-// Admit checks that the requested Shoot resources are within the quota limits.
-func (q *QuotaValidator) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+// Validate checks that the requested Shoot resources do not exceed the quota limits.
+func (q *QuotaValidator) Validate(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if q.readyFunc == nil {
 		q.AssignReadyFunc(func() bool {
