@@ -115,6 +115,8 @@ const (
 	SeedProvider = "seed.gardener.cloud/provider"
 	// ShootProvider is used to identify the shoot provider.
 	ShootProvider = "shoot.gardener.cloud/provider"
+	// NetworkingProvider is used to identify the networking provider for the cni plugin.
+	NetworkingProvider = "networking.shoot.gardener.cloud/provider"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
