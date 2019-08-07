@@ -2745,6 +2745,187 @@ var _ = Describe("validation", func() {
 		)
 	})
 
+	Describe("#ValidateKubeletConfiguration", func() {
+		validResourceQuantityValueMi := "100Mi"
+		validResourceQuantityValueKi := "100"
+		invalidResourceQuantityValue := "-100Mi"
+		validPercentValue := "5%"
+		invalidPercentValueLow := "-5%"
+		invalidPercentValueHigh := "110%"
+		invalidValue := "5X"
+
+		DescribeTable("validate the kubelet configuration - EvictionHard & EvictionSoft",
+			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					EvictionHard: &garden.KubeletConfigEviction{
+						MemoryAvailable:   &memoryAvailable,
+						ImageFSAvailable:  &imagefsAvailable,
+						ImageFSInodesFree: &imagefsInodesFree,
+						NodeFSAvailable:   &nodefsAvailable,
+						NodeFSInodesFree:  &nodefsInodesFree,
+					},
+					EvictionSoft: &garden.KubeletConfigEviction{
+						MemoryAvailable:   &memoryAvailable,
+						ImageFSAvailable:  &imagefsAvailable,
+						ImageFSInodesFree: &imagefsInodesFree,
+						NodeFSAvailable:   &nodefsAvailable,
+						NodeFSInodesFree:  &nodefsInodesFree,
+					},
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", validResourceQuantityValueMi, validResourceQuantityValueKi, validPercentValue, validPercentValue, validPercentValue, HaveLen(0)),
+			Entry("only allow resource.Quantity or percent value for any value", invalidValue, validPercentValue, validPercentValue, validPercentValue, validPercentValue, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionHard.memoryAvailable").String()),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionSoft.memoryAvailable").String()),
+				})))),
+			Entry("do not allow negative resource.Quantity", invalidResourceQuantityValue, validPercentValue, validPercentValue, validPercentValue, validPercentValue, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionHard.memoryAvailable").String()),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionSoft.memoryAvailable").String()),
+				})))),
+			Entry("do not allow negative percentages", invalidPercentValueLow, validPercentValue, validPercentValue, validPercentValue, validPercentValue, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionHard.memoryAvailable").String()),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionSoft.memoryAvailable").String()),
+				})))),
+			Entry("do not allow percentages > 100", invalidPercentValueHigh, validPercentValue, validPercentValue, validPercentValue, validPercentValue, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionHard.memoryAvailable").String()),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionSoft.memoryAvailable").String()),
+				})))),
+		)
+
+		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
+		DescribeTable("validate the kubelet configuration - EvictionMinimumReclaim",
+			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree resource.Quantity, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					EvictionMinimumReclaim: &garden.KubeletConfigEvictionMinimumReclaim{
+						MemoryAvailable:   &memoryAvailable,
+						ImageFSAvailable:  &imagefsAvailable,
+						ImageFSInodesFree: &imagefsInodesFree,
+						NodeFSAvailable:   &nodefsAvailable,
+						NodeFSInodesFree:  &nodefsInodesFree,
+					},
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, HaveLen(0)),
+			Entry("only allow positive resource.Quantity for any value", resource.MustParse(invalidResourceQuantityValue), validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal(field.NewPath("evictionMinimumReclaim.memoryAvailable").String()),
+			})))),
+		)
+		validDuration := metav1.Duration{Duration: 2 * time.Minute}
+		invalidDuration := metav1.Duration{Duration: -2 * time.Minute}
+		DescribeTable("validate the kubelet configuration - KubeletConfigEvictionSoftGracePeriod",
+			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					EvictionSoftGracePeriod: &garden.KubeletConfigEvictionSoftGracePeriod{
+						MemoryAvailable:   &memoryAvailable,
+						ImageFSAvailable:  &imagefsAvailable,
+						ImageFSInodesFree: &imagefsInodesFree,
+						NodeFSAvailable:   &nodefsAvailable,
+						NodeFSInodesFree:  &nodefsInodesFree,
+					},
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", validDuration, validDuration, validDuration, validDuration, validDuration, HaveLen(0)),
+			Entry("only allow positive Duration for any value", invalidDuration, validDuration, validDuration, validDuration, validDuration, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionSoftGracePeriod.memoryAvailable").String()),
+				})))),
+		)
+
+		DescribeTable("validate the kubelet configuration - EvictionPressureTransitionPeriod",
+			func(evictionPressureTransitionPeriod metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					EvictionPressureTransitionPeriod: &evictionPressureTransitionPeriod,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", validDuration, HaveLen(0)),
+			Entry("only allow positive Duration", invalidDuration, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionPressureTransitionPeriod").String()),
+				})))),
+		)
+
+		DescribeTable("validate the kubelet configuration - EvictionMaxPodGracePeriod",
+			func(evictionMaxPodGracePeriod int32, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					EvictionMaxPodGracePeriod: &evictionMaxPodGracePeriod,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", int32(90), HaveLen(0)),
+			Entry("only allow positive number", int32(-3), ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("evictionMaxPodGracePeriod").String()),
+				})))),
+		)
+
+		DescribeTable("validate the kubelet configuration - MaxPods",
+			func(maxPods int32, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := garden.KubeletConfig{
+					MaxPods: &maxPods,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", int32(110), HaveLen(0)),
+			Entry("only allow positive number", int32(-3), ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("maxPods").String()),
+				})))),
+		)
+	})
+
 	Describe("#ValidateHibernationSchedules", func() {
 		DescribeTable("validate hibernation schedules",
 			func(schedules []garden.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
@@ -3675,6 +3856,103 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, garden.AWSWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, garden.AWSWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							}, garden.AWSWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
+			})
 		})
 
 		Context("Azure specific validation", func() {
@@ -4087,6 +4365,103 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, garden.AzureWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, garden.AzureWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							}, garden.AzureWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
+			})
 		})
 
 		Context("GCP specific validation", func() {
@@ -4432,6 +4807,103 @@ var _ = Describe("validation", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
+			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, garden.GCPWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, garden.GCPWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							}, garden.GCPWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
 			})
 		})
 
@@ -4825,6 +5297,103 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, garden.AlicloudWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, garden.AlicloudWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							}, garden.AlicloudWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
+			})
 		})
 
 		// BEGIN PACKET
@@ -5048,6 +5617,103 @@ var _ = Describe("validation", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))))
+			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, garden.PacketWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, garden.PacketWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     testWorker,
+							}, garden.PacketWorker{
+								VolumeSize: "35Gi",
+								VolumeType: "default",
+								Worker:     secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
 			})
 		})
 		// END PACKET
@@ -5367,6 +6033,97 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize       = 24
+					testWorker              garden.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubelet = &garden.KubeletConfig{
+						MaxPods: &defaultMaxPod,
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, garden.OpenStackWorker{
+								Worker: testWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubelet = &garden.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+
+							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, garden.OpenStackWorker{
+								Worker: testWorker,
+							}, garden.OpenStackWorker{
+								Worker: secondTestWorker,
+							})
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &garden.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(HaveLen(1))
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring(`kubelet or kube-controller configuration incorrect`),
+							}))
+						})
+					})
+				})
+			})
 		})
 
 		Context("dns section", func() {
@@ -5662,7 +6419,7 @@ var _ = Describe("validation", func() {
 				Expect(errorList).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					"Detail": Equal(`field is immutable`),
+					"Detail": ContainSubstring(`field is immutable`),
 				}))
 			})
 
@@ -5684,7 +6441,11 @@ var _ = Describe("validation", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				}))))
+				})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+					}))))
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
@@ -5694,7 +6455,11 @@ var _ = Describe("validation", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				}))))
+				})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+					}))))
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {

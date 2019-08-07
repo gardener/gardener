@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -142,34 +142,14 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	var (
 		serviceNetwork = b.Shoot.GetServiceNetwork()
 
-		kubelet = map[string]interface{}{
-			"caCert": string(b.Secrets[gardencorev1alpha1.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
-		}
-
 		originalConfig = map[string]interface{}{
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
 				"domain":     gardenv1beta1.DefaultDomain,
-				"kubelet":    kubelet,
 				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		}
 	)
-
-	if kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet; kubeletConfig != nil {
-		if featureGates := kubeletConfig.FeatureGates; featureGates != nil {
-			kubelet["featureGates"] = featureGates
-		}
-		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
-			kubelet["podPIDsLimit"] = *podPIDsLimit
-		}
-		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
-			kubelet["cpuCFSQuota"] = *cpuCFSQuota
-		}
-		if cpuManagerPolicy := kubeletConfig.CPUManagerPolicy; cpuManagerPolicy != nil {
-			kubelet["cpuManagerPolicy"] = *cpuManagerPolicy
-		}
-	}
 
 	if caBundle := b.Shoot.CloudProfile.Spec.CABundle; caBundle != nil {
 		originalConfig["caBundle"] = *caBundle
@@ -178,16 +158,8 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *Botanist) deployOperatingSystemConfigsForWorker(
-	machineTypes []gardenv1beta1.MachineType,
-	machineImage *gardenv1beta1.ShootMachineImage,
-	downloaderConfig,
-	originalConfig map[string]interface{},
-	worker gardenv1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
-	var (
-		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
-		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
-	)
+func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
+	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 
 	downloaderConfig["secretName"] = secretName
 
@@ -207,10 +179,135 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(
 		"customization":        customization,
 	}
 
+	var (
+		evictionHard            = map[string]string{}
+		evictionSoft            = map[string]string{}
+		evictionSoftGracePeriod = map[string]string{}
+		evictionMinimumReclaim  = map[string]string{}
+	)
+
+	// use the spec.Kubernetes.Kubelet as default for worker
+	kubeletConfig := worker.Kubelet
+	if kubeletConfig == nil {
+		kubeletConfig = b.Shoot.Info.Spec.Kubernetes.Kubelet
+	}
+
+	// ensure sane defaults for evictionHard.memoryAvailable and evictionSoft.memoryAvailable
+	evictionHard["memoryAvailable"], evictionSoft["memoryAvailable"] = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
+
+	if kubeletConfig != nil {
+		if kubeletConfig.EvictionHard != nil {
+			eviction := kubeletConfig.EvictionHard
+			if memoryAvailable := eviction.MemoryAvailable; memoryAvailable != nil {
+				evictionHard["memoryAvailable"] = *memoryAvailable
+			}
+			if imageFSAvailable := eviction.ImageFSAvailable; imageFSAvailable != nil {
+				evictionHard["imageFSAvailable"] = *imageFSAvailable
+			}
+			if imageFSInodesFree := eviction.ImageFSInodesFree; imageFSInodesFree != nil {
+				evictionHard["imageFSInodesFree"] = *imageFSInodesFree
+			}
+			if nodeFSAvailable := eviction.NodeFSAvailable; nodeFSAvailable != nil {
+				evictionHard["nodeFSAvailable"] = *nodeFSAvailable
+			}
+			if nodeFSInodesFree := eviction.NodeFSInodesFree; nodeFSInodesFree != nil {
+				evictionHard["nodeFSInodesFree"] = *nodeFSInodesFree
+			}
+		}
+
+		if kubeletConfig.EvictionSoft != nil {
+			eviction := kubeletConfig.EvictionSoft
+			if memoryAvailable := eviction.MemoryAvailable; memoryAvailable != nil {
+				evictionSoft["memoryAvailable"] = *memoryAvailable
+			}
+			if imageFSAvailable := eviction.ImageFSAvailable; imageFSAvailable != nil {
+				evictionSoft["imageFSAvailable"] = *imageFSAvailable
+			}
+			if imageFSInodesFree := eviction.ImageFSInodesFree; imageFSInodesFree != nil {
+				evictionSoft["imageFSInodesFree"] = *imageFSInodesFree
+			}
+			if nodeFSAvailable := eviction.NodeFSAvailable; nodeFSAvailable != nil {
+				evictionSoft["nodeFSAvailable"] = *nodeFSAvailable
+			}
+			if nodeFSInodesFree := eviction.NodeFSInodesFree; nodeFSInodesFree != nil {
+				evictionSoft["nodeFSInodesFree"] = *nodeFSInodesFree
+			}
+		}
+
+		if kubeletConfig.EvictionSoftGracePeriod != nil {
+			eviction := kubeletConfig.EvictionSoftGracePeriod
+			if memoryAvailable := eviction.MemoryAvailable; memoryAvailable != nil {
+				evictionSoftGracePeriod["memoryAvailable"] = memoryAvailable.Duration.String()
+			}
+			if imageFSAvailable := eviction.ImageFSAvailable; imageFSAvailable != nil {
+				evictionSoftGracePeriod["imageFSAvailable"] = imageFSAvailable.Duration.String()
+			}
+			if imageFSInodesFree := eviction.ImageFSInodesFree; imageFSInodesFree != nil {
+				evictionSoftGracePeriod["imageFSInodesFree"] = imageFSInodesFree.Duration.String()
+			}
+			if nodeFSAvailable := eviction.NodeFSAvailable; nodeFSAvailable != nil {
+				evictionSoftGracePeriod["nodeFSAvailable"] = nodeFSAvailable.Duration.String()
+			}
+			if nodeFSInodesFree := eviction.NodeFSInodesFree; nodeFSInodesFree != nil {
+				evictionSoftGracePeriod["nodeFSInodesFree"] = nodeFSInodesFree.Duration.String()
+			}
+		}
+
+		if kubeletConfig.EvictionMinimumReclaim != nil {
+			eviction := kubeletConfig.EvictionMinimumReclaim
+			if memoryAvailable := eviction.MemoryAvailable; memoryAvailable != nil {
+				evictionMinimumReclaim["memoryAvailable"] = memoryAvailable.String()
+			}
+			if imageFSAvailable := eviction.ImageFSAvailable; imageFSAvailable != nil {
+				evictionMinimumReclaim["imageFSAvailable"] = imageFSAvailable.String()
+			}
+			if imageFSInodesFree := eviction.ImageFSInodesFree; imageFSInodesFree != nil {
+				evictionMinimumReclaim["imageFSInodesFree"] = imageFSInodesFree.String()
+			}
+			if nodeFSAvailable := eviction.NodeFSAvailable; nodeFSAvailable != nil {
+				evictionMinimumReclaim["nodeFSAvailable"] = nodeFSAvailable.String()
+			}
+			if nodeFSInodesFree := eviction.NodeFSInodesFree; nodeFSInodesFree != nil {
+				evictionMinimumReclaim["nodeFSInodesFree"] = nodeFSInodesFree.String()
+			}
+		}
+	}
+
+	var kubelet = map[string]interface{}{
+		"caCert":                  string(b.Secrets[gardencorev1alpha1.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
+		"evictionHard":            evictionHard,
+		"evictionSoft":            evictionSoft,
+		"evictionSoftGracePeriod": evictionSoftGracePeriod,
+		"evictionMinimumReclaim":  evictionMinimumReclaim,
+	}
+
+	if kubeletConfig := kubeletConfig; kubeletConfig != nil {
+		if featureGates := kubeletConfig.FeatureGates; featureGates != nil {
+			kubelet["featureGates"] = featureGates
+		}
+		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
+			kubelet["podPIDsLimit"] = *podPIDsLimit
+		}
+		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
+			kubelet["cpuCFSQuota"] = *cpuCFSQuota
+		}
+		if cpuManagerPolicy := kubeletConfig.CPUManagerPolicy; cpuManagerPolicy != nil {
+			kubelet["cpuManagerPolicy"] = *cpuManagerPolicy
+		}
+		if maxPods := kubeletConfig.MaxPods; maxPods != nil {
+			kubelet["maxPods"] = *maxPods
+		}
+		if evictionPressureTransitionPeriod := kubeletConfig.EvictionPressureTransitionPeriod; evictionPressureTransitionPeriod != nil {
+			kubelet["evictionPressureTransitionPeriod"] = *evictionPressureTransitionPeriod
+		}
+		if evictionMaxPodGracePeriod := kubeletConfig.EvictionMaxPodGracePeriod; evictionMaxPodGracePeriod != nil {
+			kubelet["evictionMaxPodGracePeriod"] = *evictionMaxPodGracePeriod
+		}
+	}
+
 	originalConfig["worker"] = map[string]interface{}{
-		"name":                        worker.Name,
-		"evictionHardMemoryAvailable": evictionHardMemoryAvailable,
-		"evictionSoftMemoryAvailable": evictionSoftMemoryAvailable,
+		"name":    worker.Name,
+		"kubelet": kubelet,
 	}
 
 	var (

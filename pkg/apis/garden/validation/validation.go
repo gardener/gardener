@@ -17,6 +17,8 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -58,6 +60,45 @@ var (
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
 func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
+}
+
+// ValidatePositiveDuration validates that a duration is positive.
+func ValidatePositiveDuration(duration *v1.Duration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if duration == nil {
+		return allErrs
+	}
+	if duration.Seconds() < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, duration.Duration.String(), "must be non-negative"))
+	}
+	return allErrs
+}
+
+// ValidateResourceQuantityOrPercent checks if a value can be parsed to either a resource.quantity, a positive int or percent.
+func ValidateResourceQuantityOrPercent(valuePtr *string, fldPath *field.Path, key string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if valuePtr == nil {
+		return allErrs
+	}
+	value := *valuePtr
+	// check for resource quantity
+	if quantity, err := resource.ParseQuantity(value); err == nil {
+		if len(validateResourceQuantityValue(key, quantity, fldPath)) == 0 {
+			return allErrs
+		}
+	}
+
+	if validation.IsValidPercent(value) != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(key), value, "field must be either a valid resource quantity (e.g 200Mi) or a percentage (e.g '5%')"))
+		return allErrs
+	}
+
+	percentValue, _ := strconv.Atoi(value[:len(value)-1])
+	if percentValue > 100 || percentValue < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(key), value, "must not be greater than 100% and not smaller than 0%"))
+	}
+	return allErrs
 }
 
 func ValidatePositiveIntOrPercent(intOrPercent intstr.IntOrString, fldPath *field.Path) field.ErrorList {
@@ -889,7 +930,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	}
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
-	allErrs = append(allErrs, validateCloud(spec.Cloud, fldPath.Child("cloud"))...)
+	allErrs = append(allErrs, validateCloud(spec.Cloud, spec.Kubernetes, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
@@ -969,7 +1010,7 @@ func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
+func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	workerNames := make(map[string]bool)
 
@@ -984,6 +1025,12 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	}
 	if cloud.Seed != nil && len(*cloud.Seed) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), cloud.Seed, "seed name must not be empty when providing the key"))
+	}
+
+	var maxPod int32
+
+	if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
+		maxPod = *kubernetes.Kubelet.MaxPods
 	}
 
 	aws := cloud.AWS
@@ -1054,7 +1101,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			return allErrs
 		}
 
-		var workers []garden.Worker
+		var (
+			workers []garden.Worker
+		)
+
 		for i, worker := range aws.Workers {
 			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
@@ -1065,6 +1115,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 			workers = append(workers, worker.Worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
@@ -1135,6 +1188,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 			workers = append(workers, worker.Worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
@@ -1197,6 +1253,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 			workers = append(workers, worker.Worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
@@ -1254,6 +1313,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			}
 			workerNames[worker.Name] = true
 			workers = append(workers, worker.Worker)
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
@@ -1310,6 +1372,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 			workerNames[worker.Name] = true
 		}
 
@@ -1340,11 +1405,33 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
+			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubelet.MaxPods
+			}
 			workerNames[worker.Name] = true
 		}
 
 	}
 
+	if maxPod == 0 {
+		// default maxPod setting on kubelet
+		maxPod = 110
+	}
+	allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize)...)
+
+	return allErrs
+}
+
+// ValidateNodeCIDRMaskWithMaxPod validates if the Pod Network has enough ip addresses (configured via the NodeCIDRMask on the kube controller manager) to support the highest max pod setting on the shoot
+func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int) field.ErrorList {
+	allErrs := field.ErrorList{}
+	free := float64(32 - nodeCIDRMaskSize)
+	// first and last ips are reserved
+	ipAdressesAvailable := int32(math.Pow(2, free) - 2)
+
+	if ipAdressesAvailable < maxPod {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller configuration incorrect. Please adjust the NodeCIDRMaskSize of the kube-controller to support the highest maxPod on any worker pool. The NodeCIDRMaskSize of '%d (default: 24)' of the kube-controller only supports '%d' ip adresses. Highest maxPod setting on kubelet is '%d (default: 110)'. Please choose a NodeCIDRMaskSize that at least supports %d ip adresses", nodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
+	}
 	return allErrs
 }
 
@@ -1857,7 +1944,81 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	if len(worker.Taints) > 0 {
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
+	if worker.Kubelet != nil {
+		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubelet, fldPath.Child("kubelet"))...)
+	}
 
+	return allErrs
+}
+
+// ValidateWorker validates the worker object.
+func ValidateKubeletConfig(kubeletConfig garden.KubeletConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubeletConfig.MaxPods != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.MaxPods), fldPath.Child("maxPods"))...)
+	}
+
+	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
+	}
+
+	if kubeletConfig.EvictionMaxPodGracePeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.EvictionMaxPodGracePeriod), fldPath.Child("evictionMaxPodGracePeriod"))...)
+	}
+
+	if kubeletConfig.EvictionHard != nil {
+		allErrs = append(allErrs, validateKubeletConfigEviction(kubeletConfig.EvictionHard, fldPath.Child("evictionHard"))...)
+	}
+	if kubeletConfig.EvictionSoft != nil {
+		allErrs = append(allErrs, validateKubeletConfigEviction(kubeletConfig.EvictionSoft, fldPath.Child("evictionSoft"))...)
+	}
+	if kubeletConfig.EvictionMinimumReclaim != nil {
+		allErrs = append(allErrs, validateKubeletConfigEvictionMinimumReclaim(kubeletConfig.EvictionMinimumReclaim, fldPath.Child("evictionMinimumReclaim"))...)
+	}
+	if kubeletConfig.EvictionSoftGracePeriod != nil {
+		allErrs = append(allErrs, validateKubeletConfigEvictionSoftGracePeriod(kubeletConfig.EvictionSoftGracePeriod, fldPath.Child("evictionSoftGracePeriod"))...)
+	}
+	return allErrs
+}
+
+func validateKubeletConfigEviction(eviction *garden.KubeletConfigEviction, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, ValidateResourceQuantityOrPercent(eviction.MemoryAvailable, fldPath, "memoryAvailable")...)
+	allErrs = append(allErrs, ValidateResourceQuantityOrPercent(eviction.ImageFSAvailable, fldPath, "imagefsAvailable")...)
+	allErrs = append(allErrs, ValidateResourceQuantityOrPercent(eviction.ImageFSInodesFree, fldPath, "imagefsInodesFree")...)
+	allErrs = append(allErrs, ValidateResourceQuantityOrPercent(eviction.NodeFSAvailable, fldPath, "nodefsAvailable")...)
+	allErrs = append(allErrs, ValidateResourceQuantityOrPercent(eviction.ImageFSInodesFree, fldPath, "imagefsInodesFree")...)
+	return allErrs
+}
+
+func validateKubeletConfigEvictionMinimumReclaim(eviction *garden.KubeletConfigEvictionMinimumReclaim, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if eviction.MemoryAvailable != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("memoryAvailable", *eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
+	}
+	if eviction.ImageFSAvailable != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("imagefsAvailable", *eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
+	}
+	if eviction.ImageFSInodesFree != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+	}
+	if eviction.NodeFSAvailable != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("nodefsAvailable", *eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
+	}
+	if eviction.ImageFSInodesFree != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("imagefsInodesFree", *eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+	}
+	return allErrs
+}
+
+func validateKubeletConfigEvictionSoftGracePeriod(eviction *garden.KubeletConfigEvictionSoftGracePeriod, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, ValidatePositiveDuration(eviction.MemoryAvailable, fldPath.Child("memoryAvailable"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(eviction.ImageFSAvailable, fldPath.Child("imagefsAvailable"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
+	allErrs = append(allErrs, ValidatePositiveDuration(eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	return allErrs
 }
 
