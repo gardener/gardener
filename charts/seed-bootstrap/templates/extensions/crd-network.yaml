@@ -1,0 +1,73 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: networks.extensions.gardener.cloud
+spec:
+  group: extensions.gardener.cloud
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: networks
+    singular: network
+    kind: Network
+  additionalPrinterColumns:
+    - name: Type
+      type: string
+      description: The type of the network provider for this resource.
+      JSONPath: .spec.type
+    - name: Pod CIDR
+      type: string
+      JSONPath: .spec.podCIDR
+    - name: Service CIDR
+      type: string
+      JSONPath: .spec.serviceCIDR
+    - name: Status
+      type: string
+      JSONPath: .status.lastOperation.state
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            podCIDR:
+              description: PodCIDR defines the CIDR that will be used for pods.
+              type: string
+            providerConfig:
+              description: ProviderConfig contains plugin-specific configuration.
+              type: object
+            serviceCIDR:
+              description: ServiceCIDR defines the CIDR that will be used for services.
+              type: string
+          required:
+          - podCIDR
+          - serviceCIDR
+          type: object
+        status:
+          properties:
+            providerStatus:
+              description: ProviderStatus contains plugin-specific output.
+              type: object
+          type: object
+      required:
+      - spec

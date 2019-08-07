@@ -292,6 +292,16 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
+		destroyNetwork = g.Add(flow.Task{
+			Name:         "Destroying shoot network plugin",
+			Fn:           flow.TaskFn(botanist.DestroyNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+		})
+		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
+			Name:         "Waiting until shoot network plugin has been destroyed",
+			Fn:           flow.TaskFn(botanist.WaitUntilNetworkIsDeleted),
+			Dependencies: flow.NewTaskIDs(destroyNetwork),
+		})
 		destroyWorker = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
 			Fn:           flow.TaskFn(botanist.DestroyWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -338,6 +348,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
 			timeForInfrastructureResourceCleanup,
+			destroyNetwork,
+			waitUntilNetworkIsDestroyed,
 		)
 
 		destroyControlPlane = g.Add(flow.Task{

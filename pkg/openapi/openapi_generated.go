@@ -134,6 +134,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate":                schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow":                schema_pkg_apis_garden_v1beta1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular":                            schema_pkg_apis_garden_v1beta1_Monocular(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking":                           schema_pkg_apis_garden_v1beta1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress":                         schema_pkg_apis_garden_v1beta1_NginxIngress(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig":                           schema_pkg_apis_garden_v1beta1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud":                       schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref),
@@ -4876,6 +4877,56 @@ func schema_pkg_apis_garden_v1beta1_Monocular(ref common.ReferenceCallback) comm
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_Networking(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Networking defines networking parameters for the shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes is the CIDR of the node network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type identifies the type of the networking plugin",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to network resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
+				},
+				Required: []string{"type"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6840,9 +6891,16 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes"),
 						},
 					},
+					"networking": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking"),
+						},
+					},
 					"maintenance": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
+							Description: "Maintenance contains information about the time window for maintenance operations and which operations should be performed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
 						},
 					},
 				},
@@ -6850,7 +6908,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking"},
 	}
 }
 

@@ -27,9 +27,12 @@ import (
 var _ = Describe("#SetDefaults_Shoot", func() {
 	var (
 		shoot *v1beta1.Shoot
+		networking = &v1beta1.Networking{}
+
 	)
 
 	JustBeforeEach(func() {
+		shoot.Spec.Networking = networking
 		v1beta1.SetDefaults_Shoot(shoot)
 	})
 
@@ -38,7 +41,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 	})
 
 	Context("cloud", func() {
-
 		Context("aws", func() {
 			var (
 				aws *v1beta1.AWSCloud
@@ -46,6 +48,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			BeforeEach(func() {
 				aws = &v1beta1.AWSCloud{}
 				shoot.Spec.Cloud.AWS = aws
+
 			})
 
 			Context("Shoot Networks", func() {
@@ -211,6 +214,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			BeforeEach(func() {
 				azure = &v1beta1.AzureCloud{}
 				shoot.Spec.Cloud.Azure = azure
+				shoot.Spec.Networking = networking
 			})
 
 			Context("Shoot Networks", func() {
@@ -667,6 +671,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			BeforeEach(func() {
 				openstack = &v1beta1.OpenStackCloud{}
 				shoot.Spec.Cloud.OpenStack = openstack
+				shoot.Spec.Networking = networking
 			})
 
 			Context("Shoot Networks", func() {

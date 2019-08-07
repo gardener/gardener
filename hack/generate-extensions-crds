@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go get sigs.k8s.io/controller-tools/cmd/controller-gen
+GO111MODULE=on go get -u sigs.k8s.io/controller-tools/cmd/controller-gen
 
 # The CRD generator does not understand APIs managed by aggregated API servers.
 cp -r pkg/apis pkg/apis-tmp

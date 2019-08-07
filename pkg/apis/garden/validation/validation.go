@@ -935,6 +935,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
 
@@ -1784,6 +1785,20 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, fldPath.Child("kubeProxy"))...)
 	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
+	}
+
+	return allErrs
+}
+
+func validateNetworking(networking *garden.Networking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if networking == nil {
+		return append(allErrs, field.Required(fldPath, "networking section must be provided"))
+	}
+
+	if len(networking.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
 	}
 
 	return allErrs

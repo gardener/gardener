@@ -208,9 +208,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.GetPodNetwork(),
 		}
-		calicoConfig = map[string]interface{}{
-			"cloudProvider": b.Shoot.CloudProvider,
-		}
 		coreDNSConfig = map[string]interface{}{
 			"service": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
@@ -265,11 +262,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
 
-	calico, err := b.InjectShootShootImages(calicoConfig, common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName, common.CalicoKubeControllersImageName)
-	if err != nil {
-		return nil, err
-	}
-
 	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
 	if err != nil {
 		return nil, err
@@ -320,7 +312,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"coredns":             coreDNS,
 		"kube-proxy":          kubeProxy,
 		"vpn-shoot":           vpnShoot,
-		"calico":              calico,
 		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,

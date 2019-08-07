@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -34,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -157,12 +156,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployControlPlane = g.Add(flow.Task{
-			Name:         "Deploying Shoot control plane",
+			Name:         "Deploying shoot control plane components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilInfrastructureReady),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
-			Name:         "Waiting until Shoot control plane has been reconciled",
+			Name:         "Waiting until shoot control plane has been reconciled",
 			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
@@ -182,7 +181,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Deploying control plane exposure components",
+			Name:         "Deploying shoot control plane exposure components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
@@ -226,6 +225,16 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
+		deployNetworking = g.Add(flow.Task{
+			Name:         "Deploying shoot network plugin",
+			Fn:           flow.TaskFn(botanist.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, computeShootOSConfig),
+		})
+		waitUntilNetworkIsReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot network plugin has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilNetworkIsReady),
+			Dependencies: flow.NewTaskIDs(deployNetworking),
+		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
 			Fn:           flow.TaskFn(botanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
@@ -256,7 +265,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",

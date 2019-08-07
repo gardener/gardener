@@ -18,11 +18,6 @@ vpn-shoot:
   podAnnotations: {}
   images:
     vpn-shoot: image-repository:image-tag
-calico:
-  cloudProvider: aws
-  images:
-    calico-node: image-repository:image-tag
-    calico-cni:  image-repository:image-tag
 monitoring:
   node-exporter:
     images:
