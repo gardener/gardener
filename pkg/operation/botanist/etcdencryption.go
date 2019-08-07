@@ -17,13 +17,14 @@ package botanist
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"time"
-
-	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -139,36 +140,61 @@ func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx conte
 		return err
 	}
 
+	// If the etcd encryption secret in the seed already has the correct checksum annotation then we don't have to do anything.
 	if secret.Annotations[common.EtcdEncryptionChecksumAnnotationName] == checksum {
 		b.Logger.Infof("etcd encryption is up to date (checksum %s), no need to rewrite secrets", checksum)
 		return nil
 	}
 
 	shortChecksum := kutil.TruncateLabelValue(checksum)
+
+	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in
+	// case this function fails for some reason.
 	notCurrentChecksum, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.NotEquals, []string{shortChecksum})
 	if err != nil {
 		return err
 	}
+	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, notCurrentChecksum, func(m metav1.Object) {
+		kutil.SetMetaDataLabel(m, common.EtcdEncryptionChecksumLabelName, shortChecksum)
+	}); len(errorList) > 0 {
+		return fmt.Errorf("could not add checksum label for all shoot secrets: %+v", errorList)
+	}
+	b.Logger.Info("Successfully updated all secrets in the shoot after etcd encryption config changed")
 
-	secretSelectOptions := client.UseListOptions(&client.ListOptions{
-		LabelSelector: labels.NewSelector().Add(*notCurrentChecksum),
-	})
-
-	secretList := &corev1.SecretList{}
-	if err = b.K8sShootClient.Client().List(ctx, secretList, secretSelectOptions); err != nil {
+	// Remove checksum label from all secrets in shoot again.
+	hasChecksumLabelKey, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.Exists, nil)
+	if err != nil {
 		return err
 	}
-
-	for _, s := range secretList.Items {
-		withoutChecksumLabel := s.DeepCopy()
-		kutil.SetMetaDataLabel(&s, common.EtcdEncryptionChecksumLabelName, shortChecksum)
-		if err := b.K8sShootClient.Client().Patch(ctx, &s, client.MergeFrom(withoutChecksumLabel)); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		b.Logger.Debugf("Successfully rewrote secret %v/%v (checksum %q)", s.Namespace, s.Name, shortChecksum)
+	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, hasChecksumLabelKey, func(m metav1.Object) {
+		delete(m.GetLabels(), common.EtcdEncryptionChecksumLabelName)
+	}); len(errorList) > 0 {
+		return fmt.Errorf("could not remove checksum label from all shoot secrets: %+v", errorList)
 	}
+	b.Logger.Info("Successfully removed all added secret labels in the shoot after etcd encryption config changed")
 
+	// Update etcd encryption secret in seed to have the correct checksum annotation.
 	oldSecret := secret.DeepCopy()
 	kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionChecksumAnnotationName, checksum)
 	return b.K8sSeedClient.Client().Patch(ctx, secret, client.MergeFrom(oldSecret))
+}
+
+func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, labelRequirement *labels.Requirement, mutateLabelsFunc func(m metav1.Object)) []error {
+	secretList := &corev1.SecretList{}
+	if err := b.K8sShootClient.Client().List(ctx, secretList, client.UseListOptions(&client.ListOptions{LabelSelector: labels.NewSelector().Add(*labelRequirement)})); err != nil {
+		return []error{err}
+	}
+
+	var errorList []error
+	for _, s := range secretList.Items {
+		secretCopy := s.DeepCopy()
+		mutateLabelsFunc(&s)
+		patch := client.MergeFrom(secretCopy)
+
+		if err := b.K8sShootClient.Client().Patch(ctx, &s, patch); err != nil {
+			errorList = append(errorList, err)
+		}
+	}
+
+	return errorList
 }
