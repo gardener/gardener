@@ -21,5 +21,9 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  - name: Class
+    type: string
+    description: The class identifies which resource manager is responsible for this ManagedResource.
+    JSONPath: .spec.class
   subresources:
     status: {}
