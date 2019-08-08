@@ -144,8 +144,74 @@ spec:
         type: env
         value: westeurope
 
+  - name: hibernated-shoot-aws
+    dependsOn: [ create-garden ]
+    definition:
+      name: create-shoot
+      locationSet: default
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: h-aws-{{ $prefix }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: aws
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: SEED
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: aws
+      - name: SECRET_BINDING
+        type: env
+        value: core-aws-aws
+      - name: REGION
+        type: env
+        value: eu-west-1
+      - name: ZONE
+        type: env
+        value: eu-west-1b
+  - name: hibernate-aws
+    dependsOn: [ hibernated-shoot-aws ]
+    definition:
+      name: hibernate-shoot
+
+  - name: hibernated-shoot-gcp
+    dependsOn: [ create-garden ]
+    definition:
+      name: create-shoot
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: h-gcp-{{ $prefix }}
+      - name: K8S_VERSION
+        type: env
+        value: {{ .Values.shoot.k8sVersion }}
+      - name: CLOUDPROVIDER
+        type: env
+        value: gcp
+      - name: CLOUDPROFILE
+        type: env
+        value: gcp
+      - name: SECRET_BINDING
+        type: env
+        value: core-gcp-gcp
+      - name: REGION
+        type: env
+        value: europe-west1
+      - name: ZONE
+        type: env
+        value: europe-west1-b
+  - name: hibernate-gcp
+    dependsOn: [ hibernated-shoot-gcp ]
+    definition:
+      name: hibernate-shoot
+
   - name: upgrade-garden
-    dependsOn: [ create-shoot-gcp, create-shoot-aws, create-shoot-az ]
+    dependsOn: [ create-shoot-gcp, create-shoot-aws, create-shoot-az, hibernate-aws, hibernate-gcp ]
     definition:
       name: upgrade-garden
       locationSet: upgraded
@@ -241,6 +307,33 @@ spec:
       - name: SHOOT_NAME
         type: env
         value: az-14-{{ $prefix }}
+
+  - name: delete-hibernated-aws-shoot
+    dependsOn: [ reconcile-shoots ]
+    artifactsFrom: hibernated-shoot-aws
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: h-aws-{{ $prefix }}
+
+  - name: wakeup-gcp-shoot
+    dependsOn: [ reconcile-shoots ]
+    artifactsFrom: hibernated-shoot-gcp
+    definition:
+      name: wakeup-shoot
+      locationSet: upgraded
+      config:
+      - name: SHOOT_NAME
+        type: env
+        value: h-gcp-{{ $prefix }}
+  - name: delete-hibernated-gcp-shoot
+    dependsOn: [ wakeup-gcp-shoot ]
+    definition:
+      name: delete-shoot
+      locationSet: upgraded
 
   - name: create-shoot-gcp-upgrade
     dependsOn: [ reconcile-shoots ]
@@ -363,7 +456,7 @@ spec:
       locationSet: upgraded
 
   - name: scheduler-test
-    dependsOn: [ delete-shoot-aws, delete-shoot-gcp, delete-shoot-az, delete-shoot-gcp-upgraded, delete-shoot-aws-upgraded, delete-shoot-az-upgraded ]
+    dependsOn: [ delete-shoot-aws, delete-shoot-gcp, delete-shoot-az, delete-shoot-gcp-upgraded, delete-shoot-aws-upgraded, delete-shoot-az-upgraded, delete-hibernated-aws-shoot, delete-hibernated-gcp-shoot ]
     definition:
       name: scheduler-test
       locationSet: upgraded
