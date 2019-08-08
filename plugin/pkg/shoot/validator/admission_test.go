@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -44,10 +43,10 @@ var _ = Describe("validator", func() {
 			project               garden.Project
 			shoot                 garden.Shoot
 
-			podCIDR     = gardencore.CIDR("100.96.0.0/11")
-			serviceCIDR = gardencore.CIDR("100.64.0.0/13")
-			nodesCIDR   = gardencore.CIDR("10.250.0.0/16")
-			k8sNetworks = gardencore.K8SNetworks{
+			podCIDR     = garden.CIDR("100.96.0.0/11")
+			serviceCIDR = garden.CIDR("100.64.0.0/13")
+			nodesCIDR   = garden.CIDR("10.250.0.0/16")
+			k8sNetworks = garden.K8SNetworks{
 				Pods:     &podCIDR,
 				Services: &serviceCIDR,
 				Nodes:    &nodesCIDR,
@@ -65,9 +64,9 @@ var _ = Describe("validator", func() {
 			validMachineImageVersions     = []garden.MachineImageVersion{{Version: "0.0.1"}}
 			validShootMachineImageVersion = "0.0.1"
 
-			seedPodsCIDR     = gardencore.CIDR("10.241.128.0/17")
-			seedServicesCIDR = gardencore.CIDR("10.241.0.0/17")
-			seedNodesCIDR    = gardencore.CIDR("10.240.0.0/16")
+			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
+			seedServicesCIDR = garden.CIDR("10.241.0.0/17")
+			seedNodesCIDR    = garden.CIDR("10.240.0.0/16")
 
 			projectBase = garden.Project{
 				ObjectMeta: metav1.ObjectMeta{

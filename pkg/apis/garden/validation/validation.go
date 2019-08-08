@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Masterminds/semver"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -738,7 +737,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateCIDR(cidr gardencore.CIDR, fldPath *field.Path) field.ErrorList {
+func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
@@ -1715,7 +1714,7 @@ func validateCIDROVerlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bo
 	return allErrs
 }
 
-func transformK8SNetworks(networks gardencore.K8SNetworks, fldPath *field.Path) (nodes, pods, services cidrvalidation.CIDR, allErrs field.ErrorList) {
+func transformK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) (nodes, pods, services cidrvalidation.CIDR, allErrs field.ErrorList) {
 	cidrs := []cidrvalidation.CIDR{}
 
 	if networks.Nodes != nil {

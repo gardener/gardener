@@ -64,12 +64,12 @@ const (
 // NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
 func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *v1beta1.Shoot) (*GardenerTestOperation, error) {
 	var (
-		seedClient kubernetes.Interface
+		seedClient  kubernetes.Interface
 		shootClient kubernetes.Interface
 
-		seed = &v1beta1.Seed{}
+		seed             = &v1beta1.Seed{}
 		seedCloudProfile = &v1beta1.CloudProfile{}
-		project = &v1beta1.Project{}
+		project          = &v1beta1.Project{}
 	)
 	if shoot != nil {
 		if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
@@ -129,7 +129,6 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 			return nil, errors.Wrap(err, "could not construct Shoot client")
 		}
 	}
-
 
 	return &GardenerTestOperation{
 		Logger: logger,

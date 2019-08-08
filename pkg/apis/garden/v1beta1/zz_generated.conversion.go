@@ -7,7 +7,6 @@ package v1beta1
 import (
 	unsafe "unsafe"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	v1 "k8s.io/api/core/v1"
@@ -1351,9 +1350,9 @@ func autoConvert_v1beta1_AWSNetworks_To_garden_AWSNetworks(in *AWSNetworks, out 
 	if err := Convert_v1beta1_AWSVPC_To_garden_AWSVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Internal = *(*[]core.CIDR)(unsafe.Pointer(&in.Internal))
-	out.Public = *(*[]core.CIDR)(unsafe.Pointer(&in.Public))
-	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = *(*[]garden.CIDR)(unsafe.Pointer(&in.Internal))
+	out.Public = *(*[]garden.CIDR)(unsafe.Pointer(&in.Public))
+	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1407,7 +1406,7 @@ func Convert_garden_AWSProfile_To_v1beta1_AWSProfile(in *garden.AWSProfile, out 
 
 func autoConvert_v1beta1_AWSVPC_To_garden_AWSVPC(in *AWSVPC, out *garden.AWSVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1691,7 +1690,7 @@ func autoConvert_v1beta1_AlicloudNetworks_To_garden_AlicloudNetworks(in *Aliclou
 	if err := Convert_v1beta1_AlicloudVPC_To_garden_AlicloudVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1743,7 +1742,7 @@ func Convert_garden_AlicloudProfile_To_v1beta1_AlicloudProfile(in *garden.Aliclo
 
 func autoConvert_v1beta1_AlicloudVPC_To_garden_AlicloudVPC(in *AlicloudVPC, out *garden.AlicloudVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1989,7 +1988,7 @@ func autoConvert_v1beta1_AzureNetworks_To_garden_AzureNetworks(in *AzureNetworks
 	if err := Convert_v1beta1_AzureVNet_To_garden_AzureVNet(&in.VNet, &out.VNet, s); err != nil {
 		return err
 	}
-	out.Workers = core.CIDR(in.Workers)
+	out.Workers = garden.CIDR(in.Workers)
 	return nil
 }
 
@@ -2065,7 +2064,7 @@ func Convert_garden_AzureResourceGroup_To_v1beta1_AzureResourceGroup(in *garden.
 
 func autoConvert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.AzureVNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
-	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -2232,8 +2231,8 @@ func Convert_garden_BackupInfrastructureSpec_To_v1beta1_BackupInfrastructureSpec
 }
 
 func autoConvert_v1beta1_BackupInfrastructureStatus_To_garden_BackupInfrastructureStatus(in *BackupInfrastructureStatus, out *garden.BackupInfrastructureStatus, s conversion.Scope) error {
-	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
 	if err := metav1.Convert_int64_To_Pointer_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
 		return err
 	}
@@ -2715,7 +2714,7 @@ func Convert_garden_DNSProviderConstraint_To_v1beta1_DNSProviderConstraint(in *g
 
 func autoConvert_v1beta1_Extension_To_garden_Extension(in *Extension, out *garden.Extension, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
@@ -2845,8 +2844,8 @@ func autoConvert_v1beta1_GCPNetworks_To_garden_GCPNetworks(in *GCPNetworks, out 
 		return err
 	}
 	out.VPC = (*garden.GCPVPC)(unsafe.Pointer(in.VPC))
-	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
-	out.Internal = (*core.CIDR)(unsafe.Pointer(in.Internal))
+	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = (*garden.CIDR)(unsafe.Pointer(in.Internal))
 	return nil
 }
 
@@ -3974,7 +3973,7 @@ func autoConvert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(in *OpenS
 		return err
 	}
 	out.Router = (*garden.OpenStackRouter)(unsafe.Pointer(in.Router))
-	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -4579,9 +4578,9 @@ func Convert_garden_SeedList_To_v1beta1_SeedList(in *garden.SeedList, out *SeedL
 }
 
 func autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
-	out.Nodes = core.CIDR(in.Nodes)
-	out.Pods = core.CIDR(in.Pods)
-	out.Services = core.CIDR(in.Services)
+	out.Nodes = garden.CIDR(in.Nodes)
+	out.Pods = garden.CIDR(in.Pods)
+	out.Services = garden.CIDR(in.Services)
 	return nil
 }
 
@@ -4611,7 +4610,7 @@ func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.S
 	if err := Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.BlockCIDRs = *(*[]core.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
+	out.BlockCIDRs = *(*[]garden.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
 	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
 	out.Backup = (*garden.BackupProfile)(unsafe.Pointer(in.Backup))
@@ -4648,7 +4647,7 @@ func autoConvert_v1beta1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *ga
 	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
@@ -4771,7 +4770,7 @@ func Convert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *Sh
 func autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in *ShootMachineImage, out *garden.ShootMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Version = in.Version
-	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
@@ -4841,12 +4840,12 @@ func Convert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out *Sh
 }
 
 func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
 	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
-	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed

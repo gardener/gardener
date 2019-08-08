@@ -112,15 +112,14 @@ const (
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
 	SeedResourceManagerClass = "seed"
-
-	// BackupProvider is used to identify the backup provider.
-	BackupProvider = "backup.gardener.cloud/provider"
-	// SeedProvider is used to identify the seed provider.
-	SeedProvider = "seed.gardener.cloud/provider"
-	// ShootProvider is used to identify the shoot provider.
-	ShootProvider = "shoot.gardener.cloud/provider"
-	// NetworkingProvider is used to identify the networking provider for the cni plugin.
-	NetworkingProvider = "networking.shoot.gardener.cloud/provider"
+	// LabelBackupProvider is used to identify the backup provider.
+	LabelBackupProvider = "backup.gardener.cloud/provider"
+	// LabelSeedProvider is used to identify the seed provider.
+	LabelSeedProvider = "seed.gardener.cloud/provider"
+	// LabelShootProvider is used to identify the shoot provider.
+	LabelShootProvider = "shoot.gardener.cloud/provider"
+	// LabelNetworkingProvider is used to identify the networking provider for the cni plugin.
+	LabelNetworkingProvider = "networking.shoot.gardener.cloud/provider"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
