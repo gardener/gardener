@@ -344,7 +344,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			waitUntilNetworkIsDestroyed,
 			waitUntilExtensionResourcesDeleted,
 		)
-
 		destroyControlPlane = g.Add(flow.Task{
 			Name:         "Destroying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DestroyControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -361,7 +360,16 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
-
+		deleteBackupInfrastructure = g.Add(flow.Task{
+			Name:         "Delete backup infrastructure resource",
+			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until the backup infrastructure has been deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureDeleted),
+			Dependencies: flow.NewTaskIDs(deleteBackupInfrastructure),
+		})
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying Shoot control plane exposure",
 			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure),

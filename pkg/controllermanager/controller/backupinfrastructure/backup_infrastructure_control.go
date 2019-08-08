@@ -19,14 +19,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
@@ -110,18 +108,8 @@ func (c *Controller) reconcileBackupInfrastructureKey(key string) error {
 	}
 
 	durationToNextSync := c.config.Controllers.BackupInfrastructure.SyncPeriod.Duration
-	deleted, reconcileErr := c.control.ReconcileBackupInfrastructure(backupInfrastructure, key)
-	if reconcileErr != nil {
+	if _, reconcileErr := c.control.ReconcileBackupInfrastructure(backupInfrastructure, key); reconcileErr != nil {
 		durationToNextSync = 15 * time.Second
-	} else if deleted {
-		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
-		durationToActualDeletion := gracePeriod - time.Since(backupInfrastructure.DeletionTimestamp.Local())
-		// We don't set durationToNextSync directly to durationToActualDeletion since,
-		// we want reconciliation to update status as per sync period. This will help in adjusting
-		// the next sync time in case deletionGracePeriod is reduced from GCM config.
-		if durationToNextSync > durationToActualDeletion {
-			durationToNextSync = durationToActualDeletion
-		}
 	}
 	c.backupInfrastructureQueue.AddAfter(key, durationToNextSync)
 	backupInfrastructureLogger.Infof("Scheduled next reconciliation for BackupInfrastructure '%s' in %s", key, durationToNextSync)
@@ -194,34 +182,24 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	// it has to be ensured that no infrastructure resources are depending on the BackupInfrastructure anymore.
 	// When this happens the controller will remove the finalizer from the BackupInfrastructure so that it can be garbage collected.
 	if backupInfrastructure.DeletionTimestamp != nil {
-		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
-		present, _ := strconv.ParseBool(backupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
-		if present || time.Since(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
-			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
-				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion start: %+v", updateErr)
-				return false, updateErr
-			}
-
-			if deleteErr := c.deleteBackupInfrastructure(op); deleteErr != nil {
-				c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
-				if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateError, operationType, deleteErr.Description+" Operation will be retried.", 1, deleteErr); updateErr != nil {
-					backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion error: %+v", updateErr)
-					return false, updateErr
-				}
-				return false, errors.New(deleteErr.Description)
-			}
-			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateSucceeded, operationType, "Backup Infrastructure has been successfully deleted.", 100, nil); updateErr != nil {
-				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion successful: %+v", updateErr)
-				return false, updateErr
-			}
-			return false, c.removeFinalizer(op)
+		if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
+			backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion start: %+v", updateErr)
+			return false, updateErr
 		}
 
-		if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStatePending, operationType, fmt.Sprintf("Deletion of backup infrastructure is scheduled for %s", backupInfrastructure.DeletionTimestamp.Time.Add(gracePeriod)), 1, nil); updateErr != nil {
-			backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after suspending deletion: %+v", updateErr)
-			return true, updateErr
+		if deleteErr := c.deleteBackupInfrastructure(op); deleteErr != nil {
+			c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
+			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateError, operationType, deleteErr.Description+" Operation will be retried.", 1, deleteErr); updateErr != nil {
+				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion error: %+v", updateErr)
+				return false, updateErr
+			}
+			return false, errors.New(deleteErr.Description)
 		}
-		return true, nil
+		if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateSucceeded, operationType, "Backup Infrastructure has been successfully deleted.", 100, nil); updateErr != nil {
+			backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion successful: %+v", updateErr)
+			return false, updateErr
+		}
+		return false, c.removeFinalizer(op)
 	}
 
 	// When a BackupInfrastructure deletion timestamp is not set we need to create/reconcile the backup infrastructure.
@@ -414,19 +392,6 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 		}
 		return utilretry.MinorError(fmt.Errorf("backup infrastructure still has finalizer %s", gardenv1beta1.GardenerName))
 	})
-}
-
-func computeGracePeriod(config *config.ControllerManagerConfiguration, backupInfrastructure *gardenv1beta1.BackupInfrastructure) time.Duration {
-	var (
-		shootPurpose                      = backupInfrastructure.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
-		deletionGracePeriodHoursByPurpose = config.Controllers.BackupInfrastructure.DeletionGracePeriodHoursByPurpose
-	)
-
-	if deletionGracePeriodHours, ok := deletionGracePeriodHoursByPurpose[shootPurpose]; ok {
-		return time.Hour * time.Duration(deletionGracePeriodHours)
-	}
-
-	return time.Hour * time.Duration(*config.Controllers.BackupInfrastructure.DeletionGracePeriodHours)
 }
 
 func nextReconcileScheduleReached(obj *gardenv1beta1.BackupInfrastructure, syncPeriod time.Duration) bool {
