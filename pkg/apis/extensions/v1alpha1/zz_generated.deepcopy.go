@@ -379,6 +379,11 @@ func (in *ControlPlaneList) DeepCopyObject() runtime.Object {
 func (in *ControlPlaneSpec) DeepCopyInto(out *ControlPlaneSpec) {
 	*out = *in
 	out.DefaultSpec = in.DefaultSpec
+	if in.Purpose != nil {
+		in, out := &in.Purpose, &out.Purpose
+		*out = new(Purpose)
+		**out = **in
+	}
 	if in.ProviderConfig != nil {
 		in, out := &in.ProviderConfig, &out.ProviderConfig
 		*out = new(runtime.RawExtension)
