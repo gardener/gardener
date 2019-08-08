@@ -21,6 +21,11 @@ import (
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	plantstore "github.com/gardener/gardener/pkg/registry/core/plant/storage"
+
+	// garden storage for migration
+	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
+	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -51,6 +56,11 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
 	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
 	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
+
+	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
+	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
+	storage["seeds"] = seedStorage.Seed
+	storage["seeds/status"] = seedStorage.Status
 
 	plantStorage := plantstore.NewStorage(restOptionsGetter)
 	storage["plants"] = plantStorage.Plant

@@ -14,6 +14,8 @@ type Interface interface {
 	ControllerRegistrations() ControllerRegistrationInformer
 	// Plants returns a PlantInformer.
 	Plants() PlantInformer
+	// Seeds returns a SeedInformer.
+	Seeds() SeedInformer
 }
 
 type version struct {
@@ -40,4 +42,9 @@ func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 // Plants returns a PlantInformer.
 func (v *version) Plants() PlantInformer {
 	return &plantInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Seeds returns a SeedInformer.
+func (v *version) Seeds() SeedInformer {
+	return &seedInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

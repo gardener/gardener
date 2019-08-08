@@ -1,0 +1,29 @@
+# Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
+---
+apiVersion: core.gardener.cloud/v1alpha1
+kind: Seed
+metadata:
+  name: my-seed
+spec:
+  provider:
+    type: <provider-name> # e.g., aws, azure, gcp, ...
+    region: europe-1
+  secretRef:
+    name: seed-secret
+    namespace: garden
+  dns:
+    ingressDomain: dev.my-seed.example.com
+  networks: # seed and shoot networks must be disjunct
+    nodes: 10.240.0.0/16
+    pods: 10.241.128.0/17
+    services: 10.241.0.0/17
+  blockCIDRs:
+  - 169.254.169.254/32
+# taints:
+# - key: seed.gardener.cloud/protected  # only shoots in the `garden` namespace can use this seed
+# - key: seed.gardener.cloud/invisible  # the gardener-scheduler won't consider this seed for shoots
+# volume:
+#  minimumSize: 20Gi
+#  providers:
+#  - purpose: etcd-main
+#    name: flexvolume

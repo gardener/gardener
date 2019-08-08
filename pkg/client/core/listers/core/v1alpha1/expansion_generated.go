@@ -17,3 +17,7 @@ type PlantListerExpansion interface{}
 // PlantNamespaceListerExpansion allows custom methods to be added to
 // PlantNamespaceLister.
 type PlantNamespaceListerExpansion interface{}
+
+// SeedListerExpansion allows custom methods to be added to
+// SeedLister.
+type SeedListerExpansion interface{}

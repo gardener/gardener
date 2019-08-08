@@ -702,7 +702,15 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		allErrs = append(allErrs, field.Required(cloudPath.Child("profile"), "must provide a cloud profile name"))
 	}
 	if len(seedSpec.Cloud.Region) == 0 {
-		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a region"))
+		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a cloud region"))
+	}
+
+	providerPath := fldPath.Child("provider")
+	if len(seedSpec.Provider.Type) == 0 {
+		allErrs = append(allErrs, field.Required(providerPath.Child("type"), "must provide a provider type"))
+	}
+	if len(seedSpec.Provider.Region) == 0 {
+		allErrs = append(allErrs, field.Required(providerPath.Child("region"), "must provide a provider region"))
 	}
 
 	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
@@ -734,6 +742,28 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
 	}
+
+	if seedSpec.Volume != nil {
+		if seedSpec.Volume.MinimumSize != nil {
+			allErrs = append(allErrs, validateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+		}
+
+		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
+		for i, provider := range seedSpec.Volume.Providers {
+			idxPath := fldPath.Child("volume", "providers").Index(i)
+			if len(provider.Purpose) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("purpose"), "cannot be empty"))
+			}
+			if len(provider.Name) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "cannot be empty"))
+			}
+			if _, ok := volumeProviderPurposes[provider.Purpose]; ok {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("purpose"), provider.Purpose))
+			}
+			volumeProviderPurposes[provider.Purpose] = struct{}{}
+		}
+	}
+
 	return allErrs
 }
 

@@ -38,8 +38,8 @@ type SeedStorage struct {
 }
 
 // NewStorage creates a new SeedStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter) SeedStorage {
-	seedRest, seedStatusRest := NewREST(optsGetter)
+func NewStorage(optsGetter generic.RESTOptionsGetter, cloudProfiles rest.StandardStorage) SeedStorage {
+	seedRest, seedStatusRest := NewREST(optsGetter, cloudProfiles)
 
 	return SeedStorage{
 		Seed:   seedRest,
@@ -48,16 +48,20 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) SeedStorage {
 }
 
 // NewREST returns a RESTStorage object that will work with Seed objects.
-func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
+func NewREST(optsGetter generic.RESTOptionsGetter, cloudProfiles rest.StandardStorage) (*REST, *StatusREST) {
+	strategy := seed.NewStrategy(cloudProfiles)
+	statusStrategy := seed.NewStatusStrategy(cloudProfiles)
+
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &garden.Seed{} },
 		NewListFunc:              func() runtime.Object { return &garden.SeedList{} },
 		DefaultQualifiedResource: garden.Resource("seeds"),
 		EnableGarbageCollection:  true,
 
-		CreateStrategy: seed.Strategy,
-		UpdateStrategy: seed.Strategy,
-		DeleteStrategy: seed.Strategy,
+		CreateStrategy: strategy,
+		UpdateStrategy: strategy,
+		DeleteStrategy: strategy,
+		Decorator:      func(obj runtime.Object) error { return strategy.Migrate(context.TODO(), obj) },
 
 		TableConvertor: newTableConvertor(),
 	}
@@ -67,7 +71,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	}
 
 	statusStore := *store
-	statusStore.UpdateStrategy = seed.StatusStrategy
+	statusStore.UpdateStrategy = statusStrategy
 	return &REST{store}, &StatusREST{store: &statusStore}
 }
 

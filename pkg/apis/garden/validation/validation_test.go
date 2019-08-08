@@ -2297,12 +2297,12 @@ var _ = Describe("validation", func() {
 	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
 		var (
 			seed   *garden.Seed
-			backup *garden.BackupProfile
+			backup *garden.SeedBackup
 		)
 
 		BeforeEach(func() {
 			region := "some-region"
-			backup = &garden.BackupProfile{
+			backup = &garden.SeedBackup{
 				Provider: garden.CloudProviderAWS,
 				Region:   &region,
 				SecretRef: corev1.SecretReference{
@@ -2321,6 +2321,10 @@ var _ = Describe("validation", func() {
 					Cloud: garden.SeedCloud{
 						Profile: "aws",
 						Region:  "eu-west-1",
+					},
+					Provider: garden.SeedProvider{
+						Type:   "aws",
+						Region: "eu-west-1",
 					},
 					IngressDomain: "ingress.my-seed-1.example.com",
 					SecretRef: corev1.SecretReference{
@@ -2365,6 +2369,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
+			seed.Spec.Provider = garden.SeedProvider{}
 			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
 			seed.Spec.SecretRef = corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
@@ -2374,47 +2379,100 @@ var _ = Describe("validation", func() {
 			}
 			seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 			seed.Spec.Backup.Provider = ""
+			minSize := resource.MustParse("-1")
+			seed.Spec.Volume = &garden.SeedVolume{
+				MinimumSize: &minSize,
+				Providers: []garden.SeedVolumeProvider{
+					{
+						Purpose: "",
+						Name:    "",
+					},
+					{
+						Purpose: "duplicate",
+						Name:    "value1",
+					},
+					{
+						Purpose: "duplicate",
+						Name:    "value2",
+					},
+				},
+			}
 
 			errorList := ValidateSeed(seed)
 
-			Expect(errorList).To(HaveLen(11))
-			Expect(errorList).To(ConsistOfFields(Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.cloud.profile"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.cloud.region"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.ingressDomain"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.secretRef.name"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.secretRef.namespace"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.networks.nodes"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.networks.pods"),
-			}, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.networks.services"),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("spec.backup.provider"),
-				"Detail": Equal(`must provide a backup cloud provider name`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("spec.backup.secretRef.name"),
-				"Detail": Equal(`must provide a name`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("spec.backup.secretRef.namespace"),
-				"Detail": Equal(`must provide a namespace`),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.backup.provider"),
+					"Detail": Equal(`must provide a backup cloud provider name`),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.backup.secretRef.name"),
+					"Detail": Equal(`must provide a name`),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.backup.secretRef.namespace"),
+					"Detail": Equal(`must provide a namespace`),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.profile"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.provider.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.provider.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.ingressDomain"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.secretRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.secretRef.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networks.nodes"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networks.pods"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networks.services"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.volume.minimumSize"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.volume.providers[0].purpose"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.volume.providers[0].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.volume.providers[2].purpose"),
+				})),
+			))
 		})
 
 		It("should forbid Seed with overlapping networks", func() {
@@ -2471,7 +2529,7 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
-		Context("#validateBackupProfileUpdate", func() {
+		Context("#validateSeedBackupUpdate", func() {
 			It("should allow adding backup profile", func() {
 				seed.Spec.Backup = nil
 				newSeed := prepareSeedForUpdate(seed)

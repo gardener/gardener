@@ -126,3 +126,13 @@ func (l *LastOperation) GetState() LastOperationState {
 func (l *LastOperation) GetType() LastOperationType {
 	return l.Type
 }
+
+// Gardener holds the information about the Gardener version that operated a resource.
+type Gardener struct {
+	// ID is the Docker container id of the Gardener which last acted on a resource.
+	ID string `json:"id"`
+	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
+	Name string `json:"name"`
+	// Version is the version of the Gardener which last acted on a resource.
+	Version string `json:"version"`
+}

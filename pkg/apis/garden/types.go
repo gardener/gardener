@@ -329,8 +329,8 @@ type Zone struct {
 	Names []string
 }
 
-// BackupProfile contains the object store configuration for backups for shoot(currently only etcd).
-type BackupProfile struct {
+// SeedBackup contains the object store configuration for backups for shoot(currently only etcd).
+type SeedBackup struct {
 	// Provider is a provider name.
 	Provider CloudProvider
 	// Region is a region name.
@@ -449,6 +449,8 @@ type SeedList struct {
 type SeedSpec struct {
 	// Cloud defines the cloud profile and the region this Seed cluster belongs to.
 	Cloud SeedCloud
+	// Provider defines the provider type and region for this Seed cluster.
+	Provider SeedProvider
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters.
 	IngressDomain string
@@ -468,8 +470,19 @@ type SeedSpec struct {
 	// If it is not specified, then there won't be any backups taken for Shoots associated with this Seed.
 	// If backup field is present in Seed, then backups of the etcd from Shoot controlplane will be stored under the
 	// configured object store.
-	Backup *BackupProfile
+	Backup *SeedBackup
+	// Volume contains settings for persistentvolumes created in the seed cluster.
+	Volume *SeedVolume
 }
+
+const (
+	MigrationSeedCloudProfile      = "migration.seed.gardener.cloud/cloudProfile"
+	MigrationSeedCloudRegion       = "migration.seed.gardener.cloud/cloudRegion"
+	MigrationSeedProviderType      = "migration.seed.gardener.cloud/providerType"
+	MigrationSeedProviderRegion    = "migration.seed.gardener.cloud/providerRegion"
+	MigrationSeedVolumeMinimumSize = "migration.seed.gardener.cloud/volumeMinimumSize"
+	MigrationSeedVolumeProviders   = "migration.seed.gardener.cloud/volumeProviders"
+)
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
 type SeedStatus struct {
@@ -489,6 +502,33 @@ type SeedCloud struct {
 	// Region is a name of a region.
 	Region string
 }
+
+// SeedProvider defines the provider type and region for this Seed cluster.
+type SeedProvider struct {
+	// Type is the name of the provider.
+	Type string
+	// Region is a name of a region.
+	Region string
+}
+
+// Volume contains settings for persistentvolumes created in the seed cluster.
+type SeedVolume struct {
+	// MinimumSize defines the minimum size that should be used for PVCs in the seed.
+	MinimumSize *resource.Quantity
+	// Providers is a list of storage class provisioner types for the seed.
+	Providers []SeedVolumeProvider
+}
+
+// SeedVolumeProvider is a storage class provisioner type.
+type SeedVolumeProvider struct {
+	// Purpose is the purpose of this provider.
+	Purpose string
+	// Name is the name of the storage class provisioner type.
+	Name string
+}
+
+// SeedVolumeProviderPurposeEtcdMain is a constant for the etcd-main volume provider purpose.
+const SeedVolumeProviderPurposeEtcdMain = "etcd-main"
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
@@ -679,11 +719,11 @@ const CalicoNetworkType = "calico"
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// Type identifies the type of the networking plugin
 	Type string
 	// ProviderConfig is the configuration passed to network resource.
-	ProviderConfig *gardencore.ProviderConfig
+	ProviderConfig *ProviderConfig
 }
 
 // Cloud contains information about the cloud environment and their specific settings.
