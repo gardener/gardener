@@ -86,6 +86,7 @@ kubectl cluster-info
     --es-config-name=sap_internal \
     --s3-endpoint=$S3_ENDPOINT \
     --s3-ssl=true \
+    --landscape=$LANDSCAPE \
     --testruns-chart-path=$TESTRUN_CHART_PATH \
     --set=gardener.upgraded.commit=$NEW_GARDENERT_COMMIT,gardener.upgraded.tag=$NEW_GARDENER_VERSION \
     --component-descriptor-path=$OUT_PATH/previous_component_descriptor.yaml \
