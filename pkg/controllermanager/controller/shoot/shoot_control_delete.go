@@ -138,7 +138,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		kubeControllerManagerDeploymentFound = false
 	}
 
-	controlPlaneDeploymentNeeded, err := needsControlPlaneDeployment(o)
+	controlPlaneDeploymentNeeded, err := needsControlPlaneDeployment(o, kubeAPIServerDeploymentFound)
 	if err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether control plane deployment is needed (%s)", err.Error()))
 	}
@@ -494,19 +494,21 @@ func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, lastEr
 	return err
 }
 
-func needsControlPlaneDeployment(o *operation.Operation) (bool, error) {
+func needsControlPlaneDeployment(o *operation.Operation, kubeAPIServerDeploymentFound bool) (bool, error) {
 	var (
 		client    = o.K8sSeedClient.Client()
 		namespace = o.Shoot.SeedNamespace
 		name      = o.Shoot.Info.Name
 	)
 
-	// If the `ControlPlane` resource does no longer exist then we don't want to re-deploy it.
+	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
+	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
+	// which is needed for it to run.
 	exists, err := extensionResourceStillExists(client, &extensionsv1alpha1.ControlPlane{}, namespace, name)
 	if err != nil {
 		return false, err
 	}
-	if !exists {
+	if !exists && !kubeAPIServerDeploymentFound {
 		return false, nil
 	}
 
