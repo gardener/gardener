@@ -173,29 +173,41 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Name: "Deploying Shoot certificates / keys",
 			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
 		})
-		wakeUpControlPlane = g.Add(flow.Task{
-			Name:         "Waking up control plane to ensure proper cleanup of resources",
-			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated != nil && *o.Shoot.Info.Status.IsHibernated || o.Shoot.Info.Status.IsHibernated == nil && o.Shoot.HibernationEnabled) && cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
-		})
-
-		initializeShootClients = g.Add(flow.Task{
-			Name:         "Initializing connection to Shoot",
-			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, wakeUpControlPlane),
-		})
-
-		// Redeploy the control plane, worker extensions, and kube-controller-manager to make sure all components that depend on the
-		// cloud provider secret are restarted in case it has changed.
+		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
+		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
+		// controller-manager to be updateable due to provider config injection.
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, syncClusterResourceToSeed),
 		})
+		waitUntilControlPlaneReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot control plane has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
+		})
+		wakeUpControlPlane = g.Add(flow.Task{
+			Name:         "Waking up control plane to ensure proper cleanup of resources",
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated != nil && *o.Shoot.Info.Status.IsHibernated || o.Shoot.Info.Status.IsHibernated == nil && o.Shoot.HibernationEnabled) && cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed, waitUntilControlPlaneReady),
+		})
+		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server reports readiness",
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
+		})
+		initializeShootClients = g.Add(flow.Task{
+			Name:         "Initializing connection to Shoot",
+			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
+		})
+
+		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
+		// cloud provider secret are restarted in case it has changed.
 		computeShootOSConfig = g.Add(flow.Task{
 			Name:         "Computing operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && workerDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilControlPlaneReady, initializeShootClients),
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
@@ -205,7 +217,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 
 		deleteSeedMonitoring = g.Add(flow.Task{
