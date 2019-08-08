@@ -142,6 +142,12 @@ spec:
         env:
         - name: OPENVPN_PORT
           value: "4314"
+        - name: SERVICE_NETWORK
+          value: {{ .Values.networks.services }}
+        - name: POD_NETWORK
+          value: {{ .Values.networks.pods }}
+        - name: NODE_NETWORK
+          value: {{ .Values.networks.nodes }}
         ports:
         - name: https
           containerPort: 1194
