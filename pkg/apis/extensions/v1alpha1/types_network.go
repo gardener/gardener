@@ -63,7 +63,7 @@ type NetworkSpec struct {
 	// PodCIDR defines the CIDR that will be used for pods.
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services.
-	ServiceCIDR string `json:"serviceNetworkCIDR"`
+	ServiceCIDR string `json:"serviceCIDR"`
 	// ProviderConfig contains plugin-specific configuration.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
