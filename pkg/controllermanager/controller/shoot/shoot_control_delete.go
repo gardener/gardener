@@ -89,6 +89,27 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the Shoot namespace in the Seed cluster (%s)", err.Error()))
 	}
 
+	// Unregister the Shoot as Seed cluster if it was annotated to be a seed and is in the garden namespace
+	if o.Shoot.Info.Namespace == common.GardenNamespace && o.ShootedSeed != nil {
+		if err := botanist.UnregisterAsSeed(); err != nil {
+			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not unregister Shoot %q as Seed: %+v", o.Shoot.Info.Name, err))
+		}
+
+		// wait for seed object to be deleted before going on with shoot deletion
+		if err := utilretry.UntilTimeout(context.TODO(), time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
+			_, err = c.k8sGardenClient.Garden().GardenV1beta1().Seeds().Get(o.Shoot.Info.Name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return utilretry.Ok()
+			}
+			if err != nil {
+				return utilretry.SevereError(err)
+			}
+			return utilretry.NotOk()
+		}); err != nil {
+			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed while waiting for seed %s to be deleted, err=%s", o.Shoot.Info.Name, err.Error()))
+		}
+	}
+
 	shootNamespaceInDeletion, err := kutil.HasDeletionTimestamp(namespace)
 	if err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check the deletion timestamp for the Shoot namespace (%s)", err.Error()))
@@ -105,13 +126,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
-	}
-
-	// Unregister the Shoot as Seed cluster if it was annotated to be a seed and is in the garden namespace
-	if o.Shoot.Info.Namespace == common.GardenNamespace && o.ShootedSeed != nil {
-		if err := botanist.UnregisterAsSeed(); err != nil {
-			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not unregister Shoot %q as Seed: %+v", o.Shoot.Info.Name, err))
-		}
 	}
 
 	// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
