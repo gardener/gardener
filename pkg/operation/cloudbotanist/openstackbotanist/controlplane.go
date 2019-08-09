@@ -43,8 +43,3 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error
 
 	return secretData, nil
 }
-
-// DeployCloudSpecificControlPlane does currently nothing for OpenStack.
-func (b *OpenStackBotanist) DeployCloudSpecificControlPlane() error {
-	return nil
-}

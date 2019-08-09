@@ -265,7 +265,7 @@ var _ = Describe("kubernetes", func() {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name:  "aws-lb-readvertiser",
+									Name:  "lb-deployment",
 									Image: fakeImage,
 								},
 							},
@@ -276,8 +276,8 @@ var _ = Describe("kubernetes", func() {
 			ok, _ := ValidDeploymentContainerImageVersion(&deployment, containerName, minVersion)
 			Expect(ok).To(Equal(expected))
 		},
-		Entry("invalid version", "aws-lb-readvertiser", `0.4.0`, false),
-		Entry("invalid container name", "aws-readvertiser", "0.3.0", false),
+		Entry("invalid version", "lb-deployment", `0.4.0`, false),
+		Entry("invalid container name", "deployment", "0.3.0", false),
 	)
 
 	Context("DeploymentLister", func() {

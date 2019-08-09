@@ -219,7 +219,6 @@ var _ = Describe("health check", func() {
 		kubeSchedulerDeployment            = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeScheduler, common.GardenRoleControlPlane, true)
 		machineControllerManagerDeployment = newDeployment(seedNamespace, common.MachineControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
 		dependencyWatchdogDeployment       = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameDependencyWatchdog, common.GardenRoleControlPlane, true)
-		awsLBReadvertiserDeployment        = newDeployment(seedNamespace, common.AWSLBReadvertiserDeploymentName, common.GardenRoleControlPlane, true)
 		clusterAutoscalerDeployment        = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
 
 		requiredControlPlaneDeployments = []*appsv1.Deployment{
@@ -229,7 +228,6 @@ var _ = Describe("health check", func() {
 			kubeSchedulerDeployment,
 			machineControllerManagerDeployment,
 			dependencyWatchdogDeployment,
-			awsLBReadvertiserDeployment,
 			clusterAutoscalerDeployment,
 		}
 
@@ -314,7 +312,7 @@ var _ = Describe("health check", func() {
 				checker                 = botanist.NewHealthChecker(map[gardencorev1alpha1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister, machineDeploymentLister)
+			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, statefulSetLister, machineDeploymentLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -335,7 +333,6 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
 				dependencyWatchdogDeployment,
-				awsLBReadvertiserDeployment,
 			},
 			requiredControlPlaneStatefulSets,
 			nil,

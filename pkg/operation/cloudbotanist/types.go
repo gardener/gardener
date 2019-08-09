@@ -25,5 +25,4 @@ type CloudBotanist interface {
 
 	// Control Plane
 	GenerateEtcdBackupConfig() (map[string][]byte, error)
-	DeployCloudSpecificControlPlane() error
 }

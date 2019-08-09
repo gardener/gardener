@@ -42,8 +42,3 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 
 	return secretData, nil
 }
-
-// DeployCloudSpecificControlPlane does currently nothing for Azure.
-func (b *AzureBotanist) DeployCloudSpecificControlPlane() error {
-	return nil
-}

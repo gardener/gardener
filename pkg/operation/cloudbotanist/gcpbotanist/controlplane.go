@@ -39,8 +39,3 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 
 	return secretData, nil
 }
-
-// DeployCloudSpecificControlPlane does currently nothing for GCP.
-func (b *GCPBotanist) DeployCloudSpecificControlPlane() error {
-	return nil
-}

@@ -190,12 +190,8 @@ func isRollingUpdateOngoing(machineDeploymentLister kutil.MachineDeploymentListe
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
-// As this will anyways change with the Gardener extensibility, for now, this will check for the only
-// cloud provider where it differs (AWS). Once cloud provider specific code moves out, this will also have to
-// be refactored / re-aligned.
 func computeRequiredControlPlaneDeployments(
 	shoot *gardenv1beta1.Shoot,
-	seedCloudProvider gardenv1beta1.CloudProvider,
 	machineDeploymentLister kutil.MachineDeploymentLister,
 ) (sets.String, error) {
 	shootWantsClusterAutoscaler, err := gardenv1beta1helper.ShootWantsClusterAutoscaler(shoot)
@@ -204,10 +200,6 @@ func computeRequiredControlPlaneDeployments(
 	}
 
 	requiredControlPlaneDeployments := sets.NewString(common.RequiredControlPlaneDeployments.UnsortedList()...)
-	if seedCloudProvider == gardenv1beta1.CloudProviderAWS {
-		requiredControlPlaneDeployments.Insert(common.AWSLBReadvertiserDeploymentName)
-	}
-
 	if shootWantsClusterAutoscaler {
 		rollingUpdateOngoing, err := isRollingUpdateOngoing(machineDeploymentLister)
 		if err != nil {
@@ -236,14 +228,13 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 func (b *HealthChecker) CheckControlPlane(
 	shoot *gardenv1beta1.Shoot,
 	namespace string,
-	seedCloudProvider gardenv1beta1.CloudProvider,
 	condition gardencorev1alpha1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
 	machineDeploymentLister kutil.MachineDeploymentLister,
 ) (*gardencorev1alpha1.Condition, error) {
 
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, seedCloudProvider, machineDeploymentLister)
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, machineDeploymentLister)
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +565,7 @@ func (b *Botanist) checkControlPlane(
 	machineDeploymentLister kutil.MachineDeploymentLister,
 ) (*gardencorev1alpha1.Condition, error) {
 
-	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, b.Seed.CloudProvider, condition, seedDeploymentLister, seedStatefulSetLister, machineDeploymentLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, machineDeploymentLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {

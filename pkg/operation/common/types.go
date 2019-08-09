@@ -209,9 +209,6 @@ const (
 	// appended.
 	InternalDomainKey = "internal"
 
-	// AWSLBReadvertiserDeploymentName is the name for the aws-lb-readvertiser
-	AWSLBReadvertiserDeploymentName = "aws-lb-readvertiser"
-
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
@@ -456,9 +453,6 @@ const (
 
 	// CSIPluginPacketImageName is the name of csi plugin for Packet - https://github.com/packethost/csi-packet
 	CSIPluginPacketImageName = "packet-storage-interface"
-
-	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
-	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
 
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
