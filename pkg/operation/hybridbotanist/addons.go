@@ -258,8 +258,8 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 				"controller": map[string]interface{}{
 					"resources": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu":    "500m",
-							"memory": "1024Mi",
+							"cpu":    "1000m",
+							"memory": "2048Mi",
 						},
 					},
 				},
