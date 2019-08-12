@@ -83,6 +83,12 @@ type CloudProfileSpec struct {
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
+	// Backup holds the object store configuration for the backups of shoot(currently only etcd).
+	// If it is not specified, then there won't be any backups taken for Shoots associated with this CloudProfile.
+	// If backup field is present in CloudProfile, then backups of the etcd from Shoot controlplane will be stored under the
+	// configured object store.
+	// +optional
+	Backup *BackupProfile `json:"backup,omitempty"`
 }
 
 // AWSProfile defines certain constraints and definitions for the AWS cloud.
@@ -220,7 +226,7 @@ type OpenStackConstraints struct {
 	Zones []Zone `json:"zones"`
 }
 
-// FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
+// OpenStackFloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
 type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string `json:"name"`
@@ -344,6 +350,19 @@ type Zone struct {
 	Region string `json:"region"`
 	// Names is a list of availability zone names in this region.
 	Names []string `json:"names"`
+}
+
+// BackupProfile contains the object store configuration for backups for shoot(currently only etcd).
+type BackupProfile struct {
+	// Provider is a provider name.
+	Provider CloudProvider `json:"provider"`
+	// Region is a region name.
+	// +optional
+	Region *string `json:"region,omitempty"`
+	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
+	// the object store where backups should be stored. It should have enough privileges to manipulate
+	// the objects as well as buckets.
+	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
 ////////////////////////////////////////////////////

@@ -89,6 +89,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureList":      schema_pkg_apis_garden_v1beta1_BackupInfrastructureList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureSpec":      schema_pkg_apis_garden_v1beta1_BackupInfrastructureSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureStatus":    schema_pkg_apis_garden_v1beta1_BackupInfrastructureStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile":                 schema_pkg_apis_garden_v1beta1_BackupProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud":                         schema_pkg_apis_garden_v1beta1_Cloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig":  schema_pkg_apis_garden_v1beta1_CloudControllerManagerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfile":                  schema_pkg_apis_garden_v1beta1_CloudProfile(ref),
@@ -2907,6 +2908,42 @@ func schema_pkg_apis_garden_v1beta1_BackupInfrastructureStatus(ref common.Refere
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_BackupProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BackupProfile contains the object store configuration for backups for shoot(currently only etcd).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider is a provider name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a region name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+				},
+				Required: []string{"provider", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.SecretReference"},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3154,11 +3191,17 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Backup holds the object store configuration for the backups of shoot(currently only etcd). If it is not specified, then there won't be any backups taken for Shoots associated with this CloudProfile. If backup field is present in CloudProfile, then backups of the etcd from Shoot controlplane will be stored under the configured object store.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
 	}
 }
 
@@ -4905,7 +4948,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackFloatingPool(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.",
+				Description: "OpenStackFloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
