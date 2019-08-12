@@ -81,12 +81,11 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 	// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 	namespace := &corev1.Namespace{}
-	err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace)
-	if apierrors.IsNotFound(err) {
-		o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
-		return nil
-	}
-	if err != nil {
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
+			return nil
+		}
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the Shoot namespace in the Seed cluster (%s)", err.Error()))
 	}
 
@@ -120,10 +119,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing
 	// to delete anymore.
 	kubeAPIServerDeploymentFound := true
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), &appsv1.Deployment{}); err != nil {
+	deploymentKubeAPIServer := &appsv1.Deployment{}
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-apiserver deployment in the shoot namespace in the seed cluster (%s)", err.Error()))
 		}
+		kubeAPIServerDeploymentFound = false
+	}
+	if deploymentKubeAPIServer.DeletionTimestamp != nil {
 		kubeAPIServerDeploymentFound = false
 	}
 
@@ -131,10 +134,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 	// cleaned up.
 	kubeControllerManagerDeploymentFound := true
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
+	deploymentKubeControllerManager := &appsv1.Deployment{}
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster (%s)", err))
 		}
+		kubeControllerManagerDeploymentFound = false
+	}
+	if deploymentKubeControllerManager.DeletionTimestamp != nil {
 		kubeControllerManagerDeploymentFound = false
 	}
 
@@ -288,18 +295,26 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
-		destroyControlPlane = g.Add(flow.Task{
-			Name:         "Destroying Shoot control plane",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlane),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
-		})
-		waitUntilControlPlaneDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneDeleted),
-			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+
+		// Services (and other objects that have a footprint in the infrastructure) still don't have finalizers yet. There is no way to
+		// determine whether all the resources have been deleted successfully yet, whether there was an error, or whether they are still
+		// pending. While most providers have implemented custom clean up already (basically, duplicated the code in the CCM) not everybody
+		// has, especially not for all objects.
+		// Until service finalizers are enabled by default with Kubernetes 1.16 and our minimum supported seed version is raised to 1.16 we
+		// can not do much more than best-effort waiting until everything has been cleaned up. That's what the following task is doing.
+		timeForInfrastructureResourceCleanup = g.Add(flow.Task{
+			Name: "Waiting until time for infrastructure resource cleanup has elapsed",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+				defer cancel()
+
+				<-ctx.Done()
+				return nil
+			}).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
 
 		syncPointCleaned = flow.NewTaskIDs(
@@ -308,16 +323,27 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			cleanKubernetesResources,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
-			waitUntilControlPlaneDeleted,
+			timeForInfrastructureResourceCleanup,
 		)
+
+		destroyControlPlane = g.Add(flow.Task{
+			Name:         "Destroying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned),
+		})
+		waitUntilControlPlaneDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been destroyed",
+			Fn:           botanist.WaitUntilControlPlaneDeleted,
+			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+		})
 
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 
-		destroyNginxIngressResources = g.Add(flow.Task{
+		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
 			Fn:           botanist.DestroyIngressDNSRecord,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
@@ -349,7 +375,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			deleteSeedMonitoring,
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
-			destroyNginxIngressResources,
+			destroyNginxIngressDNSRecord,
 			destroyKube2IAMResources,
 			destroyExternalDomainDNSRecord,
 			waitUntilInfrastructureDeleted,
