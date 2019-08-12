@@ -81,12 +81,11 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 	// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 	namespace := &corev1.Namespace{}
-	err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace)
-	if apierrors.IsNotFound(err) {
-		o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
-		return nil
-	}
-	if err != nil {
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
+			return nil
+		}
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the Shoot namespace in the Seed cluster (%s)", err.Error()))
 	}
 
@@ -120,10 +119,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing
 	// to delete anymore.
 	kubeAPIServerDeploymentFound := true
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), &appsv1.Deployment{}); err != nil {
+	deploymentKubeAPIServer := &appsv1.Deployment{}
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-apiserver deployment in the shoot namespace in the seed cluster (%s)", err.Error()))
 		}
+		kubeAPIServerDeploymentFound = false
+	}
+	if deploymentKubeAPIServer.DeletionTimestamp != nil {
 		kubeAPIServerDeploymentFound = false
 	}
 
@@ -131,10 +134,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 	// cleaned up.
 	kubeControllerManagerDeploymentFound := true
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
+	deploymentKubeControllerManager := &appsv1.Deployment{}
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster (%s)", err))
 		}
+		kubeControllerManagerDeploymentFound = false
+	}
+	if deploymentKubeControllerManager.DeletionTimestamp != nil {
 		kubeControllerManagerDeploymentFound = false
 	}
 
