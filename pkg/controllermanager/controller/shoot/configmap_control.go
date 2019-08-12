@@ -15,12 +15,17 @@
 package shoot
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *Controller) configMapAdd(obj interface{}) {
@@ -64,12 +69,20 @@ func (c *Controller) reconcileShootsReferringConfigMap(configMapName string, con
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name == configMapName {
+
 			if shootKey, err := cache.MetaNamespaceKeyFunc(shoot); err == nil {
 				logger.Logger.Infof("[ConfigMap controller] schedule for reconciliation shoot %v ", shootKey)
-				c.shootQueue.Add(shootKey)
-			} else {
-				logger.Logger.Errorf("[ConfigMap controller] failed to get key for shoot. err=%+v", err)
+				// If reconciliation is enabled only during maintenance time window then adding the shoot key to the
+				// shoot queue does not trigger a reconciliation (unless the shoot is in its maintenance time window at the
+				// moment). Thus, we have to annotate the shoot in order to trigger a reconciliation operation.
+				_, err := controllerutil.CreateOrUpdate(context.TODO(), c.k8sGardenClient.Client(), shoot, func() error {
+					kutil.SetMetaDataAnnotation(shoot, common.ShootOperation, common.ShootOperationReconcile)
+					return nil
+				})
+				return err
 			}
+
+			logger.Logger.Errorf("[ConfigMap controller] failed to get key for shoot. err=%+v", err)
 		}
 	}
 	return nil
