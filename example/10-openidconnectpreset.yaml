@@ -1,0 +1,32 @@
+# Plant cluster registration manifest through which an external kubernetes cluster will be mapped
+---
+apiVersion: settings.gardener.cloud/v1alpha1
+kind: OpenIDConnectPreset
+metadata:
+  name:  example-preset
+  namespace: garden-dev
+shootSelector: # use {} to select all Shoots in that namespace
+  matchExpressions:
+  - {key: oidc, operator: In, values: [enabled]}
+server:
+  clientID: client-id
+  issuerURL: https://identity.example.com
+  # caBundle: |
+  #   -----BEGIN CERTIFICATE-----
+  #   Li4u
+  #   -----END CERTIFICATE-----
+  # groupsClaim: groups-claim
+  # groupsPrefix: groups-prefix
+  # usernameClaim: username-claim
+  # usernamePrefix: username-prefix
+  # signingAlgs:
+  # - RS256
+  # only usable with Kubernetes >= 1.11
+  # requiredClaims:
+  #   key: value
+client:
+  secret: oidc-client-secret
+  extraConfig:
+    extra-scopes: email,offline_access,profile
+    foo: bar
+weight: 90 # value from 1 to 100

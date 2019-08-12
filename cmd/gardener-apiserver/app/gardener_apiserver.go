@@ -23,12 +23,15 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardensettingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
+	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
@@ -37,6 +40,8 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
+	clusteropenidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
+	openidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 
@@ -89,20 +94,28 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
-	Recommended           *genericoptions.RecommendedOptions
-	CoreInformerFactory   gardencoreinformers.SharedInformerFactory
-	GardenInformerFactory gardeninformers.SharedInformerFactory
-	KubeInformerFactory   kubeinformers.SharedInformerFactory
-	StdOut                io.Writer
-	StdErr                io.Writer
+	Recommended             *genericoptions.RecommendedOptions
+	CoreInformerFactory     gardencoreinformers.SharedInformerFactory
+	GardenInformerFactory   gardeninformers.SharedInformerFactory
+	KubeInformerFactory     kubeinformers.SharedInformerFactory
+	SettingsInformerFactory settingsinformer.SharedInformerFactory
+	StdOut                  io.Writer
+	StdErr                  io.Writer
 }
 
 // NewOptions returns a new Options object.
 func NewOptions(out, errOut io.Writer) *Options {
 	o := &Options{
-		Recommended: genericoptions.NewRecommendedOptions(fmt.Sprintf("/registry/%s", garden.GroupName), api.Codecs.LegacyCodec(gardencorev1alpha1.SchemeGroupVersion, gardenv1beta1.SchemeGroupVersion), genericoptions.NewProcessInfo("gardener-apiserver", "garden")),
-		StdOut:      out,
-		StdErr:      errOut,
+		Recommended: genericoptions.NewRecommendedOptions(
+			fmt.Sprintf("/registry/%s", garden.GroupName),
+			api.Codecs.LegacyCodec(
+				gardencorev1alpha1.SchemeGroupVersion,
+				gardenv1beta1.SchemeGroupVersion,
+				gardensettingsv1alpha1.SchemeGroupVersion,
+			),
+			genericoptions.NewProcessInfo("gardener-apiserver", "garden")),
+		StdOut: out,
+		StdErr: errOut,
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(gardenv1beta1.SchemeGroupVersion, schema.GroupKind{Group: gardenv1beta1.GroupName})
 	return o
@@ -131,6 +144,8 @@ func (o *Options) complete() error {
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
 	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
 	plantvalidator.Register(o.Recommended.Admission.Plugins)
+	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
+	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
@@ -140,6 +155,8 @@ func (o *Options) complete() error {
 		controllerregistrationresources.PluginName,
 		plantvalidator.PluginName,
 		deletionconfirmation.PluginName,
+		openidconnectpreset.PluginName,
+		clusteropenidconnectpreset.PluginName,
 	}
 
 	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
@@ -185,12 +202,21 @@ func (o *Options) config() (*apiserver.Config, error) {
 		gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 		o.GardenInformerFactory = gardenInformerFactory
 
+		// settings client
+		settingsClient, err := settingsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				coreInformerFactory,
 				coreClient,
 				gardenInformerFactory,
 				gardenClient,
+				o.SettingsInformerFactory,
 				kubeInformerFactory,
 				kubeClient,
 				gardenerAPIServerConfig.Authorization.Authorizer,
@@ -228,6 +254,7 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		o.CoreInformerFactory.Start(context.StopCh)
 		o.GardenInformerFactory.Start(context.StopCh)
 		o.KubeInformerFactory.Start(context.StopCh)
+		o.SettingsInformerFactory.Start(context.StopCh)
 		return nil
 	}); err != nil {
 		return err
