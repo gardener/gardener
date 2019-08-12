@@ -116,6 +116,11 @@ func GenerateBackupNamespaceName(backupInfrastructureName string) string {
 	return fmt.Sprintf("%s--%s", BackupNamespacePrefix, backupInfrastructureName)
 }
 
+// GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
+func GenerateBackupEntryName(seedNamespace string, shootUID types.UID) string {
+	return fmt.Sprintf("%s--%s", seedNamespace, shootUID)
+}
+
 // IsFollowingNewNamingConvention determines whether the new naming convention followed for shoot resources.
 // TODO: Remove this and use only "--" as separator, once we have all shoots deployed as per new naming conventions.
 func IsFollowingNewNamingConvention(seedNamespace string) bool {
