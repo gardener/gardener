@@ -109,6 +109,15 @@ var _ = Describe("validation", func() {
 					Names:  []string{""},
 				},
 			}
+			region = "some-region"
+			backup = garden.BackupProfile{
+				Provider: garden.CloudProviderAWS,
+				Region:   &region,
+				SecretRef: corev1.SecretReference{
+					Name:      "backup-aws",
+					Namespace: "garden",
+				},
+			}
 		)
 
 		It("should forbid empty CloudProfile resources", func() {
@@ -130,7 +139,7 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
-		Context("tests for AWS cloud profiles", func() {
+		Context("tests for AWS cloud profiles with backup", func() {
 			var (
 				fldPath         = "aws"
 				awsCloudProfile *garden.CloudProfile
@@ -157,6 +166,7 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 						},
+						Backup: &backup,
 					},
 				}
 			})
@@ -457,6 +467,19 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
+				})
+			})
+
+			Context("backup profile validation", func() {
+				It("should enforce that region should not be empty for provider other than cloud profile", func() {
+					awsCloudProfile.Spec.Backup.Provider = garden.CloudProviderPacket
+					awsCloudProfile.Spec.Backup.Region = nil
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.backup.region")),
+					}))))
 				})
 			})
 		})
