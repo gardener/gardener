@@ -295,18 +295,26 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
-		destroyControlPlane = g.Add(flow.Task{
-			Name:         "Destroying Shoot control plane",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlane),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
-		})
-		waitUntilControlPlaneDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneDeleted),
-			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+
+		// Services (and other objects that have a footprint in the infrastructure) still don't have finalizers yet. There is no way to
+		// determine whether all the resources have been deleted successfully yet, whether there was an error, or whether they are still
+		// pending. While most providers have implemented custom clean up already (basically, duplicated the code in the CCM) not everybody
+		// has, especially not for all objects.
+		// Until service finalizers are enabled by default with Kubernetes 1.16 and our minimum supported seed version is raised to 1.16 we
+		// can not do much more than best-effort waiting until everything has been cleaned up. That's what the following task is doing.
+		timeForInfrastructureResourceCleanup = g.Add(flow.Task{
+			Name: "Waiting until time for infrastructure resource cleanup has elapsed",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+				defer cancel()
+
+				<-ctx.Done()
+				return nil
+			}).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
 
 		syncPointCleaned = flow.NewTaskIDs(
@@ -315,16 +323,27 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			cleanKubernetesResources,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
-			waitUntilControlPlaneDeleted,
+			timeForInfrastructureResourceCleanup,
 		)
+
+		destroyControlPlane = g.Add(flow.Task{
+			Name:         "Destroying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned),
+		})
+		waitUntilControlPlaneDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been destroyed",
+			Fn:           botanist.WaitUntilControlPlaneDeleted,
+			Dependencies: flow.NewTaskIDs(destroyControlPlane),
+		})
 
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 
-		destroyNginxIngressResources = g.Add(flow.Task{
+		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
 			Fn:           botanist.DestroyIngressDNSRecord,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
@@ -356,7 +375,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			deleteSeedMonitoring,
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
-			destroyNginxIngressResources,
+			destroyNginxIngressDNSRecord,
 			destroyKube2IAMResources,
 			destroyExternalDomainDNSRecord,
 			waitUntilInfrastructureDeleted,
