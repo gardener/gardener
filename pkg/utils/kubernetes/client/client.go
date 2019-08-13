@@ -167,12 +167,16 @@ func GracePeriodSeconds(gp int64) DeleteOptionFunc {
 	}
 }
 
+// TolerateErrorFunc is a function for tolerating errors.
+type TolerateErrorFunc func(err error) bool
+
 // CleanOptions are options to clean certain resources.
 // If FinalizeGracePeriod is set, the finalizers of the resources are removed if the resources still
 // exist after their targeted termination date plus the FinalizeGracePeriod amount.
 type CleanOptions struct {
 	DeleteOptions
 	FinalizeGracePeriod *int64
+	ErrorToleration     []TolerateErrorFunc
 }
 
 // ApplyOptions applies the OptFuncs to the CleanOptions.
@@ -190,6 +194,16 @@ type CleanOptionFunc func(*CleanOptions)
 func FinalizeGracePeriod(s int64) CleanOptionFunc {
 	return func(opts *CleanOptions) {
 		opts.FinalizeGracePeriod = &s
+	}
+}
+
+// TolerateErrors returns a CleanOptionFunc that adds the given functions
+// to tolerate certain errors to the CleanOptions.
+func TolerateErrors(fns ...TolerateErrorFunc) CleanOptionFunc {
+	return func(opts *CleanOptions) {
+		for _, fn := range fns {
+			opts.ErrorToleration = append(opts.ErrorToleration, fn)
+		}
 	}
 }
 
@@ -252,7 +266,15 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 		return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
 	}
 
-	return delete(ctx, c, obj, &cleanOptions.DeleteOptions)
+	if err := delete(ctx, c, obj, &cleanOptions.DeleteOptions); err != nil {
+		for _, tolerate := range cleanOptions.ErrorToleration {
+			if tolerate(err) {
+				return nil
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)

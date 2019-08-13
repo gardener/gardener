@@ -32,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -149,6 +150,9 @@ var (
 
 	// PersistentVolumeClaimCleanOptions is the delete selector for PersistentVolumeClaims.
 	PersistentVolumeClaimCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
+
+	// NamespaceErrorToleration are the errors to be tolerated during deletion.
+	NamespaceErrorToleration = utilclient.TolerateErrors(apierrors.IsConflict)
 )
 
 func cleanResourceFn(c client.Client, list runtime.Object, opts ...utilclient.CleanOptionFunc) flow.TaskFn {
@@ -198,7 +202,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 		cleanResourceFn(c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes, NamespaceErrorToleration),
 		cleanResourceFn(c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 		cleanResourceFn(c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 		cleanResourceFn(c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
