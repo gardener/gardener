@@ -21,6 +21,7 @@ data:
         seed_api: {{ .Values.seed.apiserver }}
         seed_region: {{ .Values.seed.region }}
         seed_profile: {{ .Values.seed.profile }}
+        shoot_infra: {{ .Values.shoot.provider }}
         ignoreAlerts: {{ .Values.ignoreAlerts }}
     rule_files:
     - /etc/prometheus/rules/*.yaml
