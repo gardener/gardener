@@ -76,3 +76,6 @@ groups:
     annotations:
       description: The nf_conntrack table is {{ $value }}% full.
       summary: Number of tracked connections is near the limit
+
+  - record: shoot:kube_node_info:count
+    expr: count(kube_node_info{type="shoot"})

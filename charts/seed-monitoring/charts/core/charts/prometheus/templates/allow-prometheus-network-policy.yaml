@@ -56,6 +56,13 @@ spec:
       namespaceSelector:
         matchLabels:
           role: kube-system
+    - podSelector:
+        matchLabels:
+          app: aggregate-prometheus
+          role: monitoring
+      namespaceSelector:
+        matchLabels:
+          role: garden
   policyTypes:
   - Egress
   - Ingress

@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aggregate-prometheus-config
+  namespace: {{ .Release.Namespace }}
+data:
+  prometheus.yaml: |
+
+    global:
+      evaluation_interval: 30s
+      scrape_interval: 30s
+      external_labels:
+        seed: seed
+
+    scrape_configs:
+    - job_name: shoot-prometheus
+      metrics_path: /federate
+      params:
+        'match[]':
+        - '{__name__="probe_success", job="blackbox-exporter-k8s-service-check"}'
+        - '{__name__="shoot:kube_apiserver:sum_by_pod"}'
+        - '{__name__="shoot:kube_node_info:count"}'
+        - '{__name__="ALERTS"}'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_namespace
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: shoot-(.+);prometheus-web;metrics
+        action: keep
+
+    - job_name: prometheus
+      metrics_path: /federate
+      params:
+        'match[]':
+        - '{__name__="seed:container_cpu_usage_seconds_total:sum_rate_by_pod"}'
+        - '{__name__="seed:container_memory_working_set_bytes:sum_by_pod"}'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_namespace
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: garden;prometheus-web;web
+        action: keep
+
+    - job_name: alertmanager
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: alertmanager;cluster
+        action: keep
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertmanager | indent 6 }}
+      - source_labels: [ namespace ]
+        action: keep
+        regex: ^{{ .Release.Namespace }}$
+
+    - job_name: elasticsearch-logging
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: elasticsearch-logging;metrics
+        action: keep
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.elasticsearch | indent 6 }}
+      - source_labels: [ namespace ]
+        action: keep
+        regex: ^{{ .Release.Namespace }}$

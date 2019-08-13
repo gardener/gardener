@@ -1,0 +1,8 @@
+groups:
+- name: recording-rules.rules
+  rules:
+  - record: seed:container_cpu_usage_seconds_total:sum_rate_by_pod
+    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod_name)
+
+  - record: seed:container_memory_working_set_bytes:sum_by_pod
+    expr: sum(container_memory_working_set_bytes) by (pod_name)
