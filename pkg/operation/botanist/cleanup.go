@@ -69,7 +69,10 @@ func MustNewRequirement(key string, op selection.Operator, vals ...string) label
 
 var (
 	// FinalizeAfterFiveMinutes is an option to finalize resources after five minutes.
-	FinalizeAfterFiveMinutes = utilclient.FinalizeGracePeriod(5 * 60)
+	FinalizeAfterFiveMinutes = utilclient.FinalizeGracePeriodSeconds(5 * 60)
+
+	// FinalizeAfterOneHour is an option to finalize resources after one hour.
+	FinalizeAfterOneHour = utilclient.FinalizeGracePeriodSeconds(60 * 60)
 
 	// ZeroGracePeriod is an option to delete resources with no grace period.
 	ZeroGracePeriod = utilclient.DeleteWith(utilclient.GracePeriodSeconds(0))
@@ -184,8 +187,8 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
+		cleanResourceFn(c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
 	)(ctx)
 }
 

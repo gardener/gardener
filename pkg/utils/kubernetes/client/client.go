@@ -171,12 +171,12 @@ func GracePeriodSeconds(gp int64) DeleteOptionFunc {
 type TolerateErrorFunc func(err error) bool
 
 // CleanOptions are options to clean certain resources.
-// If FinalizeGracePeriod is set, the finalizers of the resources are removed if the resources still
-// exist after their targeted termination date plus the FinalizeGracePeriod amount.
+// If FinalizeGracePeriodSeconds is set, the finalizers of the resources are removed if the resources still
+// exist after their targeted termination date plus the FinalizeGracePeriodSeconds amount.
 type CleanOptions struct {
 	DeleteOptions
-	FinalizeGracePeriod *int64
-	ErrorToleration     []TolerateErrorFunc
+	FinalizeGracePeriodSeconds *int64
+	ErrorToleration            []TolerateErrorFunc
 }
 
 // ApplyOptions applies the OptFuncs to the CleanOptions.
@@ -189,11 +189,11 @@ func (o *CleanOptions) ApplyOptions(optFuncs []CleanOptionFunc) {
 // CleanOptionFunc is a function that modifies CleanOptions.
 type CleanOptionFunc func(*CleanOptions)
 
-// FinalizeGracePeriod specifies that a resource shall be finalized if it's deleting for
-// the given amount.
-func FinalizeGracePeriod(s int64) CleanOptionFunc {
+// FinalizeGracePeriodSeconds specifies that a resource shall be finalized if it's been deleting
+// without being gone beyond the deletion timestamp for the given seconds.
+func FinalizeGracePeriodSeconds(s int64) CleanOptionFunc {
 	return func(opts *CleanOptions) {
-		opts.FinalizeGracePeriod = &s
+		opts.FinalizeGracePeriodSeconds = &s
 	}
 }
 
@@ -256,8 +256,8 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 	}
 
 	gracePeriod := time.Second
-	if cleanOptions != nil && cleanOptions.FinalizeGracePeriod != nil {
-		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriod)
+	if cleanOptions != nil && cleanOptions.FinalizeGracePeriodSeconds != nil {
+		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriodSeconds)
 	}
 
 	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
