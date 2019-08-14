@@ -232,7 +232,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Patch(ctx, &cm2, client.MergeFrom(&cm2WithFinalizer)),
 				)
 
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriod(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
 			It("should delete the object if its deletion timestamp is not over the finalize grace period", func() {
@@ -251,7 +251,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriod(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
 			It("should delete the object if its deletion timestamp is over the finalize grace period and no finalizer is left", func() {
@@ -270,7 +270,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
-				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriod(10))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(10))).To(Succeed())
 			})
 
 			It("should finalize the list if the object's deletion timestamps are over the finalize grace period", func() {
@@ -290,7 +290,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Patch(ctx, &cm2, client.MergeFrom(&cm2WithFinalizer)),
 				)
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriod(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
 			It("should delete the list if the object's deletion timestamps are not over the finalize grace period", func() {
@@ -310,7 +310,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Delete(ctx, &cm2WithFinalizer, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriod(20))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
 			It("should delete the list if the object's deletion timestamps is over the finalize grace period and no finalizers are left", func() {
@@ -330,7 +330,7 @@ var _ = Describe("Cleaner", func() {
 					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
-				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriod(10))).To(Succeed())
+				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
 			})
 		})
 	})
