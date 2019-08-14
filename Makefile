@@ -89,7 +89,7 @@ release: build build-local docker-images docker-login docker-push rename-binarie
 docker-images:
 	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(APISERVER_IMAGE_REPOSITORY):latest         -f Dockerfile --target apiserver .
 	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
-	@docker build -t $(SCHEDULER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(SCHEDULER_IMAGE_REPOSITORY):latest -f Dockerfile --target scheduler .
+	@docker build -t $(SCHEDULER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(SCHEDULER_IMAGE_REPOSITORY):latest         -f Dockerfile --target scheduler .
 
 .PHONY: docker-login
 docker-login:
