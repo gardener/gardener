@@ -22,7 +22,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenextensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
@@ -421,40 +421,46 @@ func (c *defaultControllerInstallationControl) isResponsible(controllerInstallat
 }
 
 func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Context, seedClient client.Client, controllerRegistration *gardencorev1alpha1.ControllerRegistration) error {
-	var fns []flow.TaskFn
+	var (
+		fns               []flow.TaskFn
+		relevantExtension []extensionsv1alpha1.Extension
+		result            error
+	)
 
-	objList := &gardenextensionsv1alpha1.ExtensionList{}
-	if err := seedClient.List(ctx, objList); err != nil {
+	extensionList := &extensionsv1alpha1.ExtensionList{}
+	if err := seedClient.List(ctx, extensionList); err != nil {
 		return err
 	}
 
 	for _, res := range controllerRegistration.Spec.Resources {
-		if res.Kind != gardenextensionsv1alpha1.ExtensionResource {
+		if res.Kind != extensionsv1alpha1.ExtensionResource {
 			continue
 		}
-		for _, item := range objList.Items {
+
+		for _, item := range extensionList.Items {
 			if res.Type != item.Spec.Type {
 				continue
 			}
-			delFunc := func(ctx context.Context) error {
-				del := &gardenextensionsv1alpha1.Extension{
+
+			relevantExtension = append(relevantExtension, item)
+			fns = append(fns, func(ctx context.Context) error {
+				del := &extensionsv1alpha1.Extension{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      item.GetName(),
 						Namespace: item.GetNamespace(),
 					},
 				}
 				return seedClient.Delete(ctx, del)
-			}
-			fns = append(fns, delFunc)
+			})
 		}
 	}
 
-	var result error
 	if errs := flow.Parallel(fns...)(ctx); errs != nil {
 		multiErrs, ok := errs.(*multierror.Error)
 		if !ok {
 			return errs
 		}
+
 		for _, err := range multiErrs.WrappedErrors() {
 			if !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
@@ -466,7 +472,7 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 		return result
 	}
 
-	if len(objList.Items) != 0 {
+	if len(relevantExtension) != 0 {
 		return newDeletionInProgressError("deletion of extensions is still pending")
 	}
 
