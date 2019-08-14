@@ -70,7 +70,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
     systemctl daemon-reload
 {{- range $name := (required ".worker.units is required" .worker.units) }}
 {{- if ne $name "docker.service" }}
-    systemctl restart {{ $name }}
+    systemctl enable {{ $name }} && systemctl restart {{ $name }}
 {{- end }}
 {{- end }}
     echo "Successfully restarted all units referenced in the cloud config."
