@@ -266,6 +266,13 @@ var _ = Describe("Shoot application testing", func() {
 	}, DownloadKubeconfigTimeout)
 
 	CIt("should deploy guestbook app successfully", func(ctx context.Context) {
+		shoot := shootTestOperations.Shoot
+		if !shoot.Spec.Addons.NginxIngress.Enabled {
+			Fail("The test requires .spec.kubernetes.addons.nginx-ingress.enabled to be true")
+		} else if shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil || !*shoot.Spec.Kubernetes.AllowPrivilegedContainers {
+			Fail("The test requires .spec.kubernetes.allowPrivilegedContainers to be true")
+		}
+
 		ctx = context.WithValue(ctx, "name", "guestbook app")
 
 		helm := Helm(resourcesDir)
@@ -306,7 +313,7 @@ var _ = Describe("Shoot application testing", func() {
 			ShootDNSHost        string
 		}{
 			helmDeployNamespace,
-			fmt.Sprintf("guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain),
+			fmt.Sprintf("guestbook.ingress.%s", *shoot.Spec.DNS.Domain),
 		}
 
 		By("Deploy the guestbook application")
@@ -320,8 +327,8 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// define guestbook app urls
-		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain)
-		pushString := fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)
+		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shoot.Spec.DNS.Domain)
+		pushString := fmt.Sprintf("foobar-%s", shoot.Name)
 		pushURL := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
 		pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 
@@ -343,12 +350,17 @@ var _ = Describe("Shoot application testing", func() {
 
 		// test if foobar-<shoot-name> was pulled successfully
 		bodyString := string(responseBytes)
-		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)))
+		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shoot.Name)))
 		By("Guestbook app was deployed successfully!")
 
 	}, GuestbookAppTimeout)
 
 	CIt("Dashboard should be available", func(ctx context.Context) {
+		shoot := shootTestOperations.Shoot
+		if !shoot.Spec.Addons.KubernetesDashboard.Enabled {
+			Fail("The test requires .spec.addons.kubernetes-dashboard.enabled to be be true")
+		}
+
 		err := shootTestOperations.DashboardAvailable(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	}, DashboardAvailableTimeout)
