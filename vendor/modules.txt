@@ -301,7 +301,7 @@ golang.org/x/crypto/openpgp/elgamal
 # golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3
 golang.org/x/lint/golint
 golang.org/x/lint
-# golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
+# golang.org/x/net v0.0.0-20190613194153-d28f0bde5980 => golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
 golang.org/x/net/http2
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
@@ -908,8 +908,8 @@ k8s.io/utils/pointer
 # sigs.k8s.io/controller-runtime v0.2.0-beta.2 => sigs.k8s.io/controller-runtime v0.2.0-beta.2
 sigs.k8s.io/controller-runtime/pkg/client
 sigs.k8s.io/controller-runtime/pkg/runtime/signals
-sigs.k8s.io/controller-runtime/pkg/reconcile
 sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
+sigs.k8s.io/controller-runtime/pkg/reconcile
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
 sigs.k8s.io/controller-runtime/pkg/manager/signals
 sigs.k8s.io/controller-runtime/pkg/client/fake
