@@ -22,6 +22,9 @@ spec:
         {{- if .Values.global.apiserver.audit.policy }}
         checksum/configmap-gardener-audit-policy-config: {{ include (print $.Template.BasePath "/apiserver/configmap-audit-policy.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.apiserver.audit.policy }}
+        checksum/configmap-gardener-encryption-config: {{ include (print $.Template.BasePath "/apiserver/configmap-encryption-configuration.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.apiserver.audit.webhook.config }}
         checksum/secret-gardener-audit-webhook-config: {{ include (print $.Template.BasePath "/apiserver/secret-audit-webhook-config.yaml") . | sha256sum }}
         {{- end }}
@@ -60,6 +63,9 @@ spec:
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver
+        {{- if .Values.global.apiserver.encryption.configuration }}
+        - --encryption-provider-config=/etc/gardener-apiserver/encryption/encryption-configuration.yaml
+        {{- end }}
         {{- if .Values.global.apiserver.audit.dynamicConfiguration }}
         - --audit-dynamic-configuration={{ .Values.global.apiserver.audit.dynamicConfiguration }}
         {{- end }}
@@ -203,6 +209,10 @@ spec:
         - name: gardener-audit-webhook-config
           mountPath: /etc/gardener-apiserver/auditwebhook
         {{- end }}
+        {{- if .Values.global.apiserver.encryption.configuration }}
+        - name: gardener-encryption-config
+          mountPath: /etc/gardener-apiserver/encryption
+        {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.3.12
@@ -253,6 +263,11 @@ spec:
       - name: gardener-audit-policy-config
         configMap:
           name: gardener-audit-policy-config
+      {{- end }}
+      {{- if .Values.global.apiserver.encryption.configuration }}
+      - name: gardener-encryption-config
+        configMap:
+          name: gardener-encryption-config
       {{- end }}
       {{- if .Values.global.apiserver.audit.webhook.config }}
       - name: gardener-audit-webhook-config

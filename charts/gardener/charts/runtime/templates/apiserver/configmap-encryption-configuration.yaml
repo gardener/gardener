@@ -1,0 +1,16 @@
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.encryption.configuration }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-encryption-config
+  namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  encryption-configuration.yaml: |-
+{{ .Values.global.apiserver.encryption.configuration | indent 4 }}
+{{- end }}
