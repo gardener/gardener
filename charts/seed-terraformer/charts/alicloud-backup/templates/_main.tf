@@ -12,9 +12,13 @@ provider "alicloud" {
 resource "alicloud_oss_bucket" "bucket" {
   bucket        = "{{ required "bucket.name is required" .Values.bucket.name }}"
   acl           = "private"
+}
 
-  server_side_encryption_rule {
-    sse_algorithm = "KMS"
+// Workaround: Providing a null-resource for letting Terraform think that there are
+// differences, enabling the Gardener to start an actual `terraform apply` job.
+resource "null_resource" "outputs" {
+  triggers = {
+    recompute = "outputs"
   }
 }
 
