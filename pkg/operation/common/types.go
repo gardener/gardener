@@ -42,6 +42,9 @@ const (
 	// BackupInfrastructureReconcile is a constant for an annotation on a Backupinfrastructure indicating that a Backupinfrastructure reconciliation shall be triggered.
 	BackupInfrastructureReconcile = "reconcile"
 
+	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
+	BasicAuthSecretName = "kube-apiserver-basic-auth"
+
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
@@ -339,6 +342,10 @@ const (
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be executed as soon as
 	// possible.
 	ShootOperationMaintain = "maintain"
+
+	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the credentials contained in the
+	// kubeconfig that is handed out to the user shall be rotated.
+	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials"
 
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.garden.sapcloud.io/tasks"

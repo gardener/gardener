@@ -286,7 +286,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"objectCount": b.Shoot.GetNodeCount(),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-prometheus":                b.CheckSums["prometheus"],
-				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
+				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums[common.BasicAuthSecretName],
 				"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 				"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			},
