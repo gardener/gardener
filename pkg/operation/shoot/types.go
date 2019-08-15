@@ -42,11 +42,11 @@ type Shoot struct {
 	IgnoreAlerts           bool
 	HibernationEnabled     bool
 
-	CloudConfigMap       map[string]CloudConfig
-	Extensions           map[string]Extension
-	InfrastructureStatus []byte
-	ControlPlaneStatus   []byte
-	MachineDeployments   []extensionsv1alpha1.MachineDeployment
+	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
+	Extensions                map[string]Extension
+	InfrastructureStatus      []byte
+	ControlPlaneStatus        []byte
+	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 }
 
 // ExternalDomain contains information for the used external shoot domain.
@@ -56,15 +56,21 @@ type ExternalDomain struct {
 	SecretData map[string][]byte
 }
 
-// CloudConfig contains a downloader script as well as the original cloud config.
-type CloudConfig struct {
-	Downloader CloudConfigData
-	Original   CloudConfigData
+// OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud config.
+type OperatingSystemConfigs struct {
+	Downloader OperatingSystemConfig
+	Original   OperatingSystemConfig
 }
 
-// CloudConfigData contains the actual content, a command to load it and all units that
+// OperatingSystemConfig contains the operating system config's name and data.
+type OperatingSystemConfig struct {
+	Name string
+	Data OperatingSystemConfigData
+}
+
+// OperatingSystemConfigData contains the actual content, a command to load it and all units that
 // shall be considered for restart on change.
-type CloudConfigData struct {
+type OperatingSystemConfigData struct {
 	Content string
 	Command *string
 	Units   []string

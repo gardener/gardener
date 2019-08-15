@@ -73,15 +73,16 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 	}
 
 	type oscOutput struct {
-		workerName  string
-		cloudConfig *shoot.CloudConfig
-		err         error
+		workerName string
+		oscs       *shoot.OperatingSystemConfigs
+		err        error
 	}
 
 	var (
-		results   = make(chan *oscOutput)
-		wg        sync.WaitGroup
-		errorList = []error{}
+		results      = make(chan *oscOutput)
+		wg           sync.WaitGroup
+		errorList    = []error{}
+		usedOscNames = make(map[string]string)
 	)
 
 	for _, worker := range b.Shoot.GetWorkers() {
@@ -96,8 +97,8 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 
 			machineImageName := machineImage.Name
 			downloaderConfig := b.generateDownloaderConfig(machineImageName)
-			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImage, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
-			results <- &oscOutput{worker.Name, cloudConfig, err}
+			oscs, err := b.deployOperatingSystemConfigsForWorker(machineTypes, machineImage, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
+			results <- &oscOutput{worker.Name, oscs, err}
 		}(worker)
 	}
 
@@ -111,12 +112,21 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 			errorList = append(errorList, out.err)
 			continue
 		}
-		b.Shoot.CloudConfigMap[out.workerName] = *out.cloudConfig
+
+		b.Shoot.OperatingSystemConfigsMap[out.workerName] = *out.oscs
+		usedOscNames[out.oscs.Downloader.Name] = out.oscs.Downloader.Name
+		usedOscNames[out.oscs.Original.Name] = out.oscs.Original.Name
 	}
 
 	if len(errorList) > 0 {
 		return fmt.Errorf("errors occurred during operating system config generation: %+v", errorList)
 	}
+
+	// Delete all old operating system configs (i.e. those which were previously computed but now are unused).
+	if err := b.CleanupOperatingSystemConfigs(ctx, usedOscNames); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -168,7 +178,12 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *Botanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *Botanist) deployOperatingSystemConfigsForWorker(
+	machineTypes []gardenv1beta1.MachineType,
+	machineImage *gardenv1beta1.ShootMachineImage,
+	downloaderConfig,
+	originalConfig map[string]interface{},
+	worker gardenv1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
@@ -198,19 +213,32 @@ func (b *Botanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv
 		"evictionSoftMemoryAvailable": evictionSoftMemoryAvailable,
 	}
 
-	downloader, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "downloader"), fmt.Sprintf("%s-downloader", secretName), downloaderConfig)
+	var (
+		downloaderName = fmt.Sprintf("%s-downloader", secretName)
+		originalName   = fmt.Sprintf("%s-original", secretName)
+	)
+	downloaderData, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "downloader"), downloaderName, downloaderConfig)
 	if err != nil {
 		return nil, err
 	}
-	original, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "original"), fmt.Sprintf("%s-original", secretName), originalConfig)
+	originalData, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "original"), originalName, originalConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &shoot.CloudConfig{Downloader: *downloader, Original: *original}, nil
+	return &shoot.OperatingSystemConfigs{
+		Downloader: shoot.OperatingSystemConfig{
+			Name: downloaderName,
+			Data: *downloaderData,
+		},
+		Original: shoot.OperatingSystemConfig{
+			Name: originalName,
+			Data: *originalData,
+		},
+	}, nil
 }
 
-func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
+func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.OperatingSystemConfigData, error) {
 	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
 		return nil, err
 	}
@@ -237,7 +265,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name str
 		return nil, err
 	}
 
-	return &shoot.CloudConfigData{
+	return &shoot.OperatingSystemConfigData{
 		Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 		Command: oscStatus.Command,
 		Units:   oscStatus.Units,
@@ -258,16 +286,16 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	)
 
 	for _, worker := range shootWorkers {
-		cloudConfigData := b.Shoot.CloudConfigMap[worker.Name]
+		oscData := b.Shoot.OperatingSystemConfigsMap[worker.Name]
 
 		w := map[string]interface{}{
 			"name":        worker.Name,
 			"secretName":  b.Shoot.ComputeCloudConfigSecretName(worker.Name),
-			"cloudConfig": cloudConfigData.Original.Content,
-			"units":       cloudConfigData.Original.Units,
+			"cloudConfig": oscData.Original.Data.Content,
+			"units":       oscData.Original.Data.Units,
 		}
 
-		if cmd := cloudConfigData.Original.Command; cmd != nil {
+		if cmd := oscData.Original.Data.Command; cmd != nil {
 			w["command"] = *cmd
 		}
 
@@ -324,4 +352,26 @@ func (b *Botanist) computeBootstrapToken() (secret *corev1.Secret, err error) {
 		return secret, err
 	}
 	return secret, err
+}
+
+// CleanupOperatingSystemConfigs deletes all unused operating system configs in the shoot seed namespace
+// (i.e., those which are not part of the provided map <usedOscNames>.
+func (b *Botanist) CleanupOperatingSystemConfigs(ctx context.Context, usedOscNames map[string]string) error {
+	var (
+		k8sSeedClient = b.K8sSeedClient.Client()
+		list          = &extensionsv1alpha1.OperatingSystemConfigList{}
+	)
+	if err := k8sSeedClient.List(ctx, list, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+		return err
+	}
+
+	for _, osc := range list.Items {
+		if _, ok := usedOscNames[osc.Name]; !ok {
+			if err := k8sSeedClient.Delete(ctx, &osc); err != nil && !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
