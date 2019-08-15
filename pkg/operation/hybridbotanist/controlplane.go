@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -255,32 +255,36 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"maxReplicas":      3,
-		"securePort":       443,
-		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets[common.KubecfgSecretName].Data[secrets.DataKeyUserName], b.Secrets[common.KubecfgSecretName].Data[secrets.DataKeyPassword]))),
+		"maxReplicas":               3,
+		"enableBasicAuthentication": gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
+		"probeCredentials":          b.APIServerHealthCheckToken,
+		"securePort":                443,
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                        b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
-			"checksum/secret-ca-front-proxy":            b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],
-			"checksum/secret-kube-apiserver":            b.CheckSums[gardencorev1alpha1.DeploymentNameKubeAPIServer],
-			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
-			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
-			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums[common.BasicAuthSecretName],
-			"checksum/secret-static-token":              b.CheckSums[common.StaticTokenSecretName],
-			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
-			"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
-			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
-			"checksum/secret-etcd-ca":                   b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
-			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
+			"checksum/secret-ca":                     b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
+			"checksum/secret-ca-front-proxy":         b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],
+			"checksum/secret-kube-apiserver":         b.CheckSums[gardencorev1alpha1.DeploymentNameKubeAPIServer],
+			"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
+			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
+			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
+			"checksum/secret-vpn-seed":               b.CheckSums["vpn-seed"],
+			"checksum/secret-vpn-seed-tlsauth":       b.CheckSums["vpn-seed-tlsauth"],
+			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
+			"checksum/secret-etcd-ca":                b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
+			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
 		},
 	}
+
 	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {
 		return err
 	}
 	if enableEtcdEncryption {
 		defaultValues["enableEtcdEncryption"] = true
-		podAnotationMap := defaultValues["podAnnotations"].(map[string]interface{})
-		podAnotationMap["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
+	}
+
+	if gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
 	}
 
 	if b.ShootedSeed != nil {

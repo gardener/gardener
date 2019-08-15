@@ -4054,6 +4054,52 @@ func schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref common.ReferenceCall
 							},
 						},
 					},
+					"admissionPlugins": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding configuration.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin"),
+									},
+								},
+							},
+						},
+					},
+					"apiAudiences": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single element list containing the issuer URL.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"auditConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig"),
+						},
+					},
+					"enableBasicAuthentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"oidcConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OIDCConfig contains configuration settings for the OIDC provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"),
+						},
+					},
 					"runtimeConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RuntimeConfig contains information about enabled or disabled APIs.",
@@ -4069,49 +4115,10 @@ func schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref common.ReferenceCall
 							},
 						},
 					},
-					"oidcConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "OIDCConfig contains configuration settings for the OIDC provider.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"),
-						},
-					},
-					"admissionPlugins": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding configuration.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin"),
-									},
-								},
-							},
-						},
-					},
-					"auditConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig"),
-						},
-					},
 					"serviceAccountConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountConfig contains configuration settings for the service account handling of the kube-apiserver.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ServiceAccountConfig"),
-						},
-					},
-					"apiAudiences": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single element list containing the issuer URL.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
 						},
 					},
 				},

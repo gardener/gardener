@@ -39,27 +39,28 @@ import (
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
-	Logger               *logrus.Entry
-	GardenerInfo         *gardenv1beta1.Gardener
-	Secrets              map[string]*corev1.Secret
-	CheckSums            map[string]string
-	ImageVector          imagevector.ImageVector
-	Garden               *garden.Garden
-	Seed                 *seed.Seed
-	Shoot                *shoot.Shoot
-	ShootedSeed          *helper.ShootedSeed
-	K8sGardenClient      kubernetes.Interface
-	K8sGardenInformers   gardeninformers.Interface
-	K8sSeedClient        kubernetes.Interface
-	K8sShootClient       kubernetes.Interface
-	ChartApplierGarden   kubernetes.ChartApplier
-	ChartApplierSeed     kubernetes.ChartApplier
-	ChartApplierShoot    kubernetes.ChartApplier
-	APIServerAddress     string
-	SeedNamespaceObject  *corev1.Namespace
-	BackupInfrastructure *gardenv1beta1.BackupInfrastructure
-	ShootBackup          *config.ShootBackup
-	MonitoringClient     prometheusclient.API
+	Logger                    *logrus.Entry
+	GardenerInfo              *gardenv1beta1.Gardener
+	Secrets                   map[string]*corev1.Secret
+	CheckSums                 map[string]string
+	ImageVector               imagevector.ImageVector
+	Garden                    *garden.Garden
+	Seed                      *seed.Seed
+	Shoot                     *shoot.Shoot
+	ShootedSeed               *helper.ShootedSeed
+	K8sGardenClient           kubernetes.Interface
+	K8sGardenInformers        gardeninformers.Interface
+	K8sSeedClient             kubernetes.Interface
+	K8sShootClient            kubernetes.Interface
+	ChartApplierGarden        kubernetes.ChartApplier
+	ChartApplierSeed          kubernetes.ChartApplier
+	ChartApplierShoot         kubernetes.ChartApplier
+	APIServerAddress          string
+	APIServerHealthCheckToken string
+	SeedNamespaceObject       *corev1.Namespace
+	BackupInfrastructure      *gardenv1beta1.BackupInfrastructure
+	ShootBackup               *config.ShootBackup
+	MonitoringClient          prometheusclient.API
 }
 
 type prometheusRoundTripper struct {

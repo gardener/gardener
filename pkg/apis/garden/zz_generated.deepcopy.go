@@ -1578,18 +1578,6 @@ func (in *Kube2IAMRole) DeepCopy() *Kube2IAMRole {
 func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
-	if in.RuntimeConfig != nil {
-		in, out := &in.RuntimeConfig, &out.RuntimeConfig
-		*out = make(map[string]bool, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
-	if in.OIDCConfig != nil {
-		in, out := &in.OIDCConfig, &out.OIDCConfig
-		*out = new(OIDCConfig)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.AdmissionPlugins != nil {
 		in, out := &in.AdmissionPlugins, &out.AdmissionPlugins
 		*out = make([]AdmissionPlugin, len(*in))
@@ -1597,20 +1585,37 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.APIAudiences != nil {
+		in, out := &in.APIAudiences, &out.APIAudiences
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.AuditConfig != nil {
 		in, out := &in.AuditConfig, &out.AuditConfig
 		*out = new(AuditConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnableBasicAuthentication != nil {
+		in, out := &in.EnableBasicAuthentication, &out.EnableBasicAuthentication
+		*out = new(bool)
+		**out = **in
+	}
+	if in.OIDCConfig != nil {
+		in, out := &in.OIDCConfig, &out.OIDCConfig
+		*out = new(OIDCConfig)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.RuntimeConfig != nil {
+		in, out := &in.RuntimeConfig, &out.RuntimeConfig
+		*out = make(map[string]bool, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.ServiceAccountConfig != nil {
 		in, out := &in.ServiceAccountConfig, &out.ServiceAccountConfig
 		*out = new(ServiceAccountConfig)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.APIAudiences != nil {
-		in, out := &in.APIAudiences, &out.APIAudiences
-		*out = make([]string, len(*in))
-		copy(*out, *in)
 	}
 	return
 }

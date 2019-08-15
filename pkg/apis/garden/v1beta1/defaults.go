@@ -139,6 +139,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
 	}
 
+	if obj.Spec.Kubernetes.KubeAPIServer != nil {
+		if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+		}
+	}
+
 	if obj.Spec.Kubernetes.KubeProxy != nil {
 		if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
 			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
@@ -209,7 +215,7 @@ func SetDefaults_Project(obj *Project) {
 
 // SetDefaults_KubernetesDashboard sets default values for KubernetesDashboard objects.
 func SetDefaults_KubernetesDashboard(obj *KubernetesDashboard) {
-	defaultAuthMode := "basic"
+	defaultAuthMode := KubernetesDashboardAuthModeBasic
 	if obj.AuthenticationMode == nil {
 		obj.AuthenticationMode = &defaultAuthMode
 	}

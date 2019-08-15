@@ -78,7 +78,9 @@ spec:
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
         - --authorization-mode=Node,RBAC
+        {{- if .Values.enableBasicAuthentication }}
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
+        {{- end }}
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
@@ -129,7 +131,7 @@ spec:
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
-              value: Basic {{ .Values.probeCredentials }}
+              value: Bearer {{ .Values.probeCredentials }}
           successThreshold: 1
           failureThreshold: 3
           initialDelaySeconds: 15
@@ -142,7 +144,7 @@ spec:
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
-              value: Basic {{ .Values.probeCredentials }}
+              value: Bearer {{ .Values.probeCredentials }}
           successThreshold: 1
           failureThreshold: 3
           initialDelaySeconds: 10
@@ -173,8 +175,10 @@ spec:
           mountPath: /srv/kubernetes/apiserver
         - name: service-account-key
           mountPath: /srv/kubernetes/service-account-key
+        {{- if .Values.enableBasicAuthentication }}
         - name: kube-apiserver-basic-auth
           mountPath: /srv/kubernetes/auth
+        {{- end }}
         - name: static-token
           mountPath: /srv/kubernetes/token
         - name: kube-apiserver-kubelet
@@ -212,6 +216,14 @@ spec:
           value: "true"
         - name: OPENVPN_PORT
           value: "4314"
+        - name: APISERVER_AUTH_MODE
+          value: client-cert
+        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CA
+          value: /srv/secrets/vpn-seed/ca.crt
+        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CRT
+          value: /srv/secrets/vpn-seed/tls.crt
+        - name: APISERVER_AUTH_MODE_CLIENT_CERT_KEY
+          value: /srv/secrets/vpn-seed/tls.key
         - name: SERVICE_NETWORK
           value: {{ .Values.shootNetworks.service }}
         - name: POD_NETWORK
@@ -241,8 +253,6 @@ spec:
           name: vpn-seed
         - mountPath: /srv/secrets/tlsauth
           name: vpn-seed-tlsauth
-        - mountPath: /srv/auth
-          name: kube-apiserver-basic-auth
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}
         args:
@@ -288,9 +298,11 @@ spec:
       - name: service-account-key
         secret:
           secretName: service-account-key
+      {{- if .Values.enableBasicAuthentication }}
       - name: kube-apiserver-basic-auth
         secret:
           secretName: kube-apiserver-basic-auth
+      {{- end }}
       - name: static-token
         secret:
           secretName: static-token

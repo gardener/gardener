@@ -17,13 +17,14 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Masterminds/semver"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -52,8 +53,8 @@ var (
 		string(garden.ProxyModeIPVS),
 	)
 	availableKubernetesDashboardAuthenticationModes = sets.NewString(
-		"basic",
-		"token",
+		garden.KubernetesDashboardAuthModeBasic,
+		garden.KubernetesDashboardAuthModeToken,
 	)
 )
 
@@ -929,7 +930,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 		return allErrs
 	}
 
-	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateCloud(spec.Cloud, spec.Kubernetes, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
@@ -967,7 +968,7 @@ func validateNameConsecutiveHyphens(name string, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *garden.Addons, kubeAPIServerConfig *garden.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if addons == nil {
@@ -1002,8 +1003,14 @@ func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList 
 	}
 
 	if addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled {
-		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil && !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
+		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
+			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
+			}
+
+			if *authMode == garden.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubeAPIServerConfig) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, "cannot use basic auth mode when basic auth is not enabled in kube-apiserver configuration"))
+			}
 		}
 	}
 

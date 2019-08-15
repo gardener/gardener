@@ -397,7 +397,7 @@ type ProjectSpec struct {
 	Namespace *string
 	// Viewers is a list of subjects representing a user name, an email address, or any other identifier of a user
 	// that should be part of this project with limited permissions to only view some resources.
-	Viewers []rbacv1.Subject `json:"viewers,omitempty"`
+	Viewers []rbacv1.Subject
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -1035,6 +1035,13 @@ type KubernetesDashboard struct {
 	AuthenticationMode *string
 }
 
+const (
+	// KubernetesDashboardAuthModeBasic uses basic authentication mode for auth.
+	KubernetesDashboardAuthModeBasic = "basic"
+	// KubernetesDashboardAuthModeToken uses token-based mode for auth.
+	KubernetesDashboardAuthModeToken = "token"
+)
+
 // AddonClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type AddonClusterAutoscaler struct {
 	Addon
@@ -1160,7 +1167,7 @@ type Kubernetes struct {
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string
 	// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
-	ClusterAutoscaler *ClusterAutoscaler `json:"clusterAutoscaler,omitempty"`
+	ClusterAutoscaler *ClusterAutoscaler
 }
 
 // ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
@@ -1188,23 +1195,25 @@ type KubernetesConfig struct {
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
 	KubernetesConfig
-	// RuntimeConfig contains information about enabled or disabled APIs.
-	RuntimeConfig map[string]bool
-	// OIDCConfig contains configuration settings for the OIDC provider.
-	OIDCConfig *OIDCConfig
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
 	// configuration.
 	AdmissionPlugins []AdmissionPlugin
-	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
-	AuditConfig *AuditConfig
-	// ServiceAccountConfig contains configuration settings for the service account handling
-	// of the kube-apiserver.
-	ServiceAccountConfig *ServiceAccountConfig
 	// APIAudiences are the identifiers of the API. The service account token authenticator will
 	// validate that tokens used against the API are bound to at least one of these audiences.
 	// If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single
 	// element list containing the issuer URL.
 	APIAudiences []string
+	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
+	AuditConfig *AuditConfig
+	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
+	EnableBasicAuthentication *bool
+	// OIDCConfig contains configuration settings for the OIDC provider.
+	OIDCConfig *OIDCConfig
+	// RuntimeConfig contains information about enabled or disabled APIs.
+	RuntimeConfig map[string]bool
+	// ServiceAccountConfig contains configuration settings for the service account handling
+	// of the kube-apiserver.
+	ServiceAccountConfig *ServiceAccountConfig
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.

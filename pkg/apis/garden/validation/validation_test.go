@@ -3205,6 +3205,7 @@ var _ = Describe("validation", func() {
 									},
 								},
 							},
+							EnableBasicAuthentication: makeBoolPointer(true),
 						},
 						KubeControllerManager: &garden.KubeControllerManagerConfig{
 							NodeCIDRMaskSize: makeIntPointer(22),
@@ -3310,6 +3311,27 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.addons.kubernetes-dashboard.authenticationMode"),
 				})),
 			))
+		})
+
+		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer(garden.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = makeBoolPointer(false)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.addons.kubernetes-dashboard.authenticationMode"),
+			}))))
+		})
+
+		It("should allow using basic auth mode for kubernetes dashboard when it's enabled in kube-apiserver config", func() {
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer(garden.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = makeBoolPointer(true)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid unsupported cloud specification (provider independent)", func() {
@@ -6923,6 +6945,11 @@ func makeFloat64Pointer(f float64) *float64 {
 }
 
 func makeIntPointer(i int) *int {
+	ptr := i
+	return &ptr
+}
+
+func makeBoolPointer(i bool) *bool {
 	ptr := i
 	return &ptr
 }

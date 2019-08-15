@@ -544,16 +544,20 @@ spec:
     kubeAPIServer: ${yaml.dump(kubeAPIServer, width=10000, default_flow_style=None)}
     % else:
   # kubeAPIServer:
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
+  #   enableBasicAuthentication: true
   #   featureGates:
   #     SomeKubernetesFeature: true
-  #   runtimeConfig:
-  #     scheduling.k8s.io/v1alpha1: true
-  #-#-# requires TokenRequest feature gate
-  #-#-# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
-  #   serviceAccountConfig:
-  #     issuer: "https://${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com")}"
-  #     signingKeySecretName: "service-account-signing-key"
-  #   apiAudiences: ["some", "audiences"]
   #   oidcConfig:
   #     caBundle: |
   #       -----BEGIN CERTIFICATE-----
@@ -569,17 +573,14 @@ spec:
   #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
-  #   admissionPlugins:
-  #   - name: PodNodeSelector
-  #     config: |
-  #       podNodeSelectorPluginConfig:
-  #         clusterDefaultNodeSelector: <node-selectors-labels>
-  #         namespace1: <node-selectors-labels>
-  #         namespace2: <node-selectors-labels>
-  #   auditConfig:
-  #     auditPolicy:
-  #       configMapRef:
-  #         name: auditpolicy
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #-#-# requires TokenRequest feature gate
+  #-#-# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  #   serviceAccountConfig:
+  #     issuer: "https://${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com")}"
+  #     signingKeySecretName: "service-account-signing-key"
+  #   apiAudiences: ["some", "audiences"]
   % endif
     % if cloudControllerManager != {}:
     cloudControllerManager: ${yaml.dump(cloudControllerManager, width=10000, default_flow_style=None)}

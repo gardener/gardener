@@ -79,16 +79,20 @@ spec:
     version: 1.15.2
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
+  #   enableBasicAuthentication: true
   #   featureGates:
   #     SomeKubernetesFeature: true
-  #   runtimeConfig:
-  #     scheduling.k8s.io/v1alpha1: true
-  #-#-# requires TokenRequest feature gate
-  #-#-# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
-  #   serviceAccountConfig:
-  #     issuer: "https://johndoe-packet.garden-dev.example.com"
-  #     signingKeySecretName: "service-account-signing-key"
-  #   apiAudiences: ["some", "audiences"]
   #   oidcConfig:
   #     caBundle: |
   #       -----BEGIN CERTIFICATE-----
@@ -104,17 +108,14 @@ spec:
   #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
-  #   admissionPlugins:
-  #   - name: PodNodeSelector
-  #     config: |
-  #       podNodeSelectorPluginConfig:
-  #         clusterDefaultNodeSelector: <node-selectors-labels>
-  #         namespace1: <node-selectors-labels>
-  #         namespace2: <node-selectors-labels>
-  #   auditConfig:
-  #     auditPolicy:
-  #       configMapRef:
-  #         name: auditpolicy
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #-#-# requires TokenRequest feature gate
+  #-#-# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  #   serviceAccountConfig:
+  #     issuer: "https://johndoe-packet.garden-dev.example.com"
+  #     signingKeySecretName: "service-account-signing-key"
+  #   apiAudiences: ["some", "audiences"]
   # cloudControllerManager:
   #   featureGates:
   #     SomeKubernetesFeature: true
