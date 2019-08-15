@@ -245,6 +245,18 @@ const (
 	// KibanaAdminIngressCredentialsSecretName is the name of the secret which holds admin credentials.
 	KibanaAdminIngressCredentialsSecretName = "logging-ingress-credentials"
 
+	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
+	KubecfgUsername = "system:cluster-admin"
+
+	// KubecfgSecretName is the name of the kubecfg secret.
+	KubecfgSecretName = "kubecfg"
+
+	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
+	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
+
+	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
+	StaticTokenSecretName = "static-token"
+
 	// FluentBitDaemonSetName is the name of the fluent-bit daemon set.
 	FluentBitDaemonSetName = "fluent-bit"
 

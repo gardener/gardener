@@ -108,6 +108,7 @@ spec:
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
         - --service-cluster-ip-range={{ .Values.shootNetworks.service }}
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
+        - --token-auth-file=/srv/kubernetes/token/static_tokens.csv
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
@@ -174,6 +175,8 @@ spec:
           mountPath: /srv/kubernetes/service-account-key
         - name: kube-apiserver-basic-auth
           mountPath: /srv/kubernetes/auth
+        - name: static-token
+          mountPath: /srv/kubernetes/token
         - name: kube-apiserver-kubelet
           mountPath: /srv/kubernetes/apiserver-kubelet
         - name: kube-aggregator
@@ -288,6 +291,9 @@ spec:
       - name: kube-apiserver-basic-auth
         secret:
           secretName: kube-apiserver-basic-auth
+      - name: static-token
+        secret:
+          secretName: static-token
       - name: kube-apiserver-kubelet
         secret:
           secretName: kube-apiserver-kubelet

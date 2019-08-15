@@ -75,7 +75,7 @@ const (
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
@@ -332,28 +332,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 		},
 
-		// Secret definition for kubecfg
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kubecfg",
-
-				CommonName:   "system:cluster-admin",
-				Organization: []string{user.SystemPrivilegedGroup},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
-			},
-
-			BasicAuth: basicAuthAPIServer,
-
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, false),
-			},
-		},
-
 		// Secret definition for gardener
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -535,6 +513,27 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	}
 
+	// Secret definition for kubecfg
+	kubecfgToken, err := staticToken.GetTokenForUsername(common.KubecfgUsername)
+	if err != nil {
+		return nil, err
+	}
+
+	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+		CertificateSecretConfig: &secrets.CertificateSecretConfig{
+			Name:      "kubecfg",
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+		},
+
+		BasicAuth: basicAuthAPIServer,
+		Token:     kubecfgToken,
+
+		KubeConfigRequest: &secrets.KubeConfigRequest{
+			ClusterName:  b.Shoot.SeedNamespace,
+			APIServerURL: b.Shoot.ComputeAPIServerURL(false, false),
+		},
+	})
+
 	loggingEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
 		elasticsearchHosts := []string{"elasticsearch-logging",
@@ -662,11 +661,16 @@ func (b *Botanist) DeploySecrets() error {
 		return err
 	}
 
+	staticToken, err := b.generateStaticToken(existingSecretsMap)
+	if err != nil {
+		return err
+	}
+
 	if err := b.deployOpenVPNTLSAuthSecret(existingSecretsMap); err != nil {
 		return err
 	}
 
-	wantedSecretsList, err := b.generateWantedSecrets(basicAuthAPIServer, certificateAuthorities)
+	wantedSecretsList, err := b.generateWantedSecrets(basicAuthAPIServer, staticToken, certificateAuthorities)
 	if err != nil {
 		return err
 	}
@@ -794,6 +798,61 @@ func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*cor
 	b.Secrets[basicAuthSecretAPIServer.Name] = secret
 
 	return basicAuth.(*secrets.BasicAuth), nil
+}
+
+func (b *Botanist) generateStaticToken(existingSecretsMap map[string]*corev1.Secret) (*secrets.StaticToken, error) {
+	staticTokenConfig := &secrets.StaticTokenSecretConfig{
+		Name: "static-token",
+		Tokens: []secrets.TokenConfig{
+			{
+				Username: common.KubecfgUsername,
+				UserID:   common.KubecfgUsername,
+				Groups:   []string{user.SystemPrivilegedGroup},
+			},
+			{
+				Username: common.KubeAPIServerHealthCheck,
+				UserID:   common.KubeAPIServerHealthCheck,
+			},
+		},
+	}
+
+	if existingSecret, ok := existingSecretsMap[staticTokenConfig.Name]; ok {
+		staticToken, err := secrets.LoadStaticTokenFromCSV(staticTokenConfig.Name, existingSecret.Data[secrets.DataKeyStaticTokenCSV])
+		if err != nil {
+			return nil, err
+		}
+
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+
+		b.Secrets[staticTokenConfig.Name] = existingSecret
+
+		return staticToken, nil
+	}
+
+	staticToken, err := staticTokenConfig.Generate()
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      staticTokenConfig.Name,
+			Namespace: b.Shoot.SeedNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: staticToken.SecretData(),
+	}
+	if err := b.K8sSeedClient.Client().Create(context.TODO(), secret); err != nil {
+		return nil, err
+	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	b.Secrets[staticTokenConfig.Name] = secret
+
+	return staticToken.(*secrets.StaticToken), nil
 }
 
 func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) error {
