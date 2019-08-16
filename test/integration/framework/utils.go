@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -29,12 +31,12 @@ import (
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -276,5 +278,34 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 
 	return kubernetes.NewForConfig(serviceAccountConfig, client.Options{
 		Scheme: kubernetes.GardenScheme,
+	})
+}
+
+// GetDeploymentReplicas gets the spec.Replicas count from a deployment
+func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace, name string) (*int32, error) {
+	deployment := &appsv1.Deployment{}
+	if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+		return nil, err
+	}
+	replicas := deployment.Spec.Replicas
+	return replicas, nil
+}
+
+// WaitUntilDeploymentScaled waits until the deployment has the desired replica count in the status
+func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+		deployment := &appsv1.Deployment{}
+		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+			return retry.SevereError(err)
+		}
+		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
+			return retry.SevereError(fmt.Errorf("waiting for deployment scale failed. spec.replicas does not match the desired replicas"))
+		}
+
+		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("deployment currently has '%d' replicas. Desired: %d", deployment.Status.AvailableReplicas, desiredReplicas))
 	})
 }

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -23,16 +24,17 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/test/integration/framework"
 )
+
 var (
 	falseVar = false
 	trueVar  = true
 )
 
-func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framework.ShootGardenerTest, shootMaintenanceTest *framework.ShootMaintenanceTest, shoot *gardenv1beta1.Shoot) {
+func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framework.ShootGardenerTest, shootMaintenanceTest *framework.ShootMaintenanceTest, shoot *gardenv1beta1.Shoot) error {
 	// TEST CASE: AutoUpdate.MachineImageVersion == false && expirationDate does not apply -> shoot machineImage must not be updated in maintenance time
 	integrationTestShoot, err := shootGardenerTest.GetShoot(ctx)
 	if err != nil {
-		testLogger.Fatalf("Failed retrieve the test shoot: %s", err.Error())
+		return fmt.Errorf("failed retrieve the test shoot: %s", err.Error())
 	}
 
 	// set test specific shoot settings
@@ -42,12 +44,12 @@ func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framewo
 	// update integration test shoot
 	err = shootMaintenanceTest.TryUpdateShootForMaintenance(ctx, integrationTestShoot, false, nil)
 	if err != nil {
-		testLogger.Fatalf("Failed to update shoot for maintenance: %s", err.Error())
+		return fmt.Errorf("failed to update shoot for maintenance: %s", err.Error())
 	}
 
 	err = shootMaintenanceTest.WaitForExpectedMaintenance(ctx, testMachineImage, shootMaintenanceTest.CloudProvider, false, time.Now().Add(time.Minute*1))
 	if err != nil {
-		testLogger.Fatalf("Failed to wait for expected machine image maintenance on shoot: %s", err.Error())
+		return fmt.Errorf("failed to wait for expected machine image maintenance on shoot: %s", err.Error())
 	}
 
 	// TEST CASE: AutoUpdate.MachineImageVersion == true && expirationDate does not apply -> shoot machineImage must be updated in maintenance time
@@ -59,12 +61,12 @@ func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framewo
 	// update integration test shoot - set maintain now annotation & autoupdate == true
 	err = shootMaintenanceTest.TryUpdateShootForMaintenance(ctx, integrationTestShoot, false, nil)
 	if err != nil {
-		testLogger.Fatalf("Failed to update shoot for maintenance: %s", err.Error())
+		return fmt.Errorf("failed to update shoot for maintenance: %s", err.Error())
 	}
 
 	err = shootMaintenanceTest.WaitForExpectedMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, shootMaintenanceTest.CloudProvider, true, time.Now().Add(time.Minute*1))
 	if err != nil {
-		testLogger.Fatalf("Failed to wait for expected machine image maintenance on shoot: %s", err.Error())
+		return fmt.Errorf("failed to wait for expected machine image maintenance on shoot: %s", err.Error())
 	}
 
 	// TEST CASE: AutoUpdate.MachineImageVersion == default && expirationDate does not apply -> shoot machineImage must be updated in maintenance time
@@ -74,27 +76,27 @@ func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framewo
 	integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
 
 	// reset machine image from latest version to dummy version
-	updateImage := v1beta1helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+	updateImage := v1beta1helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
 	if err != nil {
-		testLogger.Fatalf("Failed to update machine image: %s", err.Error())
+		return fmt.Errorf("failed to update machine image: %s", err.Error())
 	}
 
 	// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)
 	err = shootMaintenanceTest.TryUpdateShootForMaintenance(ctx, integrationTestShoot, true, updateImage)
 	if err != nil {
-		testLogger.Fatalf("Failed to update shoot for maintenance: %s", err.Error())
+		return fmt.Errorf("failed to update shoot for maintenance: %s", err.Error())
 	}
 
 	err = shootMaintenanceTest.WaitForExpectedMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, shootMaintenanceTest.CloudProvider, true, time.Now().Add(time.Minute*1))
 	if err != nil {
-		testLogger.Fatalf("Failed to wait for expected machine image maintenance on shoot: %s", err.Error())
+		return fmt.Errorf("failed to wait for expected machine image maintenance on shoot: %s", err.Error())
 	}
 
 	// TEST CASE: AutoUpdate.MachineImageVersion == false && expirationDate does apply -> shoot machineImage must be updated in maintenance time
 	// modify cloud profile for test
 	err = shootMaintenanceTest.TryUpdateCloudProfileForMaintenance(ctx, shoot, testMachineImage)
 	if err != nil {
-		testLogger.Fatalf("Failed to update CloudProfile for maintenance: %s", err.Error())
+		return fmt.Errorf("failed to update CloudProfile for maintenance: %s", err.Error())
 	}
 
 	// set test specific shoot settings
@@ -102,19 +104,20 @@ func testMachineImageMaintenance(ctx context.Context, shootGardenerTest *framewo
 	integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
 
 	// reset machine image from latest version to dummy version
-	updateImage = v1beta1helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+	updateImage = v1beta1helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
 	if err != nil {
-		testLogger.Fatalf("Failed to update machine image: %s", err.Error())
+		return fmt.Errorf("failed to update machine image: %s", err.Error())
 	}
 
 	// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)
 	err = shootMaintenanceTest.TryUpdateShootForMaintenance(ctx, integrationTestShoot, true, updateImage)
 	if err != nil {
-		testLogger.Fatalf("Failed to update shoot for maintenance: %s", err.Error())
+		return fmt.Errorf("failed to update shoot for maintenance: %s", err.Error())
 	}
 
 	err = shootMaintenanceTest.WaitForExpectedMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, shootMaintenanceTest.CloudProvider, true, time.Now().Add(time.Minute*1))
 	if err != nil {
-		testLogger.Fatalf("Failed to wait for expected machine image maintenance on shoot: %s", err.Error())
+		return fmt.Errorf("failed to wait for expected machine image maintenance on shoot: %s", err.Error())
 	}
+	return nil
 }

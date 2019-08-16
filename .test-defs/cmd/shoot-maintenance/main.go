@@ -19,13 +19,16 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
 	helper "github.com/gardener/gardener/.test-defs/cmd"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/integration/framework"
 )
 
@@ -57,11 +60,96 @@ var (
 	testMachineImage = gardenv1beta1.ShootMachineImage{
 		Version: testMachineImageVersion,
 	}
+
+	shootMaintenanceTest          *framework.ShootMaintenanceTest
+	gardenerSchedulerReplicaCount *int32
+
+	setupShootMaintenanceCtx = context.Background()
+
+	// timeouts
+	mainContextTimeout  = time.Minute * 5
+	setupContextTimeout = time.Minute * 2
+	restoreCtxTimeout   = time.Minute * 2
 )
 
 func init() {
 	testLogger = logger.NewLogger("debug")
 
+	setEnvironmentVariables()
+	setupShootMaintenanceTest()
+}
+
+func setupShootMaintenanceTest() {
+	defer setupShootMaintenanceCtx.Done()
+
+	gardenerConfigPath := fmt.Sprintf("%s/gardener.config", kubeconfigPath)
+	shootGardenerTest, err := framework.NewShootGardenerTest(gardenerConfigPath, nil, testLogger)
+	if err != nil {
+		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
+	}
+	_, shootObject, err := framework.CreateShootTestArtifacts(shootArtifactPath, "", true)
+	if err != nil {
+		testLogger.Fatalf("Cannot create shoot artifact %s", err.Error())
+	}
+	updateShootWithEnvVars(shootObject)
+
+	maintenanceTest, err := framework.NewShootMaintenanceTest(setupShootMaintenanceCtx, shootGardenerTest)
+	if err != nil {
+		testLogger.Fatalf("Failed to create an new Shoot Maintenance test '%v'", err)
+	}
+	shootMaintenanceTest = maintenanceTest
+}
+
+// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
+// scale down the gardener-scheduler to 0 replicas
+func setupEnvironmentForMaintenanceTest() error {
+	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
+	replicas, err := framework.GetDeploymentReplicas(ctxSetup, shootMaintenanceTest.ShootGardenerTest.GardenClient.Client(), "garden", "gardener-scheduler")
+	if err != nil {
+		return fmt.Errorf("failed to retrieve the replica count of the Gardener-scheduler deployment: '%v'", err)
+	}
+	if replicas == nil || *replicas == 0 {
+		return nil
+	}
+	gardenerSchedulerReplicaCount = replicas
+
+	defer cancelCtxSetup()
+
+	// scale down the scheduler deployment
+	if err := kubernetes.ScaleDeployment(ctxSetup, shootMaintenanceTest.ShootGardenerTest.GardenClient.Client(), kutil.Key("garden", "gardener-scheduler"), 0); err != nil {
+		return fmt.Errorf("failed to scale down the replica count of the Gardener-scheduler deployment: '%v'", err)
+	}
+
+	// wait until scaled down
+	if err := framework.WaitUntilDeploymentScaled(ctxSetup, shootMaintenanceTest.ShootGardenerTest.GardenClient.Client(), "garden", "gardener-scheduler", 0); err != nil {
+		return fmt.Errorf("failed to wait until the Gardener-scheduler deployment is scaled down: '%v'", err)
+	}
+	return nil
+}
+
+// restoreEnvironment restores the Gardener components like they were before the maintenance test
+func restoreEnvironment() error {
+	if gardenerSchedulerReplicaCount == nil {
+		return nil
+	}
+
+	ctxRestore, cancelCtxRestore := context.WithTimeout(context.Background(), restoreCtxTimeout)
+
+	defer cancelCtxRestore()
+
+	// scale up the scheduler deployment
+	if err := kubernetes.ScaleDeployment(ctxRestore, shootMaintenanceTest.ShootGardenerTest.GardenClient.Client(), kutil.Key("garden", "gardener-scheduler"), *gardenerSchedulerReplicaCount); err != nil {
+		return fmt.Errorf("failed to restore the environment after the integration test. Scaling up the replica count of the Gardener-scheduler deployment failed: '%v'", err)
+	}
+
+	// wait until scaled up
+	if err := framework.WaitUntilDeploymentScaled(ctxRestore, shootMaintenanceTest.ShootGardenerTest.GardenClient.Client(), "garden", "gardener-scheduler", *gardenerSchedulerReplicaCount); err != nil {
+		return fmt.Errorf("failed to wait until the Gardener-scheduler deployment is scaled up again to %d: '%v'", *gardenerSchedulerReplicaCount, err)
+	}
+	return nil
+}
+
+func setEnvironmentVariables() {
 	shootName = os.Getenv("SHOOT_NAME")
 	if shootName == "" {
 		testLogger.Fatalf("EnvVar 'SHOOT_NAME' needs to be specified")
@@ -98,7 +186,6 @@ func init() {
 	if k8sVersion == "" {
 		testLogger.Fatalf("EnvVar 'K8S_VERSION' needs to be specified")
 	}
-
 	shootArtifactPath = os.Getenv("SHOOT_ARTIFACT_PATH")
 	if shootArtifactPath == "" {
 		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
@@ -118,7 +205,6 @@ func init() {
 		}
 		autoScalerMax = &autoScalerMaxInt
 	}
-
 	loadBalancerProvider = os.Getenv("LOADBALANCER_PROVIDER")
 	floatingPoolName = os.Getenv("FLOATING_POOL_NAME")
 	if cloudprovider == gardenv1beta1.CloudProviderOpenStack && floatingPoolName == "" {
@@ -127,20 +213,88 @@ func init() {
 }
 
 func main() {
-	ctx := context.Background()
-	defer ctx.Done()
-	gardenerConfigPath := fmt.Sprintf("%s/gardener.config", kubeconfigPath)
+	if errs := executeTest(); len(errs) != 0 {
+		testLogger.Fatalf("Test execution failed: %v", errs)
+	}
+	testLogger.Info("Test execution successful")
+}
 
-	shootGardenerTest, err := framework.NewShootGardenerTest(gardenerConfigPath, nil, testLogger)
-	if err != nil {
-		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
+func executeTest() (errs []error) {
+	ctxMain, cancelCtxMain := context.WithTimeout(context.Background(), mainContextTimeout)
+
+	defer cancelCtxMain()
+	defer func() {
+		if err := restoreEnvironment(); err != nil {
+			errs = append(errs, err)
+		}
+	}()
+
+	if err := setupEnvironmentForMaintenanceTest(); err != nil {
+		return append(errs, err)
 	}
 
-	_, shootObject, err := framework.CreateShootTestArtifacts(shootArtifactPath, "", true)
+	found, image, err := v1beta1helper.DetermineMachineImageForName(*shootMaintenanceTest.CloudProfile, shootMaintenanceTest.ShootMachineImage.Name)
 	if err != nil {
-		testLogger.Fatalf("Cannot create shoot artifact %s", err.Error())
+		return append(errs, fmt.Errorf("failed to determine machine image for name: '%s'", err.Error()))
+	}
+	if !found {
+		return append(errs, fmt.Errorf("failed to determine machine image for name: '%s'", shootMaintenanceTest.ShootMachineImage.Name))
 	}
 
+	// test machine image needs to have the same name but a lower version
+	testMachineImage.Name = shootMaintenanceTest.ShootMachineImage.Name
+	imageVersions := append(image.Versions, gardenv1beta1.MachineImageVersion{Version: testMachineImageVersion})
+
+	// setup cloud profile & shoot for integration test
+	cloudProfileImages, err := v1beta1helper.GetMachineImagesFromCloudProfile(shootMaintenanceTest.CloudProfile)
+	if err != nil {
+		return append(errs, fmt.Errorf("failed to determine cloud profile images: '%s'", err.Error()))
+	}
+	if cloudProfileImages == nil {
+		return append(errs, fmt.Errorf("cloud profile does not contain any machine images"))
+	}
+	updatedCloudProfileImages, err := v1beta1helper.SetMachineImageVersionsToMachineImage(cloudProfileImages, shootMaintenanceTest.ShootMachineImage.Name, imageVersions)
+
+	if err := v1beta1helper.SetMachineImages(shootMaintenanceTest.CloudProfile, updatedCloudProfileImages); err != nil {
+		return append(errs, fmt.Errorf("failed to set machine images for cloud provider: '%s'", err.Error()))
+	}
+	// update Cloud Profile with integration test machineImage
+	_, err = shootMaintenanceTest.ShootGardenerTest.GardenClient.Garden().GardenV1beta1().CloudProfiles().Update(shootMaintenanceTest.CloudProfile)
+	if err != nil {
+		return append(errs, fmt.Errorf("failed to update Cloud Profile with integration test machineImage '%v'", err))
+	}
+
+	defer func() {
+		if err := cleanupCloudProfile(ctxMain, shootMaintenanceTest); err != nil {
+			errs = append(errs, err)
+		}
+	}()
+
+	// set integration test machineImage to shoot
+	updateImage := v1beta1helper.UpdateDefaultMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
+	if err != nil {
+		return append(errs, fmt.Errorf("failed to update Machine Image on shoot: '%v'", err))
+	}
+	updateImage(&shootMaintenanceTest.ShootGardenerTest.Shoot.Spec.Cloud)
+
+	_, err = shootMaintenanceTest.CreateShoot(ctxMain)
+	if err != nil {
+		return append(errs, fmt.Errorf("failed to create shoot resource: '%v'", err))
+	}
+
+	defer func() {
+		if err := shootMaintenanceTest.ShootGardenerTest.DeleteShoot(ctxMain); err != nil {
+			errs = append(errs, err)
+		}
+	}()
+
+	if err := testMachineImageMaintenance(ctxMain, shootMaintenanceTest.ShootGardenerTest, shootMaintenanceTest, shootMaintenanceTest.ShootGardenerTest.Shoot); err != nil {
+		return append(errs, err)
+	}
+	return errs
+}
+
+func updateShootWithEnvVars(shootObject *gardenv1beta1.Shoot) {
 	shootObject.Name = shootName
 	shootObject.Namespace = projectNamespace
 	shootObject.Spec.Cloud.Profile = cloudprofileName
@@ -162,68 +316,14 @@ func main() {
 	}
 	helper.UpdateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
 	helper.UpdateLoadBalancerProvider(shootObject, loadBalancerProvider, cloudprovider)
-
-	shootGardenerTest.Shoot = shootObject
-
-	shootMaintenanceTest, err := framework.NewShootMaintenanceTest(ctx, shootGardenerTest)
-	if err != nil {
-		testLogger.Fatalf("Failed to create an new Shoot Maintenance test '%v'", err)
-	}
-
-	found, image, err := v1beta1helper.DetermineMachineImageForName(*shootMaintenanceTest.CloudProfile, shootMaintenanceTest.ShootMachineImage.Name)
-	if err != nil {
-		testLogger.Fatalf("Failed to determine machine image for name: '%s'", err.Error())
-	}
-	if !found {
-		testLogger.Fatalf("Failed to determine machine image for name: '%s'", shootMaintenanceTest.ShootMachineImage.Name)
-	}
-
-	// test machine image needs to have the same name but a lower version
-	testMachineImage.Name = shootMaintenanceTest.ShootMachineImage.Name
-	imageVersions := append(image.Versions, gardenv1beta1.MachineImageVersion{Version: testMachineImageVersion})
-
-	// setup cloud profile & shoot for integration test
-	cloudProfileImages, err := v1beta1helper.GetMachineImagesFromCloudProfile(shootMaintenanceTest.CloudProfile)
-	if err != nil {
-		testLogger.Fatalf("Failed to determine cloud profile images: '%s'", err.Error())
-	}
-	if cloudProfileImages == nil {
-		testLogger.Fatalf("cloud profile does not contain any machine images")
-	}
-	updatedCloudProfileImages, err := v1beta1helper.SetMachineImageVersionsToMachineImage(cloudProfileImages, shootMaintenanceTest.ShootMachineImage.Name, imageVersions)
-
-	if err := v1beta1helper.SetMachineImages(shootMaintenanceTest.CloudProfile, updatedCloudProfileImages); err != nil {
-		testLogger.Fatalf("Failed to set machine images for cloud provider: '%s'", err.Error())
-	}
-	// update Cloud Profile with integration test machineImage
-	_, err = shootGardenerTest.GardenClient.Garden().GardenV1beta1().CloudProfiles().Update(shootMaintenanceTest.CloudProfile)
-	if err != nil {
-		testLogger.Fatalf("Failed to update Cloud Profile with integration test machineImage '%v'", err)
-	}
-
-	defer cleanupCloudProfile(ctx, shootMaintenanceTest)
-
-	// set integration test machineImage to shoot
-	updateImage := v1beta1helper.UpdateMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
-	if err != nil {
-		testLogger.Fatalf("Failed to update Machine Image on shoot: '%v'", err)
-	}
-	updateImage(&shootObject.Spec.Cloud)
-
-	_, err = shootMaintenanceTest.CreateShoot(ctx)
-	if err != nil {
-		testLogger.Fatalf("Failed to create shoot resource: '%v'", err)
-	}
-	defer shootMaintenanceTest.ShootGardenerTest.DeleteShoot(ctx)
-
-	testMachineImageMaintenance(ctx, shootGardenerTest, shootMaintenanceTest, shootObject)
 }
 
-func cleanupCloudProfile(ctx context.Context, shootMaintenanceTest *framework.ShootMaintenanceTest) {
+func cleanupCloudProfile(ctx context.Context, shootMaintenanceTest *framework.ShootMaintenanceTest) error {
 	// retrieve the cloud profile because the machine images might got changed during test execution
 	err := shootMaintenanceTest.RemoveTestMachineImageVersionFromCloudProfile(ctx, testMachineImage)
 	if err != nil {
-		testLogger.Fatalf("Failed to cleanup CloudProfile after integration test: '%v'", err)
+		return fmt.Errorf("failed to cleanup CloudProfile after integration test: '%v'", err)
 	}
-	logger.Logger.Infof("Cleaned Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
+	logger.Logger.Infof("cleaned Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
+	return nil
 }

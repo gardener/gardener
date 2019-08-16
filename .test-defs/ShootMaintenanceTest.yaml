@@ -5,12 +5,21 @@ spec:
   owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com
   description: Tests the shoot machine image maintenance.
 
-  activeDeadlineSeconds: 5400
+  activeDeadlineSeconds: 600
+  behavior:
+    - serial
+
+  config:
+    - name: GO111MODULE
+      value: "on"
+      type: env
 
   command: [bash, -c]
   args:
-  - >-
-    /tm/setup github.com/gardener gardener &&
-    go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/shoot-maintenance
-
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
+    - >-
+      go test -mod=vendor ./test/integration/shoots/maintenance
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+      -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+      -shootName=$SHOOT_NAME
+      -shootNamespace=$PROJECT_NAMESPACE
+  image: golang:1.12.9
