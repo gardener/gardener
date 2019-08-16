@@ -1,0 +1,71 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: monitoring
+    component: grafana
+spec:
+  revisionHistoryLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      component: grafana
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-dashboards: {{ include (print $.Template.BasePath "/grafana/grafana-dashboards-configmap.yaml") . | sha256sum }}
+        checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
+        checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
+      labels:
+        garden.sapcloud.io/role: monitoring
+        component: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: {{ index .Values.global.images "grafana" }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "false"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+          value: "false"
+        - name: GF_ALERTING_ENABLED
+          value: "false"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/grafana-storage
+        - name: grafana-dashboards
+          mountPath: /var/lib/grafana/dashboards
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboard-providers
+          mountPath: /etc/grafana/provisioning/dashboards
+        ports:
+        - name: web
+          containerPort: 3000
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+      volumes:
+      - name: grafana-storage
+        emptyDir: {}
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboard-providers
+        configMap:
+          name: grafana-dashboard-providers

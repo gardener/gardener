@@ -150,6 +150,24 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 			CertType:  utilsecrets.ServerCert,
 			SigningCA: certificateAuthorities[caSeed],
 		},
+		&utilsecrets.CertificateSecretConfig{
+			Name: "grafana-tls",
+
+			CommonName:   "grafana",
+			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
+			DNSNames:     []string{seed.GetIngressFQDN("g-seed", "", "garden")},
+			IPAddresses:  nil,
+
+			CertType:  utilsecrets.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
+		},
+		&utilsecrets.BasicAuthSecretConfig{
+			Name:   "seed-monitoring-ingress-credentials",
+			Format: utilsecrets.BasicAuthFormatNormal,
+
+			Username:       "admin",
+			PasswordLength: 32,
+		},
 	}
 
 	// Logging feature gate
@@ -207,6 +225,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
+
 	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret, client.Options{
@@ -249,6 +268,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			common.FluentBitImageName,
 			common.FluentdEsImageName,
 			common.GardenerResourceManagerImageName,
+			common.GrafanaImageName,
 			common.KibanaImageName,
 			common.PauseContainerImageName,
 			common.PrometheusImageName,
@@ -388,8 +408,11 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
-		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
+		vpaGK              = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		issuerGK           = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
+		grafanaHost        = seed.GetIngressFQDN("g-seed", "", "garden")
+		grafanaCredentials = existingSecretsMap["seed-monitoring-ingress-credentials"]
+		grafanaBasicAuth   = utils.CreateSHA1Secret(grafanaCredentials.Data[utilsecrets.DataKeyUserName], grafanaCredentials.Data[utilsecrets.DataKeyPassword])
 	)
 
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
@@ -465,6 +488,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		},
 		"gardenerResourceManager": map[string]interface{}{
 			"resourceClass": v1alpha1.SeedResourceManagerClass,
+		},
+		"ingress": map[string]interface{}{
+			"basicAuthSecret": grafanaBasicAuth,
+			"host":            grafanaHost,
 		},
 	}, applierOptions)
 }
