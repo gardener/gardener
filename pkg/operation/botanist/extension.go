@@ -18,6 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -27,6 +30,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -61,6 +65,36 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 				return nil
 			})
 		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+// DeleteStaleExtensionResources deletes unused extensions from the shoot namespace in the seed.
+func (b *Botanist) DeleteStaleExtensionResources(ctx context.Context) error {
+	wantedExtensions := sets.NewString()
+	for _, extension := range b.Shoot.Extensions {
+		wantedExtensions.Insert(extension.Spec.Type)
+	}
+
+	deployedExtensions := &extensionsv1alpha1.ExtensionList{}
+	if err := b.K8sSeedClient.Client().List(ctx, deployedExtensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+		return err
+	}
+
+	fns := make([]flow.TaskFn, 0, meta.LenList(deployedExtensions))
+	for _, deployedExtension := range deployedExtensions.Items {
+		if !wantedExtensions.Has(deployedExtension.Spec.Type) {
+			fns = append(fns, func(ctx context.Context) error {
+				toDelete := &extensionsv1alpha1.Extension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      deployedExtension.Name,
+						Namespace: deployedExtension.Namespace,
+					},
+				}
+				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptionFuncs...))
+			})
+		}
 	}
 
 	return flow.Parallel(fns...)(ctx)
@@ -117,6 +151,10 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 
 	fns := make([]flow.TaskFn, 0, len(extensions.Items))
 	for _, extension := range extensions.Items {
+		if extension.GetDeletionTimestamp() == nil {
+			continue
+		}
+
 		var (
 			name      = extension.Name
 			namespace = extension.Namespace

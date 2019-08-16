@@ -278,7 +278,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
-		deployExtensionResource = g.Add(flow.Task{
+		deployExtensionResources = g.Add(flow.Task{
 			Name:         "Deploying extension resources",
 			Fn:           flow.TaskFn(botanist.DeployExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
@@ -286,7 +286,17 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until extension resources are ready",
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesReady),
-			Dependencies: flow.NewTaskIDs(deployExtensionResource),
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Delete stale extension resources",
+			Fn:           flow.TaskFn(botanist.DeleteStaleExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale extension resources are deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		f = g.Compile()
 	)
