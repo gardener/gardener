@@ -46,13 +46,23 @@ allowedMetrics:
   coredns:
   - process_max_fds
   - process_open_fds
+  - coredns_dns_request_count_total
+  - coredns_dns_request_type_count_total
+  - coredns_cache_hits_total
+  - coredns_cache_misses_total
+  - coredns_cache_size
+  - coredns_dns_response_rcode_count_total
+  - coredns_forward_request_count_total
+  - coredns_forward_response_rcode_count_total
   cloudControllerManager:
+  - rest_client_requests_total
   - process_max_fds
   - process_open_fds
   clusterAutoscaler:
   - process_max_fds
   - process_open_fds
   kubeAPIServer:
+  - apiserver_registered_watchers
   - apiserver_request_count
   - apiserver_request_total
   - apiserver_request_latencies_bucket
@@ -62,6 +72,7 @@ allowedMetrics:
   - apiserver_audit_event_total
   - apiserver_audit_error_total
   kubeControllerManager:
+  - rest_client_requests_total
   - process_max_fds
   - process_open_fds
   kubelet:
@@ -114,6 +125,7 @@ allowedMetrics:
   - scheduler_binding_latency_microseconds_bucket
   - scheduler_e2e_scheduling_latency_microseconds_bucket
   - scheduler_scheduling_algorithm_latency_microseconds_bucket
+  - rest_client_requests_total
   - process_max_fds
   - process_open_fds
   kubeStateMetrics:
@@ -162,17 +174,58 @@ allowedMetrics:
   - process_max_fds
   - process_open_fds
   machineControllerManager:
-  - process_max_fds
-  - process_open_fds
+  - mcm_cloud_api_requests_failed_total
+  - mcm_cloud_api_requests_total
   - mcm_machine_controller_frozen
+  - mcm_machine_current_status_phase
+  - mcm_machine_deployment_failed_machines
   - mcm_machine_items_total
-  - mcm_machineset_items_total
   - mcm_machine_set_failed_machines
   - mcm_machinedeployment_items_total
-  - mcm_machine_deployment_failed_machines
-  - mcm_cloud_api_requests_total
-  - mcm_cloud_api_requests_failed_total
+  - mcm_machineset_items_total
   - mcm_scrape_failure_total
+  - machine_adds
+  - machine_depth
+  - machine_queue_latency
+  - machine_retries
+  - machine_work_duration
+  - machinedeployment_adds
+  - machinedeployment_depth
+  - machinedeployment_queue_latency
+  - machinedeployment_retries
+  - machinedeployment_work_duration
+  - machinesafetyapiserver_adds
+  - machinesafetyapiserver_depth
+  - machinesafetyapiserver_queue_latency
+  - machinesafetyapiserver_retries
+  - machinesafetyapiserver_work_duration
+  - machinesafetyorphanvms_adds
+  - machinesafetyorphanvms_depth
+  - machinesafetyorphanvms_queue_latency
+  - machinesafetyorphanvms_retries
+  - machinesafetyorphanvms_work_duration
+  - machinesafetyovershooting_adds
+  - machinesafetyovershooting_depth
+  - machinesafetyovershooting_latency
+  - machinesafetyovershooting_retries
+  - machinesafetyovershooting_work_duration
+  - machineset_adds
+  - machineset_depth
+  - machineset_queue_latency
+  - machineset_retries
+  - machineset_work_duration
+  - node_adds
+  - node_depth
+  - node_queue_latency
+  - node_retries
+  - node_work_duration
+  - secret_adds
+  - secret_depth
+  - secret_queue_latency
+  - secret_retries
+  - secret_work_duration
+  - process_max_fds
+  - process_open_fds
   nodeExporter:
   - node_cpu_seconds_total
   - node_filesystem_avail_bytes
