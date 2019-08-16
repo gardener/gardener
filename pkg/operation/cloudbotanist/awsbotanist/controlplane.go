@@ -15,8 +15,6 @@
 package awsbotanist
 
 import (
-	"path/filepath"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -41,26 +39,4 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	}
 
 	return secretData, nil
-}
-
-// DeployCloudSpecificControlPlane updates the AWS ELB health check to SSL and deploys the aws-lb-readvertiser.
-// https://github.com/gardener/aws-lb-readvertiser
-func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
-	var (
-		name          = "aws-lb-readvertiser"
-		defaultValues = map[string]interface{}{
-			"domain":   b.APIServerAddress,
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-aws-lb-readvertiser": b.CheckSums[name],
-			},
-		}
-	)
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.AWSLBReadvertiserImageName)
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, nil, values)
 }

@@ -38,8 +38,3 @@ func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error)
 
 	return secretData, nil
 }
-
-// DeployCloudSpecificControlPlane does nothing currently for Alicloud
-func (b *AlicloudBotanist) DeployCloudSpecificControlPlane() error {
-	return nil
-}

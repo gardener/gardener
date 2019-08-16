@@ -18,8 +18,3 @@ package packetbotanist
 func (b *PacketBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	return map[string][]byte{}, nil
 }
-
-// DeployCloudSpecificControlPlane does any last minute updates
-func (b *PacketBotanist) DeployCloudSpecificControlPlane() error {
-	return nil
-}

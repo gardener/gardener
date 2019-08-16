@@ -708,17 +708,73 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	})
 }
 
+const controlPlaneExposureSuffix = "-exposure"
+
+// DeployControlPlaneExposure creates the `ControlPlane` extension resource with purpose `exposure` in the shoot
+// namespace in the seed cluster. Gardener waits until an external controller did reconcile the cluster successfully.
+func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
+	var (
+		cp = &extensionsv1alpha1.ControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.Shoot.Info.Name + controlPlaneExposureSuffix,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+	)
+
+	purpose := new(extensionsv1alpha1.Purpose)
+	*purpose = extensionsv1alpha1.Exposure
+
+	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: string(b.Seed.CloudProvider),
+			},
+			Purpose: purpose,
+			Region:  b.Seed.Info.Spec.Cloud.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      gardencorev1alpha1.SecretNameCloudProvider,
+				Namespace: cp.Namespace,
+			},
+		}
+		return nil
+	})
+}
+
 // DestroyControlPlane deletes the `ControlPlane` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) DestroyControlPlane(ctx context.Context) error {
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: b.Shoot.Info.Name}}))
+	return b.destroyControlPlane(ctx, b.Shoot.Info.Name)
+}
+
+// DestroyControlPlaneExposure deletes the `ControlPlane` extension resource with purpose `exposure`
+// in the shoot namespace in the seed cluster, and it waits for a maximum of 10m until it is deleted.
+func (b *Botanist) DestroyControlPlaneExposure(ctx context.Context) error {
+	return b.destroyControlPlane(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
+}
+
+// destroyControlPlane deletes the `ControlPlane` extension resource with the following name in the shoot namespace
+// in the seed cluster, and it waits for a maximum of 10m until it is deleted.
+func (b *Botanist) destroyControlPlane(ctx context.Context, name string) error {
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}))
+}
+
+// WaitUntilControlPlaneExposureReady waits until the control plane resource with purpose `exposure` has been reconciled successfully.
+func (b *Botanist) WaitUntilControlPlaneExposureReady(ctx context.Context) error {
+	return b.waitUntilControlPlaneReady(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
 }
 
 // WaitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
 func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
+	return b.waitUntilControlPlaneReady(ctx, b.Shoot.Info.Name)
+}
+
+// waitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
+func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) error {
 	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
 			return retry.SevereError(err)
 		}
 
@@ -737,13 +793,23 @@ func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 	return nil
 }
 
+// WaitUntilControlPlaneExposureDeleted waits until the control plane resource with pusrpose `exposure` has been deleted.
+func (b *Botanist) WaitUntilControlPlaneExposureDeleted(ctx context.Context) error {
+	return b.waitUntilControlPlaneDeleted(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
+}
+
 // WaitUntilControlPlaneDeleted waits until the control plane resource has been deleted.
 func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
+	return b.waitUntilControlPlaneDeleted(ctx, b.Shoot.Info.Name)
+}
+
+// waitUntilControlPlaneDeleted waits until the control plane resource with the following name has been deleted.
+func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
 	var lastError *gardencorev1alpha1.LastError
 
 	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}

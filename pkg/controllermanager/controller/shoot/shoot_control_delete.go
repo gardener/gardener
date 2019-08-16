@@ -357,6 +357,17 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 
+		destroyControlPlaneExposure = g.Add(flow.Task{
+			Name:         "Destroying Shoot control plane exposure",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure),
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
+		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane exposure has been destroyed",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureDeleted),
+			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
+		})
+
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
 			Fn:           botanist.DestroyIngressDNSRecord,
@@ -389,6 +400,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			deleteSeedMonitoring,
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
+			waitUntilControlPlaneExposureDeleted,
 			destroyNginxIngressDNSRecord,
 			destroyKube2IAMResources,
 			destroyExternalDomainDNSRecord,
