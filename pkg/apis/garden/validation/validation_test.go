@@ -4500,6 +4500,18 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("CIDR", func() {
+				It("should forbid more than one CIDR", func() {
+					shoot.Spec.Cloud.GCP.Networks.Workers = []gardencore.CIDR{"10.250.0.1/32", "10.250.0.2/32"}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.workers"),
+						"Detail": Equal("must specify only one worker cidr"),
+					}))
+				})
+
 				It("should forbid invalid workers CIDR", func() {
 					shoot.Spec.Cloud.GCP.Networks.Workers = []gardencore.CIDR{invalidCIDR}
 

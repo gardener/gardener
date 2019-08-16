@@ -1208,8 +1208,8 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		nodes, pods, services, networkErrors := transformK8SNetworks(gcp.Networks.K8SNetworks, gcpPath.Child("networks"))
 		allErrs = append(allErrs, networkErrors...)
 
-		if len(gcp.Networks.Workers) != zoneCount {
-			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "workers"), gcp.Networks.Workers, "must specify as many workers networks as zones"))
+		if len(gcp.Networks.Workers) > 1 {
+			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "workers"), gcp.Networks.Workers, "must specify only one worker cidr"))
 		}
 
 		workerCIDRs := make([]cidrvalidation.CIDR, 0, len(gcp.Networks.Workers))
