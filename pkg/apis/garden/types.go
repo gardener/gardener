@@ -975,6 +975,8 @@ type Worker struct {
 	Labels map[string]string
 	// Taints is a list of taints for all the `Node` objects in this worker pool.
 	Taints []corev1.Taint
+	// Kubelet contains configuration settings for the kubelet.
+	Kubelet *KubeletConfig
 }
 
 // Extension contains type and provider information for Shoot extensions.
@@ -1319,6 +1321,84 @@ type KubeletConfig struct {
 	CPUCFSQuota *bool
 	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
 	CPUManagerPolicy *string
+	// MaxPods is the maximum number of Pods that are allowed by the Kubelet.
+	// Default: 110
+	MaxPods *int32
+	// EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
+	// Default:
+	//   memory.available:   "100Mi/1Gi/5%"
+	//   nodefs.available:   "5%"
+	//   nodefs.inodesFree:  "5%"
+	//   imagefs.available:  "5%"
+	//   imagefs.inodesFree: "5%"
+	EvictionHard *KubeletConfigEviction
+	// EvictionSoft describes a set of eviction thresholds (e.g. memory.available<1.5Gi) that if met over a corresponding grace period would trigger a Pod eviction.
+	// Default:
+	//   memory.available:   "200Mi/1.5Gi/10%"
+	//   nodefs.available:   "10%"
+	//   nodefs.inodesFree:  "10%"
+	//   imagefs.available:  "10%"
+	//   imagefs.inodesFree: "10%"
+	EvictionSoft *KubeletConfigEviction
+	// EvictionSoftGracePeriod describes a set of eviction grace periods (e.g. memory.available=1m30s) that correspond to how long a soft eviction threshold must hold before triggering a Pod eviction.
+	// Default:
+	//   memory.available:   1m30s
+	//   nodefs.available:   1m30s
+	//   nodefs.inodesFree:  1m30s
+	//   imagefs.available:  1m30s
+	//   imagefs.inodesFree: 1m30s
+	EvictionSoftGracePeriod *KubeletConfigEvictionSoftGracePeriod
+	// EvictionMinimumReclaim configures the amount of resources below the configured eviction threshold that the kubelet attempts to reclaim whenever the kubelet observes resource pressure.
+	// Default: 0 for each resource
+	EvictionMinimumReclaim *KubeletConfigEvictionMinimumReclaim
+	// EvictionPressureTransitionPeriod is the duration for which the kubelet has to wait before transitioning out of an eviction pressure condition.
+	// Default: 4m0s
+	EvictionPressureTransitionPeriod *metav1.Duration
+	// EvictionMaxPodGracePeriod describes the maximum allowed grace period (in seconds) to use when terminating pods in response to a soft eviction threshold being met.
+	// Default: 90
+	EvictionMaxPodGracePeriod *int32
+}
+
+// KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
+type KubeletConfigEviction struct {
+	// MemoryAvailable is the threshold for the free memory on the host server.
+	MemoryAvailable *string
+	// ImageFSAvailable is the threshold for the free disk space in the imagefs filesystem (docker images and container writable layers).
+	ImageFSAvailable *string
+	// ImageFSInodesFree is the threshold for the available inodes in the imagefs filesystem.
+	ImageFSInodesFree *string
+	// NodeFSAvailable is the threshold for the free disk space in the nodefs filesystem (docker volumes, logs, etc).
+	NodeFSAvailable *string
+	// NodeFSInodesFree is the threshold for the available inodes in the nodefs filesystem.
+	NodeFSInodesFree *string
+}
+
+// KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.
+type KubeletConfigEvictionMinimumReclaim struct {
+	// MemoryAvailable is the threshold for the memory reclaim on the host server.
+	MemoryAvailable *resource.Quantity
+	// ImageFSAvailable is the threshold for the disk space reclaim in the imagefs filesystem (docker images and container writable layers).
+	ImageFSAvailable *resource.Quantity
+	// ImageFSInodesFree is the threshold for the inodes reclaim in the imagefs filesystem.
+	ImageFSInodesFree *resource.Quantity
+	// NodeFSAvailable is the threshold for the disk space reclaim in the nodefs filesystem (docker volumes, logs, etc).
+	NodeFSAvailable *resource.Quantity
+	// NodeFSInodesFree is the threshold for the inodes reclaim in the nodefs filesystem.
+	NodeFSInodesFree *resource.Quantity
+}
+
+// KubeletConfigEvictionSoftGracePeriod contains grace periods for kubelet eviction thresholds.
+type KubeletConfigEvictionSoftGracePeriod struct {
+	// MemoryAvailable is the grace period for the MemoryAvailable eviction threshold.
+	MemoryAvailable *metav1.Duration
+	// ImageFSAvailable is the grace period for the ImageFSAvailable eviction threshold.
+	ImageFSAvailable *metav1.Duration
+	// ImageFSInodesFree is the grace period for the ImageFSInodesFree eviction threshold.
+	ImageFSInodesFree *metav1.Duration
+	// NodeFSAvailable is the grace period for the NodeFSAvailable eviction threshold.
+	NodeFSAvailable *metav1.Duration
+	// NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.
+	NodeFSInodesFree *metav1.Duration
 }
 
 // Maintenance contains information about the time window for maintenance operations and which

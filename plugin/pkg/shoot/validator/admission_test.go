@@ -144,6 +144,9 @@ var _ = Describe("validator", func() {
 			shoot.Spec.Cloud.GCP = nil
 			shoot.Spec.Cloud.Packet = nil
 			shoot.Spec.Cloud.OpenStack = nil
+			shoot.Spec.Kubernetes = garden.Kubernetes{
+				KubeControllerManager: nil,
+			}
 		})
 
 		// The verification of protection is independent of the Cloud Provider (being checked before). We use AWS.
@@ -975,6 +978,10 @@ var _ = Describe("validator", func() {
 						VolumeType: "volume-type-1",
 					},
 				}
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
+				}
 				azureCloud = &garden.AzureCloud{}
 			)
 
@@ -984,6 +991,7 @@ var _ = Describe("validator", func() {
 				cloudProfile.Spec.Azure = azureProfile
 				azureCloud.Networks = garden.AzureNetworks{K8SNetworks: k8sNetworks}
 				azureCloud.Workers = workers
+				azureCloud.MachineImage = machineImage
 				shoot.Spec.Cloud.Azure = azureCloud
 			})
 
@@ -1249,7 +1257,11 @@ var _ = Describe("validator", func() {
 						VolumeType: "volume-type-1",
 					},
 				}
-				zones    = []string{"europe-a"}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
+				}
 				gcpCloud = &garden.GCPCloud{}
 			)
 
@@ -1259,6 +1271,7 @@ var _ = Describe("validator", func() {
 				gcpCloud.Networks = garden.GCPNetworks{K8SNetworks: k8sNetworks}
 				gcpCloud.Workers = workers
 				gcpCloud.Zones = zones
+				gcpCloud.MachineImage = machineImage
 				cloudProfile.Spec.GCP = gcpProfile
 				shoot.Spec.Cloud.GCP = gcpCloud
 			})
@@ -1511,7 +1524,11 @@ var _ = Describe("validator", func() {
 						VolumeType: "volume-type-1",
 					},
 				}
-				zones       = []string{"europe-a"}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
+				}
 				packetCloud = &garden.PacketCloud{}
 			)
 
@@ -1521,6 +1538,7 @@ var _ = Describe("validator", func() {
 				packetCloud.Networks = garden.PacketNetworks{K8SNetworks: k8sNetworks}
 				packetCloud.Workers = workers
 				packetCloud.Zones = zones
+				packetCloud.MachineImage = machineImage
 				cloudProfile.Spec.Packet = packetProfile
 				shoot.Spec.Cloud.Packet = packetCloud
 			})
@@ -1765,7 +1783,11 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				zones          = []string{"europe-a"}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
+				}
 				openStackCloud = &garden.OpenStackCloud{}
 			)
 
@@ -1777,6 +1799,7 @@ var _ = Describe("validator", func() {
 				openStackCloud.Networks = garden.OpenStackNetworks{K8SNetworks: k8sNetworks}
 				openStackCloud.Workers = workers
 				openStackCloud.Zones = zones
+				openStackCloud.MachineImage = machineImage
 				cloudProfile.Spec.OpenStack = openStackProfile
 				shoot.Spec.Cloud.OpenStack = openStackCloud
 			})
@@ -2059,7 +2082,11 @@ var _ = Describe("validator", func() {
 						VolumeType: "volume-type-1",
 					},
 				}
-				zones    = []string{"europe-a"}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: validShootMachineImageVersion,
+				}
 				aliCloud = &garden.Alicloud{}
 			)
 
@@ -2069,6 +2096,7 @@ var _ = Describe("validator", func() {
 				aliCloud.Networks = garden.AlicloudNetworks{K8SNetworks: k8sNetworks}
 				aliCloud.Workers = workers
 				aliCloud.Zones = zones
+				aliCloud.MachineImage = machineImage
 				cloudProfile.Spec.Alicloud = alicloudProfile
 				shoot.Spec.Cloud.Alicloud = aliCloud
 			})

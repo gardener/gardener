@@ -15,6 +15,8 @@
 package v1beta1
 
 import (
+	"math"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -49,6 +51,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 				obj.Spec.Cloud.AWS.Networks.Nodes = &cloud.AWS.Networks.Workers[0]
 			}
 		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderAWS, obj)))
+		}
 	}
 
 	if cloud.Azure != nil {
@@ -61,6 +66,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.Azure.Networks.Nodes == nil {
 			obj.Spec.Cloud.Azure.Networks.Nodes = &cloud.Azure.Networks.Workers
 		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderAzure, obj)))
+		}
 	}
 
 	if cloud.GCP != nil {
@@ -72,6 +80,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) == 1 {
 			obj.Spec.Cloud.GCP.Networks.Nodes = &cloud.GCP.Networks.Workers[0]
+		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderGCP, obj)))
 		}
 	}
 
@@ -91,6 +102,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = &cloud.Alicloud.Networks.Workers[0]
 			}
 		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderAlicloud, obj)))
+		}
 	}
 
 	if cloud.OpenStack != nil {
@@ -103,6 +117,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) == 1 {
 			obj.Spec.Cloud.OpenStack.Networks.Nodes = &cloud.OpenStack.Networks.Workers[0]
 		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderOpenStack, obj)))
+		}
 	}
 
 	if cloud.Packet != nil {
@@ -111,6 +128,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if cloud.Packet.Networks.Services == nil {
 			obj.Spec.Cloud.Packet.Networks.Services = &defaultServiceCIDR
+		}
+		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderPacket, obj)))
 		}
 	}
 
@@ -232,4 +252,73 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
 		obj.Usable = &trueVar
 	}
+}
+
+// CalculateDefaultNodeCIDRMaskSize calculates a default NodeCIDRMaskSize CIDR from the highest maxPod setting in the shoot
+func CalculateDefaultNodeCIDRMaskSize(kubernetes *Kubernetes, workers []Worker) *int {
+	var maxPod int32
+	if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
+		maxPod = *kubernetes.Kubelet.MaxPods
+	}
+
+	for _, worker := range workers {
+		if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
+			maxPod = *worker.Kubelet.MaxPods
+		}
+	}
+
+	if maxPod == 0 {
+		// default maxPod setting on kubelet
+		maxPod = 110
+	}
+
+	// by having approximately twice as many available IP addresses as possible Pods, Kubernetes is able to mitigate IP address reuse as Pods are added to and removed from a node.
+	nodeCidrRange := 32 - int(math.Ceil(math.Log2(float64(maxPod*2))))
+	return &nodeCidrRange
+}
+
+// SetNodeCIDRMaskSize sets the NodeCIDRMaskSize on the shoot
+func SetNodeCIDRMaskSize(kubernetes *Kubernetes, requiredNodeCIDRMaskSize *int) {
+	if kubernetes.KubeControllerManager == nil {
+		kubernetes.KubeControllerManager = &KubeControllerManagerConfig{NodeCIDRMaskSize: requiredNodeCIDRMaskSize}
+	} else {
+		kubernetes.KubeControllerManager.NodeCIDRMaskSize = requiredNodeCIDRMaskSize
+	}
+}
+
+// getShootCloudProviderWorkers retrieves the cloud-specific workers of the given Shoot.
+func getShootCloudProviderWorkers(cloudProvider CloudProvider, shoot *Shoot) []Worker {
+	var (
+		cloud   = shoot.Spec.Cloud
+		workers []Worker
+	)
+
+	switch cloudProvider {
+	case CloudProviderAWS:
+		for _, worker := range cloud.AWS.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	case CloudProviderAzure:
+		for _, worker := range cloud.Azure.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	case CloudProviderGCP:
+		for _, worker := range cloud.GCP.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	case CloudProviderAlicloud:
+		for _, worker := range cloud.Alicloud.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	case CloudProviderOpenStack:
+		for _, worker := range cloud.OpenStack.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	case CloudProviderPacket:
+		for _, worker := range cloud.Packet.Workers {
+			workers = append(workers, worker.Worker)
+		}
+	}
+
+	return workers
 }

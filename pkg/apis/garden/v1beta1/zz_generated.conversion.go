@@ -12,6 +12,7 @@ import (
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -652,6 +653,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfig)(nil), (*KubeletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(a.(*garden.KubeletConfig), b.(*KubeletConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEviction)(nil), (*garden.KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(a.(*KubeletConfigEviction), b.(*garden.KubeletConfigEviction), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEviction)(nil), (*KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(a.(*garden.KubeletConfigEviction), b.(*KubeletConfigEviction), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionMinimumReclaim)(nil), (*garden.KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(a.(*KubeletConfigEvictionMinimumReclaim), b.(*garden.KubeletConfigEvictionMinimumReclaim), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEvictionMinimumReclaim)(nil), (*KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(a.(*garden.KubeletConfigEvictionMinimumReclaim), b.(*KubeletConfigEvictionMinimumReclaim), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionSoftGracePeriod)(nil), (*garden.KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(a.(*KubeletConfigEvictionSoftGracePeriod), b.(*garden.KubeletConfigEvictionSoftGracePeriod), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEvictionSoftGracePeriod)(nil), (*KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(a.(*garden.KubeletConfigEvictionSoftGracePeriod), b.(*KubeletConfigEvictionSoftGracePeriod), scope)
 	}); err != nil {
 		return err
 	}
@@ -3237,6 +3268,13 @@ func autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in *KubeletConfig
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))
+	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
+	out.EvictionHard = (*garden.KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
+	out.EvictionSoft = (*garden.KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
+	out.EvictionSoftGracePeriod = (*garden.KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
+	out.EvictionMinimumReclaim = (*garden.KubeletConfigEvictionMinimumReclaim)(unsafe.Pointer(in.EvictionMinimumReclaim))
+	out.EvictionPressureTransitionPeriod = (*metav1.Duration)(unsafe.Pointer(in.EvictionPressureTransitionPeriod))
+	out.EvictionMaxPodGracePeriod = (*int32)(unsafe.Pointer(in.EvictionMaxPodGracePeriod))
 	return nil
 }
 
@@ -3252,12 +3290,103 @@ func autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.Kubele
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))
+	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
+	out.EvictionHard = (*KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
+	out.EvictionSoft = (*KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
+	out.EvictionSoftGracePeriod = (*KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
+	out.EvictionMinimumReclaim = (*KubeletConfigEvictionMinimumReclaim)(unsafe.Pointer(in.EvictionMinimumReclaim))
+	out.EvictionPressureTransitionPeriod = (*metav1.Duration)(unsafe.Pointer(in.EvictionPressureTransitionPeriod))
+	out.EvictionMaxPodGracePeriod = (*int32)(unsafe.Pointer(in.EvictionMaxPodGracePeriod))
 	return nil
 }
 
 // Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig is an autogenerated conversion function.
 func Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
 	return autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in, out, s)
+}
+
+func autoConvert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in *KubeletConfigEviction, out *garden.KubeletConfigEviction, s conversion.Scope) error {
+	out.MemoryAvailable = (*string)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*string)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*string)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*string)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*string)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in *KubeletConfigEviction, out *garden.KubeletConfigEviction, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in, out, s)
+}
+
+func autoConvert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *garden.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
+	out.MemoryAvailable = (*string)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*string)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*string)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*string)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*string)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction is an autogenerated conversion function.
+func Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *garden.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
+	return autoConvert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in, out, s)
+}
+
+func autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *garden.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	out.MemoryAvailable = (*resource.Quantity)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *garden.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in, out, s)
+}
+
+func autoConvert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *garden.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	out.MemoryAvailable = (*resource.Quantity)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
+func Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *garden.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	return autoConvert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in, out, s)
+}
+
+func autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *garden.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	out.MemoryAvailable = (*metav1.Duration)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *garden.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in, out, s)
+}
+
+func autoConvert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *garden.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	out.MemoryAvailable = (*metav1.Duration)(unsafe.Pointer(in.MemoryAvailable))
+	out.ImageFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.ImageFSAvailable))
+	out.ImageFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.ImageFSInodesFree))
+	out.NodeFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.NodeFSAvailable))
+	out.NodeFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.NodeFSInodesFree))
+	return nil
+}
+
+// Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
+func Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *garden.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	return autoConvert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in, out, s)
 }
 
 func autoConvert_v1beta1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *garden.Kubernetes, s conversion.Scope) error {
@@ -4708,6 +4837,7 @@ func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker,
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
+	out.Kubelet = (*garden.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	return nil
 }
 
@@ -4722,6 +4852,7 @@ func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker,
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
+	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	return nil
 }
 

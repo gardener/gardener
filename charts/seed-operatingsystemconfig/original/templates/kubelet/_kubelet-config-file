@@ -21,8 +21,8 @@ clusterDomain: {{ required "kubernetes.domain is required" .Values.kubernetes.do
 clusterDNS:
 - {{ required "kubernetes.clusterDNS is required" .Values.kubernetes.clusterDNS }}
 configTrialDuration: 10m0s
-cpuCFSQuota: {{ .Values.kubernetes.kubelet.cpuCFSQuota }}
-cpuManagerPolicy: {{ .Values.kubernetes.kubelet.cpuManagerPolicy }}
+cpuCFSQuota: {{ .Values.worker.kubelet.cpuCFSQuota }}
+cpuManagerPolicy: {{ .Values.worker.kubelet.cpuManagerPolicy }}
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true
 enableDebuggingHandlers: true
@@ -32,30 +32,35 @@ enforceNodeAllocatable:
 eventRecordQPS: 50
 eventBurst: 50
 evictionHard:
-  imagefs.available: 5%
-  imagefs.inodesFree: 5%
-  memory.available: {{ .Values.worker.evictionHardMemoryAvailable }}
-  nodefs.available: 5%
-  nodefs.inodesFree: 5%
+  memory.available: {{ .Values.worker.kubelet.evictionHard.memoryAvailable }}
+  imagefs.available: {{ .Values.worker.kubelet.evictionHard.imageFSAvailable }}
+  imagefs.inodesFree: {{ .Values.worker.kubelet.evictionHard.imageFSInodesFree }}
+  nodefs.available: {{ .Values.worker.kubelet.evictionHard.nodeFSAvailable }}
+  nodefs.inodesFree: {{ .Values.worker.kubelet.evictionHard.nodeFSInodesFree }}
 evictionSoft:
-  imagefs.available: 10%
-  imagefs.inodesFree: 10%
-  memory.available: {{ .Values.worker.evictionSoftMemoryAvailable }}
-  nodefs.available: 10%
-  nodefs.inodesFree: 10%
+  memory.available: {{ .Values.worker.kubelet.evictionSoft.memoryAvailable }}
+  imagefs.available: {{ .Values.worker.kubelet.evictionSoft.imageFSAvailable }}
+  imagefs.inodesFree: {{ .Values.worker.kubelet.evictionSoft.imageFSInodesFree }}
+  nodefs.available: {{ .Values.worker.kubelet.evictionSoft.nodeFSAvailable }}
+  nodefs.inodesFree: {{ .Values.worker.kubelet.evictionSoft.nodeFSInodesFree }}
 evictionSoftGracePeriod:
-  imagefs.available: 1m30s
-  imagefs.inodesFree: 1m30s
-  memory.available: 1m30s
-  nodefs.available: 1m30s
-  nodefs.inodesFree: 1m30s
-evictionPressureTransitionPeriod: 4m0s
-evictionMaxPodGracePeriod: 90
-evictionMinimumReclaim: null
+  memory.available: {{ .Values.worker.kubelet.evictionSoftGracePeriod.memoryAvailable }}
+  imagefs.available: {{ .Values.worker.kubelet.evictionSoftGracePeriod.imageFSAvailable }}
+  imagefs.inodesFree: {{ .Values.worker.kubelet.evictionSoftGracePeriod.imageFSInodesFree }}
+  nodefs.available: {{ .Values.worker.kubelet.evictionSoftGracePeriod.nodeFSAvailable }}
+  nodefs.inodesFree: {{ .Values.worker.kubelet.evictionSoftGracePeriod.nodeFSInodesFree }}
+evictionMinimumReclaim:
+  memory.available: {{ .Values.worker.kubelet.evictionMinimumReclaim.memoryAvailable }}
+  imagefs.available: {{ .Values.worker.kubelet.evictionMinimumReclaim.imageFSAvailable }}
+  imagefs.inodesFree: {{ .Values.worker.kubelet.evictionMinimumReclaim.imageFSInodesFree }}
+  nodefs.available: {{ .Values.worker.kubelet.evictionMinimumReclaim.nodeFSAvailable }}
+  nodefs.inodesFree: {{ .Values.worker.kubelet.evictionMinimumReclaim.nodeFSInodesFree }}
+evictionPressureTransitionPeriod: {{ .Values.worker.kubelet.evictionPressureTransitionPeriod }}
+evictionMaxPodGracePeriod: {{ .Values.worker.kubelet.evictionMaxPodGracePeriod }}
 failSwapOn: true
-{{- if .Values.kubernetes.kubelet.featureGates }}
+{{- if .Values.worker.kubelet.featureGates }}
 featureGates:
-{{ toYaml .Values.kubernetes.kubelet.featureGates | indent 6 }}
+{{ toYaml .Values.worker.kubelet.featureGates | indent 6 }}
 {{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
@@ -77,11 +82,13 @@ hostIPCSources:
 {{- end }}
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-maxPods: 110
+{{- if .Values.worker.kubelet.maxPods }}
+maxPods: {{ .Values.worker.kubelet.maxPods }}
+{{- end }}
 nodeStatusUpdateFrequency: 10s
 podsPerCore: 0
-{{- if .Values.kubernetes.kubelet.podPIDsLimit }}
-podPidsLimit: {{ .Values.kubernetes.kubelet.podPIDsLimit }}
+{{- if .Values.worker.kubelet.podPIDsLimit }}
+podPidsLimit: {{ .Values.worker.kubelet.podPIDsLimit }}
 {{- end }}
 readOnlyPort: 0
 registryPullQPS: 5

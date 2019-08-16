@@ -15,12 +15,13 @@
 package v1beta1_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("#SetDefaults_Shoot", func() {
@@ -101,6 +102,106 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					})
 				})
 			})
+			Context("kube controller - NodeCIDRMask", func() {
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
+
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							aws.Workers = []v1beta1.AWSWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							aws.Workers = []v1beta1.AWSWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							aws.Workers = []v1beta1.AWSWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+					})
+				})
+			})
 		})
 
 		Context("azure", func() {
@@ -131,6 +232,109 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 					It("should be the same value as azure.networks.workers[0]", func() {
 						Expect(shoot.Spec.Cloud.Azure.Networks.Nodes).To(PointTo(Equal(workerCIDR)))
+					})
+				})
+			})
+
+			Context("kube controller - NodeCIDRMask", func() {
+
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
+
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							azure.Workers = []v1beta1.AzureWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							azure.Workers = []v1beta1.AzureWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							azure.Workers = []v1beta1.AzureWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 					})
 				})
 			})
@@ -183,6 +387,107 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 						It("should be nil", func() {
 							Expect(shoot.Spec.Cloud.GCP.Networks.Nodes).To(BeNil())
 						})
+					})
+				})
+			})
+			Context("kube controller - NodeCIDRMask", func() {
+
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
+
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							gcp.Workers = []v1beta1.GCPWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							gcp.Workers = []v1beta1.GCPWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							gcp.Workers = []v1beta1.GCPWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 					})
 				})
 			})
@@ -251,6 +556,108 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					})
 				})
 			})
+
+			Context("kube controller - NodeCIDRMask", func() {
+
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
+
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							alicloud.Workers = []v1beta1.AlicloudWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							alicloud.Workers = []v1beta1.AlicloudWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							alicloud.Workers = []v1beta1.AlicloudWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+					})
+				})
+			})
 		})
 
 		Context("openstack", func() {
@@ -303,6 +710,107 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					})
 				})
 			})
+			Context("kube controller - NodeCIDRMask", func() {
+
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
+
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							openstack.Workers = []v1beta1.OpenStackWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							openstack.Workers = []v1beta1.OpenStackWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							openstack.Workers = []v1beta1.OpenStackWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+					})
+				})
+			})
 		})
 
 		Context("packet", func() {
@@ -324,69 +832,170 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					Expect(shoot.Spec.Cloud.Packet.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
 				})
 			})
-		})
-	})
+			Context("kube controller - NodeCIDRMask", func() {
 
-	Context("kubernetes", func() {
-		It("should enable privileged containers by default", func() {
-			Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
-		})
+				Context("Non-nil kube controller NodeCIDRMask", func() {
+					size := 23
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeControllerManager = &v1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: &size}
+					})
 
-		Context("kubeproxy", func() {
-			// TODO: Fix this in next API version of the Shoot spec.
-			It("should use not set kube-proxy to any value", func() {
-				Expect(shoot.Spec.Kubernetes.KubeProxy).To(BeNil())
+					It("NodeCIDRMask should be unchanged", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&size))
+					})
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 260
+							shoot.Spec.Cloud.Packet.Workers = []v1beta1.PacketWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should calculate an appropriate NodeCIDRMask", func() {
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+							expectedSize := 22
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						BeforeEach(func() {
+							var maxPod int32 = 150
+							var defaultMaxPod int32 = 110
+							shoot.Spec.Cloud.Packet.Workers = []v1beta1.PacketWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &maxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should use the highest maxPod in any worker", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+					Context("kubernetes.Kubelet global default max pod", func() {
+						BeforeEach(func() {
+							var (
+								maxPod        int32 = 150
+								defaultMaxPod int32 = 110
+							)
+							shoot.Spec.Kubernetes.Kubelet = &v1beta1.KubeletConfig{
+								MaxPods: &maxPod,
+							}
+							shoot.Spec.Cloud.Packet.Workers = []v1beta1.PacketWorker{
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										Kubelet: &v1beta1.KubeletConfig{
+											MaxPods: &defaultMaxPod,
+										},
+									},
+								},
+							}
+						})
+						It("should consider the global maxPod setting in spec.Kubernetes.Kubelet", func() {
+							expectedSize := 23
+							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+						})
+					})
+				})
+
+				Context("default max pod settings", func() {
+					It("should calculate an appropriate NodeCIDRMask", func() {
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).ToNot(BeNil())
+						expectedSize := 24
+						Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
+					})
+				})
 			})
-			Context("when kubeProxy is not nil", func() {
+		})
+
+		Context("kubernetes", func() {
+			It("should enable privileged containers by default", func() {
+				Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
+			})
+
+			Context("kubeproxy", func() {
+				// TODO: Fix this in next API version of the Shoot spec.
+				It("should use not set kube-proxy to any value", func() {
+					Expect(shoot.Spec.Kubernetes.KubeProxy).To(BeNil())
+				})
+				Context("when kubeProxy is not nil", func() {
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.KubeProxy = &v1beta1.KubeProxyConfig{}
+					})
+					It("should use iptables as default mode", func() {
+						// Don't change this value to guarantee backwards compatibility.
+						defaultMode := v1beta1.ProxyMode("IPTables")
+						Expect(shoot.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(defaultMode)))
+					})
+				})
+
+			})
+		})
+
+		Context("maintenance", func() {
+
+			Context("without provided maintenance", func() {
+				It("should automatically update the Kubernetes version", func() {
+					Expect(shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
+				})
+
+				It("should have a valid maintenance start time", func() {
+					Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.Begin)).ShouldNot(PointTo(BeNil()))
+				})
+
+				It("should have a valid maintenance end time", func() {
+					Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)).ShouldNot(PointTo(BeNil()))
+				})
+			})
+
+			Context("with provided maintenance", func() {
+				var maintenance *v1beta1.Maintenance
+
 				BeforeEach(func() {
-					shoot.Spec.Kubernetes.KubeProxy = &v1beta1.KubeProxyConfig{}
+					maintenance = &v1beta1.Maintenance{}
+					shoot.Spec.Maintenance = maintenance
 				})
-				It("should use iptables as default mode", func() {
-					// Don't change this value to guarantee backwards compatibility.
-					defaultMode := v1beta1.ProxyMode("IPTables")
-					Expect(shoot.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(defaultMode)))
+
+				It("should automatically update the Kubernetes version", func() {
+					Expect(shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
+				})
+
+				It("should have a valid maintenance start time", func() {
+					Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.Begin)).ShouldNot(PointTo(BeNil()))
+				})
+
+				It("should have a valid maintenance end time", func() {
+					Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)).ShouldNot(PointTo(BeNil()))
 				})
 			})
 
 		})
-	})
-
-	Context("maintenance", func() {
-
-		Context("without provided maitanence", func() {
-			It("should automatically update the Kubernetes version", func() {
-				Expect(shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
-			})
-
-			It("should have a valid mataince start time", func() {
-				Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.Begin)).ShouldNot(PointTo(BeNil()))
-			})
-
-			It("should have a valid mataince end time", func() {
-				Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)).ShouldNot(PointTo(BeNil()))
-			})
-		})
-
-		Context("with provided maitanence", func() {
-			var maintenance *v1beta1.Maintenance
-
-			BeforeEach(func() {
-				maintenance = &v1beta1.Maintenance{}
-				shoot.Spec.Maintenance = maintenance
-			})
-
-			It("should automatically update the Kubernetes version", func() {
-				Expect(shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
-			})
-
-			It("should have a valid mataince start time", func() {
-				Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.Begin)).ShouldNot(PointTo(BeNil()))
-			})
-
-			It("should have a valid mataince end time", func() {
-				Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)).ShouldNot(PointTo(BeNil()))
-			})
-		})
-
 	})
 })

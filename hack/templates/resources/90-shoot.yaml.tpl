@@ -88,6 +88,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.aws.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos
       #   version: 2023.5.0
@@ -136,6 +174,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.azure.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos
       #   version: 2023.5.0
@@ -176,6 +252,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.alicloud.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos-alicloud
       #   version: 2023.5.0
@@ -207,6 +321,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.packet.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos
       #   version: 2079.3.0
@@ -248,6 +400,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.gcp.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos
       #   version: 2023.5.0
@@ -288,6 +478,44 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # kubelet:<% kubelet=value("spec.cloud.openstack.workers.kubelet", {}) %>
+        % if kubelet != {}:
+        kubelet:
+        ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
+        % else:
+        # cpuCFSQuota: true
+        # cpuManagerPolicy: none
+        # podPidsLimit: 10
+        # maxPods: 110
+        # evictionPressureTransitionPeriod: 4m0s
+        # evictionMaxPodGracePeriod: 90
+        # evictionHard:
+        #   memoryAvailable: 100Mi
+        #   imageFSAvailable: 5%
+        #   imageFSInodesFree: 5%
+        #   nodeFSAvailable: 5%
+        #   nodeFSInodesFree: 5%
+        # evictionSoft:
+        #   memoryAvailable: 200Mi
+        #   imageFSAvailable: 10%
+        #   imageFSInodesFree: 10%
+        #   nodeFSAvailable: 10%
+        #   nodeFSInodesFree: 10%
+        # evictionSoftGracePeriod:
+        #   memoryAvailable: 1m30s
+        #   imageFSAvailable: 1m30s
+        #   imageFSInodesFree: 1m30s
+        #   nodeFSAvailable: 1m30s
+        #   nodeFSInodesFree: 1m30s
+        # evictionMinimumReclaim:
+        #   memoryAvailable: 0Mi
+        #   imageFSAvailable: 0Mi
+        #   imageFSInodesFree: 0Mi
+        #   nodeFSAvailable: 0Mi
+        #   nodeFSInodesFree: 0Mi
+        # featureGates:
+        #   SomeKubernetesFeature: true
+          % endif
       # machineImage:
       #   name: coreos
       #   version: 2023.5.0
