@@ -1,0 +1,14 @@
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: gardener-resource-manager-vpa
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener-resource-manager
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: gardener-resource-manager
+  updatePolicy:
+    updateMode: "Auto"

@@ -109,6 +109,10 @@ const (
 	// GardenRoleExtension is a constant for a label that describes the 'extensions' role.
 	GardenRoleExtension = "extension"
 
+	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
+	// instance in the garden namespace on the seeds.
+	SeedResourceManagerClass = "seed"
+
 	// BackupProvider is used to identify the backup provider.
 	BackupProvider = "backup.gardener.cloud/provider"
 	// SeedProvider is used to identify the seed provider.

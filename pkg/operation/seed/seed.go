@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -246,6 +248,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			common.ElasticsearchMetricsExporterImageName,
 			common.FluentBitImageName,
 			common.FluentdEsImageName,
+			common.GardenerResourceManagerImageName,
 			common.KibanaImageName,
 			common.PauseContainerImageName,
 			common.PrometheusImageName,
@@ -459,6 +462,9 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			// "metadataService": "169.254.169.254/32"
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,
+		},
+		"gardenerResourceManager": map[string]interface{}{
+			"resourceClass": v1alpha1.SeedResourceManagerClass,
 		},
 	}, applierOptions)
 }
