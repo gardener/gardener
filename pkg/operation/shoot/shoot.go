@@ -85,7 +85,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 
 		Extensions: extensions,
 	}
-	shootObj.CloudConfigMap = make(map[string]CloudConfig, len(shootObj.GetWorkerNames()))
+	shootObj.OperatingSystemConfigsMap = make(map[string]OperatingSystemConfigs, len(shootObj.GetWorkerNames()))
 
 	// Determine information about external domain for shoot cluster.
 	externalDomain, err := ConstructExternalDomain(context.TODO(), k8sGardenClient.Client(), shoot, secret, defaultDomains)
