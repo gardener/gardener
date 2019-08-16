@@ -6,7 +6,7 @@ metadata:
   namespace: garden-dev
 spec:
   cloud:
-    profile: azure
+    profile: az
     region: westeurope
     secretBindingRef:
       name: core-azure
