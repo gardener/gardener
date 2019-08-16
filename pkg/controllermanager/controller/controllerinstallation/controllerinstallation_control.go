@@ -496,14 +496,13 @@ func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient k
 	)
 
 	for _, oldResource := range oldResources.Resources {
-		// TODO: Adapt this part with "unstructured reader" once https://github.com/gardener/gardener/pull/624
-		// has been merged.
 		if !newResourcesSet.Has(objectReferenceToString(oldResource)) {
-			obj := &unstructured.Unstructured{}
-			obj.SetAPIVersion(oldResource.APIVersion)
-			obj.SetKind(oldResource.Kind)
-			obj.SetNamespace(oldResource.Namespace)
-			obj.SetName(oldResource.Name)
+			reader := kubernetes.NewObjectReferenceReader(&oldResource)
+			obj, err := reader.Read()
+			if err != nil {
+				result = multierror.Append(result, err)
+				continue
+			}
 
 			if err := k8sSeedClient.Client().Delete(context.TODO(), obj); err != nil {
 				if !apierrors.IsNotFound(err) {

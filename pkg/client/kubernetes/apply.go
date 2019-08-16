@@ -295,3 +295,26 @@ func (n *namespaceSettingReader) Read() (*unstructured.Unstructured, error) {
 
 	return readObj, nil
 }
+
+// NewObjectReferenceReader initializes a reader from ObjectReference
+func NewObjectReferenceReader(objectReference *corev1.ObjectReference) UnstructuredReader {
+	return &objectReferenceReader{
+		objectReference: objectReference,
+	}
+}
+
+// objectReferenceReader is an unstructured reader that contains a ObjectReference
+type objectReferenceReader struct {
+	objectReference *corev1.ObjectReference
+}
+
+// Read translates ObjectReference into Unstructured object
+func (r *objectReferenceReader) Read() (*unstructured.Unstructured, error) {
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion(r.objectReference.APIVersion)
+	obj.SetKind(r.objectReference.Kind)
+	obj.SetNamespace(r.objectReference.Namespace)
+	obj.SetName(r.objectReference.Name)
+
+	return obj, nil
+}
