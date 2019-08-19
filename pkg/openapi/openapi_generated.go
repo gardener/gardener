@@ -166,6 +166,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks":                         schema_pkg_apis_garden_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec":                             schema_pkg_apis_garden_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus":                           schema_pkg_apis_garden_v1beta1_SeedStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ServiceAccountConfig":                 schema_pkg_apis_garden_v1beta1_ServiceAccountConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot":                                schema_pkg_apis_garden_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootList":                            schema_pkg_apis_garden_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage":                    schema_pkg_apis_garden_v1beta1_ShootMachineImage(ref),
@@ -4093,11 +4094,31 @@ func schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref common.ReferenceCall
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig"),
 						},
 					},
+					"serviceAccountConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccountConfig contains configuration settings for the service account handling of the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ServiceAccountConfig"),
+						},
+					},
+					"apiAudiences": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single element list containing the issuer URL.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ServiceAccountConfig"},
 	}
 }
 
@@ -6589,6 +6610,34 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_ServiceAccountConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceAccountConfig is the kube-apiserver configuration for service accounts.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"issuer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"signingKeySecretName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SigningKeySecret is a reference to a secret that contains the current private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. (Requires the 'TokenRequest' feature gate.)",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 

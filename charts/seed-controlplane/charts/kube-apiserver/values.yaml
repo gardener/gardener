@@ -79,3 +79,19 @@ auditConfig:
   auditPolicy: ""
 
 enableEtcdEncryption: false
+
+## Identifiers of the API. The service account token authenticator will validate that tokens used
+## against the API are bound to at least one of these audiences. If the .serviceAccountConfig.issuer
+## is configured and this flag is not, this field defaults to a single element list
+## containing the issuer URL .
+#apiAudiences:
+#- "vault"
+
+## Configuration of how to issue service accounts
+#serviceAccountConfig:
+#  # Identifier of the service account token issuer. The issuer will assert this identifier in "iss"
+#  # claim of issued tokens. This value is a string or URI.
+#  issuer: "my-issuer"
+#  # The current private key of the service account token issuer. The issuer will sign issued ID
+#  #  tokens with this private key. (Requires the 'TokenRequest' feature gate.)
+#  signingKey: <private key in PEM format>

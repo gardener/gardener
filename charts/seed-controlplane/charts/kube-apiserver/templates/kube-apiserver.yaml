@@ -23,6 +23,11 @@ spec:
   template:
     metadata:
       annotations:
+        {{- if .Values.serviceAccountConfig }}
+        {{- if .Values.serviceAccountConfig.signingKey}}
+        checksum/service-account-signing-key: {{ include ( print $.Template.BasePath "/service-account-signing-key-secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- end }}
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
         checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
@@ -106,6 +111,8 @@ spec:
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
+        {{- include "kube-apiserver.apiAudiences" . | indent 8 }}
+        {{- include "kube-apiserver.serviceAccountConfig" . | indent 8 }}
         - --v=2
         lifecycle:
           preStop:
@@ -174,6 +181,12 @@ spec:
         {{- if .Values.oidcConfig.caBundle }}
         - name: kube-apiserver-oidc-cabundle
           mountPath: /srv/kubernetes/oidc
+        {{- end }}
+        {{- if .Values.serviceAccountConfig }}
+        {{- if .Values.serviceAccountConfig.signingKey }}
+        - name: kube-apiserver-service-account-signing-key
+          mountPath: /srv/kubernetes/service-account-signing-key
+        {{- end }}
         {{- end }}
         - name: kube-apiserver-admission-config
           mountPath: {{ include "kube-apiserver.admissionPluginConfigFileDir" . }}
@@ -285,6 +298,13 @@ spec:
       - name: kube-apiserver-oidc-cabundle
         secret:
           secretName: kube-apiserver-oidc-cabundle
+      {{- end }}
+      {{- if .Values.serviceAccountConfig }}
+      {{- if .Values.serviceAccountConfig.signingKey }}
+      - name: kube-apiserver-service-account-signing-key
+        secret:
+          secretName: kube-apiserver-service-account-signing-key
+      {{- end }}
       {{- end }}
       - name: kube-apiserver-admission-config
         configMap:

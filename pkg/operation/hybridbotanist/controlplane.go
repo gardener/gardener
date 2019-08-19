@@ -339,6 +339,29 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["oidcConfig"] = apiServerConfig.OIDCConfig
 		}
 
+		if serviceAccountConfig := apiServerConfig.ServiceAccountConfig; serviceAccountConfig != nil {
+			config := make(map[string]interface{})
+
+			if issuer := serviceAccountConfig.Issuer; issuer != nil {
+				config["issuer"] = *issuer
+			}
+
+			if signingKeySecret := serviceAccountConfig.SigningKeySecret; signingKeySecret != nil {
+				signingKey, err := common.GetServiceAccountSigningKeySecret(context.TODO(), b.K8sGardenClient.Client(), b.Shoot.Info.Namespace, signingKeySecret.Name)
+				if err != nil {
+					return err
+				}
+
+				config["signingKey"] = signingKey
+			}
+
+			defaultValues["serviceAccountConfig"] = config
+		}
+
+		if apiServerConfig.APIAudiences != nil {
+			defaultValues["apiAudiences"] = apiServerConfig.APIAudiences
+		}
+
 		for _, plugin := range apiServerConfig.AdmissionPlugins {
 			pluginOverwritesDefault := false
 
