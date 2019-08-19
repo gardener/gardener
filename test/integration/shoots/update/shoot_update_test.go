@@ -46,6 +46,7 @@ var (
 const (
 	UpdateKubernetesVersionTimeout = 600 * time.Second
 	InitializationTimeout          = 600 * time.Second
+	DumpStateTimeout               = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -112,6 +113,10 @@ var _ = Describe("Shoot update testing", func() {
 		}
 
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		shootTestOperations.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	CIt("should update the kubernetes version of the shoot to the next available minor version", func(ctx context.Context) {
 		currentVersion := shootTestOperations.Shoot.Spec.Kubernetes.Version

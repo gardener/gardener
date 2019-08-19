@@ -57,6 +57,7 @@ const (
 	FinalizationTimeout             = 30 * time.Minute
 	KibanaAvailableTimeout          = 10 * time.Second
 	GetLogsFromElasticsearchTimeout = 5 * time.Minute
+	DumpStateTimeout                = 5 * time.Minute
 
 	FluentBit = "fluent-bit"
 	Fluentd   = "fluentd-es"
@@ -197,6 +198,10 @@ var _ = Describe("Seed logging testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, FinalizationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenTestOperation.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	CIt("Kibana should be available", func(ctx context.Context) {
 		err := gardenTestOperation.KibanaDashboardAvailable(ctx)

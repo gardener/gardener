@@ -26,6 +26,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onsi/ginkgo"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -39,10 +42,14 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/helm/pkg/repo"
+	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
+	metricsscheme "k8s.io/metrics/pkg/client/clientset/versioned/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -91,12 +98,27 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
-	seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{})
+	seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{
+		Scheme: kubernetes.SeedScheme,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not construct Seed client")
 	}
 
-	k8sShootClient, err := kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, client.Options{})
+	shootScheme := runtime.NewScheme()
+	shootSchemeBuilder := runtime.NewSchemeBuilder(
+		corescheme.AddToScheme,
+		apiextensionsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
+		metricsscheme.AddToScheme,
+	)
+	err = shootSchemeBuilder.AddToScheme(shootScheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not add schemes to shoot scheme")
+	}
+	k8sShootClient, err := kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, client.Options{
+		Scheme: shootScheme,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not construct Shoot client")
 	}
@@ -359,6 +381,52 @@ func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, char
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
 	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, values, nil)
+}
+
+// AfterEach greps all necessary logs and state of the cluster if the test failed
+func (o *GardenerTestOperation) AfterEach(ctx context.Context) {
+	if !ginkgo.CurrentGinkgoTestDescription().Failed {
+		return
+	}
+
+	// dump shoot state if shoot is defined
+	if o.Shoot != nil && o.ShootClient != nil {
+		ctxIdentifier := fmt.Sprintf("[SHOOT %s]", o.Shoot.Name)
+		o.Logger.Info(ctxIdentifier)
+		if err := o.dumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, o.ShootClient); err != nil {
+			o.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", o.Shoot.Name, err.Error())
+		}
+		if err := o.dumpNodes(ctx, ctxIdentifier, o.ShootClient); err != nil {
+			o.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", o.Shoot.Name, err.Error())
+		}
+
+		// dump controlplane in the shootnamespace
+		if o.Seed != nil && o.SeedClient != nil {
+			if err := o.dumpControlplaneInSeed(ctx, o.SeedClient, o.Seed, o.ShootSeedNamespace()); err != nil {
+				o.Logger.Errorf("unable to dump controlplane of %s in seed %s: %v", o.Shoot.Name, o.Seed.Name, err)
+			}
+		}
+	}
+
+	// dump gardener status
+	if o.GardenClient != nil {
+		ctxIdentifier := "[GARDENER]"
+		o.Logger.Info(ctxIdentifier)
+		if o.Shoot != nil {
+			err := o.dumpEventsInNamespace(ctx, ctxIdentifier, o.GardenClient, *o.Project.Spec.Namespace, func(event corev1.Event) bool {
+				return event.InvolvedObject.Name == o.Shoot.Name
+			})
+			if err != nil {
+				o.Logger.Errorf("unable to dump Events from project namespace %s in gardener: %s", *o.Project.Spec.Namespace, err.Error())
+			}
+			return
+		}
+
+		err := o.dumpEventsInAllNamespace(ctx, ctxIdentifier, o.GardenClient)
+		if err != nil {
+			o.Logger.Errorf("unable to dump Events from namespaces gardener: %s", err.Error())
+		}
+	}
 }
 
 // EnsureDirectories creates the repository directory which holds the repositories.yaml config file

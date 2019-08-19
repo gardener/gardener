@@ -44,6 +44,7 @@ var (
 const (
 	WaitForCreateDeleteTimeout = 7200 * time.Second
 	InitializationTimeout      = 600 * time.Second
+	DumpStateTimeout           = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -68,6 +69,7 @@ func validateFlags() {
 
 var _ = Describe("Scheduler testing", func() {
 	var (
+		gardenerTestOperation         *GardenerTestOperation
 		schedulerGardenerTest         *SchedulerGardenerTest
 		shoot                         *v1beta1.Shoot
 		schedulerOperationsTestLogger *logrus.Logger
@@ -91,6 +93,9 @@ var _ = Describe("Scheduler testing", func() {
 		schedulerGardenerTest, err = NewGardenSchedulerTest(ctx, shootGardenerTest, *kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 		schedulerGardenerTest.ShootGardenerTest.Shoot.Namespace = *schedulerTestNamespace
+
+		gardenerTestOperation, err = NewGardenTestOperation(ctx, schedulerGardenerTest.ShootGardenerTest.GardenClient, schedulerOperationsTestLogger, nil)
+		Expect(err).ToNot(HaveOccurred())
 	}, InitializationTimeout)
 
 	CAfterSuite(func(ctx context.Context) {
@@ -101,6 +106,10 @@ var _ = Describe("Scheduler testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenerTestOperation.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	// Only being executed if Scheduler is configured with SameRegion Strategy
 	CIt("SameRegion Scheduling Strategy Test - should fail because no Seed in same region exists", func(ctx context.Context) {

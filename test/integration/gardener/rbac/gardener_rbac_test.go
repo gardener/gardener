@@ -17,6 +17,7 @@ package gardener_rbac_test
 import (
 	"context"
 	"flag"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"time"
 
@@ -40,12 +41,14 @@ import (
 var (
 	kubeconfigPath   = flag.String("kubeconfig", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
 	projectNamespace = flag.String("project-namespace", "garden-it", "garden project to create the service account")
+	logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 )
 
 const (
 	RBACEnabledTimeout              = 60 * time.Second
 	ServiceAccountPermissionTimeout = 60 * time.Second
 	InitializationTimeout           = 20 * time.Second
+	DumpStateTimeout                = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -61,7 +64,8 @@ func validateFlags() {
 
 var _ = Describe("RBAC testing", func() {
 	var (
-		gardenClient kubernetes.Interface
+		gardenerTestOperation *framework.GardenerTestOperation
+		gardenClient          kubernetes.Interface
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -73,7 +77,15 @@ var _ = Describe("RBAC testing", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		testLogger := logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
+		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger, nil)
+		Expect(err).ToNot(HaveOccurred())
+
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenerTestOperation.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	CIt("Should have rbac enabled", func(ctx context.Context) {
 		apiGroups, err := gardenClient.Kubernetes().Discovery().ServerGroups()

@@ -44,6 +44,7 @@ var (
 const (
 	ReconcileShootsTimeout = 1 * time.Hour
 	InitializationTimeout  = 20 * time.Second
+	DumpStateTimeout       = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -63,8 +64,9 @@ func validateFlags() {
 
 var _ = Describe("Shoot reconciliation testing", func() {
 	var (
-		gardenClient kubernetes.Interface
-		testLogger   *logrus.Logger
+		gardenerTestOperation *framework.GardenerTestOperation
+		gardenClient          kubernetes.Interface
+		testLogger            *logrus.Logger
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -77,7 +79,14 @@ var _ = Describe("Shoot reconciliation testing", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger, nil)
+		Expect(err).ToNot(HaveOccurred())
+
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenerTestOperation.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	CIt("Should reconcile all shoots", func(ctx context.Context) {
 		err := retry.UntilTimeout(ctx, 30*time.Second, ReconcileShootsTimeout, func(ctx context.Context) (bool, error) {
