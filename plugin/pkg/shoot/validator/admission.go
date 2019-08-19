@@ -17,6 +17,7 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io"
 	"reflect"
 	"strings"
@@ -405,8 +406,11 @@ func validateAWS(c *validationContext) field.ErrorList {
 	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.AWS.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.AWS.Constraints.MachineImages, c.shoot.Spec.Cloud.AWS.MachineImage, c.oldShoot.Spec.Cloud.AWS.MachineImage); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.AWS.MachineImage, validMachineImages))
@@ -458,8 +462,11 @@ func validateAzure(c *validationContext) field.ErrorList {
 	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.Azure.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Azure.Constraints.MachineImages, c.shoot.Spec.Cloud.Azure.MachineImage, c.oldShoot.Spec.Cloud.Azure.MachineImage); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.Azure.MachineImage, validMachineImages))
@@ -508,8 +515,11 @@ func validateGCP(c *validationContext) field.ErrorList {
 	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.GCP.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.GCP.Constraints.MachineImages, c.shoot.Spec.Cloud.GCP.MachineImage, c.oldShoot.Spec.Cloud.GCP.MachineImage); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.GCP.MachineImage, validMachineImages))
@@ -562,8 +572,11 @@ func validatePacket(c *validationContext) field.ErrorList {
 	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.Packet.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Packet.Constraints.MachineImages, c.shoot.Spec.Cloud.Packet.MachineImage, c.oldShoot.Spec.Cloud.Packet.MachineImage); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.Packet.MachineImage, validMachineImages))
@@ -619,8 +632,11 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 	if ok, validFloatingPools := validateFloatingPoolConstraints(c.cloudProfile.Spec.OpenStack.Constraints.FloatingPools, c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, c.oldShoot.Spec.Cloud.OpenStack.FloatingPoolName); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("floatingPoolName"), c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, validFloatingPools))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(c.cloudProfile.Spec.OpenStack.Constraints.LoadBalancerProviders, c.shoot.Spec.Cloud.OpenStack.LoadBalancerProvider, c.oldShoot.Spec.Cloud.OpenStack.LoadBalancerProvider); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("floatingPoolName"), c.shoot.Spec.Cloud.OpenStack.LoadBalancerProvider, validLoadBalancerProviders))
@@ -673,8 +689,11 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.Alicloud.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
 	}
-	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	if !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	} else if versionDefault != nil {
+		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
 	if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.Alicloud.Constraints.MachineImages, c.shoot.Spec.Cloud.Alicloud.MachineImage, c.oldShoot.Spec.Cloud.Alicloud.MachineImage); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.Alicloud.MachineImage, validMachineImages))
@@ -805,21 +824,55 @@ func hasDomainIntersection(domainA, domainB string) bool {
 	return strings.HasSuffix(long, short)
 }
 
-func validateKubernetesVersionConstraints(constraints []string, version, oldVersion string) (bool, []string) {
-	if version == oldVersion {
-		return true, nil
+func validateKubernetesVersionConstraints(constraints []string, shootVersion, oldShootVersion string) (bool, []string, *semver.Version) {
+	if shootVersion == oldShootVersion {
+		return true, nil, nil
 	}
 
-	validValues := []string{}
-
-	for _, v := range constraints {
-		validValues = append(validValues, v)
-		if v == version {
-			return true, nil
+	shootVersionSplit := strings.Split(shootVersion, ".")
+	var (
+		shootVersionMajor, shootVersionMinor int64
+		getLatestPatchVersion                bool
+	)
+	if len(shootVersionSplit) == 2 {
+		// add a fake patch version to avoid manual parsing
+		fakeShootVersion := shootVersion + ".0"
+		version, err := semver.NewVersion(fakeShootVersion)
+		if err == nil {
+			getLatestPatchVersion = true
+			shootVersionMajor = version.Major()
+			shootVersionMinor = version.Minor()
 		}
 	}
 
-	return false, validValues
+	validValues := []string{}
+	var latestVersion *semver.Version
+	for _, versionConstraint := range constraints {
+		validValues = append(validValues, versionConstraint)
+
+		if versionConstraint == shootVersion {
+			return true, nil, nil
+		}
+
+		if getLatestPatchVersion {
+			// CloudProfile cannot contain invalid semVer shootVersion
+			cpVersion, _ := semver.NewVersion(versionConstraint)
+
+			if cpVersion.Major() != shootVersionMajor || cpVersion.Minor() != shootVersionMinor {
+				continue
+			}
+
+			if latestVersion == nil || cpVersion.GreaterThan(latestVersion) {
+				latestVersion = cpVersion
+			}
+		}
+	}
+
+	if latestVersion != nil {
+		return true, nil, latestVersion
+	}
+
+	return false, validValues, nil
 }
 
 func validateMachineTypes(constraints []garden.MachineType, machineType, oldMachineType string) (bool, []string) {
