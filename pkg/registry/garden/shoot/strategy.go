@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
@@ -44,6 +45,9 @@ type shootStrategy struct {
 
 // Strategy defines the storage strategy for Shoots.
 var Strategy = shootStrategy{api.Scheme, names.SimpleNameGenerator}
+
+// Strategy should implement rest.RESTCreateUpdateStrategy
+var _ rest.RESTCreateUpdateStrategy = Strategy
 
 func (shootStrategy) NamespaceScoped() bool {
 	return true
@@ -60,6 +64,7 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	shoot.Finalizers = finalizers.UnsortedList()
+
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -70,6 +75,24 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// TODO: (mvladev) there was a bug in the verication of GCP
+	// and clusters with more than one Worker network were allowed to
+	// be created.
+	// This is used to fix the broken Shoots on update.
+	// Remove those 2 checks after several releases.
+	if gcp := newShoot.Spec.Cloud.GCP; gcp != nil {
+		if len(gcp.Networks.Workers) > 1 {
+			gcp.Networks.Workers = []gardencore.CIDR{gcp.Networks.Workers[0]}
+		}
+	}
+
+	if gcp := oldShoot.Spec.Cloud.GCP; gcp != nil {
+		if len(gcp.Networks.Workers) > 1 {
+			gcp.Networks.Workers = []gardencore.CIDR{gcp.Networks.Workers[0]}
+		}
+	}
+
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
