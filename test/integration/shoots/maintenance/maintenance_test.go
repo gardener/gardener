@@ -126,7 +126,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		cloudProfileCleanupNeeded = true
 
 		// set integration test machineImage to shoot
-		updateImage := helper.UpdateMachineImages(shootMaintenanceTest.CloudProvider, []*gardenv1beta1.ShootMachineImage{&testMachineImage})
+		updateImage := helper.UpdateDefaultMachineImage(shootMaintenanceTest.CloudProvider, &testMachineImage)
 		Expect(updateImage).NotTo(BeNil())
 		updateImage(&shoot.Spec.Cloud)
 
