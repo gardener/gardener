@@ -35,8 +35,10 @@ data:
       metrics_path: /federate
       params:
         'match[]':
-        - '{__name__="seed:container_cpu_usage_seconds_total:sum_rate_by_pod"}'
+        - '{__name__="seed:container_cpu_usage_seconds_total:sum_by_pod"}'
         - '{__name__="seed:container_memory_working_set_bytes:sum_by_pod"}'
+        - '{__name__="seed:container_network_receive_bytes_total:sum_by_pod"}'
+        - '{__name__="seed:container_network_transmit_bytes_total:sum_by_pod"}'
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:
