@@ -93,4 +93,8 @@ const (
 	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
+	// DefaultPodNetworkCIDRAlicloud is a constant for the default pod network CIDR of a Alicloud Shoot cluster.
+	DefaultPodNetworkCIDRAlicloud = CIDR("100.64.0.0/11")
+	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Alicloud Shoot cluster.
+	DefaultServiceNetworkCIDRAlicloud = CIDR("100.104.0.0/13")
 )

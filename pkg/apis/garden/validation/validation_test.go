@@ -3217,6 +3217,9 @@ var _ = Describe("validation", func() {
 							},
 						},
 					},
+					Networking: &garden.Networking{
+						Type: "some-network-plugin",
+					},
 					Maintenance: &garden.Maintenance{
 						AutoUpdate: &garden.MaintenanceAutoUpdate{
 							KubernetesVersion: true,
@@ -6672,6 +6675,30 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.kubernetes.version"),
 			}))
+		})
+
+		Context("networking section", func() {
+			It("should forbid not specifying the networking section", func() {
+				shoot.Spec.Networking = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.networking"),
+				}))))
+			})
+
+			It("should forbid not specifying a networking type", func() {
+				shoot.Spec.Networking.Type = ""
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
 		})
 
 		Context("maintenance section", func() {

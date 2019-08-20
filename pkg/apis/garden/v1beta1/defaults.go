@@ -37,6 +37,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 		defaultProxyMode   = ProxyModeIPTables
 	)
 
+	if obj.Spec.Networking == nil {
+		obj.Spec.Networking = &Networking{}
+	}
+
 	if cloud.AWS != nil {
 		if cloud.AWS.Networks.Pods == nil {
 			obj.Spec.Cloud.AWS.Networks.Pods = &defaultPodCIDR
@@ -47,8 +51,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.AWS.Networks.Nodes == nil {
 			if cloud.AWS.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
+				if obj.Spec.Networking.Nodes == nil {
+					obj.Spec.Networking.Nodes = cloud.AWS.Networks.VPC.CIDR
+				}
 			} else if len(cloud.AWS.Networks.Workers) == 1 {
 				obj.Spec.Cloud.AWS.Networks.Nodes = &cloud.AWS.Networks.Workers[0]
+				if obj.Spec.Networking.Nodes == nil {
+					obj.Spec.Networking.Nodes = &cloud.AWS.Networks.Workers[0]
+				}
 			}
 		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
@@ -65,6 +75,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if cloud.Azure.Networks.Nodes == nil {
 			obj.Spec.Cloud.Azure.Networks.Nodes = &cloud.Azure.Networks.Workers
+			if obj.Spec.Networking.Nodes == nil {
+				obj.Spec.Networking.Nodes = &cloud.Azure.Networks.Workers
+			}
 		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderAzure, obj)))
@@ -80,6 +93,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) == 1 {
 			obj.Spec.Cloud.GCP.Networks.Nodes = &cloud.GCP.Networks.Workers[0]
+			if obj.Spec.Networking.Nodes == nil {
+				obj.Spec.Networking.Nodes = &cloud.GCP.Networks.Workers[0]
+			}
 		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderGCP, obj)))
@@ -87,19 +103,34 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.Alicloud != nil {
+		var (
+			defaultPodCIDRAlicloud     = gardencorev1alpha1.DefaultPodNetworkCIDRAlicloud
+			defaultServiceCIDRAlicloud = gardencorev1alpha1.DefaultServiceNetworkCIDRAlicloud
+		)
+
+		if obj.Spec.Networking.Pods == nil {
+			obj.Spec.Networking.Pods = &defaultPodCIDRAlicloud
+		}
+		if obj.Spec.Networking.Services == nil {
+			obj.Spec.Networking.Services = &defaultServiceCIDRAlicloud
+		}
 		if cloud.Alicloud.Networks.Pods == nil {
-			podCIDR := gardencorev1alpha1.CIDR("100.64.0.0/11")
-			obj.Spec.Cloud.Alicloud.Networks.Pods = &podCIDR
+			obj.Spec.Cloud.Alicloud.Networks.Pods = &defaultPodCIDRAlicloud
 		}
 		if cloud.Alicloud.Networks.Services == nil {
-			svcCIDR := gardencorev1alpha1.CIDR("100.104.0.0/13")
-			obj.Spec.Cloud.Alicloud.Networks.Services = &svcCIDR
+			obj.Spec.Cloud.Alicloud.Networks.Services = &defaultServiceCIDRAlicloud
 		}
 		if cloud.Alicloud.Networks.Nodes == nil {
 			if cloud.Alicloud.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = cloud.Alicloud.Networks.VPC.CIDR
+				if obj.Spec.Networking.Nodes == nil {
+					obj.Spec.Networking.Nodes = cloud.Alicloud.Networks.VPC.CIDR
+				}
 			} else if len(cloud.Alicloud.Networks.Workers) == 1 {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = &cloud.Alicloud.Networks.Workers[0]
+				if obj.Spec.Networking.Nodes == nil {
+					obj.Spec.Networking.Nodes = &cloud.Alicloud.Networks.Workers[0]
+				}
 			}
 		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
@@ -116,6 +147,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) == 1 {
 			obj.Spec.Cloud.OpenStack.Networks.Nodes = &cloud.OpenStack.Networks.Workers[0]
+			if obj.Spec.Networking.Nodes == nil {
+				obj.Spec.Networking.Nodes = &cloud.OpenStack.Networks.Workers[0]
+			}
 		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderOpenStack, obj)))
@@ -132,6 +166,16 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderPacket, obj)))
 		}
+	}
+
+	if obj.Spec.Networking.Pods == nil {
+		obj.Spec.Networking.Pods = &defaultPodCIDR
+	}
+	if obj.Spec.Networking.Services == nil {
+		obj.Spec.Networking.Services = &defaultServiceCIDR
+	}
+	if len(obj.Spec.Networking.Type) == 0 {
+		obj.Spec.Networking.Type = CalicoNetworkType
 	}
 
 	trueVar := true
@@ -156,7 +200,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		obj.Spec.Maintenance = &Maintenance{
 			AutoUpdate: &MaintenanceAutoUpdate{
-				KubernetesVersion:   trueVar,
+				KubernetesVersion:   true,
 				MachineImageVersion: &trueVar,
 			},
 			TimeWindow: &MaintenanceTimeWindow{

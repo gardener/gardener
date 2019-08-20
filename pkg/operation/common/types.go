@@ -395,18 +395,6 @@ const (
 	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
 	GardenerResourceManagerImageName = "gardener-resource-manager"
 
-	// CalicoNodeImageName is the name of the CalicoNode image.
-	CalicoNodeImageName = "calico-node"
-
-	// CalicoCNIImageName is the name of the CalicoCNI image.
-	CalicoCNIImageName = "calico-cni"
-
-	// CalicoTyphaImageName is the name of the CalicoTypha image.
-	CalicoTyphaImageName = "calico-typha"
-
-	// CalicoKubeControllersImageName is the name of the CalicoKubeControllers image.
-	CalicoKubeControllersImageName = "calico-kube-controllers"
-
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"
 

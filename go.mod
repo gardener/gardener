@@ -26,7 +26,7 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gardener/controller-manager-library v0.0.0-20190418145731-83f4bac4b55f // indirect
 	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
-	github.com/gardener/gardener-extensions v0.0.0-20190725050243-a80ef643c64b
+	github.com/gardener/gardener-extensions v0.0.0-20190820050625-a15de8a82f6b
 	github.com/gardener/gardener-resource-manager v0.0.0-20190802142246-6b2029430332
 	github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a
 	github.com/ghodss/yaml v1.0.0
@@ -78,7 +78,7 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	github.com/ugorji/go v1.1.7 // indirect
+	github.com/ugorji/go/codec v1.1.7 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.3 // indirect

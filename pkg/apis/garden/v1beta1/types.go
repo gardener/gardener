@@ -677,10 +677,11 @@ type ShootSpec struct {
 	Hibernation *Hibernation `json:"hibernation,omitempty"`
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes `json:"kubernetes"`
+	// Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
+	Networking *Networking `json:"networking,omitempty"`
 	// Maintenance contains information about the time window for maintenance operations and which
 	// operations should be performed.
 	// +optional
-
 	Maintenance *Maintenance `json:"maintenance,omitempty"`
 }
 
@@ -722,6 +723,19 @@ type ShootStatus struct {
 ///////////////////////////////
 // Shoot Specification Types //
 ///////////////////////////////
+
+// CalicoNetworkType is a constant for the calico network type.
+const CalicoNetworkType = "calico"
+
+// Networking defines networking parameters for the shoot cluster.
+type Networking struct {
+	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	// Type identifies the type of the networking plugin
+	Type string `json:"type"`
+	// ProviderConfig is the configuration passed to network resource.
+	// +optional
+	ProviderConfig *gardencorev1alpha1.ProviderConfig `json:"providerConfig,omitempty"`
+}
 
 // Cloud contains information about the cloud environment and their specific settings.
 // It must contain exactly one key of the below cloud providers.
