@@ -1134,6 +1134,13 @@ type KubernetesDashboard struct {
 	AuthenticationMode *string `json:"authenticationMode,omitempty"`
 }
 
+const (
+	// KubernetesDashboardAuthModeBasic uses basic authentication mode for auth.
+	KubernetesDashboardAuthModeBasic = "basic"
+	// KubernetesDashboardAuthModeToken uses token-based mode for auth.
+	KubernetesDashboardAuthModeToken = "token"
+)
+
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type AddonClusterAutoscaler struct {
 	Addon `json:",inline"`
@@ -1313,29 +1320,32 @@ type KubernetesConfig struct {
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
 	KubernetesConfig `json:",inline"`
-	// RuntimeConfig contains information about enabled or disabled APIs.
-	// +optional
-	RuntimeConfig map[string]bool `json:"runtimeConfig,omitempty"`
-	// OIDCConfig contains configuration settings for the OIDC provider.
-	// +optional
-	OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty"`
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
 	// configuration.
 	// +optional
 	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty"`
-	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
-	// +optional
-	AuditConfig *AuditConfig `json:"auditConfig,omitempty"`
-	// ServiceAccountConfig contains configuration settings for the service account handling
-	// of the kube-apiserver.
-	// +optional
-	ServiceAccountConfig *ServiceAccountConfig `json:"serviceAccountConfig,omitempty"`
 	// APIAudiences are the identifiers of the API. The service account token authenticator will
 	// validate that tokens used against the API are bound to at least one of these audiences.
 	// If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single
 	// element list containing the issuer URL.
 	// +optional
 	APIAudiences []string `json:"apiAudiences,omitempty"`
+	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
+	// +optional
+	AuditConfig *AuditConfig `json:"auditConfig,omitempty"`
+	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
+	// +optional
+	EnableBasicAuthentication *bool `json:"enableBasicAuthentication,omitempty"`
+	// OIDCConfig contains configuration settings for the OIDC provider.
+	// +optional
+	OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty"`
+	// RuntimeConfig contains information about enabled or disabled APIs.
+	// +optional
+	RuntimeConfig map[string]bool `json:"runtimeConfig,omitempty"`
+	// ServiceAccountConfig contains configuration settings for the service account handling
+	// of the kube-apiserver.
+	// +optional
+	ServiceAccountConfig *ServiceAccountConfig `json:"serviceAccountConfig,omitempty"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.

@@ -79,6 +79,7 @@ auditConfig:
   auditPolicy: ""
 
 enableEtcdEncryption: false
+enableBasicAuthentication: true
 
 ## Identifiers of the API. The service account token authenticator will validate that tokens used
 ## against the API are bound to at least one of these audiences. If the .serviceAccountConfig.issuer

@@ -17,6 +17,7 @@ package helper
 import (
 	"errors"
 	"fmt"
+
 	"github.com/Masterminds/semver"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -132,4 +133,16 @@ func DetermineLatestMachineImageVersion(image garden.MachineImage) (garden.Machi
 		}
 	}
 	return latestMachineImageVersion, nil
+}
+
+// ShootWantsBasicAuthentication returns true if basic authentication is not configured or
+// if it is set explicitly to 'true'.
+func ShootWantsBasicAuthentication(kubeAPIServerConfig *garden.KubeAPIServerConfig) bool {
+	if kubeAPIServerConfig == nil {
+		return true
+	}
+	if kubeAPIServerConfig.EnableBasicAuthentication == nil {
+		return true
+	}
+	return *kubeAPIServerConfig.EnableBasicAuthentication
 }

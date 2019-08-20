@@ -25,7 +25,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/util/retry"
@@ -651,25 +652,34 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		}
 	}
 
+	// Basic authentication can be enabled or disabled. In both cases we have to check whether the basic auth secret in the shoot
+	// namespace in the seed exists because we might need to regenerate the end-users kubecfg that is used to communicate with the
+	// shoot cluster. If basic auth is enabled then we want to store the credentials inside the kubeconfig, if it's disabled then
+	// we want to remove old credentials out of it.
+	// Thus, if the basic-auth secret is not found and basic auth is disabled then we don't need to refresh anything. If it's found
+	// then we have to delete it and refresh the kubecfg (which is triggered by deleting the kubecfg secret). The other cases are
+	// the opposite: Basic auth is enabled and basic-auth secret found: no deletion required. If the secret is not found then we
+	// generate a new one and want to refresh the kubecfg.
+	mustDeleteUserCredentialSecrets := !gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	basicAuthSecret := &corev1.Secret{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BasicAuthSecretName), basicAuthSecret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		mustDeleteUserCredentialSecrets = gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	}
+	if mustDeleteUserCredentialSecrets {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.BasicAuthSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.KubecfgSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
 	existingSecretsMap, err := b.fetchExistingSecrets(ctx)
 	if err != nil {
 		return err
-	}
-
-	// Migrate logging ingress admin credentials after exposing users logging.
-	// This can be removed in a future Gardener version.
-	loggingIngressAdminCredentials := existingSecretsMap[common.KibanaAdminIngressCredentialsSecretName]
-	if loggingIngressAdminCredentials != nil && len(loggingIngressAdminCredentials.Data[secrets.DataKeyPasswordBcryptHash]) == 0 {
-		kibanaIngressCredentials := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.KibanaAdminIngressCredentialsSecretName,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		if err := b.K8sSeedClient.Client().Delete(ctx, kibanaIngressCredentials, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		delete(existingSecretsMap, common.KibanaAdminIngressCredentialsSecretName)
 	}
 
 	certificateAuthorities, err := b.generateCertificateAuthorities(existingSecretsMap)
@@ -677,9 +687,12 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
-	basicAuthAPIServer, err := b.generateBasicAuthAPIServer(ctx, existingSecretsMap)
-	if err != nil {
-		return err
+	var basicAuthAPIServer *secrets.BasicAuth
+	if gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+		basicAuthAPIServer, err = b.generateBasicAuthAPIServer(ctx, existingSecretsMap)
+		if err != nil {
+			return err
+		}
 	}
 
 	staticToken, err := b.generateStaticToken(ctx, existingSecretsMap)
@@ -848,6 +861,10 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 
 		b.Secrets[staticTokenConfig.Name] = existingSecret
 
+		if err := b.storeAPIServerHealthCheckToken(staticToken); err != nil {
+			return nil, err
+		}
+
 		return staticToken, nil
 	}
 
@@ -873,7 +890,23 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 
 	b.Secrets[staticTokenConfig.Name] = secret
 
-	return staticToken.(*secrets.StaticToken), nil
+	staticTokenObj := staticToken.(*secrets.StaticToken)
+
+	if err := b.storeAPIServerHealthCheckToken(staticTokenObj); err != nil {
+		return nil, err
+	}
+
+	return staticTokenObj, nil
+}
+
+func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticToken) error {
+	kubeAPIServerHealthCheckToken, err := staticToken.GetTokenForUsername(common.KubeAPIServerHealthCheck)
+	if err != nil {
+		return err
+	}
+
+	b.APIServerHealthCheckToken = kubeAPIServerHealthCheckToken.Token
+	return nil
 }
 
 func (b *Botanist) generateShootSecrets(ctx context.Context, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) error {

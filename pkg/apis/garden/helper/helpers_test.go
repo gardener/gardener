@@ -19,6 +19,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/garden/helper"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -237,4 +238,21 @@ var _ = Describe("helper", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	var (
+		trueVar  = true
+		falseVar = false
+	)
+
+	DescribeTable("#ShootWantsBasicAuthentication",
+		func(kubeAPIServerConfig *garden.KubeAPIServerConfig, wantsBasicAuth bool) {
+			actualWantsBasicAuth := ShootWantsBasicAuthentication(kubeAPIServerConfig)
+
+			Expect(actualWantsBasicAuth).To(Equal(wantsBasicAuth))
+		},
+		Entry("no kubeapiserver configuration", nil, true),
+		Entry("field not set", &garden.KubeAPIServerConfig{}, true),
+		Entry("explicitly enabled", &garden.KubeAPIServerConfig{EnableBasicAuthentication: &trueVar}, true),
+		Entry("explicitly disabled", &garden.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}, false),
+	)
 })

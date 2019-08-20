@@ -15,15 +15,13 @@
 package helper_test
 
 import (
-	"github.com/Masterminds/semver"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	corev1 "k8s.io/api/core/v1"
+	"github.com/Masterminds/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -461,6 +459,23 @@ var _ = Describe("helper", func() {
 				},
 			},
 			true))
+
+	var (
+		trueVar  = true
+		falseVar = false
+	)
+
+	DescribeTable("#ShootWantsBasicAuthentication",
+		func(shoot *gardenv1beta1.Shoot, wantsBasicAuth bool) {
+			actualWantsBasicAuth := ShootWantsBasicAuthentication(shoot)
+
+			Expect(actualWantsBasicAuth).To(Equal(wantsBasicAuth))
+		},
+		Entry("no kubeapiserver configuration", &gardenv1beta1.Shoot{}, true),
+		Entry("field not set", &gardenv1beta1.Shoot{Spec: gardenv1beta1.ShootSpec{Kubernetes: gardenv1beta1.Kubernetes{KubeAPIServer: &gardenv1beta1.KubeAPIServerConfig{}}}}, true),
+		Entry("explicitly enabled", &gardenv1beta1.Shoot{Spec: gardenv1beta1.ShootSpec{Kubernetes: gardenv1beta1.Kubernetes{KubeAPIServer: &gardenv1beta1.KubeAPIServerConfig{EnableBasicAuthentication: &trueVar}}}}, true),
+		Entry("explicitly disabled", &gardenv1beta1.Shoot{Spec: gardenv1beta1.ShootSpec{Kubernetes: gardenv1beta1.Kubernetes{KubeAPIServer: &gardenv1beta1.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}}}}, false),
+	)
 
 	var (
 		alertingSecrets = map[string]*corev1.Secret{

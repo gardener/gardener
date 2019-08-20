@@ -1,0 +1,26 @@
+---
+apiVersion: {{ template "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:gardener.cloud:vpn-seed
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  resourceNames:
+  - vpn-shoot
+  verbs:
+  - get
+---
+apiVersion: {{ template "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:gardener.cloud:vpn-seed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:gardener.cloud:vpn-seed
+subjects:
+- kind: User
+  name: vpn-seed

@@ -104,6 +104,19 @@ func ShootWantsClusterAutoscaler(shoot *gardenv1beta1.Shoot) (bool, error) {
 	return false, nil
 }
 
+// ShootWantsBasicAuthentication returns true if basic authentication is not configured or
+// if it is set explicitly to 'true'.
+func ShootWantsBasicAuthentication(shoot *gardenv1beta1.Shoot) bool {
+	kubeAPIServerConfig := shoot.Spec.Kubernetes.KubeAPIServer
+	if kubeAPIServerConfig == nil {
+		return true
+	}
+	if kubeAPIServerConfig.EnableBasicAuthentication == nil {
+		return true
+	}
+	return *kubeAPIServerConfig.EnableBasicAuthentication
+}
+
 // ShootWantsAlertmanager checks if the given Shoot needs an Alertmanger.
 func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*corev1.Secret) bool {
 	if alertingSMTPSecret := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPSecret) > 0 {
