@@ -10,6 +10,7 @@ aggregatePrometheus:
 
 allowedMetrics:
   alertmanager: []
+
   cAdvisor:
   - container_cpu_cfs_periods_total
   - container_cpu_usage_seconds_total
@@ -22,10 +23,44 @@ allowedMetrics:
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
-  elasticsearch: []
+
   kubelet:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
+
+  fluentd:
+  - fluentd_output_status_buffer_queue_length
+  - fluentd_output_status_buffer_total_bytes
+  - fluentd_output_status_retry_count
+  - fluentd_output_status_num_errors
+  - fluentd_output_status_emit_count
+  - fluentd_output_status_retry_wait
+  - fluentd_output_status_emit_records
+  - fluentd_output_status_write_count
+  - fluentd_output_status_rollback_count
+
+  fluentbit:
+  - fluentbit_input_records_total
+  - fluentbit_input_bytes_total
+  - fluentbit_output_proc_records_total
+  - fluentbit_output_proc_bytes_total
+  - fluentbit_output_errors_total
+  - fluentbit_output_retries_total
+  - fluentbit_output_retries_failed_total
+
+  elasticsearch:
+  - elasticsearch_cluster_health_active_primary_shards
+  - elasticsearch_cluster_health_active_shards
+  - elasticsearch_cluster_health_delayed_unassigned_shards
+  - elasticsearch_cluster_health_number_of_pending_tasks
+  - elasticsearch_cluster_health_status
+  - elasticsearch_filesystem_data_free_bytes
+  - elasticsearch_indices_flush_time_seconds
+  - elasticsearch_indices_flush_total
+  - elasticsearch_indices_segments_count
+  - elasticsearch_indices_segments_memory_bytes
+  - elasticsearch_jvm_memory_pool_used_bytes
+  - elasticsearch_jvm_memory_pool_max_bytes
 
 
 ingress:

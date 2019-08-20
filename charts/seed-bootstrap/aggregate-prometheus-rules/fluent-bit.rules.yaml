@@ -1,0 +1,14 @@
+groups:
+- name: fluent-bit.rules
+  rules:
+  - alert: FluentBitDown
+    expr: absent(up{job="fluent-bit"} == 1)
+    for: 15m
+    labels:
+      service: fluent-bit
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      description: There are no running fluent-bit pods. No logs will be collected.
+      summary: Fluent-bit is down

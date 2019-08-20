@@ -111,3 +111,4 @@ data:
 
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubelet | indent 6 }}
+

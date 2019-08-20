@@ -1,0 +1,24 @@
+rule_files:
+- ../aggregate-prometheus-rules/fluent-bit.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # FluentBitDown
+  - series: 'up{job="fluent-bit"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: FluentBitDown
+    exp_alerts:
+    - exp_labels:
+        service: fluent-bit
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: There are no running fluent-bit pods. No logs will be collected.
+        summary: Fluent-bit is down
+
