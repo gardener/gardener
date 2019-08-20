@@ -15,6 +15,8 @@
 package secrets
 
 import (
+	"context"
+
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"github.com/pkg/errors"
@@ -31,6 +33,7 @@ type Secrets struct {
 
 // Deploy generates and deploys the secrets into the given namespace, taking into account existing secrets.
 func (s *Secrets) Deploy(
+	ctx context.Context,
 	cs kubernetes.Interface,
 	gcs gardenerkubernetes.Interface,
 	namespace string,
@@ -50,7 +53,7 @@ func (s *Secrets) Deploy(
 
 	// Generate cluster secrets
 	secretConfigs := s.SecretConfigsFunc(cas, namespace)
-	clusterSecrets, err := GenerateClusterSecrets(gcs, existingSecrets, secretConfigs, namespace)
+	clusterSecrets, err := GenerateClusterSecrets(ctx, gcs, existingSecrets, secretConfigs, namespace)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate cluster secrets in namespace '%s'", namespace)
 	}

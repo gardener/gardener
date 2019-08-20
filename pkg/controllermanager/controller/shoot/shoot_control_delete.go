@@ -192,7 +192,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
+			Fn:   flow.TaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-

@@ -101,7 +101,7 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		}
 	}
 
-	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
+	secretData["kubeconfig"] = b.Secrets[common.KubecfgSecretName].Data["kubeconfig"]
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

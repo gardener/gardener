@@ -120,9 +120,16 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 				mustIncrease = true
 			}
 		default:
-			// The shoot state is not failed and the reconcile annotation is set.
-			if val, ok := newShoot.Annotations[common.ShootOperation]; ok && val == common.ShootOperationReconcile {
-				mustIncrease = true
+			// The shoot state is not failed and the reconcile or rotate-credentials annotation is set.
+			if val, ok := newShoot.Annotations[common.ShootOperation]; ok {
+				if val == common.ShootOperationReconcile {
+					mustIncrease = true
+				}
+				if val == common.ShootOperationRotateKubeconfigCredentials {
+					// We don't want to remove the annotation so that the controller-manager can pick it up and rotate
+					// the credentials. It has to remove the annotation after it is done.
+					return true
+				}
 			}
 		}
 

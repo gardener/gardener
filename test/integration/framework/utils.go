@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"os"
 	"strings"
@@ -26,18 +25,20 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	kubecfg                   = "kubecfg"
 	kubeconfig                = "kubeconfig"
 	loggingIngressCredentials = "logging-ingress-credentials"
 	password                  = "password"
@@ -81,7 +82,7 @@ func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsMap l
 
 // getAdminPassword gets the admin password for authenticating against the api
 func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, error) {
-	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), kubecfg, password)
+	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), common.KubecfgSecretName, password)
 }
 
 func (o *GardenerTestOperation) getLoggingPassword(ctx context.Context) (string, error) {

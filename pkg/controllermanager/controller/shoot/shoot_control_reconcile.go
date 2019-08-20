@@ -114,7 +114,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
-			Fn:           flow.SimpleTaskFn(botanist.DeploySecrets),
+			Fn:           flow.TaskFn(botanist.DeploySecrets),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		_ = g.Add(flow.Task{

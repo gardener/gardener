@@ -42,12 +42,6 @@ var _ = Describe("utils", func() {
 
 			BeforeEach(func() {
 				secret = &ControlPlaneSecretConfig{
-					CertificateSecretConfig: &CertificateSecretConfig{
-						SigningCA: &Certificate{
-							CertificatePEM: []byte(caCert),
-						},
-					},
-
 					BasicAuth: &BasicAuth{
 						Username: basicAuthUser,
 						Password: basicAuthPass,
@@ -60,6 +54,9 @@ var _ = Describe("utils", func() {
 				}
 
 				certificate = &Certificate{
+					CA: &Certificate{
+						CertificatePEM: []byte(caCert),
+					},
 					CertificatePEM: []byte(clientCert),
 					PrivateKeyPEM:  []byte(clientKey),
 				}
