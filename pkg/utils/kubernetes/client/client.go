@@ -16,6 +16,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,8 +26,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -222,20 +225,95 @@ func useListOptionsIfNotNil(newOpts *client.ListOptions) client.ListOptionFunc {
 	}
 }
 
+type finalizer struct{}
+
+// NewFinalizer instantiates a default finalizer.
+func NewFinalizer() Finalizer {
+	return &finalizer{}
+}
+
+var defaultFinalizer = NewFinalizer()
+
+// Finalize removes the finalizers (.meta.finalizers) of given resource.
+func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
+	acc, err := meta.Accessor(obj)
+	if err != nil {
+		return err
+	}
+
+	withFinalizers := obj.DeepCopyObject()
+	acc.SetFinalizers(nil)
+	return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
+}
+
+// HasFinalizers checks whether the given resource has finalizers (.meta.finalizers).
+func (f *finalizer) HasFinalizers(obj runtime.Object) (bool, error) {
+	acc, err := meta.Accessor(obj)
+	if err != nil {
+		return false, err
+	}
+
+	return len(acc.GetFinalizers()) > 0, nil
+}
+
+type namespaceFinalizer struct {
+	coreV1Interface typedcorev1.CoreV1Interface
+}
+
+// NewNamespaceFinalizer instantiates a namespace finalizer.
+func NewNamespaceFinalizer(coreV1Interface typedcorev1.CoreV1Interface) Finalizer {
+	return &namespaceFinalizer{coreV1Interface}
+}
+
+// Finalize removes the finalizers of given namespace resource.
+// Because of legacy reasons namespaces have both .meta.finalizers and .spec.finalizers.
+// Both of them are removed. An error is returned when the given resource is not a namespace.
+func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
+	namespace, ok := obj.(*corev1.Namespace)
+	if !ok {
+		return errors.New("corev1.Namespace is expected")
+	}
+
+	namespace.SetFinalizers(nil)
+	namespace.Spec.Finalizers = nil
+
+	// TODO (ialidzhikov): Use controller-runtime client once subresources are
+	// suported - https://github.com/kubernetes-sigs/controller-runtime/issues/172.
+	_, err := f.coreV1Interface.Namespaces().Finalize(namespace)
+	return err
+}
+
+// HasFinalizers checks whether the given namespace has finalizers
+// (.meta.finalizers and .spec.finalizers).
+func (f *namespaceFinalizer) HasFinalizers(obj runtime.Object) (bool, error) {
+	namespace, ok := obj.(*corev1.Namespace)
+	if !ok {
+		return false, errors.New("corev1.Namespace expected")
+	}
+
+	return len(namespace.Finalizers)+len(namespace.Spec.Finalizers) > 0, nil
+}
+
 type cleaner struct {
-	time utiltime.Ops
+	time      utiltime.Ops
+	finalizer Finalizer
 }
 
-// NewCleaner instantiates a new Cleaner with the given utiltime.Ops.
-func NewCleaner(time utiltime.Ops) Cleaner {
-	return &cleaner{time}
+// NewCleaner instantiates a new Cleaner with the given utiltime.Ops and finalizer.
+func NewCleaner(time utiltime.Ops, finalizer Finalizer) Cleaner {
+	return &cleaner{time, finalizer}
 }
 
-var defaultCleaner = NewCleaner(utiltime.DefaultOps())
+var defaultCleaner = NewCleaner(utiltime.DefaultOps(), defaultFinalizer)
 
 // DefaultCleaner is the default Cleaner.
 func DefaultCleaner() Cleaner {
 	return defaultCleaner
+}
+
+// NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
+func NewNamespaceCleaner(coreV1Interface typedcorev1.CoreV1Interface) Cleaner {
+	return NewCleaner(utiltime.DefaultOps(), NewNamespaceFinalizer(coreV1Interface))
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
@@ -261,9 +339,14 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 	}
 
 	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
-		withFinalizers := obj.DeepCopyObject()
-		acc.SetFinalizers(nil)
-		return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
+		hasFinalizers, err := o.finalizer.HasFinalizers(obj)
+		if err != nil {
+			return err
+		}
+
+		if hasFinalizers {
+			return o.finalizer.Finalize(ctx, c, obj)
+		}
 	}
 
 	if err := delete(ctx, c, obj, &cleanOptions.DeleteOptions); err != nil {

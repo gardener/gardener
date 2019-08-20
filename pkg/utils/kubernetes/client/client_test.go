@@ -183,12 +183,14 @@ var _ = Describe("Cleaner", func() {
 
 	Context("Cleaner", func() {
 		var (
-			timeOps *mocktime.MockOps
-			cleaner Cleaner
+			timeOps   *mocktime.MockOps
+			finalizer Finalizer
+			cleaner   Cleaner
 		)
 		BeforeEach(func() {
 			timeOps = mocktime.NewMockOps(ctrl)
-			cleaner = NewCleaner(timeOps)
+			finalizer = NewFinalizer()
+			cleaner = NewCleaner(timeOps, finalizer)
 		})
 
 		Describe("#Clean", func() {

@@ -292,10 +292,15 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
+		cleanShootNamespaces = g.Add(flow.Task{
+			Name:         "Cleaning Shoot namespaces",
+			Fn:           flow.TaskFn(botanist.CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+		})
 		destroyNetwork = g.Add(flow.Task{
 			Name:         "Destroying shoot network plugin",
 			Fn:           flow.TaskFn(botanist.DestroyNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
 		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been destroyed",
@@ -305,7 +310,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		destroyWorker = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
 			Fn:           flow.TaskFn(botanist.DestroyWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been terminated",
@@ -315,7 +320,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",
 			Fn:           flow.TaskFn(botanist.DeleteManagedResources).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilWorkerDeleted),
+			Dependencies: flow.NewTaskIDs(cleanShootNamespaces, waitUntilWorkerDeleted),
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
@@ -345,6 +350,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			cleanupWebhooks,
 			cleanExtendedAPIs,
 			cleanKubernetesResources,
+			cleanShootNamespaces,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
 			timeForInfrastructureResourceCleanup,
