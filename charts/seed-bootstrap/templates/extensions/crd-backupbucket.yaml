@@ -27,7 +27,7 @@ spec:
     JSONPath: .spec.region
   - name: State
     type: string
-    JSONPath: .status.lastOperation.status
+    JSONPath: .status.lastOperation.state
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp

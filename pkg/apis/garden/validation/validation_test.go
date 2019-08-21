@@ -109,15 +109,6 @@ var _ = Describe("validation", func() {
 					Names:  []string{""},
 				},
 			}
-			region = "some-region"
-			backup = garden.BackupProfile{
-				Provider: garden.CloudProviderAWS,
-				Region:   &region,
-				SecretRef: corev1.SecretReference{
-					Name:      "backup-aws",
-					Namespace: "garden",
-				},
-			}
 		)
 
 		It("should forbid empty CloudProfile resources", func() {
@@ -139,7 +130,7 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
-		Context("tests for AWS cloud profiles with backup", func() {
+		Context("tests for AWS cloud profiles", func() {
 			var (
 				fldPath         = "aws"
 				awsCloudProfile *garden.CloudProfile
@@ -166,7 +157,6 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 						},
-						Backup: &backup,
 					},
 				}
 			})
@@ -467,19 +457,6 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
-				})
-			})
-
-			Context("backup profile validation", func() {
-				It("should enforce that region should not be empty for provider other than cloud profile", func() {
-					awsCloudProfile.Spec.Backup.Provider = garden.CloudProviderPacket
-					awsCloudProfile.Spec.Backup.Region = nil
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.backup.region")),
-					}))))
 				})
 			})
 		})
@@ -2319,9 +2296,22 @@ var _ = Describe("validation", func() {
 	})
 
 	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
-		var seed *garden.Seed
+		var(
+			 seed *garden.Seed
+			 backup *garden.BackupProfile
+		)
+
 
 		BeforeEach(func() {
+			region := "some-region"
+			backup=&garden.BackupProfile{
+				Provider: garden.CloudProviderAWS,
+				Region:   &region,
+				SecretRef: corev1.SecretReference{
+					Name:      "backup-aws",
+					Namespace: "garden",
+				},
+			}
 			seed = &garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed-1",
@@ -2344,6 +2334,7 @@ var _ = Describe("validation", func() {
 						Pods:     gardencore.CIDR("100.96.0.0/11"),
 						Services: gardencore.CIDR("100.64.0.0/13"),
 					},
+					Backup: backup,
 				},
 			}
 		})
@@ -2383,41 +2374,48 @@ var _ = Describe("validation", func() {
 				Pods:     gardencore.CIDR("300.300.300.300/300"),
 				Services: gardencore.CIDR("invalid-cidr"),
 			}
+			seed.Spec.Backup.SecretRef = corev1.SecretReference{}
+			seed.Spec.Backup.Provider = ""
 
 			errorList := ValidateSeed(seed)
 
-			Expect(errorList).To(HaveLen(8))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(HaveLen(11))
+			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.profile"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.region"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.ingressDomain"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.secretRef.name"),
-			}))
-			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.secretRef.namespace"),
-			}))
-			Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.networks.nodes"),
-			}))
-			Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.networks.pods"),
-			}))
-			Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
+			}, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.networks.services"),
+			},Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.backup.provider"),
+				"Detail": Equal(`must provide a backup cloud provider name`),
+			},Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.backup.secretRef.name"),
+				"Detail": Equal(`must provide a name`),
+			},Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.backup.secretRef.namespace"),
+				"Detail": Equal(`must provide a namespace`),
 			}))
 		})
 
@@ -2454,14 +2452,50 @@ var _ = Describe("validation", func() {
 				Pods:     gardencore.CIDR("10.2.0.0/16"),
 				Services: gardencore.CIDR("10.3.1.64/26"),
 			}
+			otherRegion := "other-region"
+			newSeed.Spec.Backup.Provider="other-provider"
+			newSeed.Spec.Backup.Region=    &otherRegion
+
 			errorList := ValidateSeedUpdate(newSeed, seed)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks"),
 				"Detail": Equal(`field is immutable`),
+			},Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.backup.region"),
+				"Detail": Equal(`field is immutable`),
+			},Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.backup.provider"),
+				"Detail": Equal(`field is immutable`),
 			}))
+		})
 
+		Context("#validateBackupProfileUpdate",func(){
+			It("should allow adding backup profile", func() {
+				seed.Spec.Backup = nil
+				newSeed := prepareSeedForUpdate(seed)
+				newSeed.Spec.Backup = backup
+
+				errorList := ValidateSeedUpdate(newSeed, seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid removing backup profile", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				newSeed.Spec.Backup = nil
+
+				errorList := ValidateSeedUpdate(newSeed, seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.backup"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
 		})
 	})
 
