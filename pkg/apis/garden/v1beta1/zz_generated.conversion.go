@@ -2565,7 +2565,6 @@ func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudPr
 		out.Packet = nil
 	}
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.Backup = (*garden.BackupProfile)(unsafe.Pointer(in.Backup))
 	return nil
 }
 
@@ -2630,7 +2629,6 @@ func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.
 		out.Packet = nil
 	}
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.Backup = (*BackupProfile)(unsafe.Pointer(in.Backup))
 	return nil
 }
 
@@ -4616,6 +4614,7 @@ func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.S
 	out.BlockCIDRs = *(*[]core.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
 	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
+	out.Backup = (*garden.BackupProfile)(unsafe.Pointer(in.Backup))
 	return nil
 }
 
@@ -4636,6 +4635,7 @@ func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *S
 	out.BlockCIDRs = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
 	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
+	out.Backup = (*BackupProfile)(unsafe.Pointer(in.Backup))
 	return nil
 }
 

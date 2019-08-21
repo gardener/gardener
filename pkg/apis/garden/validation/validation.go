@@ -267,14 +267,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		}
 	}
 
-	if spec.Backup != nil {
-		if spec.Backup.Provider != cloud && (spec.Backup.Region == nil || len(*spec.Backup.Region) == 0) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("backup", "region"), "", "region must be specified for if backup provider is different from provider used in cloud profile"))
-		}
-
-		allErrs = append(allErrs, validateSecretReference(spec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
-	}
-
 	return allErrs
 }
 
@@ -682,7 +674,7 @@ func ValidateSeedUpdate(newSeed, oldSeed *garden.Seed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeed.Spec.Networks, oldSeed.Spec.Networks, field.NewPath("spec", "networks"))...)
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
 	return allErrs
@@ -727,6 +719,22 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	allErrs = append(allErrs, validateCIDRParse(networks...)...)
 	allErrs = append(allErrs, validateCIDROVerlap(networks, networks, false)...)
 
+	if seedSpec.Backup != nil {
+		if len(seedSpec.Backup.Provider) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "provider"), "must provide a backup cloud provider name"))
+		}
+
+		// TOADD: Currently, getting cloud provider of seed requires fetching cloudProfile which requires gardenClient.
+		// Hence we are not handling it here.
+		// This should change with new `coreV1alpha1.Seed` api as per https://github.com/gardener/gardener/pull/1284/files#diff-bf2774d9954baab517306db45a5b80bbR241-R243,
+		// and we will get direct seed cloud provider here.
+		//
+		//if seedSpec.Cloud.Type != seedSpec.Backup.Cloud &&( seedSpec.Backup.Region == nil || len(*seedSpec.Backup.Region) == 0) {
+		//	allErrs = append(allErrs, field.Invalid(fldPath.Child("backup", "region"), "", "region must be specified for if backup provider is different from provider used in `spec.cloud`"))
+		//}
+
+		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
+	}
 	return allErrs
 }
 
@@ -736,6 +744,24 @@ func validateCIDR(cidr gardencore.CIDR, fldPath *field.Path) field.ErrorList {
 	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, cidr, err.Error()))
 	}
+
+	return allErrs
+}
+
+// ValidateSeedSpecUpdate validates the specification updates of a Seed object.
+func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *garden.SeedSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks, oldSeedSpec.Networks, fldPath.Child("networks"))...)
+	if oldSeedSpec.Backup != nil {
+		if newSeedSpec.Backup != nil {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Provider, oldSeedSpec.Backup.Provider, fldPath.Child("backup", "provider"))...)
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Region, oldSeedSpec.Backup.Region, fldPath.Child("backup", "region"))...)
+		} else {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup, oldSeedSpec.Backup, fldPath.Child("backup"))...)
+		}
+	}
+	// If oldSeedSpec doesn't have backup configured, we allow to add it; but not the vice versa.
 
 	return allErrs
 }

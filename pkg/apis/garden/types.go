@@ -72,11 +72,6 @@ type CloudProfileSpec struct {
 	Packet *PacketProfile
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	CABundle *string
-	// Backup holds the object store configuration for the backups of shoot(currently only etcd).
-	// If it is not specified, then there won't be any backups taken for Shoots associated with this CloudProfile.
-	// If backup field is present in CloudProfile, then backups of the etcd from Shoot controlplane will be stored under the
-	// configured object store.
-	Backup *BackupProfile
 }
 
 // AWSProfile defines certain constraints and definitions for the AWS cloud.
@@ -471,6 +466,11 @@ type SeedSpec struct {
 	Visible *bool
 	// Protected prevent that the Seed Cluster can be used for regular Shoot cluster control planes.
 	Protected *bool
+	// Backup holds the object store configuration for the backups of shoot(currently only etcd).
+	// If it is not specified, then there won't be any backups taken for Shoots associated with this Seed.
+	// If backup field is present in Seed, then backups of the etcd from Shoot controlplane will be stored under the
+	// configured object store.
+	Backup *BackupProfile
 }
 
 // SeedStatus holds the most recently observed status of the Seed cluster.

@@ -1073,11 +1073,6 @@ func (in *CloudProfileSpec) DeepCopyInto(out *CloudProfileSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Backup != nil {
-		in, out := &in.Backup, &out.Backup
-		*out = new(BackupProfile)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 
@@ -3084,6 +3079,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 		in, out := &in.Protected, &out.Protected
 		*out = new(bool)
 		**out = **in
+	}
+	if in.Backup != nil {
+		in, out := &in.Backup, &out.Backup
+		*out = new(BackupProfile)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

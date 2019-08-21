@@ -3215,17 +3215,11 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
-					"backup": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Backup holds the object store configuration for the backups of shoot(currently only etcd). If it is not specified, then there won't be any backups taken for Shoots associated with this CloudProfile. If backup field is present in CloudProfile, then backups of the etcd from Shoot controlplane will be stored under the configured object store.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile"),
-						},
-					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
 	}
 }
 
@@ -6621,12 +6615,18 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Backup holds the object store configuration for the backups of shoot(currently only etcd). If it is not specified, then there won't be any backups taken for Shoots associated with this Seed. If backup field is present in Seed, then backups of the etcd from Shoot controlplane will be stored under the configured object store.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile"),
+						},
+					},
 				},
 				Required: []string{"cloud", "ingressDomain", "secretRef", "networks"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
