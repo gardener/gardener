@@ -64,7 +64,6 @@ const (
 	DashboardAvailableTimeout = 60 * time.Minute
 	InitializationTimeout     = 600 * time.Second
 	FinalizationTimeout       = 1800 * time.Second
-	DumpStateTimeout          = 5 * time.Minute
 
 	GuestBook                 = "guestbook"
 	RedisMaster               = "redis-master"
@@ -258,10 +257,6 @@ var _ = Describe("Shoot application testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, FinalizationTimeout)
-
-	CAfterEach(func(ctx context.Context) {
-		shootTestOperations.AfterEach(ctx)
-	}, DumpStateTimeout)
 
 	CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
 		err := shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), v1beta1.GardenerName, *downloadPath)

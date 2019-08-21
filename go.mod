@@ -105,6 +105,7 @@ require (
 	k8s.io/klog v0.3.1
 	k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
 	k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
+	k8s.io/metrics v0.0.0-20190816224245-c61a0d549e17
 	k8s.io/utils v0.0.0-20190506122338-8fab8cb257d5
 	sigs.k8s.io/controller-runtime v0.2.0-beta.2
 	sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2 // indirect

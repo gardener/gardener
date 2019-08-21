@@ -44,6 +44,7 @@ var (
 const (
 	InitializationTimeout = 15 * time.Minute
 	TearDownTimeout       = 5 * time.Minute
+	DumpStateTimeout      = 5 * time.Minute
 )
 
 func xOR(arg1, arg2 bool) bool {
@@ -143,6 +144,10 @@ var _ = Describe("Worker Suite", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenTestOperation.AfterEach(ctx)
+	}, DumpStateTimeout)
 
 	// This test creates and deletes shoots all together
 	CIt("should create a shoot with two diffent nodes", func(ctx context.Context) {

@@ -45,6 +45,7 @@ const (
 	PlantUpdateSecretTimeout = 90 * time.Second
 	PlantCreationTimeout     = 60 * time.Second
 	InitializationTimeout    = 20 * time.Second
+	LoggingTimeout           = 5 * time.Minute
 
 	KubeConfigKey = "kubeconfig"
 )
@@ -102,6 +103,7 @@ func createPlant(ctx context.Context, plantNamespace string, plantTest *PlantTes
 
 var _ = Describe("Plant testing", func() {
 	var (
+		gardenerTestOperation  *GardenerTestOperation
 		plantTest              *PlantTest
 		plantTestLogger        *logrus.Logger
 		validKubeConfigContent []byte
@@ -118,6 +120,9 @@ var _ = Describe("Plant testing", func() {
 
 			plantTest, err = NewPlantTest(*kubeconfigPath, *kubeconfigPathExternalCluster, plantObject, plantTestLogger)
 			Expect(err).NotTo(HaveOccurred())
+
+			gardenerTestOperation, err = NewGardenTestOperation(ctx, plantTest.GardenClient, plantTestLogger, nil)
+			Expect(err).ToNot(HaveOccurred())
 		}
 
 		var err error
@@ -125,6 +130,10 @@ var _ = Describe("Plant testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 	}, InitializationTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenerTestOperation.AfterEach(ctx)
+	}, LoggingTimeout)
 
 	CIt("Should create plant successfully", func(ctx context.Context) {
 		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, validKubeConfigContent)
