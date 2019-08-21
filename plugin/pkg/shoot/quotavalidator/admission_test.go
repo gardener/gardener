@@ -63,9 +63,9 @@ var _ = Describe("quotavalidator", func() {
 						},
 					},
 					Kubernetes: garden.KubernetesConstraints{
-						Versions: []string{
-							"1.0.1",
-							"1.1.1",
+						OfferedVersions: []garden.KubernetesVersion{
+							{Version: "1.0.1"},
+							{Version: "1.1.1"},
 						},
 					},
 				},
@@ -432,9 +432,9 @@ var _ = Describe("quotavalidator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{
-								"1.0.1",
-								"1.1.1",
+							OfferedVersions: []garden.KubernetesVersion{
+								{Version: "1.0.1"},
+								{Version: "1.1.1"},
 							},
 						},
 					},

@@ -3,7 +3,7 @@ metadata:
   name: hibernate-shoot
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: Tests the hiberantion of a shoot.
+  description: Tests the hibernation of a shoot.
 
   activeDeadlineSeconds: 1800
 

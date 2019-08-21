@@ -161,7 +161,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -513,7 +513,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -764,8 +764,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -775,13 +775,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -953,7 +953,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -1110,8 +1110,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1121,13 +1121,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1274,7 +1274,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -1423,8 +1423,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1434,13 +1434,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1573,7 +1573,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -1708,8 +1708,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1719,13 +1719,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1863,7 +1863,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						LoadBalancerProviders: []garden.OpenStackLoadBalancerProvider{
 							{
@@ -2042,8 +2042,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2053,13 +2053,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2185,7 +2185,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 						Kubernetes: garden.KubernetesConstraints{
-							Versions: []string{"1.6.4"},
+							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
 						},
 						MachineImages: []garden.MachineImage{
 							{
@@ -2344,8 +2344,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := "1.6.6"
-				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions, highestPatchVersion, "1.7.1", "1.7.2")
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2355,13 +2355,13 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := "1.81.5"
-				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions, "1.81.0", highestPatchVersion)
+				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

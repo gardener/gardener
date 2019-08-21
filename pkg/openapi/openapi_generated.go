@@ -139,6 +139,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig":                     schema_pkg_apis_garden_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints":                schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard":                  schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesVersion":                    schema_pkg_apis_garden_v1beta1_KubernetesVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage":                         schema_pkg_apis_garden_v1beta1_MachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImageVersion":                  schema_pkg_apis_garden_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType":                          schema_pkg_apis_garden_v1beta1_MachineType(ref),
@@ -5085,10 +5086,25 @@ func schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref common.ReferenceCa
 							},
 						},
 					},
+					"offeredVersions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesVersion"),
+									},
+								},
+							},
+						},
+					},
 				},
-				Required: []string{"versions"},
+				Required: []string{"offeredVersions"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesVersion"},
 	}
 }
 
@@ -5117,6 +5133,35 @@ func schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref common.ReferenceCall
 				Required: []string{"enabled"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_KubernetesVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubernetesVersion contains the version code and optional expiration date for a kubernetes version",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the kubernetes version",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this kubernetes version is not supported any more. This has the following implications: 1) A shoot that opted out of automatic kubernetes system updates and that is running this kubernetes version will be forcefully updated to the latest kubernetes patch version for the current minor version 2) Shoot's with this kubernetes version cannot be created",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -239,6 +239,26 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#DetermineLatestKubernetesVersion", func() {
+		It("should return the latest Kubernetes version", func() {
+			offeredVersions := []garden.KubernetesVersion{
+				{
+					Version: "1.0.0",
+				},
+				{
+					Version: "0.0.1",
+				},
+				{
+					Version: "0.2.1",
+				},
+			}
+
+			offeredVersion, err := DetermineLatestKubernetesVersion(offeredVersions)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(offeredVersion.Version).To(Equal("1.0.0"))
+		})
+	})
+
 	var (
 		trueVar  = true
 		falseVar = false

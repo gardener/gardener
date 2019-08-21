@@ -26,9 +26,8 @@ import (
 
 var _ = Describe("#SetDefaults_Shoot", func() {
 	var (
-		shoot *v1beta1.Shoot
+		shoot      *v1beta1.Shoot
 		networking = &v1beta1.Networking{}
-
 	)
 
 	JustBeforeEach(func() {

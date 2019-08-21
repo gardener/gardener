@@ -28,7 +28,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
-var _ = Describe("Conversion", func() {
+var _ = Describe("Machine Image Conversion", func() {
 	var (
 		expirationDate     = &metav1.Time{Time: time.Now().Add(time.Second * 20)}
 		v1betaMachineImage *MachineImage
@@ -338,3 +338,79 @@ var _ = Describe("Conversion", func() {
 		})
 	})
 })
+var _ = Describe("Kubernetes Constraint Conversion", func() {
+	var (
+		expirationDate             = &metav1.Time{Time: time.Now().Add(time.Second * 20)}
+		v1betaKubernetesConstraint *KubernetesConstraints
+	)
+
+	BeforeEach(func() {
+		v1betaKubernetesConstraint = &KubernetesConstraints{
+			OfferedVersions: []KubernetesVersion{
+				{
+					Version:        "0.0.9",
+					ExpirationDate: expirationDate,
+				},
+				{
+					Version:        "0.0.7",
+					ExpirationDate: expirationDate,
+				},
+				{
+					Version:        "0.0.8",
+					ExpirationDate: expirationDate,
+				},
+				{
+					Version: "0.0.6",
+				},
+			},
+		}
+	})
+
+	Describe("#V1Beta1KubernetesConstraintToGardenKubernetesConstraint", func() {
+		It("external kubernetes constraints should be properly converted to internal kubernetes constraints", func() {
+			v1betaKubernetesConstraint.Versions = []string{"0.0.1", "0.0.2", "0.0.8", "0.0.6"}
+			internal := &garden.KubernetesConstraints{}
+
+			Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(v1betaKubernetesConstraint, internal, nil)
+
+			// versions "0.0.1", "0.0.2" are distinct in the versions, "0.0.8", "0.0.6" exist also in the offered versions
+			Expect(internal.OfferedVersions).To(HaveLen(len(v1betaKubernetesConstraint.OfferedVersions) + len(v1betaKubernetesConstraint.Versions) - 2))
+			Expect(internal.OfferedVersions[0].Version).To(Equal("0.0.1"))
+			Expect(internal.OfferedVersions[0].ExpirationDate).To(BeNil())
+			// 0.0.8 should have expiration date - exists both in the versions and the offered versions
+			Expect(internal.OfferedVersions[2].ExpirationDate).ToNot(BeNil())
+			// 0.0.6 should have no expiration date - exists both in the versions and the offered versions
+			Expect(internal.OfferedVersions[3].ExpirationDate).To(BeNil())
+		})
+		It("external kubernetes constraints (no version set) should be properly converted to internal kubernetes constraints", func() {
+			internal := &garden.KubernetesConstraints{}
+
+			Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(v1betaKubernetesConstraint, internal, nil)
+
+			Expect(internal.OfferedVersions).To(HaveLen(len(v1betaKubernetesConstraint.OfferedVersions)))
+			Expect(internal.OfferedVersions[0].Version).To(Equal("0.0.9"))
+		})
+	},
+	)
+
+	Describe("#GardenKubernetesConstraintBackAndForth", func() {
+		It("assure expected structural change (when constraints.OfferedVersions is set in v1beta1) in resulting external version after back and forth conversion", func() {
+			v1betaKubernetesConstraint.Versions = []string{"0.0.1", "0.0.2"}
+
+			internal := &garden.KubernetesConstraints{}
+			Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(v1betaKubernetesConstraint, internal, nil)
+
+			v1betaKubernetesConstraintResult := &KubernetesConstraints{}
+
+			Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(internal, v1betaKubernetesConstraintResult, nil)
+
+			Expect(v1betaKubernetesConstraintResult).ToNot(Equal(internal))
+			Expect(v1betaKubernetesConstraintResult.OfferedVersions).To(HaveLen(len(v1betaKubernetesConstraint.Versions) + len(v1betaKubernetesConstraint.OfferedVersions)))
+			Expect(v1betaKubernetesConstraintResult.Versions).To(HaveLen(len(v1betaKubernetesConstraintResult.OfferedVersions)))
+			Expect(v1betaKubernetesConstraintResult.OfferedVersions[0].Version).To(Equal("0.0.1"))
+			Expect(v1betaKubernetesConstraintResult.Versions[0]).To(Equal("0.0.1"))
+			Expect(v1betaKubernetesConstraintResult.OfferedVersions[0].ExpirationDate).To(BeNil())
+		})
+	})
+},
+)

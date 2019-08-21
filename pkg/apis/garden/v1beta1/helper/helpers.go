@@ -475,7 +475,7 @@ func UpdateMachineImages(cloudProvider gardenv1beta1.CloudProvider, machineImage
 // to the given <currentVersion>. In case it does not find a newer patch version, it returns false. Otherwise,
 // true and the found version will be returned.
 func DetermineLatestKubernetesPatchVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
-	ok, newerVersions, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "~")
+	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "~")
 	if err != nil || !ok {
 		return ok, "", err
 	}
@@ -487,7 +487,7 @@ func DetermineLatestKubernetesPatchVersion(cloudProfile gardenv1beta1.CloudProfi
 // to the given <currentVersion>. In case it does not find a newer minor version, it returns false. Otherwise,
 // true and the found version will be returned.
 func DetermineNextKubernetesMinorVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
-	ok, newerVersions, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "^")
+	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "^")
 	if err != nil || !ok {
 		return ok, "", err
 	}
@@ -495,65 +495,121 @@ func DetermineNextKubernetesMinorVersion(cloudProfile gardenv1beta1.CloudProfile
 	return true, newerVersions[0], nil
 }
 
-// determineNextKubernetesVersions finds newer Kubernetes version in the <cloudProfile> compared
+// KubernetesVersionExistsInCloudProfile checks if the given Kubernetes version exists in the CloudProfile
+func KubernetesVersionExistsInCloudProfile(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, gardenv1beta1.KubernetesVersion, error) {
+	versions, err := GetKubernetesVersionsFromCloudProfile(cloudProfile)
+	if err != nil {
+		return false, gardenv1beta1.KubernetesVersion{}, err
+	}
+	for _, version := range versions {
+		ok, err := utils.CompareVersions(version.Version, "=", currentVersion)
+		if err != nil {
+			return false, gardenv1beta1.KubernetesVersion{}, err
+		}
+		if ok {
+			return true, version, nil
+		}
+	}
+	return false, gardenv1beta1.KubernetesVersion{}, nil
+}
+
+// DetermineKubernetesVersions finds newer Kubernetes versions in the <cloudProfile> compared
 // with the <operator> to the given <currentVersion>. The <operator> has to be a github.com/Masterminds/semver
 // range comparison symbol. In case it does not find a newer version, it returns false. Otherwise,
 // true and the found version will be returned.
-func determineNextKubernetesVersions(cloudProfile gardenv1beta1.CloudProfile, currentVersion, operator string) (bool, []string, error) {
-	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
-	if err != nil {
-		return false, []string{}, err
-	}
-
+func determineNextKubernetesVersions(cloudProfile gardenv1beta1.CloudProfile, currentVersion, operator string) (bool, []string, []gardenv1beta1.KubernetesVersion, error) {
 	var (
-		versions      = []string{}
-		newerVersions = []string{}
+		newerVersions       = []gardenv1beta1.KubernetesVersion{}
+		newerVersionsString = []string{}
 	)
 
-	switch cloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		for _, version := range cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	case gardenv1beta1.CloudProviderAzure:
-		for _, version := range cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	case gardenv1beta1.CloudProviderGCP:
-		for _, version := range cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	case gardenv1beta1.CloudProviderOpenStack:
-		for _, version := range cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	case gardenv1beta1.CloudProviderAlicloud:
-		for _, version := range cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	case gardenv1beta1.CloudProviderPacket:
-		for _, version := range cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions {
-			versions = append(versions, version)
-		}
-	default:
-		return false, []string{}, fmt.Errorf("unknown cloud provider %s", cloudProvider)
+	versions, err := GetKubernetesVersionsFromCloudProfile(cloudProfile)
+	if err != nil {
+		return false, []string{}, []gardenv1beta1.KubernetesVersion{}, err
 	}
-
 	for _, version := range versions {
-		ok, err := utils.CompareVersions(version, operator, currentVersion)
+		ok, err := utils.CompareVersions(version.Version, operator, currentVersion)
 		if err != nil {
-			return false, []string{}, err
+			return false, []string{}, []gardenv1beta1.KubernetesVersion{}, err
 		}
-		if version != currentVersion && ok {
+		if version.Version != currentVersion && ok {
 			newerVersions = append(newerVersions, version)
+			newerVersionsString = append(newerVersionsString, version.Version)
 		}
 	}
 
 	if len(newerVersions) == 0 {
-		return false, []string{}, nil
+		return false, []string{}, []gardenv1beta1.KubernetesVersion{}, nil
 	}
 
-	return true, newerVersions, nil
+	return true, newerVersionsString, newerVersions, nil
+}
+
+// GetKubernetesVersionsFromCloudProfile returns the Kubernetes Versions from a CloudProfile
+func GetKubernetesVersionsFromCloudProfile(cloudProfile gardenv1beta1.CloudProfile) ([]gardenv1beta1.KubernetesVersion, error) {
+	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
+	if err != nil {
+		return []gardenv1beta1.KubernetesVersion{}, err
+	}
+
+	versions := []gardenv1beta1.KubernetesVersion{}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, version := range cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, version := range cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, version := range cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		for _, version := range cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, version := range cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, version := range cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions {
+			versions = append(versions, version)
+		}
+	default:
+		return []gardenv1beta1.KubernetesVersion{}, fmt.Errorf("unknown cloud provider %s", cloudProvider)
+	}
+	return versions, nil
+}
+
+// SetKubernetesVersions sets the Kubernetes Versions to the CloudProfile
+func SetKubernetesVersions(profile *gardenv1beta1.CloudProfile, offeredVersions []gardenv1beta1.KubernetesVersion, versions []string) error {
+	cloudProvider, err := DetermineCloudProviderInProfile(profile.Spec)
+	if err != nil {
+		return err
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		profile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = offeredVersions
+		profile.Spec.AWS.Constraints.Kubernetes.Versions = versions
+	case gardenv1beta1.CloudProviderGCP:
+		profile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = offeredVersions
+		profile.Spec.GCP.Constraints.Kubernetes.Versions = versions
+	case gardenv1beta1.CloudProviderOpenStack:
+		profile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = offeredVersions
+		profile.Spec.OpenStack.Constraints.Kubernetes.Versions = versions
+	case gardenv1beta1.CloudProviderAlicloud:
+		profile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = offeredVersions
+		profile.Spec.Alicloud.Constraints.Kubernetes.Versions = versions
+	case gardenv1beta1.CloudProviderPacket:
+		profile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = offeredVersions
+		profile.Spec.Packet.Constraints.Kubernetes.Versions = versions
+	}
+	return nil
 }
 
 type ShootedSeed struct {
