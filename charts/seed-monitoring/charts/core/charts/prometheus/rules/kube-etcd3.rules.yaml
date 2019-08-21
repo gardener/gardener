@@ -65,6 +65,30 @@ groups:
       description: Etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures
         within the last hour.
       summary: High number of failed etcd proposals
-
+  
   - record: shoot:etcd_object_counts:sum_by_resource
     expr: sum(etcd_object_counts) by (resource)
+  
+  # etcd backup failure alerts
+  - alert: KubeEtcdDeltaBackupFailed
+    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Incr"}[15m]) < 1 and ON(job,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Incr",succeeded="true"}[15m]) < 1
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: No delta snapshot for the past 15 minutes.
+      summary: Etcd delta snapshot failure.
+  - alert: KubeEtcdFullBackupFailed
+    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Full"}[1455m]) < 1 and ON(job,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Full",succeeded="true"}[1455m]) < 1
+    labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+    annotations:
+        description: No full snapshot for the past 24 hours 15minutes.
+        summary: Etcd full snapshot failure.
+
+  

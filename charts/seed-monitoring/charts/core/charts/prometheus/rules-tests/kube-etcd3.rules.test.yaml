@@ -21,6 +21,16 @@ tests:
   # KubeEtcd3HighNumberOfFailedProposals
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
     values: '0+1x81 81+0x39'
+  # KubeEtcdDeltaBackupFailed
+  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Incr"}'
+    values: '0+0x30'
+  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Incr",succeeded="true"}'
+    values: '0+0x30'
+  # KubeEtcdFullBackupFailed
+  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Full"}'
+    values: '0+0x3000'
+  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Full",succeeded="true"}'
+    values: '0+0x3000'
   alert_rule_test:
   - eval_time: 5m
     alertname: KubeEtcdMainDown
@@ -77,6 +87,31 @@ tests:
         pod: etcd
         job: kube-etcd3
       exp_annotations:
-        description: Etcd3 pod etcd has seen 81 proposal failures
-          within the last hour.
+        description: Etcd3 pod etcd has seen 81 proposal failures within the last hour.
         summary: High number of failed etcd proposals
+  - eval_time: 15m
+    alertname: KubeEtcdDeltaBackupFailed
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        kind: Incr
+        job: kube-etcd3-backup-restore  
+        visibility: operator
+      exp_annotations:
+        description: No delta snapshot for the past 15 minutes.
+        summary: Etcd delta snapshot failure.     
+  - eval_time: 1455m
+    alertname: KubeEtcdFullBackupFailed
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+        kind: Full
+        job: kube-etcd3-backup-restore
+      exp_annotations:
+        description: No full snapshot for the past 24 hours 15minutes.
+        summary: Etcd full snapshot failure.     
