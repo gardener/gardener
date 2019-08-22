@@ -71,7 +71,7 @@ groups:
   
   # etcd backup failure alerts
   - alert: KubeEtcdDeltaBackupFailed
-    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Incr"}[15m]) > 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Incr",succeeded="true"}[15m]) < 1
+    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Incr"}[15m]) >= 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Incr",succeeded="true"}[15m]) < 1
     labels:
       service: etcd
       severity: critical
@@ -81,7 +81,7 @@ groups:
       description: No delta snapshot for the past 15 minutes.
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
-    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Full"}[1455m]) > 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Full",succeeded="true"}[1455m]) < 1
+    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Full"}[1455m]) >= 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Full",succeeded="true"}[1455m]) < 1
     labels:
         service: etcd
         severity: critical
