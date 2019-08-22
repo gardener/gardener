@@ -22,14 +22,14 @@ tests:
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
     values: '0+1x81 81+0x39'
   # KubeEtcdDeltaBackupFailed
-  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Incr"}'
-    values: '0+0x30'
-  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Incr",succeeded="true"}'
+  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Incr"}'
+    values: '0+1x30'
+  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Incr",succeeded="true"}'
     values: '0+0x30'
   # KubeEtcdFullBackupFailed
-  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",kind="Full"}'
-    values: '0+0x3000'
-  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",kind="Full",succeeded="true"}'
+  - series: 'etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Full"}'
+    values: '0+1x3000'
+  - series: 'etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Full",succeeded="true"}'
     values: '0+0x3000'
   alert_rule_test:
   - eval_time: 5m
@@ -96,6 +96,7 @@ tests:
         service: etcd
         severity: critical
         type: seed
+        role: main
         kind: Incr
         job: kube-etcd3-backup-restore  
         visibility: operator
@@ -109,6 +110,7 @@ tests:
         service: etcd
         severity: critical
         type: seed
+        role: main
         visibility: operator
         kind: Full
         job: kube-etcd3-backup-restore
