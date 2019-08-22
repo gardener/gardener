@@ -900,6 +900,11 @@ k8s.io/kube-openapi/pkg/generators
 k8s.io/kube-openapi/pkg/generators/rules
 k8s.io/kube-openapi/pkg/util/sets
 k8s.io/kube-openapi/pkg/schemaconv
+# k8s.io/metrics v0.0.0-20190816224245-c61a0d549e17
+k8s.io/metrics/pkg/apis/metrics/v1beta1
+k8s.io/metrics/pkg/client/clientset/versioned/scheme
+k8s.io/metrics/pkg/apis/metrics
+k8s.io/metrics/pkg/apis/metrics/v1alpha1
 # k8s.io/utils v0.0.0-20190506122338-8fab8cb257d5
 k8s.io/utils/integer
 k8s.io/utils/buffer

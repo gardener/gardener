@@ -21,6 +21,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Finalizer checks and removes the finalizers of given resource.
+type Finalizer interface {
+	// Finalize removes the resource finalizers (so it can be garbage collected).
+	Finalize(ctx context.Context, c client.Client, obj runtime.Object) error
+
+	// HasFinalizers checks whether the given resource has finalizers.
+	HasFinalizers(obj runtime.Object) (bool, error)
+}
+
 // Cleaner is capable of deleting and finalizing resources.
 type Cleaner interface {
 	// Clean cleans the given resource(s). It first tries to delete them. If they are 'hanging'

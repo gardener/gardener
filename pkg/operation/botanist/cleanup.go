@@ -158,10 +158,10 @@ var (
 	NamespaceErrorToleration = utilclient.TolerateErrors(apierrors.IsConflict)
 )
 
-func cleanResourceFn(c client.Client, list runtime.Object, opts ...utilclient.CleanOptionFunc) flow.TaskFn {
+func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list runtime.Object, opts ...utilclient.CleanOptionFunc) flow.TaskFn {
 	return func(ctx context.Context) error {
 		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
-			if err := utilclient.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
+			if err := cleanOps.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
 				if utilclient.AreObjectsRemaining(err) {
 					return retry.MinorError(err)
 				}
@@ -174,21 +174,27 @@ func cleanResourceFn(c client.Client, list runtime.Object, opts ...utilclient.Cl
 
 // CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
-	c := b.K8sShootClient.Client()
+	var (
+		c   = b.K8sShootClient.Client()
+		ops = utilclient.DefaultCleanOps()
+	)
 
 	return flow.Parallel(
-		cleanResourceFn(c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
 
 // CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
-	c := b.K8sShootClient.Client()
+	var (
+		c   = b.K8sShootClient.Client()
+		ops = utilclient.DefaultCleanOps()
+	)
 
 	return flow.Parallel(
-		cleanResourceFn(c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
-		cleanResourceFn(c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
+		cleanResourceFn(ops, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
+		cleanResourceFn(ops, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
 	)(ctx)
 }
 
@@ -198,19 +204,31 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
+	ops := utilclient.DefaultCleanOps()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes, NamespaceErrorToleration),
-		cleanResourceFn(c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 	)(ctx)
+}
+
+// CleanShootNamespaces deletes all non-system namespaces in the Shoot cluster.
+// It assumes that all workload resources are cleaned up in previous step(s).
+func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
+	var (
+		c                 = b.K8sShootClient.Client()
+		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.K8sShootClient.Kubernetes().CoreV1())
+		namespaceCleanOps = utilclient.NewCleanOps(namespaceCleaner, utilclient.DefaultGoneEnsurer())
+	)
+
+	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes, NamespaceErrorToleration)(ctx)
 }
