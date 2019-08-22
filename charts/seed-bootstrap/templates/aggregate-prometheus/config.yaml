@@ -10,7 +10,7 @@ data:
       evaluation_interval: 30s
       scrape_interval: 30s
       external_labels:
-        seed: seed
+        seed: {{ .Values.aggregatePrometheus.seed }}
 
     rule_files:
     - /etc/prometheus/rules/*.yaml
@@ -19,7 +19,7 @@ data:
       - kubernetes_sd_configs:
         - role: endpoints
           namespaces:
-            names: 
+            names:
             - garden
         relabel_configs:
         - source_labels: [ __meta_kubernetes_service_label_component ]

@@ -442,6 +442,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		},
 		"aggregatePrometheus": map[string]interface{}{
 			"storage": seed.GetValidVolumeSize("20Gi"),
+			"seed":    seed.Info.Name,
 		},
 		"elastic-kibana-curator": map[string]interface{}{
 			"enabled": loggingEnabled,
