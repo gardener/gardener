@@ -183,7 +183,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	backupInfrastructureJSON, _ := json.Marshal(backupInfrastructure)
 	backupInfrastructureLogger.Debugf(string(backupInfrastructureJSON))
 
-	op, err := operation.NewWithBackupInfrastructure(backupInfrastructure, backupInfrastructureLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
+	op, err := operation.NewWithBackupInfrastructure(backupInfrastructure, c.config, backupInfrastructureLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		backupInfrastructureLogger.Errorf("Could not initialize a new operation: %s", err.Error())
 		return false, err

@@ -23,7 +23,7 @@ import (
 
 	"k8s.io/client-go/util/retry"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
@@ -47,9 +47,11 @@ func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant
 		return nil, fmt.Errorf("Please specify the kubeconfig path for the external cluster correctly")
 	}
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, client.Options{
-		Scheme: kubernetes.GardenScheme,
-	})
+	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, kubernetes.WithClientOptions(
+		client.Options{
+			Scheme: kubernetes.GardenScheme,
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}

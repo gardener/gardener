@@ -17,9 +17,10 @@ package gardener_rbac_test
 import (
 	"context"
 	"flag"
+	"time"
+
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/test/integration/framework"
@@ -72,9 +73,11 @@ var _ = Describe("RBAC testing", func() {
 		validateFlags()
 
 		var err error
-		gardenClient, err = kubernetes.NewClientFromFile("", *kubeconfigPath, client.Options{
-			Scheme: kubernetes.GardenScheme,
-		})
+		gardenClient, err = kubernetes.NewClientFromFile("", *kubeconfigPath, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.GardenScheme,
+			}),
+		)
 		Expect(err).ToNot(HaveOccurred())
 
 		testLogger := logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)

@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/client-go/discovery"
 	"os"
 	"time"
+
+	"k8s.io/client-go/discovery"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -178,13 +179,18 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		return nil, err
 	}
 
-	k8sGardenClient, err := kubernetes.NewForConfig(restCfg, client.Options{
-		Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
-		Scheme: kubernetes.GardenScheme,
-	})
+	k8sGardenClient, err := kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(restCfg),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
+				Scheme: kubernetes.GardenScheme,
+			}),
+	)
 	if err != nil {
 		return nil, err
 	}
+
 	k8sGardenClientLeaderElection, err := k8s.NewForConfig(restCfg)
 	if err != nil {
 		return nil, err

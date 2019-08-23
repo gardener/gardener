@@ -104,9 +104,11 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 		}
 
 		seedSecretRef := seed.Spec.SecretRef
-		seedClient, err = kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{
-			Scheme: kubernetes.SeedScheme,
-		})
+		seedClient, err = kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.SeedScheme,
+			}),
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not construct Seed client")
 		}
@@ -122,9 +124,11 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 		if err != nil {
 			return nil, errors.Wrap(err, "could not add schemes to shoot scheme")
 		}
-		shootClient, err = kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, client.Options{
-			Scheme: shootScheme,
-		})
+		shootClient, err = kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: shootScheme,
+			}),
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not construct Shoot client")
 		}

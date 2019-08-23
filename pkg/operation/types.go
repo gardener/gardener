@@ -39,6 +39,7 @@ import (
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
+	Config                    *config.ControllerManagerConfiguration
 	Logger                    *logrus.Entry
 	GardenerInfo              *gardenv1beta1.Gardener
 	Secrets                   map[string]*corev1.Secret

@@ -39,9 +39,11 @@ func NewShootGardenerTest(kubeconfig string, shoot *v1beta1.Shoot, logger *logru
 		return nil, fmt.Errorf("please specify the kubeconfig path correctly")
 	}
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, client.Options{
-		Scheme: kubernetes.GardenScheme,
-	})
+	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, kubernetes.WithClientOptions(
+		client.Options{
+			Scheme: kubernetes.GardenScheme,
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -129,7 +129,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	o, err := operation.New(shoot, log, c.k8sGardenClient, c.k8sGardenInformers.Garden().V1beta1(), c.identity, c.secrets, c.imageVector, c.config.ShootBackup)
+	o, err := operation.New(shoot, c.config, log, c.k8sGardenClient, c.k8sGardenInformers.Garden().V1beta1(), c.identity, c.secrets, c.imageVector, c.config.ShootBackup)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

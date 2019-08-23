@@ -74,9 +74,11 @@ var _ = Describe("Shoot reconciliation testing", func() {
 		testLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
 
 		var err error
-		gardenClient, err = kubernetes.NewClientFromFile("", *kubeconfigPath, client.Options{
-			Scheme: kubernetes.GardenScheme,
-		})
+		gardenClient, err = kubernetes.NewClientFromFile("", *kubeconfigPath, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.GardenScheme,
+			}),
+		)
 		Expect(err).ToNot(HaveOccurred())
 
 		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger, nil)
