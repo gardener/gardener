@@ -9,16 +9,24 @@ is divided into the following major subdirectories:
 
 ```console
 ├── framework
+├── gardener
+│   ├── rbac
+│   └── reconcile
+├── plants
 ├── resources
 │   ├── charts
 │   ├── repository
 │   └── templates
-└── seeds
-    ├── logging
-    ├── networkpolicies
+├── scheduler
+├── seeds
+│   └── logging
 └── shoots
     ├── applications
-    └── operations
+    ├── maintenance
+    ├── operations
+    ├── ts
+    ├── update
+    └── worker
 ```
 
 In the following sections we will briefly describe the contents of each subdirectory.
@@ -30,87 +38,17 @@ The framework directory contains all the necessary functions / utilities for run
 ```console
 framework
 ├── common.go
+├── dump.go
 ├── errors.go
-├── framework_test.go
+├── garden_operation.go
 ├── helm_utils.go
-├── networkpolicies
 ├── plant_operations.go
-├── shoot_app.go
+├── scheduler_operations.go
+├── shoot_maintenance_operations.go
 ├── shoot_operations.go
 ├── types.go
-└── utils.go
-```
-
-### NetworkPolicies
-
-The networkpolicies directory contains all information for generation of Network policies E2E test suites.
-
-```console
-networkpolicies
-├── agnostic.go
-├── alicloud.go
-├── aws.go
-├── azure.go
-├── doc.go
-├── gcp.go
-├── netpol-gen
-│   ├── LICENSE_BOILERPLATE.txt
-│   ├── generators
-│   │   ├── networkpolicies.go
-│   │   ├── registry.go
-│   │   └── tags.go
-│   └── netpol-gen.go
-├── networkpolicies_suite_test.go
-├── openstack.go
-├── rule_builder.go
-├── rule_builder_test.go
-├── shared_resources.go
-├── types.go
-└── types_test.go
-```
-
-If a new provider is added, it must implement the `CloudAwarePodInfo` interface from `pod_info.go`, have the correct tags like
-
-```
-// AWSNetworkPolicy holds aws-specific network policy settings.
-// +gen-netpoltests=true
-// +gen-packagename=aws
-type AWSNetworkPolicy struct {
-}
-```
-
-and have a instance of that struct added to `defaultRegistry()` function in `netpol-gen/generators/registry.go`.
-
-After this code generation should be ran with
-
-```console
-go generate ./test/integration/framework/networkpolicies
-```
-
-producing a generated test suite like
-
-```console
-test/integration/seeds/networkpolicies
-├── alicloud
-│   ├── doc.go
-│   ├── networkpolicies_suite_test.go
-│   └── networkpolicy_alicloud_test.go
-├── aws
-│   ├── doc.go
-│   ├── networkpolicies_suite_test.go
-│   └── networkpolicy_aws_test.go
-├── azure
-│   ├── doc.go
-│   ├── networkpolicies_suite_test.go
-│   └── networkpolicy_azure_test.go
-├── gcp
-│   ├── doc.go
-│   ├── networkpolicies_suite_test.go
-│   └── networkpolicy_gcp_test.go
-└── openstack
-    ├── doc.go
-    ├── networkpolicies_suite_test.go
-    └── networkpolicy_openstack_test.go
+├── utils.go
+└── worker_operations.go
 ```
 
 ### Resources
@@ -120,13 +58,11 @@ The resources directory contains all the templates, helm config files (e.g., rep
 ```console
 resources
 ├── charts
-│   └── redis
 ├── repository
-│   ├── cache
-│   └── repositories.yaml
+│   └── repositories.yaml
 └── templates
-    └── guestbook-app.yaml.tp
-    └── (...)
+    ├── guestbook-app.yaml.tpl
+    └── logger-app.yaml.tpl
 ```
 
 There are two special directories that are dynamically filled with the correct test files:
@@ -266,47 +202,6 @@ To use an existing shoot, the following command can be used:
 ```console
 cd test/integration/seeds/logging
 go test -kubeconfig $HOME/.kube/config -shootName "test-zefc8aswue" -shootNamespace "garden-dev" -ginkgo.v -ginkgo.progress
-```
-
-### Seed NetworkPolicies
-
-Seed Network Policies tests are meant to test the Network Poilicies for seed clusters. It's possible run only againts an existing shoot by specifying the `shootName` and `shootNamespace`.
-
-Below are the flags used for running the logging tests:
-
-```go
-// Required kubeconfig for the garden cluster
-kubeconfig           = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-
-// Shoot options if running tests against an existing shoot
-shootName            = flag.String("shootName", "", "the name of the shoot we want to test")
-shootNamespace       = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-
-// If specified the test will clean up the created shoot
-cleanup              = flag.Bool("cleanup", false, "deletes all created e2e resources after the test suite is done")
-```
-
-#### Example Run
-
-To use an existing shoot, running on AWS, the following command can be used:
-
-```console
-cd test/integration/seeds/networkpolicies
-ginkgo \
-    --progress \
-    -v \
-    --noColor \
-    --nodes=25 \
-    --randomizeAllSpecs \
-    --randomizeSuites \
-    --failOnPending \
-    --trace \
-    --race \
-    aws -- \
-    --kubeconfig=$HOME/.kube/config \
-    --shootName="netpolicy" \
-    --shootNamespace="garden-dev" \
-    --cleanup=true
 ```
 
 ## Gardener
