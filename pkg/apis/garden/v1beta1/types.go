@@ -727,6 +727,8 @@ type ShootStatus struct {
 // CalicoNetworkType is a constant for the calico network type.
 const CalicoNetworkType = "calico"
 
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
+
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	gardencorev1alpha1.K8SNetworks `json:",inline"`
@@ -783,6 +785,8 @@ type AWSCloud struct {
 	// Zones is a list of availability zones to deploy the Shoot cluster to.
 	Zones []string `json:"zones"`
 }
+
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
@@ -841,6 +845,8 @@ type AlicloudVPC struct {
 	CIDR *gardencorev1alpha1.CIDR `json:"cidr,omitempty"`
 }
 
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
+
 // AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
 type AlicloudNetworks struct {
 	gardencorev1alpha1.K8SNetworks `json:",inline"`
@@ -873,6 +879,8 @@ type PacketCloud struct {
 	// Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.
 	Zones []string `json:"zones"`
 }
+
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
 
 // PacketNetworks holds information about the Kubernetes and infrastructure networks.
 type PacketNetworks struct {
@@ -909,6 +917,8 @@ type AzureResourceGroup struct {
 	// Name is the name of an existing resource group.
 	Name string `json:"name"`
 }
+
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
@@ -952,6 +962,8 @@ type GCPCloud struct {
 	// Zones is a list of availability zones to deploy the Shoot cluster to.
 	Zones []string `json:"zones"`
 }
+
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
@@ -1018,6 +1030,8 @@ type OpenStackLoadBalancerClass struct {
 	// +optional
 	SubnetID *string `json:"subnetID,omitempty"`
 }
+
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {

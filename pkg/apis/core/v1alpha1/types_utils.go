@@ -75,6 +75,8 @@ const (
 // CIDR is a string alias.
 type CIDR string
 
+// Adding new CIDRs to the struct bellow must be kept in sync with pkg/registry/garden/shoot/canonicalize.go
+
 // K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type K8SNetworks struct {
 	// Nodes is the CIDR of the node network.

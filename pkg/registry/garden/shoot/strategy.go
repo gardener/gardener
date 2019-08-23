@@ -154,6 +154,8 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 }
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
+	shoot := obj.(*garden.Shoot)
+	canonicalizeShootCIDRs(&shoot.Spec)
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
