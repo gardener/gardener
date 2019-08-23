@@ -19,18 +19,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
-	"github.com/gardener/gardener/pkg/utils/retry"
-
-	"github.com/gardener/gardener/pkg/operation/common"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/migration"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +39,7 @@ import (
 
 // InfrastructureDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of an infrastructure resource.
-const InfrastructureDefaultTimeout = 10 * time.Minute
+const InfrastructureDefaultTimeout = 5 * time.Minute
 
 // DeployInfrastructure creates the `Infrastructure` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.

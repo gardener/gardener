@@ -20,8 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
-
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -35,9 +33,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -419,7 +417,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 
 // ExtensionDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of this extension resource.
-const ExtensionDefaultTimeout = 10 * time.Minute
+const ExtensionDefaultTimeout = 3 * time.Minute
 
 // MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in extensions is also represented in the registration.
 func MergeExtensions(registrations []corev1alpha1.ControllerRegistration, extensions []gardenv1beta1.Extension, namespace string) (map[string]Extension, error) {

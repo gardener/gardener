@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,36 @@ const (
 // SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
 func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment map[string]string) *Terraformer {
 	t.variablesEnvironment = tfvarsEnvironment
+	return t
+}
+
+// SetJobBackoffLimit configures the backoff limit for the Terraformer job.
+func (t *Terraformer) SetJobBackoffLimit(limit int32) *Terraformer {
+	t.jobBackoffLimit = limit
+	return t
+}
+
+// SetActiveDeadlineSeconds configures the active deadline seconds for the Terraformer pod and job.
+func (t *Terraformer) SetActiveDeadlineSeconds(adl int64) *Terraformer {
+	t.activeDeadlineSeconds = adl
+	return t
+}
+
+// SetDeadlineCleaning configures the deadline while waiting for a clean environment.
+func (t *Terraformer) SetDeadlineCleaning(d time.Duration) *Terraformer {
+	t.deadlineCleaning = d
+	return t
+}
+
+// SetDeadlinePod configures the deadline while waiting for a the Terraformer pod.
+func (t *Terraformer) SetDeadlinePod(d time.Duration) *Terraformer {
+	t.deadlinePod = d
+	return t
+}
+
+// SetDeadlineJob configures the deadline while waiting for a the Terraformer job.
+func (t *Terraformer) SetDeadlineJob(d time.Duration) *Terraformer {
+	t.deadlineJob = d
 	return t
 }
 

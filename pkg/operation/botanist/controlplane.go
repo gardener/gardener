@@ -344,7 +344,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 // ControlPlaneDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of a control plane resource.
-const ControlPlaneDefaultTimeout = 10 * time.Minute
+const ControlPlaneDefaultTimeout = 3 * time.Minute
 
 // DeployControlPlane creates the `ControlPlane` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.

@@ -21,17 +21,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/sirupsen/logrus"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,7 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -101,6 +98,13 @@ func New(
 		stateName:     prefix + common.TerraformerStateSuffix,
 		podName:       fmt.Sprintf("%s-%s", prefix+common.TerraformerPodSuffix, podSuffix),
 		jobName:       prefix + common.TerraformerJobSuffix,
+
+		activeDeadlineSeconds: int64(3600),
+		jobBackoffLimit:       int32(3),
+
+		deadlineCleaning: 10 * time.Minute,
+		deadlinePod:      10 * time.Minute,
+		deadlineJob:      20 * time.Minute,
 	}
 }
 
@@ -312,8 +316,8 @@ func (t *Terraformer) deployTerraformerJob(ctx context.Context, scriptName strin
 
 	return kutil.CreateOrUpdate(ctx, t.client, job, func() error {
 		var (
-			activeDeadlineSeconds = int64(3600)
-			backoffLimit          = int32(3)
+			activeDeadlineSeconds = t.activeDeadlineSeconds
+			backoffLimit          = t.jobBackoffLimit
 			spec                  = &job.Spec
 		)
 
@@ -367,8 +371,8 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 		tfStateVolumeMountPath = "tf-state-in"
 	)
 
-	activeDeadlineSeconds := int64(1800)
-	terminationGracePeriodSeconds := int64(1800)
+	activeDeadlineSeconds := t.activeDeadlineSeconds
+	terminationGracePeriodSeconds := t.activeDeadlineSeconds
 	shCommand := fmt.Sprintf("sh /terraform.sh %s", scriptName)
 	if scriptName != "validate" {
 		shCommand += " 2>&1; [[ -f /success ]] && exit 0 || exit 1"
@@ -467,7 +471,7 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 	case result := <-logChan:
 		return result, nil
 	case <-time.After(2 * time.Minute):
-		return nil, fmt.Errorf("Timeout when reading the logs of all pds created by Terraform job '%s'", t.jobName)
+		return nil, fmt.Errorf("Timeout when reading the logs of all pods created by Terraform job '%s'", t.jobName)
 	}
 }
 

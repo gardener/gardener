@@ -19,14 +19,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +36,7 @@ import (
 
 // WorkerDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of a worker resource.
-const WorkerDefaultTimeout = 30 * time.Minute
+const WorkerDefaultTimeout = 5 * time.Minute
 
 // DeployWorker creates the `Worker` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the resource successfully.
@@ -115,7 +113,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 }
 
 // DestroyWorker deletes the `Worker` extension resource in the shoot namespace in the seed cluster,
-// and it waits for a maximum of 30m until it is deleted.
+// and it waits for a maximum of 5m until it is deleted.
 func (b *Botanist) DestroyWorker(ctx context.Context) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: b.Shoot.Info.Name}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
