@@ -30,7 +30,7 @@ import (
 // waitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
 // of the Terraformer.
 func (t *Terraformer) waitForCleanEnvironment(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, t.deadlineCleaning)
 	defer cancel()
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -63,7 +63,7 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 	// If we can't read the terminated state of the container we simply force that the Terraform
 	// job gets created.
 	var exitCode int32 = 2
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, t.deadlinePod)
 	defer cancel()
 
 	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -102,7 +102,7 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 // waitForJob waits for the Terraform Job to be completed (either successful or failed). It checks the
 // Job status field to identify the state.
 func (t *Terraformer) waitForJob(ctx context.Context) bool {
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, t.deadlineJob)
 	defer cancel()
 
 	var succeeded = false

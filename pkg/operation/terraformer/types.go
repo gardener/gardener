@@ -15,6 +15,8 @@
 package terraformer
 
 import (
+	"time"
+
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -51,6 +53,13 @@ type Terraformer struct {
 	jobName              string
 	variablesEnvironment map[string]string
 	configurationDefined bool
+
+	jobBackoffLimit       int32
+	activeDeadlineSeconds int64
+
+	deadlineCleaning time.Duration
+	deadlinePod      time.Duration
+	deadlineJob      time.Duration
 }
 
 const numberOfConfigResources = 3

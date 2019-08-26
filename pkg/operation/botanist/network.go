@@ -33,7 +33,7 @@ import (
 
 // NetworkDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of a network resource.
-const NetworkDefaultTimeout = 10 * time.Minute
+const NetworkDefaultTimeout = 3 * time.Minute
 
 // DeployNetwork creates the `Network` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.
