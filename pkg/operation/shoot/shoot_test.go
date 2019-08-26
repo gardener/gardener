@@ -16,7 +16,6 @@ package shoot_test
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -97,8 +96,8 @@ var _ = Describe("shoot", func() {
 				Expect(ConstructInternalClusterDomain(shootName, shootProject, internalDomain)).To(Equal(expected))
 			},
 
-			Entry("with internal domain key", "foo", "bar", "internal.nip.io", "api.foo.bar.internal.nip.io"),
-			Entry("without internal domain key", "foo", "bar", "nip.io", "api.foo.bar.internal.nip.io"),
+			Entry("with internal domain key", "foo", "bar", "internal.nip.io", "foo.bar.internal.nip.io"),
+			Entry("without internal domain key", "foo", "bar", "nip.io", "foo.bar.internal.nip.io"),
 		)
 
 		Describe("#ConstructExternalClusterDomain", func() {
@@ -108,9 +107,8 @@ var _ = Describe("shoot", func() {
 
 			It("should return the constructed domain", func() {
 				var (
-					domain         = "foo.bar.com"
-					expectedDomain = fmt.Sprintf("api.%s", domain)
-					shoot          = &gardenv1beta1.Shoot{
+					domain = "foo.bar.com"
+					shoot  = &gardenv1beta1.Shoot{
 						Spec: gardenv1beta1.ShootSpec{
 							DNS: gardenv1beta1.DNS{
 								Domain: &domain,
@@ -119,7 +117,7 @@ var _ = Describe("shoot", func() {
 					}
 				)
 
-				Expect(ConstructExternalClusterDomain(shoot)).To(Equal(&expectedDomain))
+				Expect(ConstructExternalClusterDomain(shoot)).To(Equal(&domain))
 			})
 		})
 

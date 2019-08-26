@@ -546,3 +546,9 @@ func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, sho
 
 	return ReadServiceAccountSigningKeySecret(secret)
 }
+
+// GetAPIServerDomain returns the fully qualified domain name of for the api-server for the Shoot cluster. The
+// end result is 'api.<domain>'.
+func GetAPIServerDomain(domain string) string {
+	return fmt.Sprintf("%s.%s", APIServerPrefix, domain)
+}

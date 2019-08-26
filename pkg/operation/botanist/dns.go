@@ -49,7 +49,7 @@ func (b *Botanist) DeployInternalDomainDNSRecord(ctx context.Context) error {
 	if err := b.deployDNSProvider(ctx, DNSPurposeInternal, b.Garden.InternalDomain.Provider, b.Garden.InternalDomain.SecretData, b.Shoot.InternalClusterDomain); err != nil {
 		return err
 	}
-	if err := b.deployDNSEntry(ctx, DNSPurposeInternal, b.Shoot.InternalClusterDomain, b.APIServerAddress); err != nil {
+	if err := b.deployDNSEntry(ctx, DNSPurposeInternal, common.GetAPIServerDomain(b.Shoot.InternalClusterDomain), b.APIServerAddress); err != nil {
 		return err
 	}
 	return b.deleteLegacyTerraformDNSResources(ctx, common.TerraformerPurposeInternalDNSDeprecated)
@@ -69,10 +69,10 @@ func (b *Botanist) DeployExternalDomainDNSRecord(ctx context.Context) error {
 		return nil
 	}
 
-	if err := b.deployDNSProvider(ctx, DNSPurposeExternal, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, *b.Shoot.Info.Spec.DNS.Domain); err != nil {
+	if err := b.deployDNSProvider(ctx, DNSPurposeExternal, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, *b.Shoot.ExternalClusterDomain); err != nil {
 		return err
 	}
-	if err := b.deployDNSEntry(ctx, DNSPurposeExternal, *b.Shoot.ExternalClusterDomain, b.Shoot.InternalClusterDomain); err != nil {
+	if err := b.deployDNSEntry(ctx, DNSPurposeExternal, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)); err != nil {
 		return err
 	}
 	return b.deleteLegacyTerraformDNSResources(ctx, common.TerraformerPurposeExternalDNSDeprecated)

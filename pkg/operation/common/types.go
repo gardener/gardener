@@ -207,6 +207,11 @@ const (
 	// '*.<IngressPrefix>.cluster.example.com'.
 	IngressPrefix = "ingress"
 
+	// APIServerPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
+	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
+	// 'api.cluster.example.com'.
+	APIServerPrefix = "api"
+
 	// InternalDomainKey is a key which must be present in an internal domain constructed for a Shoot cluster. If the
 	// configured internal domain already contains it, it won't be added twice. If it does not contain it, it will be
 	// appended.
