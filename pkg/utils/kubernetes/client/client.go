@@ -257,12 +257,12 @@ func (f *finalizer) HasFinalizers(obj runtime.Object) (bool, error) {
 }
 
 type namespaceFinalizer struct {
-	coreV1Interface typedcorev1.CoreV1Interface
+	namespaceInterface typedcorev1.NamespaceInterface
 }
 
 // NewNamespaceFinalizer instantiates a namespace finalizer.
-func NewNamespaceFinalizer(coreV1Interface typedcorev1.CoreV1Interface) Finalizer {
-	return &namespaceFinalizer{coreV1Interface}
+func NewNamespaceFinalizer(namespaceInterface typedcorev1.NamespaceInterface) Finalizer {
+	return &namespaceFinalizer{namespaceInterface}
 }
 
 // Finalize removes the finalizers of given namespace resource.
@@ -279,7 +279,7 @@ func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj 
 
 	// TODO (ialidzhikov): Use controller-runtime client once subresources are
 	// suported - https://github.com/kubernetes-sigs/controller-runtime/issues/172.
-	_, err := f.coreV1Interface.Namespaces().Finalize(namespace)
+	_, err := f.namespaceInterface.Finalize(namespace)
 	return err
 }
 
@@ -312,8 +312,8 @@ func DefaultCleaner() Cleaner {
 }
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
-func NewNamespaceCleaner(coreV1Interface typedcorev1.CoreV1Interface) Cleaner {
-	return NewCleaner(utiltime.DefaultOps(), NewNamespaceFinalizer(coreV1Interface))
+func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Cleaner {
+	return NewCleaner(utiltime.DefaultOps(), NewNamespaceFinalizer(namespaceInterface))
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
@@ -338,7 +338,7 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriodSeconds)
 	}
 
-	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
+	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) {
 		hasFinalizers, err := o.finalizer.HasFinalizers(obj)
 		if err != nil {
 			return err

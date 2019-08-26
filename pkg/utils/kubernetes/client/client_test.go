@@ -26,10 +26,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mocktime "github.com/gardener/gardener/pkg/mock/gardener/utils/time"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
-
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -125,13 +125,16 @@ var _ = Describe("Cleaner", func() {
 
 		cm1Key client.ObjectKey
 		cm2Key client.ObjectKey
+		nsKey  client.ObjectKey
 
 		cm1    corev1.ConfigMap
 		cm2    corev1.ConfigMap
 		cmList corev1.ConfigMapList
+		ns     corev1.Namespace
 		//cmObjects []runtime.Object
 
 		cm2WithFinalizer corev1.ConfigMap
+		nsWithFinalizer  corev1.Namespace
 		//cmListWithFinalizer corev1.ConfigMapList
 	)
 	BeforeEach(func() {
@@ -141,16 +144,21 @@ var _ = Describe("Cleaner", func() {
 
 		cm1Key = kutil.Key("n", "foo")
 		cm2Key = kutil.Key("n", "bar")
+		nsKey = kutil.Key("baz")
 
 		cm1 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
 		cm2 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
 		cmList = corev1.ConfigMapList{Items: []corev1.ConfigMap{cm1, cm2}}
+		ns = corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "baz"}}
 		//cmObjects, err = meta.ExtractList(&cmList)
 		Expect(err).NotTo(HaveOccurred())
 
 		cm2.DeepCopyInto(&cm2WithFinalizer)
 		cm2WithFinalizer.Finalizers = []string{"finalize.me"}
+		ns.DeepCopyInto(&nsWithFinalizer)
+		nsWithFinalizer.Spec.Finalizers = []corev1.FinalizerName{"kubernetes"}
 		//cmListWithFinalizer = corev1.ConfigMapList{Items: []corev1.ConfigMap{cm1, cm2WithFinalizer}}
+
 	})
 	AfterEach(func() {
 		ctrl.Finish()
@@ -183,19 +191,18 @@ var _ = Describe("Cleaner", func() {
 
 	Context("Cleaner", func() {
 		var (
-			timeOps   *mocktime.MockOps
-			finalizer Finalizer
-			cleaner   Cleaner
+			timeOps *mocktime.MockOps
 		)
 		BeforeEach(func() {
 			timeOps = mocktime.NewMockOps(ctrl)
-			finalizer = NewFinalizer()
-			cleaner = NewCleaner(timeOps, finalizer)
 		})
 
 		Describe("#Clean", func() {
 			It("should delete the target object", func() {
-				ctx := context.TODO()
+				var (
+					ctx     = context.TODO()
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm1Key, &cm1),
@@ -207,8 +214,9 @@ var _ = Describe("Cleaner", func() {
 
 			It("should delete all objects matching the selector", func() {
 				var (
-					ctx  = context.TODO()
-					list = &corev1.ConfigMapList{}
+					ctx     = context.TODO()
+					list    = &corev1.ConfigMapList{}
+					cleaner = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				listCall := c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, cmList)
@@ -223,6 +231,7 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(60, 0)
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
@@ -237,11 +246,34 @@ var _ = Describe("Cleaner", func() {
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
+			It("should finalize the namespace if its deletion timestamp is over the finalize grace period", func() {
+				var (
+					ctx               = context.TODO()
+					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
+					now               = time.Unix(60, 0)
+					nsInterface       = mockcorev1.NewMockNamespaceInterface(ctrl)
+					finalizer         = NewNamespaceFinalizer(nsInterface)
+					cleaner           = NewCleaner(timeOps, finalizer)
+				)
+
+				nsWithFinalizer.DeletionTimestamp = &deletionTimestamp
+				ns.DeletionTimestamp = &deletionTimestamp
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, nsKey, &nsWithFinalizer),
+					timeOps.EXPECT().Now().Return(now),
+					nsInterface.EXPECT().Finalize(&ns).Return(&ns, nil),
+				)
+
+				Expect(cleaner.Clean(ctx, c, &nsWithFinalizer, FinalizeGracePeriodSeconds(20))).To(Succeed())
+			})
+
 			It("should delete the object if its deletion timestamp is not over the finalize grace period", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
@@ -261,6 +293,7 @@ var _ = Describe("Cleaner", func() {
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
@@ -281,6 +314,7 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(60, 0)
 					list              = &corev1.ConfigMapList{}
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
@@ -301,6 +335,7 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
 					list              = &corev1.ConfigMapList{}
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
@@ -321,6 +356,7 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(50, 0)
 					list              = &corev1.ConfigMapList{}
+					cleaner           = NewCleaner(timeOps, NewFinalizer())
 				)
 
 				cm2WithFinalizer.DeletionTimestamp = &deletionTimestamp
