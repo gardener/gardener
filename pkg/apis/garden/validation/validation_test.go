@@ -2296,15 +2296,14 @@ var _ = Describe("validation", func() {
 	})
 
 	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
-		var(
-			 seed *garden.Seed
-			 backup *garden.BackupProfile
+		var (
+			seed   *garden.Seed
+			backup *garden.BackupProfile
 		)
-
 
 		BeforeEach(func() {
 			region := "some-region"
-			backup=&garden.BackupProfile{
+			backup = &garden.BackupProfile{
 				Provider: garden.CloudProviderAWS,
 				Region:   &region,
 				SecretRef: corev1.SecretReference{
@@ -2404,17 +2403,17 @@ var _ = Describe("validation", func() {
 			}, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.networks.services"),
-			},Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.backup.provider"),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.backup.provider"),
 				"Detail": Equal(`must provide a backup cloud provider name`),
-			},Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.backup.secretRef.name"),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.backup.secretRef.name"),
 				"Detail": Equal(`must provide a name`),
-			},Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.backup.secretRef.namespace"),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.backup.secretRef.namespace"),
 				"Detail": Equal(`must provide a namespace`),
 			}))
 		})
@@ -2453,8 +2452,8 @@ var _ = Describe("validation", func() {
 				Services: gardencore.CIDR("10.3.1.64/26"),
 			}
 			otherRegion := "other-region"
-			newSeed.Spec.Backup.Provider="other-provider"
-			newSeed.Spec.Backup.Region=    &otherRegion
+			newSeed.Spec.Backup.Provider = "other-provider"
+			newSeed.Spec.Backup.Region = &otherRegion
 
 			errorList := ValidateSeedUpdate(newSeed, seed)
 
@@ -2462,18 +2461,18 @@ var _ = Describe("validation", func() {
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks"),
 				"Detail": Equal(`field is immutable`),
-			},Fields{
+			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.backup.region"),
 				"Detail": Equal(`field is immutable`),
-			},Fields{
+			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.backup.provider"),
 				"Detail": Equal(`field is immutable`),
 			}))
 		})
 
-		Context("#validateBackupProfileUpdate",func(){
+		Context("#validateBackupProfileUpdate", func() {
 			It("should allow adding backup profile", func() {
 				seed.Spec.Backup = nil
 				newSeed := prepareSeedForUpdate(seed)
@@ -5848,6 +5847,18 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("CIDR", func() {
+
+				It("should forbid more than one CIDR", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []gardencore.CIDR{"10.250.0.1/32", "10.250.0.2/32"}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.workers"),
+						"Detail": Equal("must specify only one worker cidr"),
+					}))
+				})
 
 				It("should forbid invalid workers CIDR", func() {
 					shoot.Spec.Cloud.OpenStack.Networks.Workers = []gardencore.CIDR{invalidCIDR}
