@@ -89,6 +89,7 @@ func (b *Botanist) DestroyExternalDomainDNSRecord(ctx context.Context) error {
 func (b *Botanist) deployDNSProvider(ctx context.Context, name, provider string, secretData map[string][]byte, includedDomains ...string) error {
 	values := map[string]interface{}{
 		"name":       name,
+		"purpose":    name,
 		"provider":   provider,
 		"secretData": secretData,
 		"domains": map[string]interface{}{

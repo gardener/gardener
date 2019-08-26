@@ -13,6 +13,10 @@ kind: DNSProvider
 metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
+{{- if ne .Values.purpose "internal" }}
+  labels:
+    dns.gardener.cloud/realms: "{{ .Release.Namespace }},"
+{{- end }}
 spec:
   type: {{ .Values.provider }}
   secretRef:
