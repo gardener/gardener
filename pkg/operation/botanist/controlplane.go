@@ -58,13 +58,13 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
-			common.GardenRole:                     common.GardenRoleShoot,
-			gardencorev1alpha1.GardenRole:         common.GardenRoleShoot,
-			common.ShootHibernated:                strconv.FormatBool(b.Shoot.HibernationEnabled),
-			gardencorev1alpha1.BackupProvider:     string(b.Seed.CloudProvider),
-			gardencorev1alpha1.SeedProvider:       string(b.Seed.CloudProvider),
-			gardencorev1alpha1.ShootProvider:      string(b.Shoot.CloudProvider),
-			gardencorev1alpha1.NetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
+			common.GardenRole:                          common.GardenRoleShoot,
+			gardencorev1alpha1.GardenRole:              common.GardenRoleShoot,
+			common.ShootHibernated:                     strconv.FormatBool(b.Shoot.HibernationEnabled),
+			gardencorev1alpha1.LabelBackupProvider:     string(b.Seed.CloudProvider),
+			gardencorev1alpha1.LabelSeedProvider:       string(b.Seed.CloudProvider),
+			gardencorev1alpha1.LabelShootProvider:      string(b.Shoot.CloudProvider),
+			gardencorev1alpha1.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
 		}
 		return nil
 	}); err != nil {

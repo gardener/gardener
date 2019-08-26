@@ -47,6 +47,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":            schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                    schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                              schema_pkg_apis_core_v1alpha1_Endpoint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener":                              schema_pkg_apis_core_v1alpha1_Gardener(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.K8SNetworks":                           schema_pkg_apis_core_v1alpha1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes":                            schema_pkg_apis_core_v1alpha1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError":                             schema_pkg_apis_core_v1alpha1_LastError(ref),
@@ -56,6 +57,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec":                             schema_pkg_apis_core_v1alpha1_PlantSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus":                           schema_pkg_apis_core_v1alpha1_PlantStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                        schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup":                            schema_pkg_apis_core_v1alpha1_SeedBackup(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS":                               schema_pkg_apis_core_v1alpha1_SeedDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedList":                              schema_pkg_apis_core_v1alpha1_SeedList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec":                              schema_pkg_apis_core_v1alpha1_SeedSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus":                            schema_pkg_apis_core_v1alpha1_SeedStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint":                             schema_pkg_apis_core_v1alpha1_SeedTaint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume":                            schema_pkg_apis_core_v1alpha1_SeedVolume(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                    schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud":                             schema_pkg_apis_garden_v1beta1_AWSCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints":                       schema_pkg_apis_garden_v1beta1_AWSConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks":                          schema_pkg_apis_garden_v1beta1_AWSNetworks(ref),
@@ -938,6 +950,41 @@ func schema_pkg_apis_core_v1alpha1_Endpoint(ref common.ReferenceCallback) common
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_Gardener(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Gardener holds the information about the Gardener version that operated a resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID is the Docker container id of the Gardener which last acted on a resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the hostname (pod name) of the Gardener which last acted on a resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version of the Gardener which last acted on a resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"id", "name", "version"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_K8SNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1264,6 +1311,432 @@ func schema_pkg_apis_core_v1alpha1_ProviderConfig(ref common.ReferenceCallback) 
 				Description: "ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct. https://github.com/kubernetes/kubernetes/issues/55890 https://github.com/kubernetes-sigs/cluster-api/issues/137",
 				Type:        v1alpha1.ProviderConfig{}.OpenAPISchemaType(),
 				Format:      v1alpha1.ProviderConfig{}.OpenAPISchemaFormat(),
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Seed(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Seed represents an installation request for an external controller.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec contains the specification of this installation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status contains the status of this installation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedBackup contains the object store configuration for backups for shoot (currently only etcd).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider is a provider name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a region name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+				},
+				Required: []string{"provider", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.SecretReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedDNS contains DNS-relevant information about this seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ingressDomain": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"ingressDomain"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedList is a collection of Seeds.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of Seeds.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes is the CIDR of the node network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"nodes", "pods", "services"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedProvider defines the provider type and region for this Seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the name of the provider.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a name of a region.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type", "region"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSpec is the specification of a Seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken for shoots associated with this seed. If backup field is present in seed, then backups of the etcd from shoot control plane will be stored under the configured object store.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup"),
+						},
+					},
+					"blockCIDRs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running in the seed cluster.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"dns": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNS contains DNS-relevant information about this seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS"),
+						},
+					},
+					"networks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Networks defines the pod, service and worker network of the Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks"),
+						},
+					},
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider defines the provider type and region for this Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider"),
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for the account the Seed cluster has been deployed to.",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"taints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Taints describes taints on the seed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint"),
+									},
+								},
+							},
+						},
+					},
+					"volume": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Volume contains settings for persistentvolumes created in the seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume"),
+						},
+					},
+				},
+				Required: []string{"dns", "networks", "provider", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedStatus is the status of a Seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"gardener": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener"),
+						},
+					},
+					"conditions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a Seed's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the Seed's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedTaint(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedTaint describes a taint on a seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"key": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Key is the taint key to be applied to a seed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"value": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Value is the taint value corresponding to the taint key.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"key"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedVolume(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedVolume contains settings for persistentvolumes created in the seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"minimumSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinimumSize defines the minimum size that should be used for PVCs in the seed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"providers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Providers is a list of storage class provisioner types for the seed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedVolumeProvider is a storage class provisioner type.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose of this provider.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the storage class provisioner type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"purpose", "name"},
 			},
 		},
 	}

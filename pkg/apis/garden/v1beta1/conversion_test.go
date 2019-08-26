@@ -15,12 +15,17 @@
 package v1beta1
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("Conversion", func() {
@@ -83,6 +88,7 @@ var _ = Describe("Conversion", func() {
 			Expect(internalMachineImage.Versions[0].Version).To(Equal("1.0.0"))
 			Expect(internalMachineImage.Versions[0].ExpirationDate).To(BeNil())
 		})
+
 		It("external machine image (no version set) should be properly converted to internal machine image", func() {
 			internalMachineImage := &garden.MachineImage{}
 
@@ -92,8 +98,8 @@ var _ = Describe("Conversion", func() {
 			Expect(internalMachineImage.Versions).To(HaveLen(3))
 			Expect(internalMachineImage.Versions[0].Version).To(Equal("0.0.9"))
 		})
-	},
-	)
+	})
+
 	Describe("#GardenMachineImageToV1Beta1MachineImage", func() {
 		It("internal machine image should be properly converted to external machine image", func() {
 			v1betaMachineImage := &MachineImage{}
@@ -120,6 +126,7 @@ var _ = Describe("Conversion", func() {
 
 			Expect(v1betaMachineImageResult).To(Equal(v1betaMachineImage))
 		})
+
 		It("assure expected structural change (when image.Version is set in v1beta1) in resulting external version after back and forth conversion", func() {
 			v1betaMachineImage.Version = "1.0.0"
 
@@ -138,5 +145,196 @@ var _ = Describe("Conversion", func() {
 			Expect(v1betaMachineImageResult.Versions[0].ExpirationDate).To(BeNil())
 		})
 	})
-},
-)
+
+	Context("seed conversions", func() {
+		var scheme *runtime.Scheme
+
+		BeforeSuite(func() {
+			scheme = runtime.NewScheme()
+			Expect(scheme.AddConversionFuncs(
+				Convert_v1beta1_Seed_To_garden_Seed,
+				Convert_garden_Seed_To_v1beta1_Seed,
+			)).NotTo(HaveOccurred())
+		})
+
+		var (
+			cloudProfileName             = "cloudprofile1"
+			providerName                 = "provider1"
+			regionName                   = "region1"
+			ingressDomain                = "foo.example.com"
+			secretRefName                = "seed-secret"
+			secretRefNamespace           = "garden"
+			nodesCIDR                    = gardencorev1alpha1.CIDR("1.2.3.4/5")
+			podsCIDR                     = gardencorev1alpha1.CIDR("6.7.8.9/10")
+			servicesCIDR                 = gardencorev1alpha1.CIDR("11.12.13.14/15")
+			blockCIDR                    = "16.17.18.19/20"
+			minimumVolumeSize            = "20Gi"
+			minimumVolumeSizeQuantity, _ = resource.ParseQuantity(minimumVolumeSize)
+			volumeProviderPurpose1       = "etcd-main"
+			volumeProviderName1          = "flexvolume"
+			volumeProviderPurpose2       = "foo"
+			volumeProviderName2          = "bar"
+			annotations                  = map[string]string{
+				garden.MigrationSeedProviderType:                  providerName,
+				garden.MigrationSeedProviderRegion:                regionName,
+				garden.MigrationSeedVolumeMinimumSize:             minimumVolumeSize,
+				garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
+				"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
+				"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
+			}
+
+			trueVar  = true
+			falseVar = false
+		)
+
+		Describe("#Convert_v1beta1_Seed_To_garden_Seed", func() {
+			var (
+				out = &garden.Seed{}
+				in  = &Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: SeedSpec{
+						Cloud: SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
+						},
+						IngressDomain: ingressDomain,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: SeedNetworks{
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
+						},
+						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
+						Protected:  &trueVar,
+						Visible:    &falseVar,
+					},
+				}
+			)
+
+			It("should correctly convert", func() {
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(BeEquivalentTo(&garden.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: garden.SeedSpec{
+						Cloud: garden.SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
+						},
+						Provider: garden.SeedProvider{
+							Type:   providerName,
+							Region: regionName,
+						},
+						IngressDomain: ingressDomain,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: garden.SeedNetworks{
+							Nodes:    garden.CIDR(nodesCIDR),
+							Pods:     garden.CIDR(podsCIDR),
+							Services: garden.CIDR(servicesCIDR),
+						},
+						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						Protected:  &trueVar,
+						Visible:    &falseVar,
+						Volume: &garden.SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []garden.SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
+							},
+						},
+					},
+				}))
+			})
+		})
+
+		Describe("#Convert_garden_Seed_To_v1beta1_Seed", func() {
+			var (
+				out = &Seed{}
+				in  = &garden.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: garden.SeedSpec{
+						Cloud: garden.SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
+						},
+						Provider: garden.SeedProvider{
+							Type:   providerName,
+							Region: regionName,
+						},
+						IngressDomain: ingressDomain,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: garden.SeedNetworks{
+							Nodes:    garden.CIDR(nodesCIDR),
+							Pods:     garden.CIDR(podsCIDR),
+							Services: garden.CIDR(servicesCIDR),
+						},
+						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						Protected:  &trueVar,
+						Visible:    &falseVar,
+						Volume: &garden.SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []garden.SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+							},
+						},
+					},
+				}
+			)
+
+			It("should correctly convert", func() {
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: SeedSpec{
+						Cloud: SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
+						},
+						IngressDomain: ingressDomain,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: SeedNetworks{
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
+						},
+						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
+						Protected:  &trueVar,
+						Visible:    &falseVar,
+					},
+				}))
+			})
+		})
+	})
+})

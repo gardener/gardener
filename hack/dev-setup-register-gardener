@@ -126,8 +126,8 @@ spec:
   insecureSkipTLSVerify: true
   group: core.gardener.cloud
   version: v1alpha1
-  groupPriorityMinimum: 10000
-  versionPriority: 20
+  groupPriorityMinimum: 10
+  versionPriority: 10
   service:
     name: gardener-apiserver
     namespace: garden

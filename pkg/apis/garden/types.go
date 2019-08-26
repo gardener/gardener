@@ -17,8 +17,6 @@ package garden
 import (
 	"time"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -331,8 +329,8 @@ type Zone struct {
 	Names []string
 }
 
-// BackupProfile contains the object store configuration for backups for shoot(currently only etcd).
-type BackupProfile struct {
+// SeedBackup contains the object store configuration for backups for shoot(currently only etcd).
+type SeedBackup struct {
 	// Provider is a provider name.
 	Provider CloudProvider
 	// Region is a region name.
@@ -451,6 +449,8 @@ type SeedList struct {
 type SeedSpec struct {
 	// Cloud defines the cloud profile and the region this Seed cluster belongs to.
 	Cloud SeedCloud
+	// Provider defines the provider type and region for this Seed cluster.
+	Provider SeedProvider
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters.
 	IngressDomain string
@@ -461,7 +461,7 @@ type SeedSpec struct {
 	Networks SeedNetworks
 	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
 	// in the seed cluster.
-	BlockCIDRs []gardencore.CIDR
+	BlockCIDRs []CIDR
 	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
 	Visible *bool
 	// Protected prevent that the Seed Cluster can be used for regular Shoot cluster control planes.
@@ -470,13 +470,24 @@ type SeedSpec struct {
 	// If it is not specified, then there won't be any backups taken for Shoots associated with this Seed.
 	// If backup field is present in Seed, then backups of the etcd from Shoot controlplane will be stored under the
 	// configured object store.
-	Backup *BackupProfile
+	Backup *SeedBackup
+	// Volume contains settings for persistentvolumes created in the seed cluster.
+	Volume *SeedVolume
 }
+
+const (
+	MigrationSeedCloudProfile      = "migration.seed.gardener.cloud/cloudProfile"
+	MigrationSeedCloudRegion       = "migration.seed.gardener.cloud/cloudRegion"
+	MigrationSeedProviderType      = "migration.seed.gardener.cloud/providerType"
+	MigrationSeedProviderRegion    = "migration.seed.gardener.cloud/providerRegion"
+	MigrationSeedVolumeMinimumSize = "migration.seed.gardener.cloud/volumeMinimumSize"
+	MigrationSeedVolumeProviders   = "migration.seed.gardener.cloud/volumeProviders"
+)
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
 type SeedStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
-	Conditions []gardencore.Condition
+	Conditions []Condition
 	// Gardener holds information about the Gardener which last acted on the Seed.
 	Gardener Gardener
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
@@ -492,14 +503,41 @@ type SeedCloud struct {
 	Region string
 }
 
+// SeedProvider defines the provider type and region for this Seed cluster.
+type SeedProvider struct {
+	// Type is the name of the provider.
+	Type string
+	// Region is a name of a region.
+	Region string
+}
+
+// Volume contains settings for persistentvolumes created in the seed cluster.
+type SeedVolume struct {
+	// MinimumSize defines the minimum size that should be used for PVCs in the seed.
+	MinimumSize *resource.Quantity
+	// Providers is a list of storage class provisioner types for the seed.
+	Providers []SeedVolumeProvider
+}
+
+// SeedVolumeProvider is a storage class provisioner type.
+type SeedVolumeProvider struct {
+	// Purpose is the purpose of this provider.
+	Purpose string
+	// Name is the name of the storage class provisioner type.
+	Name string
+}
+
+// SeedVolumeProviderPurposeEtcdMain is a constant for the etcd-main volume provider purpose.
+const SeedVolumeProviderPurposeEtcdMain = "etcd-main"
+
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes gardencore.CIDR
+	Nodes CIDR
 	// Pods is the CIDR of the pod network.
-	Pods gardencore.CIDR
+	Pods CIDR
 	// Services is the CIDR of the service network.
-	Services gardencore.CIDR
+	Services CIDR
 }
 
 ////////////////////////////////////////////////////
@@ -646,13 +684,13 @@ type ShootSpec struct {
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
-	Conditions []gardencore.Condition
+	Conditions []Condition
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener
 	// LastOperation holds information about the last operation on the Shoot.
-	LastOperation *gardencore.LastOperation
+	LastOperation *LastOperation
 	// LastError holds information about the last occurred error during an operation.
-	LastError *gardencore.LastError
+	LastError *LastError
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
@@ -681,11 +719,11 @@ const CalicoNetworkType = "calico"
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// Type identifies the type of the networking plugin
 	Type string
 	// ProviderConfig is the configuration passed to network resource.
-	ProviderConfig *gardencore.ProviderConfig
+	ProviderConfig *ProviderConfig
 }
 
 // Cloud contains information about the cloud environment and their specific settings.
@@ -730,15 +768,15 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC
 	// Internal is a list of private subnets to create (used for internal load balancers).
-	Internal []gardencore.CIDR
+	Internal []CIDR
 	// Public is a list of public subnets to create (used for bastion and load balancers).
-	Public []gardencore.CIDR
+	Public []CIDR
 	// Workers is a list of worker subnets (private) to create (used for the VMs).
-	Workers []gardencore.CIDR
+	Workers []CIDR
 }
 
 // AWSVPC contains either an id (of an existing VPC) or the CIDR (for a VPC to be created).
@@ -746,7 +784,7 @@ type AWSVPC struct {
 	// ID is the AWS VPC id of an existing VPC.
 	ID *string
 	// CIDR is a CIDR range for a new VPC.
-	CIDR *gardencore.CIDR
+	CIDR *CIDR
 }
 
 // AWSWorker is the definition of a worker group.
@@ -777,16 +815,16 @@ type AlicloudVPC struct {
 	// ID is the Alicloud VPC id of an existing VPC.
 	ID *string
 	// CIDR is a CIDR range for a new VPC.
-	CIDR *gardencore.CIDR
+	CIDR *CIDR
 }
 
 // AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
 type AlicloudNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AlicloudVPC
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers []gardencore.CIDR
+	Workers []CIDR
 }
 
 // AlicloudWorker is the definition of a worker group.
@@ -814,7 +852,7 @@ type PacketCloud struct {
 
 // PacketNetworks holds information about the Kubernetes and infrastructure networks.
 type PacketNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 }
 
 // PacketWorker is the definition of a worker group.
@@ -848,11 +886,11 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers gardencore.CIDR
+	Workers CIDR
 }
 
 // AzureVNet indicates whether to use an existing VNet or create a new one.
@@ -860,7 +898,7 @@ type AzureVNet struct {
 	// Name is the AWS VNet name of an existing VNet.
 	Name *string
 	// CIDR is a CIDR range for a new VNet.
-	CIDR *gardencore.CIDR
+	CIDR *CIDR
 }
 
 // AzureWorker is the definition of a worker group.
@@ -888,13 +926,13 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC *GCPVPC
 	// Internal is a private subnet (used for internal load balancers).
-	Internal *gardencore.CIDR
+	Internal *CIDR
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []gardencore.CIDR
+	Workers []CIDR
 }
 
 // GCPVPC indicates whether to use an existing VPC or create a new one.
@@ -947,11 +985,11 @@ type OpenStackLoadBalancerClass struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
-	gardencore.K8SNetworks
+	K8SNetworks
 	// Router indicates whether to use an existing router or create a new one.
 	Router *OpenStackRouter
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []gardencore.CIDR
+	Workers []CIDR
 }
 
 // OpenStackRouter indicates whether to use an existing router or create a new one.
@@ -998,7 +1036,7 @@ type Extension struct {
 	// Type is the type of the extension resource.
 	Type string
 	// ProviderConfig is the configuration passed to extension resource.
-	ProviderConfig *gardencore.ProviderConfig
+	ProviderConfig *ProviderConfig
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
@@ -1477,7 +1515,7 @@ type ShootMachineImage struct {
 	// Version is the version of the shoot's image.
 	Version string
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
-	ProviderConfig *gardencore.ProviderConfig
+	ProviderConfig *ProviderConfig
 }
 
 const (
@@ -1547,16 +1585,16 @@ const (
 
 const (
 	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
-	SeedAvailable gardencore.ConditionType = "Available"
+	SeedAvailable ConditionType = "Available"
 
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
-	ShootControlPlaneHealthy gardencore.ConditionType = "ControlPlaneHealthy"
+	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
-	ShootEveryNodeReady gardencore.ConditionType = "EveryNodeReady"
+	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
-	ShootSystemComponentsHealthy gardencore.ConditionType = "SystemComponentsHealthy"
+	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootAPIServerAvailable is a constant for a condition type indicating the api server is available.
-	ShootAPIServerAvailable gardencore.ConditionType = "APIServerAvailable"
+	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
 )
 
 ////////////////////////////////////////////////////
@@ -1598,9 +1636,9 @@ type BackupInfrastructureSpec struct {
 // BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.
 type BackupInfrastructureStatus struct {
 	// LastOperation holds information about the last operation on the BackupInfrastructure.
-	LastOperation *gardencore.LastOperation
+	LastOperation *LastOperation
 	// LastError holds information about the last occurred error during an operation.
-	LastError *gardencore.LastError
+	LastError *LastError
 	// ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
 	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
 	ObservedGeneration *int64

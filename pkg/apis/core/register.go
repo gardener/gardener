@@ -15,6 +15,7 @@
 package core
 
 import (
+	"github.com/gardener/gardener/pkg/apis/garden"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -49,6 +50,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerRegistrationList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&garden.Seed{},
+		&garden.SeedList{},
 		&Plant{},
 		&PlantList{},
 	)

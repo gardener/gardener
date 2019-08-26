@@ -15,7 +15,6 @@
 package utils_test
 
 import (
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -29,9 +28,9 @@ import (
 var _ = Describe("utils", func() {
 	Describe("#ValidateNetworkDisjointedness", func() {
 		var (
-			seedPodsCIDR     = gardencore.CIDR("10.241.128.0/17")
-			seedServicesCIDR = gardencore.CIDR("10.241.0.0/17")
-			seedNodesCIDR    = gardencore.CIDR("10.240.0.0/16")
+			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
+			seedServicesCIDR = garden.CIDR("10.241.0.0/17")
+			seedNodesCIDR    = garden.CIDR("10.240.0.0/16")
 
 			seedNetworks = garden.SeedNetworks{
 				Pods:     seedPodsCIDR,
@@ -42,11 +41,11 @@ var _ = Describe("utils", func() {
 
 		It("should pass the validation", func() {
 			var (
-				podsCIDR     = gardencore.CIDR("10.242.128.0/17")
-				servicesCIDR = gardencore.CIDR("10.242.0.0/17")
-				nodesCIDR    = gardencore.CIDR("10.241.0.0/16")
+				podsCIDR     = garden.CIDR("10.242.128.0/17")
+				servicesCIDR = garden.CIDR("10.242.0.0/17")
+				nodesCIDR    = garden.CIDR("10.241.0.0/16")
 
-				validK8sNetworks = gardencore.K8SNetworks{
+				validK8sNetworks = garden.K8SNetworks{
 					Pods:     &podsCIDR,
 					Services: &servicesCIDR,
 					Nodes:    &nodesCIDR,
@@ -64,7 +63,7 @@ var _ = Describe("utils", func() {
 				servicesCIDR = seedServicesCIDR
 				nodesCIDR    = seedNodesCIDR
 
-				validK8sNetworks = gardencore.K8SNetworks{
+				validK8sNetworks = garden.K8SNetworks{
 					Pods:     &podsCIDR,
 					Services: &servicesCIDR,
 					Nodes:    &nodesCIDR,
@@ -87,7 +86,7 @@ var _ = Describe("utils", func() {
 
 		It("should fail due to missing fields", func() {
 			var (
-				validK8sNetworks = gardencore.K8SNetworks{
+				validK8sNetworks = garden.K8SNetworks{
 					Pods:     nil,
 					Services: nil,
 					Nodes:    nil,

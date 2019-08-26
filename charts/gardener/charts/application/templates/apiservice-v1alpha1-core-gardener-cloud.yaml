@@ -16,8 +16,8 @@ spec:
   {{- end }}
   group: core.gardener.cloud
   version: v1alpha1
-  groupPriorityMinimum: {{ required ".Values.global.apiserver.groupPriorityMinimum is required" .Values.global.apiserver.groupPriorityMinimum }}
-  versionPriority: {{ required ".Values.global.apiserver.versionPriority is required" .Values.global.apiserver.versionPriority }}
+  groupPriorityMinimum: 10
+  versionPriority: 10
   service:
     name: gardener-apiserver
     namespace: garden

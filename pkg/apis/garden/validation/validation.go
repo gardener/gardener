@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Masterminds/semver"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -703,7 +702,15 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		allErrs = append(allErrs, field.Required(cloudPath.Child("profile"), "must provide a cloud profile name"))
 	}
 	if len(seedSpec.Cloud.Region) == 0 {
-		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a region"))
+		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a cloud region"))
+	}
+
+	providerPath := fldPath.Child("provider")
+	if len(seedSpec.Provider.Type) == 0 {
+		allErrs = append(allErrs, field.Required(providerPath.Child("type"), "must provide a provider type"))
+	}
+	if len(seedSpec.Provider.Region) == 0 {
+		allErrs = append(allErrs, field.Required(providerPath.Child("region"), "must provide a provider region"))
 	}
 
 	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
@@ -735,10 +742,32 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
 	}
+
+	if seedSpec.Volume != nil {
+		if seedSpec.Volume.MinimumSize != nil {
+			allErrs = append(allErrs, validateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+		}
+
+		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
+		for i, provider := range seedSpec.Volume.Providers {
+			idxPath := fldPath.Child("volume", "providers").Index(i)
+			if len(provider.Purpose) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("purpose"), "cannot be empty"))
+			}
+			if len(provider.Name) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "cannot be empty"))
+			}
+			if _, ok := volumeProviderPurposes[provider.Purpose]; ok {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("purpose"), provider.Purpose))
+			}
+			volumeProviderPurposes[provider.Purpose] = struct{}{}
+		}
+	}
+
 	return allErrs
 }
 
-func validateCIDR(cidr gardencore.CIDR, fldPath *field.Path) field.ErrorList {
+func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
@@ -1715,7 +1744,7 @@ func validateCIDROVerlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bo
 	return allErrs
 }
 
-func transformK8SNetworks(networks gardencore.K8SNetworks, fldPath *field.Path) (nodes, pods, services cidrvalidation.CIDR, allErrs field.ErrorList) {
+func transformK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) (nodes, pods, services cidrvalidation.CIDR, allErrs field.ErrorList) {
 	cidrs := []cidrvalidation.CIDR{}
 
 	if networks.Nodes != nil {

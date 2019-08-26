@@ -24,6 +24,10 @@ func (c *FakeCoreV1alpha1) Plants(namespace string) v1alpha1.PlantInterface {
 	return &FakePlants{c, namespace}
 }
 
+func (c *FakeCoreV1alpha1) Seeds() v1alpha1.SeedInterface {
+	return &FakeSeeds{c}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCoreV1alpha1) RESTClient() rest.Interface {

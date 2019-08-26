@@ -15,9 +15,11 @@
 package v1beta1
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -89,8 +91,6 @@ func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage
 }
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
-
-	// Add field conversion funcs.
 	return scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {
 			switch label {
@@ -103,4 +103,116 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 			}
 		},
 	)
+}
+
+func Convert_v1beta1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_Seed_To_garden_Seed(in, out, s); err != nil {
+		return err
+	}
+
+	if a := in.Annotations; a != nil {
+		if v, ok := a[garden.MigrationSeedProviderType]; ok {
+			out.Spec.Provider.Type = v
+		}
+		if v, ok := a[garden.MigrationSeedProviderRegion]; ok {
+			out.Spec.Provider.Region = v
+		}
+
+		volumeMinimumSize, ok := a[garden.MigrationSeedVolumeMinimumSize]
+		volumeProviders, ok2 := a[garden.MigrationSeedVolumeProviders]
+		legacyVolumeMinimumSizeAnnotationValue, ok3 := a["persistentvolume.garden.sapcloud.io/minimumSize"]
+		legacyVolumeProviderAnnotationValue, ok4 := a["persistentvolume.garden.sapcloud.io/provider"]
+
+		if ok || ok2 || ok3 || ok4 {
+			out.Spec.Volume = &garden.SeedVolume{}
+		}
+
+		if ok {
+			quantity, err := resource.ParseQuantity(volumeMinimumSize)
+			if err != nil {
+				return err
+			}
+			out.Spec.Volume.MinimumSize = &quantity
+		}
+		if ok3 {
+			quantity, err := resource.ParseQuantity(legacyVolumeMinimumSizeAnnotationValue)
+			if err != nil {
+				return err
+			}
+			out.Spec.Volume.MinimumSize = &quantity
+		}
+
+		if ok4 {
+			out.Spec.Volume.Providers = append(out.Spec.Volume.Providers, garden.SeedVolumeProvider{
+				Purpose: garden.SeedVolumeProviderPurposeEtcdMain,
+				Name:    legacyVolumeProviderAnnotationValue,
+			})
+		}
+		if ok2 {
+			var obj []garden.SeedVolumeProvider
+			if err := json.Unmarshal([]byte(volumeProviders), &obj); err != nil {
+				return err
+			}
+
+			out.Spec.Volume.Providers = append(out.Spec.Volume.Providers, obj...)
+		}
+	}
+
+	out.Spec.Provider.Region = in.Spec.Cloud.Region
+
+	return nil
+}
+
+func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversion.Scope) error {
+	if err := autoConvert_garden_Seed_To_v1beta1_Seed(in, out, s); err != nil {
+		return err
+	}
+
+	if len(in.Spec.Provider.Type) > 0 || len(in.Spec.Provider.Region) > 0 || in.Spec.Volume != nil {
+		old := out.Annotations
+		out.Annotations = make(map[string]string, len(old)+3)
+		for k, v := range old {
+			out.Annotations[k] = v
+		}
+	}
+
+	if len(in.Spec.Provider.Type) > 0 {
+		out.Annotations[garden.MigrationSeedProviderType] = in.Spec.Provider.Type
+	}
+
+	if len(in.Spec.Provider.Region) > 0 {
+		out.Annotations[garden.MigrationSeedProviderRegion] = in.Spec.Provider.Region
+	}
+
+	if v := in.Spec.Volume; v != nil {
+		if v.MinimumSize != nil {
+			out.Annotations[garden.MigrationSeedVolumeMinimumSize] = v.MinimumSize.String()
+			out.Annotations["persistentvolume.garden.sapcloud.io/minimumSize"] = v.MinimumSize.String()
+		}
+
+		var volumeProviders []garden.SeedVolumeProvider
+		for _, provider := range in.Spec.Volume.Providers {
+			if provider.Purpose == garden.SeedVolumeProviderPurposeEtcdMain {
+				out.Annotations["persistentvolume.garden.sapcloud.io/provider"] = provider.Name
+			} else {
+				volumeProviders = append(volumeProviders, provider)
+			}
+		}
+
+		if len(volumeProviders) > 0 {
+			data, err := json.Marshal(volumeProviders)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationSeedVolumeProviders] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationSeedVolumeProviders)
+		}
+	}
+
+	return nil
+}
+
+func Convert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedSpec, s conversion.Scope) error {
+	return autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in, out, s)
 }

@@ -18,9 +18,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/semver"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
+
+	"github.com/Masterminds/semver"
 )
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
@@ -145,4 +145,24 @@ func ShootWantsBasicAuthentication(kubeAPIServerConfig *garden.KubeAPIServerConf
 		return true
 	}
 	return *kubeAPIServerConfig.EnableBasicAuthentication
+}
+
+// GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns -1.
+func GetConditionIndex(conditions []garden.Condition, conditionType garden.ConditionType) int {
+	for index, condition := range conditions {
+		if condition.Type == conditionType {
+			return index
+		}
+	}
+	return -1
+}
+
+// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns nil.
+func GetCondition(conditions []garden.Condition, conditionType garden.ConditionType) *garden.Condition {
+	if index := GetConditionIndex(conditions, conditionType); index != -1 {
+		return &conditions[index]
+	}
+	return nil
 }

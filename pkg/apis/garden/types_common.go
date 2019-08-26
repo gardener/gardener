@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package garden
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // ErrorCode is a string alias.
 type ErrorCode string
@@ -33,36 +35,18 @@ const (
 // LastError indicates the last occurred error for an operation on a resource.
 type LastError struct {
 	// A human readable message indicating details about the last error.
-	Description string `json:"description"`
+	Description string
 	// Well-defined error codes of the last error(s).
 	// +optional
-	Codes []ErrorCode `json:"codes,omitempty"`
+	Codes []ErrorCode
 	// Last time the error was reported
-	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
-}
-
-// GetDescription implements LastError.
-func (l *LastError) GetDescription() string {
-	return l.Description
-}
-
-// GetCodes implements LastError.
-func (l *LastError) GetCodes() []ErrorCode {
-	return l.Codes
-}
-
-// GetLastUpdateTime implements LastError.
-func (l *LastError) GetLastUpdateTime() *metav1.Time {
-	return l.LastUpdateTime
+	LastUpdateTime *metav1.Time
 }
 
 // LastOperationType is a string alias.
 type LastOperationType string
 
 const (
-	// LastOperationTypeCreate indicates a 'create' operation.
-	LastOperationTypeCreate LastOperationType = "Create"
 	// LastOperationTypeReconcile indicates a 'reconcile' operation.
 	LastOperationTypeReconcile LastOperationType = "Reconcile"
 	// LastOperationTypeDelete indicates a 'delete' operation.
@@ -91,48 +75,13 @@ const (
 // message and a progress indicator.
 type LastOperation struct {
 	// A human readable message indicating details about the last operation.
-	Description string `json:"description"`
+	Description string
 	// Last time the operation state transitioned from one to another.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+	LastUpdateTime metav1.Time
 	// The progress in percentage (0-100) of the last operation.
-	Progress int `json:"progress"`
+	Progress int
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
-	State LastOperationState `json:"state"`
+	State LastOperationState
 	// Type of the last operation, one of Create, Reconcile, Delete.
-	Type LastOperationType `json:"type"`
-}
-
-// GetDescription implements LastOperation.
-func (l *LastOperation) GetDescription() string {
-	return l.Description
-}
-
-// GetLastUpdateTime implements LastOperation.
-func (l *LastOperation) GetLastUpdateTime() metav1.Time {
-	return l.LastUpdateTime
-}
-
-// GetProgress implements LastOperation.
-func (l *LastOperation) GetProgress() int {
-	return l.Progress
-}
-
-// GetState implements LastOperation.
-func (l *LastOperation) GetState() LastOperationState {
-	return l.State
-}
-
-// GetType implements LastOperation.
-func (l *LastOperation) GetType() LastOperationType {
-	return l.Type
-}
-
-// Gardener holds the information about the Gardener version that operated a resource.
-type Gardener struct {
-	// ID is the Docker container id of the Gardener which last acted on a resource.
-	ID string `json:"id"`
-	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
-	Name string `json:"name"`
-	// Version is the version of the Gardener which last acted on a resource.
-	Version string `json:"version"`
+	Type LastOperationType
 }
