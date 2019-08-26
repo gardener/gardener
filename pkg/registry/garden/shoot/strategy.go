@@ -76,7 +76,7 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// TODO: (mvladev) there was a bug in the verication of GCP
+	// TODO: (mvladev) there was a bug in the verication of GCP & openstack
 	// and clusters with more than one Worker network were allowed to
 	// be created.
 	// This is used to fix the broken Shoots on update.
@@ -90,6 +90,18 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if gcp := oldShoot.Spec.Cloud.GCP; gcp != nil {
 		if len(gcp.Networks.Workers) > 1 {
 			gcp.Networks.Workers = []gardencore.CIDR{gcp.Networks.Workers[0]}
+		}
+	}
+
+	if openstack := newShoot.Spec.Cloud.OpenStack; openstack != nil {
+		if len(openstack.Networks.Workers) > 1 {
+			openstack.Networks.Workers = []gardencore.CIDR{openstack.Networks.Workers[0]}
+		}
+	}
+
+	if openstack := oldShoot.Spec.Cloud.OpenStack; openstack != nil {
+		if len(openstack.Networks.Workers) > 1 {
+			openstack.Networks.Workers = []gardencore.CIDR{openstack.Networks.Workers[0]}
 		}
 	}
 
