@@ -87,13 +87,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.cloud-controller-manager*cloud-controller-manager*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.kube-scheduler*cloud-kube-scheduler*
         Key_Name            log
         Parser              kubeapiserverParser
@@ -178,13 +171,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.machine-controller-manager*machine-controller-manager*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.vpn-shoot*vpn-shoot*
         Key_Name            log
         Parser              vpnshootParser
@@ -224,13 +210,6 @@ data:
         Match               kubernetes.prometheus*prometheus*
         Key_Name            log
         Parser              alermanagerParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
-        Match               kubernetes.*lb-readvertiser*lb-readvertiser*
-        Key_Name            log
-        Parser              lbReadvertiserParser
         Reserve_Data        True
 
     [FILTER]
@@ -288,6 +267,10 @@ data:
         Match               kubernetes.*
         script              modify_severity.lua
         call                cb_modify
+
+{{ if .Values.fluentbit.extensions.filters }}
+{{- toString .Values.fluentbit.extensions.filters | indent 4 }}
+{{- end }}
 
   output-fluentd.conf: |
     [OUTPUT]
@@ -385,13 +368,6 @@ data:
         Time_Format %Y-%m-%dT%H:%M:%S.%L
 
     [PARSER]
-        Name        lbReadvertiserParser
-        Format      regex
-        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
-        Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S%Z
-
-    [PARSER]
         Name        grafanaParser
         Format      regex
         Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
@@ -402,6 +378,10 @@ data:
         Name        addonmanagerParser
         Format      regex
         Regex       ^(?<severity>[A-Z]+):\s(?<log>.*)
+
+{{ if .Values.fluentbit.extensions.parsers }}
+{{- toString .Values.fluentbit.extensions.parsers | indent 4 }}
+{{- end }}
 
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
