@@ -23,6 +23,19 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
 }
 
+// SetDefaults_SecretBinding sets default values for SecretBinding objects.
+func SetDefaults_SecretBinding(obj *SecretBinding) {
+	if len(obj.SecretRef.Namespace) == 0 {
+		obj.SecretRef.Namespace = obj.Namespace
+	}
+
+	for i, quota := range obj.Quotas {
+		if len(quota.Namespace) == 0 {
+			obj.Quotas[i].Namespace = obj.Namespace
+		}
+	}
+}
+
 // SetDefaults_Project sets default values for Project objects.
 func SetDefaults_Project(obj *Project) {
 	if obj.Spec.Owner != nil && len(obj.Spec.Owner.APIGroup) == 0 {

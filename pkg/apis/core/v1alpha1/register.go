@@ -55,6 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerRegistrationList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&SecretBinding{},
+		&SecretBindingList{},
 		&Seed{},
 		&SeedList{},
 		&Plant{},
