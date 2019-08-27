@@ -330,7 +330,7 @@ func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) s
 		return s.InternalClusterDomain
 	}
 
-	return *(s.ExternalClusterDomain)
+	return common.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
@@ -354,17 +354,17 @@ func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {
 	return fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)
 }
 
-// ConstructInternalClusterDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
-// which is only used for internal purposes (all kubeconfigs except the one which is received by the
-// user will only talk with the kube-apiserver via this domain). In case the given <internalDomain>
-// already contains "internal", the result is constructed as "api.<shootName>.<shootProject>.<internalDomain>."
+// ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
+// It is only used for internal purposes (all kubeconfigs except the one which is received by the
+// user will only talk with the kube-apiserver via a DNS record of domain). In case the given <internalDomain>
+// already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
-// "api.<shootName>.<shootProject>.internal.<internalDomain>".
+// "<shootName>.<shootProject>.internal.<internalDomain>".
 func ConstructInternalClusterDomain(shootName, shootProject, internalDomain string) string {
 	if strings.Contains(internalDomain, common.InternalDomainKey) {
-		return fmt.Sprintf("api.%s.%s.%s", shootName, shootProject, internalDomain)
+		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain)
 	}
-	return fmt.Sprintf("api.%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
+	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
@@ -373,9 +373,7 @@ func ConstructExternalClusterDomain(shoot *gardenv1beta1.Shoot) *string {
 	if shoot.Spec.DNS.Domain == nil {
 		return nil
 	}
-
-	domain := fmt.Sprintf("api.%s", *(shoot.Spec.DNS.Domain))
-	return &domain
+	return shoot.Spec.DNS.Domain
 }
 
 // ConstructExternalDomain constructs an object containing all relevant information of the external domain that

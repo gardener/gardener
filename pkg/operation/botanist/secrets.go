@@ -87,7 +87,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			"kube-apiserver",
 			fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
 			fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
-			b.Shoot.InternalClusterDomain,
+			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, dnsNamesForService("kubernetes", "default")...)
 
 		kubeControllerManagerCertDNSNames = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
@@ -101,7 +101,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
-		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), *(b.Shoot.ExternalClusterDomain))
+		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 	}
 
 	secretList := []secrets.ConfigInterface{
@@ -946,9 +946,9 @@ type projectSecret struct {
 // the project namespace in the Garden cluster and the monitoring credentials for the
 // user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
-	kubecfgURL := b.Shoot.InternalClusterDomain
+	kubecfgURL := common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
 	if b.Shoot.ExternalClusterDomain != nil {
-		kubecfgURL = *b.Shoot.ExternalClusterDomain
+		kubecfgURL = common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
 	projectSecrets := []projectSecret{
