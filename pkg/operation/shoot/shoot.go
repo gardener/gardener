@@ -323,11 +323,11 @@ func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) s
 	}
 
 	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged {
-		return s.InternalClusterDomain
+		return common.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	if useInternalClusterDomain {
-		return s.InternalClusterDomain
+		return common.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	return common.GetAPIServerDomain(*s.ExternalClusterDomain)
