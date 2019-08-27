@@ -4,4 +4,7 @@ provider: ""
 secretData: {}
 domains:
   include: []
-# exclude: []
+  exclude: []
+zones:
+  include: []
+  exclude: []

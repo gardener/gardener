@@ -19,6 +19,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/garden"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -35,7 +36,7 @@ type Shoot struct {
 
 	InternalClusterDomain string
 	ExternalClusterDomain *string
-	ExternalDomain        *ExternalDomain
+	ExternalDomain        *garden.Domain
 
 	WantsClusterAutoscaler bool
 	WantsAlertmanager      bool
@@ -47,13 +48,6 @@ type Shoot struct {
 	InfrastructureStatus      []byte
 	ControlPlaneStatus        []byte
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
-}
-
-// ExternalDomain contains information for the used external shoot domain.
-type ExternalDomain struct {
-	Domain     string
-	Provider   string
-	SecretData map[string][]byte
 }
 
 // OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud config.

@@ -41,7 +41,7 @@ import (
 
 // New takes a <k8sGardenClient>, the <k8sGardenInformers> and a <shoot> manifest, and creates a new Shoot representation.
 // It will add the CloudProfile, the cloud provider secret, compute the internal cluster domain and identify the cloud provider.
-func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, shoot *gardenv1beta1.Shoot, projectName, internalDomain string, defaultDomains []*garden.DefaultDomain) (*Shoot, error) {
+func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, shoot *gardenv1beta1.Shoot, projectName, internalDomain string, defaultDomains []*garden.Domain) (*Shoot, error) {
 	var (
 		secret *corev1.Secret
 		err    error
@@ -378,14 +378,14 @@ func ConstructExternalClusterDomain(shoot *gardenv1beta1.Shoot) *string {
 
 // ConstructExternalDomain constructs an object containing all relevant information of the external domain that
 // shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
-func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *gardenv1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.DefaultDomain) (*ExternalDomain, error) {
+func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *gardenv1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.Domain) (*garden.Domain, error) {
 	externalClusterDomain := ConstructExternalClusterDomain(shoot)
 	if externalClusterDomain == nil {
 		return nil, nil
 	}
 
 	var (
-		externalDomain = &ExternalDomain{Domain: *shoot.Spec.DNS.Domain}
+		externalDomain = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
 		defaultDomain  = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
 	)
 
@@ -397,14 +397,20 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		}
 		externalDomain.SecretData = secret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Provider
+		externalDomain.IncludeZones = shoot.Spec.DNS.IncludeZones
+		externalDomain.ExcludeZones = shoot.Spec.DNS.ExcludeZones
 
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider
+		externalDomain.IncludeZones = defaultDomain.IncludeZones
+		externalDomain.ExcludeZones = defaultDomain.ExcludeZones
 
 	case shoot.Spec.DNS.Provider != nil && shoot.Spec.DNS.SecretName == nil:
 		externalDomain.SecretData = shootSecret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Provider
+		externalDomain.IncludeZones = shoot.Spec.DNS.IncludeZones
+		externalDomain.ExcludeZones = shoot.Spec.DNS.ExcludeZones
 
 	default:
 		return nil, fmt.Errorf("unable to figure out which secret should be used for dns")

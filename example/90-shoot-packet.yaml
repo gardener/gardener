@@ -148,8 +148,11 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   dns:
-  # provider: aws-route53
-    domain: johndoe-packet.garden-dev.example.com
+    domain: johndoe-packet.garden-dev.example.com # if not specified then Gardener will try to use the default domain for this shoot
+  # provider: aws-route53     # only relevant if a custom domain is used for this shoot
+  # secretName: my-dns-secret # only relevant if a custom domain is used for this shoot
+  # includeZones: []          # only relevant if a custom domain is used for this shoot
+  # excludeZones: []          # only relevant if a custom domain is used for this shoot
 # hibernation:
 #   enabled: false
 #   schedules:

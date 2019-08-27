@@ -167,7 +167,7 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 	shootDomain := shoot.Spec.DNS.Domain
 
 	for _, secret := range secrets {
-		_, domain, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+		_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return
 		}
