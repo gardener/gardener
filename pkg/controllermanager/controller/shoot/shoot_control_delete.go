@@ -251,16 +251,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.DeleteClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
-		deleteExtensionResources = g.Add(flow.Task{
-			Name:         "Deleting extension resources",
-			Fn:           flow.TaskFn(botanist.DeleteExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
-		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
-			Name:         "Waiting until extension resources have been deleted",
-			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
-			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
-		})
 
 		cleanupWebhooks = g.Add(flow.Task{
 			Name:         "Cleaning up webhooks",
@@ -275,7 +265,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
 			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive, waitUntilExtensionResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 
 		syncPointReadyForCleanup = flow.NewTaskIDs(
@@ -327,6 +317,16 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
+		deleteExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting extension resources",
+			Fn:           flow.TaskFn(botanist.DeleteExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
 
 		// Services (and other objects that have a footprint in the infrastructure) still don't have finalizers yet. There is no way to
 		// determine whether all the resources have been deleted successfully yet, whether there was an error, or whether they are still
@@ -356,6 +356,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			timeForInfrastructureResourceCleanup,
 			destroyNetwork,
 			waitUntilNetworkIsDestroyed,
+			waitUntilExtensionResourcesDeleted,
 		)
 
 		destroyControlPlane = g.Add(flow.Task{
