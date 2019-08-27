@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("helper", func() {
@@ -282,5 +284,17 @@ var _ = Describe("helper", func() {
 		},
 		Entry("taint exists", []garden.SeedTaint{{Key: "foo"}}, "foo", true),
 		Entry("taint does not exist", []garden.SeedTaint{{Key: "foo"}}, "bar", false),
+	)
+
+	DescribeTable("#QuotaScope",
+		func(apiVersion, kind, expectedScope string, expectedErr gomegatypes.GomegaMatcher) {
+			scope, err := QuotaScope(corev1.ObjectReference{APIVersion: apiVersion, Kind: kind})
+			Expect(scope).To(Equal(expectedScope))
+			Expect(err).To(expectedErr)
+		},
+
+		Entry("project", "core.gardener.cloud/v1alpha1", "Project", "project", BeNil()),
+		Entry("secret", "v1", "Secret", "secret", BeNil()),
+		Entry("unknown", "v2", "Foo", "", HaveOccurred()),
 	)
 })

@@ -55,14 +55,16 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerRegistrationList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
-		&SecretBinding{},
-		&SecretBindingList{},
-		&Seed{},
-		&SeedList{},
 		&Plant{},
 		&PlantList{},
 		&Project{},
 		&ProjectList{},
+		&Quota{},
+		&QuotaList{},
+		&SecretBinding{},
+		&SecretBindingList{},
+		&Seed{},
+		&SeedList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

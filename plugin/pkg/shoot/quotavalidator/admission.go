@@ -26,6 +26,7 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -311,8 +312,13 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 		secretBindings   []garden.SecretBinding
 	)
 
+	scope, err := helper.QuotaScope(quota.Spec.Scope)
+	if err != nil {
+		return nil, err
+	}
+
 	namespace := corev1.NamespaceAll
-	if quota.Spec.Scope == garden.QuotaScopeProject {
+	if scope == "project" {
 		namespace = shoot.Namespace
 	}
 	allSecretBindings, err := q.secretBindingLister.SecretBindings(namespace).List(labels.Everything())

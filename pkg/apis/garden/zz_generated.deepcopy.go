@@ -3012,6 +3012,7 @@ func (in *QuotaSpec) DeepCopyInto(out *QuotaSpec) {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
+	out.Scope = in.Scope
 	return
 }
 

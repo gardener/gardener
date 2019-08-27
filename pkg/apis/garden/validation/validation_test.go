@@ -2762,7 +2762,10 @@ var _ = Describe("validation", func() {
 					Namespace: "my-namespace",
 				},
 				Spec: garden.QuotaSpec{
-					Scope: garden.QuotaScopeProject,
+					Scope: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
 					Metrics: corev1.ResourceList{
 						"cpu":    resource.MustParse("200"),
 						"memory": resource.MustParse("4000Gi"),
@@ -2779,32 +2782,33 @@ var _ = Describe("validation", func() {
 
 		It("should forbid Quota specification with empty or invalid keys", func() {
 			quota.ObjectMeta = metav1.ObjectMeta{}
-			quota.Spec.Scope = garden.QuotaScope("does-not-exist")
+			quota.Spec.Scope = corev1.ObjectReference{}
 			quota.Spec.Metrics["key"] = resource.MustParse("-100")
 
 			errorList := ValidateQuota(quota)
 
-			Expect(errorList).To(HaveLen(5))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.scope"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.metrics[key]"),
-			}))
-			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.metrics[key]"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.scope"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.metrics[key]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.metrics[key]"),
+				})),
+			))
 		})
 	})
 

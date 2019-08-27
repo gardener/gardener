@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -88,7 +89,10 @@ var _ = Describe("quotavalidator", func() {
 				},
 				Spec: garden.QuotaSpec{
 					ClusterLifetimeDays: &quotaProjectLifetime,
-					Scope:               garden.QuotaScopeProject,
+					Scope: corev1.ObjectReference{
+						APIVersion: "core.gardener.cloud/v1alpha1",
+						Kind:       "Project",
+					},
 					Metrics: corev1.ResourceList{
 						garden.QuotaMetricCPU:             resource.MustParse("2"),
 						garden.QuotaMetricGPU:             resource.MustParse("0"),
@@ -108,7 +112,10 @@ var _ = Describe("quotavalidator", func() {
 				},
 				Spec: garden.QuotaSpec{
 					ClusterLifetimeDays: &quotaSecretLifetime,
-					Scope:               garden.QuotaScopeSecret,
+					Scope: corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
 					Metrics: corev1.ResourceList{
 						garden.QuotaMetricCPU:             resource.MustParse("4"),
 						garden.QuotaMetricGPU:             resource.MustParse("0"),
@@ -303,8 +310,11 @@ var _ = Describe("quotavalidator", func() {
 					},
 					Spec: garden.QuotaSpec{
 						ClusterLifetimeDays: &quotaProjectLifetime,
-						Scope:               garden.QuotaScopeProject,
-						Metrics:             corev1.ResourceList{},
+						Scope: corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1alpha1",
+							Kind:       "Project",
+						},
+						Metrics: corev1.ResourceList{},
 					},
 				}
 				secretBinding.Quotas = []corev1.ObjectReference{

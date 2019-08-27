@@ -18,9 +18,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/utils"
+
+	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
@@ -195,4 +197,15 @@ func TaintsHave(taints []garden.SeedTaint, key string) bool {
 		}
 	}
 	return false
+}
+
+// QuotaScope returns the scope of a quota scope reference.
+func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
+	if scopeRef.APIVersion == "core.gardener.cloud/v1alpha1" && scopeRef.Kind == "Project" {
+		return "project", nil
+	}
+	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
+		return "secret", nil
+	}
+	return "", fmt.Errorf("unknown quota scope")
 }
