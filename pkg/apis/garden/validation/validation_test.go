@@ -3883,6 +3883,54 @@ var _ = Describe("validation", func() {
 
 			})
 
+			It("should forbid non canonical CIDRs", func() {
+				vpcCIDR := garden.CIDR("10.0.0.3/8")
+				nodeCIDR := garden.CIDR("10.250.0.3/16")
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+
+				shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"10.250.2.7/24"}
+				shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"10.250.1.6/24"}
+				shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.AWS.Networks.Nodes = &nodeCIDR
+				shoot.Spec.Cloud.AWS.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.AWS.Networks.Pods = &podCIDR
+				shoot.Spec.Cloud.AWS.Networks.VPC = garden.AWSVPC{CIDR: &vpcCIDR}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(7))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.networks.vpc.cidr"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.nodes"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.networks.internal[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.networks.public[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
+			})
+
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{}
 
@@ -4380,6 +4428,45 @@ var _ = Describe("validation", func() {
 				})
 			})
 
+			It("should forbid non canonical CIDRs", func() {
+				vpcCIDR := garden.CIDR("10.0.0.3/8")
+				nodeCIDR := garden.CIDR("10.250.0.3/16")
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				workers := garden.CIDR("10.250.3.8/24")
+
+				shoot.Spec.Cloud.Azure.Networks.Workers = workers
+				shoot.Spec.Cloud.Azure.Networks.Nodes = &nodeCIDR
+				shoot.Spec.Cloud.Azure.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.Azure.Networks.Pods = &podCIDR
+				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{CIDR: &vpcCIDR}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(5))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.azure.networks.vnet.cidr"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.azure.nodes"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.azure.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.azure.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.azure.networks.workers[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
+			})
+
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{}
 
@@ -4791,7 +4878,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Internal CIDR to overlap with Node - and Worker CIDR", func() {
-					overlappingCIDR := garden.CIDR("10.250.1.1/30")
+					overlappingCIDR := garden.CIDR("10.250.1.0/30")
 					shoot.Spec.Cloud.GCP.Networks.Internal = &overlappingCIDR
 					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{overlappingCIDR}
 					shoot.Spec.Cloud.GCP.Networks.Nodes = &overlappingCIDR
@@ -4801,11 +4888,11 @@ var _ = Describe("validation", func() {
 					Expect(errorList).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.cloud.gcp.networks.internal"),
-						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.nodes" ("10.250.1.1/30")`),
+						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.nodes" ("10.250.1.0/30")`),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.cloud.gcp.networks.internal"),
-						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.workers[0]" ("10.250.1.1/30")`),
+						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.workers[0]" ("10.250.1.0/30")`),
 					}))
 				})
 
@@ -4845,6 +4932,43 @@ var _ = Describe("validation", func() {
 						"Detail": Equal("invalid CIDR address: invalid-cidr"),
 					}))
 				})
+			})
+
+			It("should forbid non canonical CIDRs", func() {
+				nodeCIDR := garden.CIDR("10.250.0.3/16")
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				internal := garden.CIDR("10.10.0.4/24")
+				shoot.Spec.Cloud.GCP.Networks.Internal = &internal
+				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.GCP.Networks.Nodes = &nodeCIDR
+				shoot.Spec.Cloud.GCP.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.GCP.Networks.Pods = &podCIDR
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(5))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.gcp.nodes"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.gcp.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.gcp.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.gcp.networks.internal[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.gcp.networks.workers[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -5336,6 +5460,44 @@ var _ = Describe("validation", func() {
 				})
 			})
 
+			It("should forbid non canonical CIDRs", func() {
+				vpcCIDR := garden.CIDR("10.0.0.3/8")
+				nodeCIDR := garden.CIDR("10.250.0.3/16")
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+
+				shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.Alicloud.Networks.Nodes = &nodeCIDR
+				shoot.Spec.Cloud.Alicloud.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.Alicloud.Networks.Pods = &podCIDR
+				shoot.Spec.Cloud.Alicloud.Networks.VPC = garden.AlicloudVPC{CIDR: &vpcCIDR}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(5))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.alicloud.networks.vpc.cidr"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.alicloud.nodes"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.alicloud.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.alicloud.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.alicloud.networks.workers[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
+			})
+
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{}
 
@@ -5719,6 +5881,27 @@ var _ = Describe("validation", func() {
 						"Detail": Equal("invalid CIDR address: invalid-cidr"),
 					}))
 				})
+			})
+
+			It("should forbid non canonical CIDRs", func() {
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+
+				shoot.Spec.Cloud.Packet.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.Packet.Networks.Pods = &podCIDR
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(2))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.packet.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.packet.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -6119,6 +6302,38 @@ var _ = Describe("validation", func() {
 						"Detail": Equal("invalid CIDR address: invalid-cidr"),
 					}))
 				})
+			})
+
+			It("should forbid non canonical CIDRs", func() {
+				nodeCIDR := garden.CIDR("10.250.0.3/16")
+				podCIDR := garden.CIDR("100.96.0.4/11")
+				serviceCIDR := garden.CIDR("100.64.0.5/13")
+
+				shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.OpenStack.Networks.Nodes = &nodeCIDR
+				shoot.Spec.Cloud.OpenStack.Networks.Services = &serviceCIDR
+				shoot.Spec.Cloud.OpenStack.Networks.Pods = &podCIDR
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(4))
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.openstack.nodes"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.openstack.pods"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.openstack.services"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.cloud.openstack.networks.workers[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
 			})
 
 			It("should forbid an empty worker list", func() {
