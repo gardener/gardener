@@ -14,7 +14,7 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
 {{- if ne .Values.purpose "internal" }}
-  labels:
+  annotations:
     dns.gardener.cloud/realms: "{{ .Release.Namespace }},"
 {{- end }}
 spec:
