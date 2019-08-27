@@ -174,17 +174,16 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		updateWorkerMachineImages = helper.UpdateMachineImages(operation.Shoot.CloudProvider, machineImages)
 	}
 
+	updatedVersion, err := MaintainKubernetesVersion(operation.Shoot.Info, operation.Shoot.CloudProfile)
+	if err != nil {
+		// continue execution to allow the kubernetes version update
+		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
+	}
+
 	// Check if the CloudProfile contains a newer Kubernetes patch version.
 	var updateKubernetesVersion func(s *gardenv1beta1.Kubernetes)
-	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
-		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesPatchVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
-		if err != nil {
-			handleError(fmt.Sprintf("Failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error()))
-			return nil
-		}
-		if newerPatchVersionFound {
-			updateKubernetesVersion = func(s *gardenv1beta1.Kubernetes) { s.Version = latestPatchVersion }
-		}
+	if updatedVersion != nil {
+		updateKubernetesVersion = func(s *gardenv1beta1.Kubernetes) { s.Version = *updatedVersion }
 	}
 
 	// Update the Shoot resource object.
@@ -218,6 +217,33 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.ShootEventMaintenanceDone, "[%s] %s", operationID, msg)
 
 	return nil
+}
+
+// MaintainKubernetesVersion determines if a shoots kubernetes version has to be maintained and in case returns the target version
+func MaintainKubernetesVersion(shoot *gardenv1beta1.Shoot, profile *gardenv1beta1.CloudProfile) (*string, error) {
+	shouldBeUpdated, err := shouldKubernetesVersionBeUpdated(shoot, profile)
+	if err != nil {
+		return nil, err
+	}
+	if shouldBeUpdated {
+		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesPatchVersion(*profile, shoot.Spec.Kubernetes.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
+		}
+		if newerPatchVersionFound {
+			return &latestPatchVersion, nil
+		}
+	}
+	return nil, nil
+}
+
+func shouldKubernetesVersionBeUpdated(shoot *gardenv1beta1.Shoot, profile *gardenv1beta1.CloudProfile) (bool, error) {
+	versionExistsInCloudProfile, offeredVersion, err := helper.KubernetesVersionExistsInCloudProfile(*profile, shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return false, err
+	}
+
+	return !versionExistsInCloudProfile || shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion || ExpirationDateExpired(offeredVersion.ExpirationDate), nil
 }
 
 func mustMaintainNow(shoot *gardenv1beta1.Shoot) bool {
@@ -280,7 +306,7 @@ func determineMachineImage(cloudProfile *gardenv1beta1.CloudProfile, shootMachin
 
 func shouldMachineImageBeUpdated(shoot *gardenv1beta1.Shoot, machineImage *gardenv1beta1.MachineImage, shootMachineImage *gardenv1beta1.ShootMachineImage) (bool, *gardenv1beta1.ShootMachineImage, error) {
 	versionExistsInCloudProfile, _ := helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
-	if !versionExistsInCloudProfile || *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || ForceUpdateRequired(shootMachineImage, *machineImage) {
+	if !versionExistsInCloudProfile || *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || ForceMachineImageUpdateRequired(shootMachineImage, *machineImage) {
 		shootMachineImage, err := updateToLatestMachineImageVersion(*machineImage)
 		if err != nil {
 			return false, nil, fmt.Errorf("failure while updating machineImage to the latest version: %s", err.Error())
@@ -301,8 +327,8 @@ func updateToLatestMachineImageVersion(machineImage gardenv1beta1.MachineImage) 
 	return &latestMachineImage, nil
 }
 
-// ForceUpdateRequired checks if the shoots current machine image has to be forcefully updated
-func ForceUpdateRequired(shootCurrentImage *gardenv1beta1.ShootMachineImage, imageCloudProvider gardenv1beta1.MachineImage) bool {
+// ForceMachineImageUpdateRequired checks if the shoots current machine image has to be forcefully updated
+func ForceMachineImageUpdateRequired(shootCurrentImage *gardenv1beta1.ShootMachineImage, imageCloudProvider gardenv1beta1.MachineImage) bool {
 	for _, image := range imageCloudProvider.Versions {
 		if shootCurrentImage.Version != image.Version {
 			continue

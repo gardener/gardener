@@ -90,6 +90,42 @@ func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage
 	return nil
 }
 
+func Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(in *KubernetesConstraints, out *garden.KubernetesConstraints, s conversion.Scope) error {
+	out.OfferedVersions = []garden.KubernetesVersion{}
+	duplicates := map[string]int{}
+	for index, externalVersion := range in.Versions {
+		internalVersion := &garden.KubernetesVersion{Version: externalVersion}
+		if _, exists := duplicates[externalVersion]; exists {
+			continue
+		}
+		out.OfferedVersions = append(out.OfferedVersions, *internalVersion)
+		duplicates[externalVersion] = index
+	}
+	for _, externalVersion := range in.OfferedVersions {
+		internalVersion := &garden.KubernetesVersion{}
+		if err := Convert_v1beta1_KubernetesVersion_To_garden_KubernetesVersion(&externalVersion, internalVersion, s); err != nil {
+			return err
+		}
+		if _, exists := duplicates[externalVersion.Version]; exists {
+			if externalVersion.ExpirationDate == nil {
+				continue
+			}
+			out.OfferedVersions[duplicates[externalVersion.Version]].ExpirationDate = externalVersion.ExpirationDate
+			continue
+		}
+		out.OfferedVersions = append(out.OfferedVersions, *internalVersion)
+	}
+	return nil
+}
+
+func Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(in *garden.KubernetesConstraints, out *KubernetesConstraints, s conversion.Scope) error {
+	autoConvert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(in, out, s)
+	for _, version := range in.OfferedVersions {
+		out.Versions = append(out.Versions, version.Version)
+	}
+	return nil
+}
+
 func addConversionFuncs(scheme *runtime.Scheme) error {
 	return scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {

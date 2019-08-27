@@ -48,7 +48,7 @@ var _ = Describe("validation", func() {
 				Name: "profile",
 			}
 			kubernetesVersionConstraint = garden.KubernetesConstraints{
-				Versions: []string{"1.11.4"},
+				OfferedVersions: []garden.KubernetesVersion{{Version: "1.11.4"}},
 			}
 			machineType = garden.MachineType{
 				Name:   "machine-type-1",
@@ -79,7 +79,7 @@ var _ = Describe("validation", func() {
 				},
 			}
 
-			invalidKubernetes  = []string{"1.11"}
+			invalidKubernetes  = []garden.KubernetesVersion{{Version: "1.11"}}
 			invalidMachineType = garden.MachineType{
 				Name:   "",
 				CPU:    resource.MustParse("-1"),
@@ -180,26 +180,47 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.Versions = []string{}
+					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.Versions = invalidKubernetes
+					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
 			})
@@ -501,26 +522,47 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.Versions = []string{}
+					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.Versions = invalidKubernetes
+					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
 			})
@@ -778,26 +820,47 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.Versions = []string{}
+					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.Versions = invalidKubernetes
+					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
 			})
@@ -1128,26 +1191,47 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions = []string{}
+					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions = invalidKubernetes
+					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
 			})
@@ -1513,26 +1597,47 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = []string{}
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = invalidKubernetes
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
 			})
@@ -1873,25 +1978,46 @@ var _ = Describe("validation", func() {
 
 			Context("kubernetes version constraints", func() {
 				It("should enforce that at least one version has been defined", func() {
-					packetProfile.Spec.Packet.Constraints.Kubernetes.Versions = []string{}
+					packetProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{}
 
 					errorList := ValidateCloudProfile(packetProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions", fldPath)),
 					}))))
 				})
 
 				It("should forbid versions of a not allowed pattern", func() {
-					packetProfile.Spec.Packet.Constraints.Kubernetes.Versions = invalidKubernetes
+					packetProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = invalidKubernetes
 
 					errorList := ValidateCloudProfile(packetProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[0]", fldPath)),
 					}))))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					packetProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = []garden.KubernetesVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
+					}))
 				})
 			})
 

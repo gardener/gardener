@@ -22,4 +22,7 @@ spec:
       -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
       -shootName=$SHOOT_NAME
       -shootNamespace=$PROJECT_NAMESPACE
+      -shootpath=$SHOOT_ARTIFACT_PATH
+      -cloudprovider=$CLOUDPROVIDER
+      -test-machinery-run=true
   image: golang:1.12.9

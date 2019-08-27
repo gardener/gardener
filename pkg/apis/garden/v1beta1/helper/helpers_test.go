@@ -19,12 +19,12 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 
-	corev1 "k8s.io/api/core/v1"
 	"github.com/Masterminds/semver"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -199,10 +199,10 @@ var _ = Describe("helper", func() {
 
 	var (
 		kubernetesConstraint = gardenv1beta1.KubernetesConstraints{
-			Versions: []string{
-				"1.15.1",
-				"1.14.4",
-				"1.12.9",
+			OfferedVersions: []gardenv1beta1.KubernetesVersion{
+				{Version: "1.15.1"},
+				{Version: "1.14.4"},
+				{Version: "1.12.9"},
 			},
 		}
 	)

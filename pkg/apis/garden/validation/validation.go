@@ -272,14 +272,23 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 func validateKubernetesConstraints(kubernetes garden.KubernetesConstraints, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(kubernetes.Versions) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
+	if len(kubernetes.OfferedVersions) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("offeredVersions"), "must provide at least one Kubernetes version"))
+	}
+
+	latestKubernetesVersion, err := helper.DetermineLatestKubernetesVersion(kubernetes.OfferedVersions)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, latestKubernetesVersion, "failed to determine latest kubernetes version from cloud profile"))
+	}
+
+	if latestKubernetesVersion.ExpirationDate != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("offeredVersions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
 	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
-	for i, version := range kubernetes.Versions {
-		idxPath := fldPath.Child("versions").Index(i)
-		if !r.MatchString(version) {
+	for i, version := range kubernetes.OfferedVersions {
+		idxPath := fldPath.Child("offeredVersions").Index(i)
+		if !r.MatchString(version.Version) {
 			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
 		}
 	}

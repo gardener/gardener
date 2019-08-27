@@ -300,7 +300,21 @@ type DNSProviderConstraint struct {
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 type KubernetesConstraints struct {
 	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).
-	Versions []string `json:"versions"`
+	// +optional
+	Versions []string `json:"versions,omitempty"`
+	// OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters
+	OfferedVersions []KubernetesVersion `json:"offeredVersions"`
+}
+
+// KubernetesVersion contains the version code and optional expiration date for a kubernetes version
+type KubernetesVersion struct {
+	// Version is the kubernetes version
+	Version string `json:"version"`
+	// ExpirationDate defines the time at which this kubernetes version is not supported any more. This has the following implications:
+	// 1) A shoot that opted out of automatic kubernetes system updates and that is running this kubernetes version will be forcefully updated to the latest kubernetes patch version for the current minor version
+	// 2) Shoot's with this kubernetes version cannot be created
+	// +optional
+	ExpirationDate *metav1.Time `json:"expirationDate,omitempty"`
 }
 
 // MachineType contains certain properties of a machine type.

@@ -18,9 +18,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
-
 	"github.com/Masterminds/semver"
+	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
@@ -133,6 +133,26 @@ func DetermineLatestMachineImageVersion(image garden.MachineImage) (garden.Machi
 		}
 	}
 	return latestMachineImageVersion, nil
+}
+
+// DetermineLatestKubernetesVersion determines the latest KubernetesVersion from a slice of KubernetesVersions
+func DetermineLatestKubernetesVersion(offeredVersions []garden.KubernetesVersion) (garden.KubernetesVersion, error) {
+	var latestKubernetesVersion garden.KubernetesVersion
+
+	for _, version := range offeredVersions {
+		if len(latestKubernetesVersion.Version) == 0 {
+			latestKubernetesVersion = version
+			continue
+		}
+		isGreater, err := utils.CompareVersions(version.Version, ">", latestKubernetesVersion.Version)
+		if err != nil {
+			return garden.KubernetesVersion{}, fmt.Errorf("error while comparing Kubernetes versions: %s", err.Error())
+		}
+		if isGreater {
+			latestKubernetesVersion = version
+		}
+	}
+	return latestKubernetesVersion, nil
 }
 
 // ShootWantsBasicAuthentication returns true if basic authentication is not configured or
