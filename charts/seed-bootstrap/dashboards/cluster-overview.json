@@ -6,7 +6,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1565956128181,
+  "iteration": 1566913546161,
   "links": [],
   "panels": [
     {
@@ -365,28 +365,17 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "tags": [],
-          "text": "shoot--d064864--shoot-aws1",
-          "value": "shoot--d064864--shoot-aws1"
-        },
         "datasource": "prometheus",
-        "definition": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot(.+)\"},namespace)",
+        "definition": "label_values(namespace)",
         "hide": 0,
         "includeAll": false,
         "label": "Shoot",
         "multi": false,
         "name": "shoot",
-        "options": [
-          {
-            "selected": true,
-            "text": "shoot--d064864--shoot-aws1",
-            "value": "shoot--d064864--shoot-aws1"
-          }
-        ],
-        "query": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot(.+)\"},namespace)",
-        "refresh": 0,
-        "regex": "",
+        "options": [],
+        "query": "label_values(namespace)",
+        "refresh": 1,
+        "regex": "((shoot-|shoot--)(\\w.+))",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
