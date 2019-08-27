@@ -24,9 +24,10 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Masterminds/semver"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -1162,6 +1163,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, vpcCIDR.ValidateNotSubset(pods, services)...)
 		}
 
+		// make sure all CIDRs are canonical
+		allErrs = append(allErrs, validateCIDRsAreCanonical(awsPath, aws.Networks.VPC.CIDR, &nodes, &pods, &services, aws.Networks.Internal, aws.Networks.Public, aws.Networks.Workers)...)
+
 		// make sure that VPC cidrs don't overlap with eachother
 		allErrs = append(allErrs, validateCIDROVerlap(allVPCCIDRs, allVPCCIDRs, false)...)
 
@@ -1173,9 +1177,7 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			return allErrs
 		}
 
-		var (
-			workers []garden.Worker
-		)
+		var workers []garden.Worker
 
 		for i, worker := range aws.Workers {
 			idxPath := workersPath.Index(i)
@@ -1243,6 +1245,12 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		// 	allErrs = append(allErrs, validateCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))...)
 		// }
 
+		// make sure all CIDRs are canonical
+		if azure.Networks.VNet.CIDR != nil {
+			allErrs = append(allErrs, validateCIDRIsCanonical(azurePath.Child("networks", "vnet", "cidr"), *azure.Networks.VNet.CIDR)...)
+		}
+		allErrs = append(allErrs, validateCIDRsAreCanonical(azurePath, nil, &nodes, &pods, &services, nil, nil, []garden.CIDR{azure.Networks.Workers})...)
+
 		workersPath := azurePath.Child("workers")
 		if len(azure.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
@@ -1308,6 +1316,14 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "vpc", "name"), gcp.Networks.VPC.Name, "vpc name must not be empty when vpc key is provided"))
 		}
 
+		// make sure all CIDRs are canonical
+		internalNetworks := []garden.CIDR{}
+		if gcp.Networks.Internal != nil {
+			internalNetworks = []garden.CIDR{*gcp.Networks.Internal}
+		}
+
+		allErrs = append(allErrs, validateCIDRsAreCanonical(gcpPath, nil, &nodes, &pods, &services, internalNetworks, nil, gcp.Networks.Workers)...)
+
 		workersPath := gcpPath.Child("workers")
 		if len(gcp.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
@@ -1350,7 +1366,7 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			return allErrs
 		}
 
-		nodes, _, _, networkErrors := transformK8SNetworks(openStack.Networks.K8SNetworks, openStackPath.Child("networks"))
+		nodes, pods, services, networkErrors := transformK8SNetworks(openStack.Networks.K8SNetworks, openStackPath.Child("networks"))
 		allErrs = append(allErrs, networkErrors...)
 
 		if len(openStack.Networks.Workers) > 1 {
@@ -1373,6 +1389,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		if openStack.Networks.Router != nil && len(openStack.Networks.Router.ID) == 0 {
 			allErrs = append(allErrs, field.Invalid(openStackPath.Child("networks", "router", "id"), openStack.Networks.Router.ID, "router id must not be empty when router key is provided"))
 		}
+
+		// make sure all CIDRs are canonical
+		allErrs = append(allErrs, validateCIDRsAreCanonical(openStackPath, nil, &nodes, &pods, &services, nil, nil, openStack.Networks.Workers)...)
 
 		workersPath := openStackPath.Child("workers")
 		if len(openStack.Workers) == 0 {
@@ -1435,6 +1454,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, vpcCIDR.ValidateNotSubset(pods, services)...)
 		}
 
+		// make sure all CIDRs are canonical
+		allErrs = append(allErrs, validateCIDRsAreCanonical(alicloudPath, alicloud.Networks.VPC.CIDR, &nodes, &pods, &services, nil, nil, alicloud.Networks.Workers)...)
+
 		if len(alicloud.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(alicloudPath.Child("workers"), "must specify at least one worker"))
 			return allErrs
@@ -1465,8 +1487,11 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			return allErrs
 		}
 
-		_, _, _, networkErrors := transformK8SNetworks(packet.Networks.K8SNetworks, packetPath.Child("networks"))
+		_, pods, services, networkErrors := transformK8SNetworks(packet.Networks.K8SNetworks, packetPath.Child("networks"))
 		allErrs = append(allErrs, networkErrors...)
+
+		//make sure all CIDRs are canonical
+		allErrs = append(allErrs, validateCIDRsAreCanonical(packetPath, nil, nil, &pods, &services, nil, nil, nil)...)
 
 		if len(packet.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(packetPath.Child("workers"), "must specify at least one worker"))
@@ -1748,6 +1773,51 @@ func validateCIDROVerlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bo
 			allErrs = append(allErrs, left.ValidateSubset(rightPaths...)...)
 		} else {
 			allErrs = append(allErrs, left.ValidateNotSubset(rightPaths...)...)
+		}
+	}
+	return allErrs
+}
+
+func validateCIDRsAreCanonical(fldPath *field.Path, vpc *garden.CIDR, nodes *cidrvalidation.CIDR, pods *cidrvalidation.CIDR, services *cidrvalidation.CIDR, internal []garden.CIDR, public []garden.CIDR, workers []garden.CIDR) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if vpc != nil {
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("networks", "vpc", "cidr"), *vpc)...)
+	}
+	if nodes != nil && *nodes != nil {
+		cidr := *nodes
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("nodes"), cidr.GetCIDR())...)
+	}
+	if pods != nil && *pods != nil {
+		cidr := *pods
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("pods"), cidr.GetCIDR())...)
+	}
+	if services != nil && *services != nil {
+		cidr := *services
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("services"), cidr.GetCIDR())...)
+	}
+
+	for i, cidr := range internal {
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("networks", "internal").Index(i), cidr)...)
+	}
+	for i, cidr := range public {
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("networks", "public").Index(i), cidr)...)
+	}
+	for i, cidr := range workers {
+		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("networks", "workers").Index(i), cidr)...)
+	}
+	return allErrs
+}
+
+func validateCIDRIsCanonical(fldPath *field.Path, cidrToValidate garden.CIDR) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(cidrToValidate) == 0 {
+		return allErrs
+	}
+	// CIDR parse error already validated
+	ipAdress, ipNet, _ := net.ParseCIDR(string(cidrToValidate))
+	if ipNet != nil {
+		if !ipNet.IP.Equal(ipAdress) {
+			allErrs = append(allErrs, field.Invalid(fldPath, cidrToValidate, "must be valid canonical CIDR"))
 		}
 	}
 	return allErrs

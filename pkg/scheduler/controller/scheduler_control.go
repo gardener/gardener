@@ -190,7 +190,7 @@ func determineBestSeedCandidate(shoot *gardenv1beta1.Shoot, shootList []*gardenv
 	case config.MinimalDistance:
 		candidates = determineCandidatesWithMinimalDistanceStrategy(seedList, shoot, candidates)
 	default:
-		return nil, fmt.Errorf("unknown seed determination strategy configured in seed admission plugin. Strategy: '%s' does not exist. Valid strategies are: %v", strategy, config.Strategies)
+		return nil, fmt.Errorf("unknown seed determination strategy configured. Strategy: '%s' does not exist. Valid strategies are: %v", strategy, config.Strategies)
 	}
 
 	if candidates == nil {
