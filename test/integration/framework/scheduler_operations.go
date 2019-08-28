@@ -17,13 +17,14 @@ package framework
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"time"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,9 +43,11 @@ const configurationFileName = "schedulerconfiguration.yaml"
 
 // NewGardenSchedulerTest creates a new SchedulerGardenerTest by retrieving the ConfigMap containing the Scheduler Configuration & parsing the Scheduler Configuration
 func NewGardenSchedulerTest(ctx context.Context, shootGardenTest *ShootGardenerTest, hostKubeconfigPath string) (*SchedulerGardenerTest, error) {
-	k8sHostClient, err := kubernetes.NewClientFromFile("", hostKubeconfigPath, client.Options{
-		Scheme: kubernetes.ShootScheme,
-	})
+	k8sHostClient, err := kubernetes.NewClientFromFile("", hostKubeconfigPath, kubernetes.WithClientOptions(
+		client.Options{
+			Scheme: kubernetes.ShootScheme,
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}

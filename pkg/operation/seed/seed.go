@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
 
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -225,13 +226,17 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
+func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
 
 	const chartName = "seed-bootstrap"
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
+	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret,
+		kubernetes.WithClientConnectionOptions(config.ClientConnection),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.SeedScheme,
+			}),
+	)
 	if err != nil {
 		return err
 	}
@@ -557,9 +562,11 @@ func (s *Seed) CheckMinimumK8SVersion() error {
 	// this case.
 	minSeedVersion := "1.10"
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
+	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret, kubernetes.WithClientOptions(
+		client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
+	)
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
@@ -38,68 +37,77 @@ import (
 const KubeConfig = "kubeconfig"
 
 // NewRuntimeClientFromSecret creates a new controller runtime Client struct for a given secret.
-func NewRuntimeClientFromSecret(secret *corev1.Secret, opts client.Options) (client.Client, error) {
+func NewRuntimeClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (client.Client, error) {
 	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
-		return NewRuntimeClientFromBytes(kubeconfig, opts)
+		return NewRuntimeClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("no valid kubeconfig found")
 
 }
 
 // NewRuntimeClientFromBytes creates a new controller runtime Client struct for a given kubeconfig byte slice.
-func NewRuntimeClientFromBytes(kubeconfig []byte, opts client.Options) (client.Client, error) {
+func NewRuntimeClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (client.Client, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	return NewRuntimeClientForConfig(config, opts)
+	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
+	return NewRuntimeClientForConfig(opts...)
 }
 
 // NewRuntimeClientForConfig returns a new controller runtime client from a config.
-func NewRuntimeClientForConfig(config *rest.Config, opts client.Options) (client.Client, error) {
-	return client.New(config, opts)
+func NewRuntimeClientForConfig(fns ...ConfigFunc) (client.Client, error) {
+	conf := &config{}
+	for _, f := range fns {
+		if err := f(conf); err != nil {
+			return nil, err
+		}
+	}
+	return client.New(conf.restConfig, conf.clientOptions)
 }
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>. If given, <masterURL> overrides the
 // master URL in the kubeconfig.
 // If no filepath is given, the in-cluster configuration will be taken into account.
-func NewClientFromFile(masterURL, kubeconfigPath string, opts client.Options) (Interface, error) {
+func NewClientFromFile(masterURL, kubeconfigPath string, fns ...ConfigFunc) (Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewForConfig(config, opts)
+	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
+	return NewWithConfig(opts...)
 }
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
-func NewClientFromBytes(kubeconfig []byte, opts client.Options) (Interface, error) {
+func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewForConfig(config, opts)
+	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
+	return NewWithConfig(opts...)
 }
 
 // NewClientFromSecret creates a new Client struct for a given kubeconfig stored as a
 // Secret in an existing Kubernetes cluster. This cluster will be accessed by the <k8sClient>. It will
 // read the Secret <secretName> in <namespace>. The Secret must contain a field "kubeconfig" which will
 // be used.
-func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts client.Options) (Interface, error) {
+func NewClientFromSecret(k8sClient Interface, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
 	secret := &corev1.Secret{}
 	if err := k8sClient.Client().Get(context.TODO(), kutil.Key(namespace, secretName), secret); err != nil {
 		return nil, err
 	}
-	return NewClientFromSecretObject(secret, opts)
+	return NewClientFromSecretObject(secret, fns...)
 }
 
 // NewClientFromSecretObject creates a new Client struct for a given Kubernetes Secret object. The Secret must
 // contain a field "kubeconfig" which will be used.
-func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Interface, error) {
+func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interface, error) {
 	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
-		return NewClientFromBytes(kubeconfig, opts)
+		return NewClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
 }
@@ -127,51 +135,63 @@ func checkIfSupportedKubernetesVersion(gitVersion string) error {
 	return fmt.Errorf("unsupported kubernetes version %q", gitVersion)
 }
 
-// NewForConfig returns a new Kubernetes base client.
-func NewForConfig(config *rest.Config, options client.Options) (Interface, error) {
-	c, err := client.New(config, options)
+// NewWithConfig returns a new Kubernetes base client.
+func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
+	conf := &config{}
+
+	for _, f := range fns {
+		if err := f(conf); err != nil {
+			return nil, err
+		}
+	}
+
+	return new(conf)
+}
+
+func new(conf *config) (Interface, error) {
+	c, err := client.New(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	applier, err := NewApplierForConfig(config)
+	applier, err := NewApplierForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetes, err := kubernetesclientset.NewForConfig(config)
+	kubernetes, err := kubernetesclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	garden, err := gardenclientset.NewForConfig(config)
+	garden, err := gardenclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	gardenCore, err := gardencoreclientset.NewForConfig(config)
+	gardenCore, err := gardencoreclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	machine, err := machineclientset.NewForConfig(config)
+	machine, err := machineclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	apiRegistration, err := apiserviceclientset.NewForConfig(config)
+	apiRegistration, err := apiserviceclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	apiExtension, err := apiextensionsclientset.NewForConfig(config)
+	apiExtension, err := apiextensionsclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	clientSet := &Clientset{
-		config:     config,
-		restMapper: options.Mapper,
+		config:     conf.restConfig,
+		restMapper: conf.clientOptions.Mapper,
 		restClient: kubernetes.Discovery().RESTClient(),
 
 		applier: applier,

@@ -36,10 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/discovery"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -173,8 +173,8 @@ type Clientset struct {
 // by first checking whether they exist and then either creating / updating them (update happens
 // with a predefined merge logic).
 type Applier struct {
-	client    client.Client
-	discovery discovery.CachedDiscoveryInterface
+	client     client.Client
+	restMapper *restmapper.DeferredDiscoveryRESTMapper
 }
 
 // MergeFunc determines how oldOj is merged into new oldObj.

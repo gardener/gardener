@@ -101,9 +101,11 @@ var _ = Describe("Seed logging testing", func() {
 		validateFlags()
 
 		seedLogTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-		k8sGardenClient, err := kubernetes.NewClientFromFile("", *kubeconfig, client.Options{
-			Scheme: kubernetes.GardenScheme,
-		})
+		k8sGardenClient, err := kubernetes.NewClientFromFile("", *kubeconfig, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.GardenScheme,
+			}),
+		)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Checks whether required logging resources are present.
@@ -142,7 +144,7 @@ var _ = Describe("Seed logging testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			seedSecretRef := seed.Spec.SecretRef
-			seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{})
+			seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking for required logging resources")

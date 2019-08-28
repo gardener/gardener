@@ -276,9 +276,13 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 		BearerToken: string(secret.Data["token"]),
 	}
 
-	return kubernetes.NewForConfig(serviceAccountConfig, client.Options{
-		Scheme: kubernetes.GardenScheme,
-	})
+	return kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(serviceAccountConfig),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.GardenScheme,
+			}),
+	)
 }
 
 // GetDeploymentReplicas gets the spec.Replicas count from a deployment

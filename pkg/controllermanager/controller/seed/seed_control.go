@@ -275,7 +275,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	if c.config.Controllers.Seed.ReserveExcessCapacity != nil {
 		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
 	}
-	if err := seedpkg.BootstrapCluster(seedObj, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
+	if err := seedpkg.BootstrapCluster(seedObj, c.config, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
 		conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, conditionSeedAvailable)
 		seedLogger.Error(err.Error())

@@ -196,9 +196,13 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
+	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
+		kubernetes.WithClientConnectionOptions(c.config.ClientConnection),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.SeedScheme,
+			}),
+	)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
@@ -342,9 +346,13 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		return err
 	}
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
+	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
+		kubernetes.WithClientConnectionOptions(c.config.ClientConnection),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.SeedScheme,
+			}),
+	)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))

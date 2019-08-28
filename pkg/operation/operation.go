@@ -55,16 +55,17 @@ import (
 )
 
 // New creates a new operation object with a Shoot resource object.
-func New(shoot *gardenv1beta1.Shoot, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.Cloud.Seed, shoot, nil, shootBackup)
+func New(shoot *gardenv1beta1.Shoot, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
+	return newOperation(config, logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.Cloud.Seed, shoot, nil, shootBackup)
 }
 
 // NewWithBackupInfrastructure creates a new operation object without a Shoot resource object but the BackupInfrastructure resource.
-func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfrastructure, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, &backupInfrastructure.Spec.Seed, nil, backupInfrastructure, nil)
+func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfrastructure, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+	return newOperation(config, logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, &backupInfrastructure.Spec.Seed, nil, backupInfrastructure, nil)
 }
 
 func newOperation(
+	config *config.ControllerManagerConfiguration,
 	logger *logrus.Entry,
 	k8sGardenClient kubernetes.Interface,
 	k8sGardenInformers gardeninformers.Interface,
@@ -106,6 +107,7 @@ func newOperation(
 	}
 
 	operation := &Operation{
+		Config:               config,
 		Logger:               logger,
 		GardenerInfo:         gardenerInfo,
 		Secrets:              secrets,
@@ -149,12 +151,17 @@ func (o *Operation) InitializeSeedClients() error {
 		return nil
 	}
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
+	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret,
+		kubernetes.WithClientConnectionOptions(o.Config.ClientConnection),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.SeedScheme,
+			}),
+	)
 	if err != nil {
 		return err
 	}
+
 	o.K8sSeedClient = k8sSeedClient
 
 	renderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
@@ -190,9 +197,13 @@ func (o *Operation) InitializeShootClients() error {
 		}
 	}
 
-	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardenv1beta1.GardenerName, client.Options{
-		Scheme: kubernetes.ShootScheme,
-	})
+	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardenv1beta1.GardenerName,
+		kubernetes.WithClientConnectionOptions(o.Config.ClientConnection),
+		kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.ShootScheme,
+			}),
+	)
 	if err != nil {
 		return err
 	}
