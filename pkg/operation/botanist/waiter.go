@@ -26,7 +26,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -332,27 +331,5 @@ func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
 
 		b.Logger.Infof("Waiting until all nodes have been deleted in the shoot cluster...")
 		return retry.MinorError(fmt.Errorf("not all nodes have been deleted in the shoot cluster"))
-	})
-}
-
-// WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
-func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		managedResources := &resourcesv1alpha1.ManagedResourceList{}
-		if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if len(managedResources.Items) == 0 {
-			return retry.Ok()
-		}
-
-		names := make([]string, 0, len(managedResources.Items))
-		for _, resource := range managedResources.Items {
-			names = append(names, resource.Name)
-		}
-
-		b.Logger.Infof("Waiting until all managed resources have been deleted in the shoot cluster...")
-		return retry.MinorError(fmt.Errorf("not all managed resources have been deleted in the shoot cluster (still existing: %s)", names))
 	})
 }

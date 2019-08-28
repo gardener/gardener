@@ -151,8 +151,11 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 	}
 
 	var (
-		labels = map[string]string{
+		injectedLabels = map[string]string{
 			common.ShootNoCleanup: "true",
+		}
+		labels = map[string]string{
+			ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener,
 		}
 		charts = map[string]managedResourceOptions{
 			"shoot-cloud-config-execution": managedResourceOptions{false, b.generateCloudConfigExecutionChart},
@@ -186,8 +189,9 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 		if err := manager.
 			NewManagedResource(b.K8sSeedClient.Client()).
 			WithNamespacedName(b.Shoot.SeedNamespace, name).
+			WithLabels(labels).
 			WithSecretRef(secretName).
-			WithInjectedLabels(labels).
+			WithInjectedLabels(injectedLabels).
 			KeepObjects(options.keepObjects).
 			Reconcile(ctx); err != nil {
 			return err

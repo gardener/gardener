@@ -16,14 +16,68 @@ package botanist
 
 import (
 	"context"
-
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	"fmt"
+	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// ManagedResourceLabelKeyOrigin is a key for a label on a managed resource with the value 'origin'.
+	ManagedResourceLabelKeyOrigin = "origin"
+	// ManagedResourceLabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
+	ManagedResourceLabelValueGardener = "gardener"
 )
 
 // DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
-	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, utilclient.CollectionMatching(client.InNamespace(b.Shoot.SeedNamespace)))
+	// TODO: Remove in a future release: Label well-known MRs that were potentially created without origin label.
+	for _, name := range []string{"shoot-cloud-config-execution", "shoot-core", "shoot-core-namespaces", "addons"} {
+		obj := &resourcesv1alpha1.ManagedResource{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), obj); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+			continue
+		}
+
+		objCopy := obj.DeepCopy()
+		kutil.SetMetaDataLabel(objCopy, ManagedResourceLabelKeyOrigin, ManagedResourceLabelValueGardener)
+		if err := b.K8sSeedClient.Client().Patch(ctx, obj, client.MergeFrom(objCopy)); err != nil {
+			return err
+		}
+	}
+
+	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, utilclient.CollectionMatching(
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels(map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener})),
+	)
+}
+
+// WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
+func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+		managedResources := &resourcesv1alpha1.ManagedResourceList{}
+		if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels(map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener})); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if len(managedResources.Items) == 0 {
+			return retry.Ok()
+		}
+
+		names := make([]string, 0, len(managedResources.Items))
+		for _, resource := range managedResources.Items {
+			names = append(names, resource.Name)
+		}
+
+		b.Logger.Infof("Waiting until all managed resources have been deleted in the shoot cluster...")
+		return retry.MinorError(fmt.Errorf("not all managed resources have been deleted in the shoot cluster (still existing: %s)", names))
+	})
 }
