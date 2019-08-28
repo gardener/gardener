@@ -103,23 +103,24 @@ allowedMetrics:
   - process_open_fds
   - process_resident_memory_bytes
   kubeETCD3BR:
-  - etcdbr_snapshot_gc_total
-  - etcdbr_snapshot_latest_revision
-  - etcdbr_snapshot_latest_timestamp
-  - etcdbr_snapshot_duration_seconds_bucket
-  - etcdbr_snapshot_duration_seconds_count
-  - etcdbr_snapshot_duration_seconds_sum
-  - etcdbr_validation_duration_seconds_bucket
-  - etcdbr_validation_duration_seconds_count
-  - etcdbr_validation_duration_seconds_sum
-  - etcdbr_restoration_duration_seconds_bucket
-  - etcdbr_restoration_duration_seconds_count
-  - etcdbr_restoration_duration_seconds_sum
   - etcdbr_defragmentation_duration_seconds_bucket
   - etcdbr_defragmentation_duration_seconds_count
   - etcdbr_defragmentation_duration_seconds_sum
-  - etcdbr_network_transmitted_bytes
   - etcdbr_network_received_bytes
+  - etcdbr_network_transmitted_bytes
+  - etcdbr_restoration_duration_seconds_bucket
+  - etcdbr_restoration_duration_seconds_count
+  - etcdbr_restoration_duration_seconds_sum
+  - etcdbr_snapshot_duration_seconds_bucket
+  - etcdbr_snapshot_duration_seconds_count
+  - etcdbr_snapshot_duration_seconds_sum
+  - etcdbr_snapshot_gc_total
+  - etcdbr_snapshot_latest_revision
+  - etcdbr_snapshot_latest_timestamp
+  - etcdbr_snapshot_required
+  - etcdbr_validation_duration_seconds_bucket
+  - etcdbr_validation_duration_seconds_count
+  - etcdbr_validation_duration_seconds_sum
   - process_resident_memory_bytes
   kubeScheduler:
   - scheduler_binding_latency_microseconds_bucket

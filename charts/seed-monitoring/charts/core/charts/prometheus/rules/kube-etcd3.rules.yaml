@@ -65,30 +65,32 @@ groups:
       description: Etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures
         within the last hour.
       summary: High number of failed etcd proposals
-  
+
   - record: shoot:etcd_object_counts:sum_by_resource
     expr: sum(etcd_object_counts) by (resource)
-  
+
   # etcd backup failure alerts
   - alert: KubeEtcdDeltaBackupFailed
-    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Incr"}[15m]) >= 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Incr",succeeded="true"}[15m]) < 1
+    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore",kind="Incr",role="main"} > bool 900) + (etcdbr_snapshot_required{kind="Incr", role="main"} >= bool 1) == 2
+    for: 15m
     labels:
       service: etcd
       severity: critical
       type: seed
       visibility: operator
     annotations:
-      description: No delta snapshot for the past 15 minutes.
+      description: No delta snapshot for the past at least 30 minutes.
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
-    expr: changes(etcdbr_snapshot_latest_revision{job="kube-etcd3-backup-restore",role="main",kind="Full"}[1455m]) >= 1 and ON(job,role,kind) changes(etcdbr_snapshot_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",kind="Full",succeeded="true"}[1455m]) < 1
+    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore",kind="Full",role="main"} > bool 86400) + (etcdbr_snapshot_required{kind="Full", role="main"} >= bool 1) == 2
+    for: 15m
     labels:
         service: etcd
         severity: critical
         type: seed
         visibility: operator
     annotations:
-        description: No full snapshot for the past 24 hours 15minutes.
+        description: No full snapshot taken in the past day.
         summary: Etcd full snapshot failure.
 
-  
+
