@@ -634,8 +634,11 @@ spec:
   #     SomeKubernetesFeature: true
   % endif
   dns:
-  # provider: ${value("spec.dns.provider", "aws-route53")}
-    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com")}<% hibernation = value("spec.hibernation", {}) %>
+    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com")}<% hibernation = value("spec.hibernation", {}) %> # if not specified then Gardener will try to use the default domain for this shoot
+  # provider: ${value("spec.dns.provider", "aws-route53")}     # only relevant if a custom domain is used for this shoot
+  # secretName: my-dns-secret # only relevant if a custom domain is used for this shoot
+  # includeZones: []          # only relevant if a custom domain is used for this shoot
+  # excludeZones: []          # only relevant if a custom domain is used for this shoot
   % if hibernation != {}:
   hibernation: ${yaml.dump(hibernation, width=10000, default_flow_style=None)}
   % else:

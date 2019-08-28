@@ -21,10 +21,25 @@ spec:
   type: {{ .Values.provider }}
   secretRef:
     name: extensions-dns-{{ .Values.name }}
+{{- if or .Values.domains.include .Values.domains.exclude }}
+{{- if .Values.domains.include }}
   domains:
     include:
 {{ toYaml .Values.domains.include | indent 4 }}
+{{- end }}
 {{- if .Values.domains.exclude }}
     exclude:
 {{ toYaml .Values.domains.exclude | indent 4 }}
+{{- end }}
+{{- end }}
+{{- if or .Values.zones.include .Values.zones.exclude }}
+  zones:
+{{- if .Values.zones.include }}
+    include:
+{{ toYaml .Values.zones.include | indent 4 }}
+{{- end }}
+{{- if .Values.zones.exclude }}
+    exclude:
+{{ toYaml .Values.zones.exclude | indent 4 }}
+{{- end }}
 {{- end }}

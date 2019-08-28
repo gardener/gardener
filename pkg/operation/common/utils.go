@@ -380,9 +380,9 @@ func DeleteGrafanaByRole(k8sClient kubernetes.Interface, namespace, role string)
 }
 
 // GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
-func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, err error) {
+func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, includeZones, excludeZones []string, err error) {
 	if annotations == nil {
-		return "", "", fmt.Errorf("domain secret has no annotations")
+		return "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
 	}
 
 	if providerAnnotation, ok := annotations[DNSProviderDeprecated]; ok {
@@ -399,11 +399,18 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 		domain = domainAnnotation
 	}
 
+	if includeZonesAnnotation, ok := annotations[DNSIncludeZones]; ok {
+		includeZones = strings.Split(includeZonesAnnotation, ",")
+	}
+	if excludeZonesAnnotation, ok := annotations[DNSExcludeZones]; ok {
+		excludeZones = strings.Split(excludeZonesAnnotation, ",")
+	}
+
 	if len(domain) == 0 {
-		return "", "", fmt.Errorf("missing dns domain annotation on domain secret")
+		return "", "", nil, nil, fmt.Errorf("missing dns domain annotation on domain secret")
 	}
 	if len(provider) == 0 {
-		return "", "", fmt.Errorf("missing dns provider annotation on domain secret")
+		return "", "", nil, nil, fmt.Errorf("missing dns provider annotation on domain secret")
 	}
 
 	return

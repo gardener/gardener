@@ -2673,10 +2673,11 @@ func Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.Cl
 }
 
 func autoConvert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
-	out.Provider = (*string)(unsafe.Pointer(in.Provider))
-	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
+	out.Provider = (*string)(unsafe.Pointer(in.Provider))
+	out.IncludeZones = *(*[]string)(unsafe.Pointer(&in.IncludeZones))
+	out.ExcludeZones = *(*[]string)(unsafe.Pointer(&in.ExcludeZones))
 	return nil
 }
 
@@ -2686,10 +2687,11 @@ func Convert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Sc
 }
 
 func autoConvert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Scope) error {
-	out.Provider = (*string)(unsafe.Pointer(in.Provider))
-	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
+	out.Provider = (*string)(unsafe.Pointer(in.Provider))
+	out.IncludeZones = *(*[]string)(unsafe.Pointer(&in.IncludeZones))
+	out.ExcludeZones = *(*[]string)(unsafe.Pointer(&in.ExcludeZones))
 	return nil
 }
 

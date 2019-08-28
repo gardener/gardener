@@ -94,6 +94,14 @@ const (
 	// domain name.
 	DNSDomain = "dns.gardener.cloud/domain"
 
+	// DNSIncludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
+	// of zones that shall be included.
+	DNSIncludeZones = "dns.gardener.cloud/include-zones"
+
+	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
+	// of zones that shall be excluded.
+	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
+
 	// EtcdRoleMain is the constant defining the role for main etcd storing data about objects in Shoot.
 	EtcdRoleMain = "main"
 

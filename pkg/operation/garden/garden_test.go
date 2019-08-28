@@ -16,6 +16,7 @@ package garden_test
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -39,11 +40,16 @@ var _ = Describe("Garden", func() {
 				data     = map[string][]byte{
 					"foo": []byte("bar"),
 				}
+				includeZones = []string{"a", "b"}
+				excludeZones = []string{"c", "d"}
+
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider: provider,
-							common.DNSDomain:   domain,
+							common.DNSProvider:     provider,
+							common.DNSDomain:       domain,
+							common.DNSIncludeZones: strings.Join(includeZones, ","),
+							common.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -56,11 +62,13 @@ var _ = Describe("Garden", func() {
 			defaultDomains, err := GetDefaultDomains(secrets)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(defaultDomains).To(Equal([]*DefaultDomain{
+			Expect(defaultDomains).To(Equal([]*Domain{
 				{
-					Domain:     domain,
-					Provider:   provider,
-					SecretData: data,
+					Domain:       domain,
+					Provider:     provider,
+					SecretData:   data,
+					IncludeZones: includeZones,
+					ExcludeZones: excludeZones,
 				},
 			}))
 		})
@@ -90,11 +98,16 @@ var _ = Describe("Garden", func() {
 				data     = map[string][]byte{
 					"foo": []byte("bar"),
 				}
+				includeZones = []string{"a", "b"}
+				excludeZones = []string{"c", "d"}
+
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider: provider,
-							common.DNSDomain:   domain,
+							common.DNSProvider:     provider,
+							common.DNSDomain:       domain,
+							common.DNSIncludeZones: strings.Join(includeZones, ","),
+							common.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -107,10 +120,12 @@ var _ = Describe("Garden", func() {
 			internalDomain, err := GetInternalDomain(secrets)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(internalDomain).To(Equal(&InternalDomain{
-				Domain:     domain,
-				Provider:   provider,
-				SecretData: data,
+			Expect(internalDomain).To(Equal(&Domain{
+				Domain:       domain,
+				Provider:     provider,
+				SecretData:   data,
+				IncludeZones: includeZones,
+				ExcludeZones: excludeZones,
 			}))
 		})
 
@@ -140,7 +155,7 @@ var _ = Describe("Garden", func() {
 	var (
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
-		defaultDomain           = &garden.DefaultDomain{
+		defaultDomain           = &garden.Domain{
 			Domain:     "bar.com",
 			Provider:   defaultDomainProvider,
 			SecretData: defaultDomainSecretData,
@@ -148,11 +163,11 @@ var _ = Describe("Garden", func() {
 	)
 
 	DescribeTable("#DomainIsDefaultDomain",
-		func(domain string, defaultDomains []*garden.DefaultDomain, expected gomegatypes.GomegaMatcher) {
+		func(domain string, defaultDomains []*garden.Domain, expected gomegatypes.GomegaMatcher) {
 			Expect(DomainIsDefaultDomain(domain, defaultDomains)).To(expected)
 		},
 
 		Entry("no default domain", "foo.bar.com", nil, BeNil()),
-		Entry("default domain", "foo.bar.com", []*garden.DefaultDomain{defaultDomain}, Equal(defaultDomain)),
+		Entry("default domain", "foo.bar.com", []*garden.Domain{defaultDomain}, Equal(defaultDomain)),
 	)
 })

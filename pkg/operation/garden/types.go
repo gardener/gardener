@@ -21,20 +21,15 @@ import (
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
 	Project        *gardenv1beta1.Project
-	DefaultDomains []*DefaultDomain
-	InternalDomain *InternalDomain
+	DefaultDomains []*Domain
+	InternalDomain *Domain
 }
 
-// InternalDomain contains information about the internal domain configured in the garden cluster.
-type InternalDomain struct {
-	Domain     string
-	Provider   string
-	SecretData map[string][]byte
-}
-
-// DefaultDomain contains information about a default domain configured in the garden cluster.
-type DefaultDomain struct {
-	Domain     string
-	Provider   string
-	SecretData map[string][]byte
+// Domain contains information about a domain configured in the garden cluster.
+type Domain struct {
+	Domain       string
+	Provider     string
+	SecretData   map[string][]byte
+	IncludeZones []string
+	ExcludeZones []string
 }

@@ -124,7 +124,7 @@ var _ = Describe("shoot", func() {
 		var (
 			defaultDomainProvider   = "default-domain-provider"
 			defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
-			defaultDomain           = &garden.DefaultDomain{
+			defaultDomain           = &garden.Domain{
 				Domain:     "bar.com",
 				Provider:   defaultDomainProvider,
 				SecretData: defaultDomainSecretData,
@@ -179,7 +179,7 @@ var _ = Describe("shoot", func() {
 
 				externalDomain, err := ConstructExternalDomain(ctx, c, shoot, nil, nil)
 
-				Expect(externalDomain).To(Equal(&ExternalDomain{
+				Expect(externalDomain).To(Equal(&garden.Domain{
 					Domain:     domain,
 					Provider:   provider,
 					SecretData: dnsSecretData,
@@ -201,9 +201,9 @@ var _ = Describe("shoot", func() {
 					}
 				)
 
-				externalDomain, err := ConstructExternalDomain(ctx, c, shoot, nil, []*garden.DefaultDomain{defaultDomain})
+				externalDomain, err := ConstructExternalDomain(ctx, c, shoot, nil, []*garden.Domain{defaultDomain})
 
-				Expect(externalDomain).To(Equal(&ExternalDomain{
+				Expect(externalDomain).To(Equal(&garden.Domain{
 					Domain:     domain,
 					Provider:   defaultDomainProvider,
 					SecretData: defaultDomainSecretData,
@@ -229,7 +229,7 @@ var _ = Describe("shoot", func() {
 
 				externalDomain, err := ConstructExternalDomain(ctx, c, shoot, shootSecret, nil)
 
-				Expect(externalDomain).To(Equal(&ExternalDomain{
+				Expect(externalDomain).To(Equal(&garden.Domain{
 					Domain:     domain,
 					Provider:   provider,
 					SecretData: shootSecretData,

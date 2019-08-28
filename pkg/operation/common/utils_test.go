@@ -185,27 +185,28 @@ var _ = Describe("common", func() {
 	)
 
 	DescribeTable("#GetDomainInfoFromAnnotations",
-		func(annotations map[string]string, expectedProvider, expectedDomain, expectedErr gomegatypes.GomegaMatcher) {
-			provider, domain, err := GetDomainInfoFromAnnotations(annotations)
+		func(annotations map[string]string, expectedProvider, expectedDomain, expectedIncludeZones, expectedExcludeZones, expectedErr gomegatypes.GomegaMatcher) {
+			provider, domain, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(annotations)
 			Expect(provider).To(expectedProvider)
 			Expect(domain).To(expectedDomain)
+			Expect(includeZones).To(expectedIncludeZones)
+			Expect(excludeZones).To(expectedExcludeZones)
 			Expect(err).To(expectedErr)
 		},
 
-		Entry("no annotations", nil, BeEmpty(), BeEmpty(), HaveOccurred()),
-
+		Entry("no annotations", nil, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
 		Entry("no domain", map[string]string{
 			DNSProvider: "bar",
-		}, BeEmpty(), BeEmpty(), HaveOccurred()),
-
+		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
 		Entry("no provider", map[string]string{
 			DNSProvider: "bar",
-		}, BeEmpty(), BeEmpty(), HaveOccurred()),
-
+		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
 		Entry("all present", map[string]string{
-			DNSProvider: "bar",
-			DNSDomain:   "foo",
-		}, Equal("bar"), Equal("foo"), Not(HaveOccurred())),
+			DNSProvider:     "bar",
+			DNSDomain:       "foo",
+			DNSIncludeZones: "a,b,c",
+			DNSExcludeZones: "d,e,f",
+		}, Equal("bar"), Equal("foo"), Equal([]string{"a", "b", "c"}), Equal([]string{"d", "e", "f"}), Not(HaveOccurred())),
 	)
 
 	DescribeTable("#RespectSyncPeriodOverwrite",

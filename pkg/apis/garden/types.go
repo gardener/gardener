@@ -1172,11 +1172,6 @@ type Backup struct {
 
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
-	// Provider is the DNS provider type for the Shoot.
-	Provider *string
-	// HostedZoneID is the ID of an existing DNS Hosted Zone used to create the DNS records in.
-	// deprecated
-	HostedZoneID *string
 	// Domain is the external available domain of the Shoot cluster.
 	Domain *string
 	// SecretName is a name of a secret containing credentials for the stated domain and the
@@ -1184,6 +1179,15 @@ type DNS struct {
 	// by the Shoot and try to find respective credentials there. Specifying this field may override
 	// this behavior, i.e. forcing the Gardener to only look into the given secret.
 	SecretName *string
+	// Provider is the DNS provider type for the Shoot.  Only relevant if not the default
+	// domain is used for this shoot.
+	Provider *string
+	// IncludeZones is a list of hosted zone IDs that shall be included. Only relevant if not the default
+	// domain is used for this shoot.
+	IncludeZones []string
+	// ExcludeZones is a list of hosted zone IDs that shall be excluded. Only relevant if not the default
+	// domain is used for this shoot.
+	ExcludeZones []string
 }
 
 // DNSUnmanaged is a constant for the 'unmanaged' DNS provider.
