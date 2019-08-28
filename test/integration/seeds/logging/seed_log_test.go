@@ -156,13 +156,13 @@ var _ = Describe("Seed logging testing", func() {
 			targetTestShoot, err := shootGardenerTest.CreateShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			gardenTestOperation, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, seedLogTestLogger, targetTestShoot)
+			gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, seedLogTestLogger, targetTestShoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
 		if StringSet(*shootName) {
 			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
-			gardenTestOperation, err = NewGardenTestOperation(ctx, k8sGardenClient, seedLogTestLogger, shoot)
+			gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, k8sGardenClient, seedLogTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking for required logging resources")

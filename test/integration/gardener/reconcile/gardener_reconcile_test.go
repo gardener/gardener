@@ -81,7 +81,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger, nil)
+		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger)
 		Expect(err).ToNot(HaveOccurred())
 
 	}, InitializationTimeout)

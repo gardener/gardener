@@ -98,7 +98,7 @@ var _ = Describe("Shoot update testing", func() {
 			targetTestShoot, err := shootGardenerTest.CreateShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			shootTestOperations, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, shootTestLogger, targetTestShoot)
+			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, targetTestShoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -108,7 +108,7 @@ var _ = Describe("Shoot update testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
-			shootTestOperations, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
+			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
 

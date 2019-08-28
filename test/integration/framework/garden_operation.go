@@ -61,8 +61,35 @@ const (
 	elasticsearchPort    = 9200
 )
 
-// NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
-func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *v1beta1.Shoot) (*GardenerTestOperation, error) {
+// NewGardenTestOperation initializes a new test operation from a gardener kubernetes interface
+func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger) (*GardenerTestOperation, error) {
+	return &GardenerTestOperation{
+		Logger:       logger,
+		GardenClient: k8sGardenClient,
+	}, nil
+}
+
+// NewGardenTestOperationWithShoot initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
+func NewGardenTestOperationWithShoot(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *v1beta1.Shoot) (*GardenerTestOperation, error) {
+	operation := &GardenerTestOperation{
+		Logger:       logger,
+		GardenClient: k8sGardenClient,
+	}
+	if shoot != nil {
+		if err := operation.AddShoot(ctx, shoot); err != nil {
+			return nil, errors.Wrapf(err, "could not add shoot to operation")
+		}
+	}
+
+	return operation, nil
+}
+
+// AddShoot sets the shoot and its seed for the GardenerOperation.
+func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *v1beta1.Shoot) error {
+	if o.GardenClient == nil {
+		return errors.New("no gardener client is defined")
+	}
+
 	var (
 		seedClient  kubernetes.Interface
 		shootClient kubernetes.Interface
@@ -71,81 +98,73 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 		seedCloudProfile = &v1beta1.CloudProfile{}
 		project          = &v1beta1.Project{}
 	)
-	if shoot != nil {
-		if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
-			return nil, errors.Wrap(err, "could not get Shoot in Garden cluster")
-		}
 
-		err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.Cloud.Seed}, seed)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
-		}
-
-		err = k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: seed.Spec.Cloud.Profile}, seedCloudProfile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
-		}
-
-		ns := &corev1.Namespace{}
-		if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Namespace}, ns); err != nil {
-			return nil, errors.Wrap(err, "could not get the Shoot namespace in Garden cluster")
-		}
-
-		if ns.Labels == nil {
-			return nil, fmt.Errorf("namespace %q does not have any labels", ns.Name)
-		}
-		projectName, ok := ns.Labels[common.ProjectName]
-		if !ok {
-			return nil, fmt.Errorf("namespace %q did not contain a project label", ns.Name)
-		}
-
-		if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
-			return nil, errors.Wrap(err, "could not get Project in Garden cluster")
-		}
-
-		seedSecretRef := seed.Spec.SecretRef
-		seedClient, err = kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.SeedScheme,
-			}),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not construct Seed client")
-		}
-
-		shootScheme := runtime.NewScheme()
-		shootSchemeBuilder := runtime.NewSchemeBuilder(
-			corescheme.AddToScheme,
-			apiextensionsscheme.AddToScheme,
-			apiregistrationscheme.AddToScheme,
-			metricsscheme.AddToScheme,
-		)
-		err = shootSchemeBuilder.AddToScheme(shootScheme)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not add schemes to shoot scheme")
-		}
-		shootClient, err = kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: shootScheme,
-			}),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not construct Shoot client")
-		}
+	if err := o.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
+		return errors.Wrap(err, "could not get Shoot in Garden cluster")
 	}
 
-	return &GardenerTestOperation{
-		Logger: logger,
+	err := o.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.Cloud.Seed}, seed)
+	if err != nil {
+		return errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
+	}
 
-		GardenClient: k8sGardenClient,
-		SeedClient:   seedClient,
-		ShootClient:  shootClient,
+	err = o.GardenClient.Client().Get(ctx, client.ObjectKey{Name: seed.Spec.Cloud.Profile}, seedCloudProfile)
+	if err != nil {
+		return errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
+	}
 
-		Seed:             seed,
-		SeedCloudProfile: seedCloudProfile,
-		Shoot:            shoot,
-		Project:          project,
-	}, nil
+	ns := &corev1.Namespace{}
+	if err := o.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Namespace}, ns); err != nil {
+		return errors.Wrap(err, "could not get the Shoot namespace in Garden cluster")
+	}
+
+	if ns.Labels == nil {
+		return fmt.Errorf("namespace %q does not have any labels", ns.Name)
+	}
+	projectName, ok := ns.Labels[common.ProjectName]
+	if !ok {
+		return fmt.Errorf("namespace %q did not contain a project label", ns.Name)
+	}
+
+	if err := o.GardenClient.Client().Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
+		return errors.Wrap(err, "could not get Project in Garden cluster")
+	}
+
+	seedSecretRef := seed.Spec.SecretRef
+	seedClient, err = kubernetes.NewClientFromSecret(o.GardenClient, seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(client.Options{
+		Scheme: kubernetes.SeedScheme,
+	}))
+	if err != nil {
+		return errors.Wrap(err, "could not construct Seed client")
+	}
+
+	shootScheme := runtime.NewScheme()
+	shootSchemeBuilder := runtime.NewSchemeBuilder(
+		corescheme.AddToScheme,
+		apiextensionsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
+		metricsscheme.AddToScheme,
+	)
+	err = shootSchemeBuilder.AddToScheme(shootScheme)
+	if err != nil {
+		return errors.Wrap(err, "could not add schemes to shoot scheme")
+	}
+	shootClient, err = kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
+		Scheme: shootScheme,
+	}))
+	if err != nil {
+		return errors.Wrap(err, "could not construct Shoot client")
+	}
+
+	o.SeedClient = seedClient
+	o.ShootClient = shootClient
+
+	o.Shoot = shoot
+	o.Seed = seed
+	o.SeedCloudProfile = seedCloudProfile
+	o.Project = project
+
+	return nil
 }
 
 // ShootSeedNamespace gets the shoot namespace in the seed
@@ -399,7 +418,11 @@ func (o *GardenerTestOperation) AfterEach(ctx context.Context) {
 	if !ginkgo.CurrentGinkgoTestDescription().Failed {
 		return
 	}
+	o.DumpState(ctx)
+}
 
+// DumpState greps all necessary logs and state of the cluster if the test failed
+func (o *GardenerTestOperation) DumpState(ctx context.Context) {
 	// dump shoot state if shoot is defined
 	if o.Shoot != nil && o.ShootClient != nil {
 		ctxIdentifier := fmt.Sprintf("[SHOOT %s]", o.Shoot.Name)

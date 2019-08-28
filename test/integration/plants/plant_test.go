@@ -121,7 +121,7 @@ var _ = Describe("Plant testing", func() {
 			plantTest, err = NewPlantTest(*kubeconfigPath, *kubeconfigPathExternalCluster, plantObject, plantTestLogger)
 			Expect(err).NotTo(HaveOccurred())
 
-			gardenerTestOperation, err = NewGardenTestOperation(ctx, plantTest.GardenClient, plantTestLogger, nil)
+			gardenerTestOperation, err = NewGardenTestOperation(ctx, plantTest.GardenClient, plantTestLogger)
 			Expect(err).ToNot(HaveOccurred())
 		}
 

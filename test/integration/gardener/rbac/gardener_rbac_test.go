@@ -81,7 +81,7 @@ var _ = Describe("RBAC testing", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		testLogger := logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger, nil)
+		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger)
 		Expect(err).ToNot(HaveOccurred())
 
 	}, InitializationTimeout)

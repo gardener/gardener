@@ -124,7 +124,7 @@ var _ = Describe("Worker Suite", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		gardenTestOperation, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, workerTestLogger, shoot)
+		gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, workerTestLogger, shoot)
 		Expect(err).NotTo(HaveOccurred())
 
 		workerGardenerTest, err = NewWorkerGardenerTest(ctx, shootGardenerTest, gardenTestOperation.ShootClient)
