@@ -36,7 +36,7 @@ import (
 
 // WorkerDefaultTimeout is the default timeout and defines how long Gardener should wait
 // for a successful reconciliation of a worker resource.
-const WorkerDefaultTimeout = 5 * time.Minute
+const WorkerDefaultTimeout = 10 * time.Minute
 
 // DeployWorker creates the `Worker` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the resource successfully.
