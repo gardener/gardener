@@ -58,9 +58,6 @@ var _ = Describe("Conversion", func() {
 		volumeProviderName1          = "flexvolume"
 		volumeProviderPurpose2       = "foo"
 		volumeProviderName2          = "bar"
-
-		trueVar  = true
-		falseVar = false
 	)
 
 	Describe("#Convert_v1alpha1_Seed_To_garden_Seed", func() {
@@ -139,8 +136,14 @@ var _ = Describe("Conversion", func() {
 						Services: garden.CIDR(servicesCIDR),
 					},
 					BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
-					Protected:  &trueVar,
-					Visible:    &falseVar,
+					Taints: []garden.SeedTaint{
+						{
+							Key: SeedTaintProtected,
+						},
+						{
+							Key: SeedTaintInvisible,
+						},
+					},
 					Volume: &garden.SeedVolume{
 						MinimumSize: &minimumVolumeSizeQuantity,
 						Providers: []garden.SeedVolumeProvider{
@@ -188,8 +191,14 @@ var _ = Describe("Conversion", func() {
 						Pods:     garden.CIDR(podsCIDR),
 						Services: garden.CIDR(servicesCIDR),
 					},
-					Protected:  &trueVar,
-					Visible:    &falseVar,
+					Taints: []garden.SeedTaint{
+						{
+							Key: SeedTaintProtected,
+						},
+						{
+							Key: SeedTaintInvisible,
+						},
+					},
 					BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
 					Volume: &garden.SeedVolume{
 						MinimumSize: &minimumVolumeSizeQuantity,

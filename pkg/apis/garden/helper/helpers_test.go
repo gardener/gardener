@@ -275,4 +275,12 @@ var _ = Describe("helper", func() {
 		Entry("explicitly enabled", &garden.KubeAPIServerConfig{EnableBasicAuthentication: &trueVar}, true),
 		Entry("explicitly disabled", &garden.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}, false),
 	)
+
+	DescribeTable("#TaintsHave",
+		func(taints []garden.SeedTaint, key string, expectation bool) {
+			Expect(TaintsHave(taints, key)).To(Equal(expectation))
+		},
+		Entry("taint exists", []garden.SeedTaint{{Key: "foo"}}, "foo", true),
+		Entry("taint does not exist", []garden.SeedTaint{{Key: "foo"}}, "bar", false),
+	)
 })

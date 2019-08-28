@@ -23,14 +23,13 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/gardener/gardener/test"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("validator", func() {
@@ -58,7 +57,6 @@ var _ = Describe("validator", func() {
 
 			unmanagedDNSProvider = garden.DNSUnmanaged
 			baseDomain           = "example.com"
-			trueVar              = true
 
 			validMachineImageName         = "some-machineimage"
 			validMachineImageVersions     = []garden.MachineImageVersion{{Version: "0.0.1"}}
@@ -281,7 +279,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("create should fail because shoot is not in garden namespace and seed is protected", func() {
-				seed.Spec.Protected = &trueVar
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -295,7 +293,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("update should fail because shoot is not in garden namespace and seed is protected", func() {
-				seed.Spec.Protected = &trueVar
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -312,7 +310,7 @@ var _ = Describe("validator", func() {
 				ns := "garden"
 				shoot.Namespace = ns
 				project.Spec.Namespace = &ns
-				seed.Spec.Protected = &trueVar
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -328,7 +326,7 @@ var _ = Describe("validator", func() {
 				ns := "garden"
 				shoot.Namespace = ns
 				project.Spec.Namespace = &ns
-				seed.Spec.Protected = &trueVar
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

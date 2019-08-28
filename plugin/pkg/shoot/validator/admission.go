@@ -17,18 +17,10 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"io"
 	"reflect"
 	"strings"
 	"time"
-
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -37,6 +29,14 @@ import (
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+
+	"github.com/Masterminds/semver"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -201,7 +201,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 	}
 
 	// Check whether seed is protected or not. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
-	if shoot.Namespace != common.GardenNamespace && seed != nil && seed.Spec.Protected != nil && *seed.Spec.Protected {
+	if shoot.Namespace != common.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintProtected) {
 		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a protected seed"))
 	}
 

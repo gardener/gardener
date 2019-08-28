@@ -15,6 +15,8 @@
 package apis_test
 
 import (
+	"fmt"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -124,6 +126,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						garden.MigrationSeedCloudRegion:                   regionName,
 						garden.MigrationSeedProviderType:                  providerName,
 						garden.MigrationSeedProviderRegion:                regionName,
+						garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible),
 					},
 				},
 				Spec: gardenv1beta1.SeedSpec{
@@ -167,6 +170,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedVolumeMinimumSize] = minimumVolumeSize
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedProviderType] = providerName
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedProviderRegion] = regionName
+			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedTaints] = fmt.Sprintf("%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible)
 			Expect(out4).To(Equal(expectedOutAfterRoundTrip))
 		})
 	})
@@ -250,7 +254,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			}
 		)
 
-		It("should correctly convert core/v1alpha1.Seed -> garden/v1beta1.Seed -> core/v1alpha1.Seed", func() {
+		It("should correctly convert garden/v1beta1.Seed -> core/v1alpha1.Seed -> core/v1alpha1.Seed", func() {
 			out1 := &garden.Seed{}
 			Expect(scheme.Convert(in, out1, nil)).To(BeNil())
 
@@ -268,6 +272,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedVolumeMinimumSize] = minimumVolumeSize
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedCloudProfile] = cloudProfileName
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedCloudRegion] = regionName
+			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedTaints] = fmt.Sprintf("%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible)
 			Expect(out4).To(Equal(expectedOutAfterRoundTrip))
 		})
 	})

@@ -472,10 +472,8 @@ type SeedSpec struct {
 	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
 	// in the seed cluster.
 	BlockCIDRs []CIDR
-	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
-	Visible *bool
-	// Protected prevent that the Seed Cluster can be used for regular Shoot cluster control planes.
-	Protected *bool
+	// Taints describes taints on the seed.
+	Taints []SeedTaint
 	// Backup holds the object store configuration for the backups of shoot(currently only etcd).
 	// If it is not specified, then there won't be any backups taken for Shoots associated with this Seed.
 	// If backup field is present in Seed, then backups of the etcd from Shoot controlplane will be stored under the
@@ -492,6 +490,7 @@ const (
 	MigrationSeedProviderRegion    = "migration.seed.gardener.cloud/providerRegion"
 	MigrationSeedVolumeMinimumSize = "migration.seed.gardener.cloud/volumeMinimumSize"
 	MigrationSeedVolumeProviders   = "migration.seed.gardener.cloud/volumeProviders"
+	MigrationSeedTaints            = "migration.seed.gardener.cloud/taints"
 )
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
@@ -549,6 +548,24 @@ type SeedNetworks struct {
 	// Services is the CIDR of the service network.
 	Services CIDR
 }
+
+// SeedTaint describes a taint on a seed.
+type SeedTaint struct {
+	// Key is the taint key to be applied to a seed.
+	Key string
+	// Value is the taint value corresponding to the taint key.
+	// +optional
+	Value *string
+}
+
+const (
+	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
+	// may only be used by shoots in the `garden` namespace.
+	SeedTaintProtected = "seed.gardener.cloud/protected"
+	// SeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
+	// are not considered by the gardener-scheduler.
+	SeedTaintInvisible = "seed.gardener.cloud/invisible"
+)
 
 ////////////////////////////////////////////////////
 //                      QUOTAS                    //

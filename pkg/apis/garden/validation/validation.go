@@ -24,22 +24,20 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/Masterminds/semver"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
+	"github.com/Masterminds/semver"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -64,7 +62,7 @@ func ValidateName(name string, prefix bool) []string {
 }
 
 // ValidatePositiveDuration validates that a duration is positive.
-func ValidatePositiveDuration(duration *v1.Duration, fldPath *field.Path) field.ErrorList {
+func ValidatePositiveDuration(duration *metav1.Duration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if duration == nil {
 		return allErrs
@@ -751,6 +749,21 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		//}
 
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
+	}
+
+	taintKeys := sets.NewString()
+	for i, taint := range seedSpec.Taints {
+		idxPath := fldPath.Child("taints").Index(i)
+		if len(taint.Key) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("key"), "cannot be empty"))
+		}
+		if taintKeys.Has(taint.Key) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("key"), taint.Key))
+		}
+		if taint.Key != garden.SeedTaintProtected && taint.Key != garden.SeedTaintInvisible {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("key"), taint.Key, []string{garden.SeedTaintProtected, garden.SeedTaintInvisible}))
+		}
+		taintKeys.Insert(taint.Key)
 	}
 
 	if seedSpec.Volume != nil {

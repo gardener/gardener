@@ -2457,6 +2457,9 @@ var _ = Describe("validation", func() {
 						Name:      "seed-aws",
 						Namespace: "garden",
 					},
+					Taints: []garden.SeedTaint{
+						{Key: garden.SeedTaintProtected},
+					},
 					Networks: garden.SeedNetworks{
 						Nodes:    garden.CIDR("10.250.0.0/16"),
 						Pods:     garden.CIDR("100.96.0.0/11"),
@@ -2502,6 +2505,11 @@ var _ = Describe("validation", func() {
 				Nodes:    garden.CIDR("invalid-cidr"),
 				Pods:     garden.CIDR("300.300.300.300/300"),
 				Services: garden.CIDR("invalid-cidr"),
+			}
+			seed.Spec.Taints = []garden.SeedTaint{
+				{Key: garden.SeedTaintProtected},
+				{Key: garden.SeedTaintProtected},
+				{Key: ""},
 			}
 			seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 			seed.Spec.Backup.Provider = ""
@@ -2569,6 +2577,18 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.secretRef.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.taints[1].key"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.taints[2].key"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.taints[2].key"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

@@ -17,8 +17,11 @@ package v1beta1
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/garden/helper"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +32,10 @@ func init() {
 }
 
 func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
-	autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s)
+	if err := autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s); err != nil {
+		return err
+	}
+
 	if in.MaxSurge == nil {
 		out.MaxSurge = DefaultWorkerMaxSurge
 	} else {
@@ -40,19 +46,27 @@ func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s c
 	} else {
 		out.MaxUnavailable = *in.MaxUnavailable
 	}
+
 	return nil
 }
 
 func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
-	autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s)
+	if err := autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s); err != nil {
+		return err
+	}
+
 	out.MaxSurge = &in.MaxSurge
 	out.MaxUnavailable = &in.MaxUnavailable
+
 	return nil
 }
 
 // Convert_v1beta1_MachineVersion_To_garden_MachineVersion
 func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
-	autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in, out, s)
+	if err := autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in, out, s); err != nil {
+		return err
+	}
+
 	if len(in.Version) > 0 {
 		out.Versions = make([]garden.MachineImageVersion, len(in.Versions)+1)
 		out.Versions[0] = garden.MachineImageVersion{
@@ -73,12 +87,16 @@ func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *
 			out.Versions[index] = *internalVersion
 		}
 	}
+
 	return nil
 }
 
 // Convert_garden_MachineImage_To_v1beta1_MachineImage
 func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
-	autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in, out, s)
+	if err := autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in, out, s); err != nil {
+		return err
+	}
+
 	out.Versions = make([]MachineImageVersion, len(in.Versions))
 	for index, internalVersion := range in.Versions {
 		externalVersion := &MachineImageVersion{}
@@ -87,6 +105,7 @@ func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage
 		}
 		out.Versions[index] = *externalVersion
 	}
+
 	return nil
 }
 
@@ -119,10 +138,14 @@ func Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(in *K
 }
 
 func Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(in *garden.KubernetesConstraints, out *KubernetesConstraints, s conversion.Scope) error {
-	autoConvert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(in, out, s)
+	if err := autoConvert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(in, out, s); err != nil {
+		return err
+	}
+
 	for _, version := range in.OfferedVersions {
 		out.Versions = append(out.Versions, version.Version)
 	}
+
 	return nil
 }
 
@@ -130,9 +153,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	return scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name",
-				"metadata.namespace",
-				garden.ShootSeedName:
+			case "metadata.name", "metadata.namespace", garden.ShootSeedName:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
@@ -152,6 +173,14 @@ func Convert_v1beta1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversio
 		}
 		if v, ok := a[garden.MigrationSeedProviderRegion]; ok {
 			out.Spec.Provider.Region = v
+		}
+
+		if v, ok := a[garden.MigrationSeedTaints]; ok {
+			for _, key := range strings.Split(v, ",") {
+				out.Spec.Taints = append(out.Spec.Taints, garden.SeedTaint{
+					Key: key,
+				})
+			}
 		}
 
 		volumeMinimumSize, ok := a[garden.MigrationSeedVolumeMinimumSize]
@@ -195,6 +224,18 @@ func Convert_v1beta1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversio
 	}
 
 	out.Spec.Provider.Region = in.Spec.Cloud.Region
+
+	if p := in.Spec.Protected; p != nil && *p && !helper.TaintsHave(out.Spec.Taints, garden.SeedTaintProtected) {
+		out.Spec.Taints = append(out.Spec.Taints, garden.SeedTaint{
+			Key: garden.SeedTaintProtected,
+		})
+	}
+
+	if v := in.Spec.Visible; v != nil && !*v && !helper.TaintsHave(out.Spec.Taints, garden.SeedTaintInvisible) {
+		out.Spec.Taints = append(out.Spec.Taints, garden.SeedTaint{
+			Key: garden.SeedTaintInvisible,
+		})
+	}
 
 	return nil
 }
@@ -246,9 +287,43 @@ func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversio
 		}
 	}
 
+	var (
+		trueVar   = true
+		falseVar  = false
+		taintKeys []string
+	)
+
+	for _, taint := range in.Spec.Taints {
+		taintKeys = append(taintKeys, taint.Key)
+
+		switch taint.Key {
+		case garden.SeedTaintProtected:
+			out.Spec.Protected = &trueVar
+		case garden.SeedTaintInvisible:
+			out.Spec.Visible = &falseVar
+		}
+	}
+
+	if len(taintKeys) > 0 {
+		out.Annotations[garden.MigrationSeedTaints] = strings.Join(taintKeys, ",")
+	} else {
+		delete(out.Annotations, garden.MigrationSeedTaints)
+	}
+
+	if out.Spec.Visible == nil {
+		out.Spec.Visible = &trueVar
+	}
+	if out.Spec.Protected == nil {
+		out.Spec.Protected = &falseVar
+	}
+
 	return nil
 }
 
 func Convert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedSpec, s conversion.Scope) error {
 	return autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in, out, s)
+}
+
+func Convert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in, out, s)
 }

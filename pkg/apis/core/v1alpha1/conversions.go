@@ -30,11 +30,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 }
 
 func Convert_v1alpha1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversion.Scope) error {
-	var (
-		trueVar  = true
-		falseVar = false
-	)
-
 	if err := autoConvert_v1alpha1_Seed_To_garden_Seed(in, out, s); err != nil {
 		return err
 	}
@@ -51,15 +46,6 @@ func Convert_v1alpha1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversi
 
 	out.Spec.IngressDomain = in.Spec.DNS.IngressDomain
 	out.Spec.Cloud.Region = in.Spec.Provider.Region
-
-	for _, taint := range in.Spec.Taints {
-		if taint.Key == SeedTaintProtected {
-			out.Spec.Protected = &trueVar
-		}
-		if taint.Key == SeedTaintInvisible {
-			out.Spec.Visible = &falseVar
-		}
-	}
 
 	return nil
 }
@@ -91,18 +77,6 @@ func Convert_garden_Seed_To_v1alpha1_Seed(in *garden.Seed, out *Seed, s conversi
 		out.Spec.DNS = SeedDNS{
 			IngressDomain: in.Spec.IngressDomain,
 		}
-	}
-
-	if p := in.Spec.Protected; p != nil && *p {
-		out.Spec.Taints = append(out.Spec.Taints, SeedTaint{
-			Key: SeedTaintProtected,
-		})
-	}
-
-	if v := in.Spec.Visible; v != nil && !*v {
-		out.Spec.Taints = append(out.Spec.Taints, SeedTaint{
-			Key: SeedTaintInvisible,
-		})
 	}
 
 	return nil

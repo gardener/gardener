@@ -186,3 +186,13 @@ func GetCondition(conditions []garden.Condition, conditionType garden.ConditionT
 	}
 	return nil
 }
+
+// TaintsHave returns true if the given key is part of the taints list.
+func TaintsHave(taints []garden.SeedTaint, key string) bool {
+	for _, taint := range taints {
+		if taint.Key == key {
+			return true
+		}
+	}
+	return false
+}

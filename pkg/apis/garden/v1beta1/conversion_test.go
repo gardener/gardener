@@ -15,6 +15,7 @@
 package v1beta1
 
 import (
+	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -168,20 +169,14 @@ var _ = Describe("Machine Image Conversion", func() {
 			podsCIDR                     = gardencorev1alpha1.CIDR("6.7.8.9/10")
 			servicesCIDR                 = gardencorev1alpha1.CIDR("11.12.13.14/15")
 			blockCIDR                    = "16.17.18.19/20"
+			taintKeyOtherOne             = "some-other-taint-key"
+			taintKeyOtherTwo             = "yet-some-other-taint-key"
 			minimumVolumeSize            = "20Gi"
 			minimumVolumeSizeQuantity, _ = resource.ParseQuantity(minimumVolumeSize)
 			volumeProviderPurpose1       = "etcd-main"
 			volumeProviderName1          = "flexvolume"
 			volumeProviderPurpose2       = "foo"
 			volumeProviderName2          = "bar"
-			annotations                  = map[string]string{
-				garden.MigrationSeedProviderType:                  providerName,
-				garden.MigrationSeedProviderRegion:                regionName,
-				garden.MigrationSeedVolumeMinimumSize:             minimumVolumeSize,
-				garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
-				"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
-				"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
-			}
 
 			trueVar  = true
 			falseVar = false
@@ -189,6 +184,16 @@ var _ = Describe("Machine Image Conversion", func() {
 
 		Describe("#Convert_v1beta1_Seed_To_garden_Seed", func() {
 			var (
+				annotations = map[string]string{
+					garden.MigrationSeedProviderType:                  providerName,
+					garden.MigrationSeedProviderRegion:                regionName,
+					garden.MigrationSeedVolumeMinimumSize:             minimumVolumeSize,
+					garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
+					"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
+					"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
+					garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s,%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible, taintKeyOtherOne, taintKeyOtherTwo),
+				}
+
 				out = &garden.Seed{}
 				in  = &Seed{
 					ObjectMeta: metav1.ObjectMeta{
@@ -242,8 +247,12 @@ var _ = Describe("Machine Image Conversion", func() {
 							Services: garden.CIDR(servicesCIDR),
 						},
 						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
-						Protected:  &trueVar,
-						Visible:    &falseVar,
+						Taints: []garden.SeedTaint{
+							{Key: garden.SeedTaintProtected},
+							{Key: garden.SeedTaintInvisible},
+							{Key: taintKeyOtherOne},
+							{Key: taintKeyOtherTwo},
+						},
 						Volume: &garden.SeedVolume{
 							MinimumSize: &minimumVolumeSizeQuantity,
 							Providers: []garden.SeedVolumeProvider{
@@ -267,7 +276,14 @@ var _ = Describe("Machine Image Conversion", func() {
 				out = &Seed{}
 				in  = &garden.Seed{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: annotations,
+						Annotations: map[string]string{
+							garden.MigrationSeedProviderType:                  providerName,
+							garden.MigrationSeedProviderRegion:                regionName,
+							garden.MigrationSeedVolumeMinimumSize:             minimumVolumeSize,
+							garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
+							"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
+							"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
+						},
 					},
 					Spec: garden.SeedSpec{
 						Cloud: garden.SeedCloud{
@@ -289,8 +305,11 @@ var _ = Describe("Machine Image Conversion", func() {
 							Services: garden.CIDR(servicesCIDR),
 						},
 						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
-						Protected:  &trueVar,
-						Visible:    &falseVar,
+						Taints: []garden.SeedTaint{
+							{Key: garden.SeedTaintProtected},
+							{Key: taintKeyOtherOne},
+							{Key: taintKeyOtherTwo},
+						},
 						Volume: &garden.SeedVolume{
 							MinimumSize: &minimumVolumeSizeQuantity,
 							Providers: []garden.SeedVolumeProvider{
@@ -312,7 +331,15 @@ var _ = Describe("Machine Image Conversion", func() {
 				Expect(scheme.Convert(in, out, nil)).To(BeNil())
 				Expect(out).To(Equal(&Seed{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: annotations,
+						Annotations: map[string]string{
+							garden.MigrationSeedProviderType:                  providerName,
+							garden.MigrationSeedProviderRegion:                regionName,
+							garden.MigrationSeedVolumeMinimumSize:             minimumVolumeSize,
+							garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
+							"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
+							"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
+							garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s,%s", garden.SeedTaintProtected, taintKeyOtherOne, taintKeyOtherTwo),
+						},
 					},
 					Spec: SeedSpec{
 						Cloud: SeedCloud{
@@ -331,13 +358,14 @@ var _ = Describe("Machine Image Conversion", func() {
 						},
 						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
 						Protected:  &trueVar,
-						Visible:    &falseVar,
+						Visible:    &trueVar,
 					},
 				}))
 			})
 		})
 	})
 })
+
 var _ = Describe("Kubernetes Constraint Conversion", func() {
 	var (
 		expirationDate             = &metav1.Time{Time: time.Now().Add(time.Second * 20)}
@@ -390,8 +418,7 @@ var _ = Describe("Kubernetes Constraint Conversion", func() {
 			Expect(internal.OfferedVersions).To(HaveLen(len(v1betaKubernetesConstraint.OfferedVersions)))
 			Expect(internal.OfferedVersions[0].Version).To(Equal("0.0.9"))
 		})
-	},
-	)
+	})
 
 	Describe("#GardenKubernetesConstraintBackAndForth", func() {
 		It("assure expected structural change (when constraints.OfferedVersions is set in v1beta1) in resulting external version after back and forth conversion", func() {
@@ -412,5 +439,4 @@ var _ = Describe("Kubernetes Constraint Conversion", func() {
 			Expect(v1betaKubernetesConstraintResult.OfferedVersions[0].ExpirationDate).To(BeNil())
 		})
 	})
-},
-)
+})
