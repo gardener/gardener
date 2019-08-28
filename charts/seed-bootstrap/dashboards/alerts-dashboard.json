@@ -5,7 +5,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1565958165910,
+  "iteration": 1566916324303,
   "links": [],
   "panels": [
     {
@@ -712,7 +712,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(ALERTS{severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (cluster)",
+          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (cluster)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ cluster }}",
@@ -802,7 +802,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(ALERTS{severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (alertname,cluster)",
+          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (alertname,cluster)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ alertname }}/{{ cluster }}",
@@ -864,10 +864,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "shoot--d064864--shoot-aws1",
-          "value": [
-            "shoot--d064864--shoot-aws1"
-          ]
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": "prometheus",
         "definition": "label_values(cluster)",
@@ -959,6 +957,34 @@
         "name": "AlertState",
         "options": [],
         "query": "label_values(alertstate)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(alertname)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "Alertname",
+        "options": [],
+        "query": "label_values(alertname)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
