@@ -45,6 +45,9 @@ type ManagedResourceList struct {
 }
 
 type ManagedResourceSpec struct {
+	// Class holds the resource class used to control the responsibility for multiple resource manager instances
+	// +optional
+	Class *string `json:"class,omitempty"`
 	// SecretRefs is a list of secret references.
 	SecretRefs []corev1.LocalObjectReference `json:"secretRefs"`
 	// InjectLabels injects the provided labels into every resource that is part of the referenced secrets.

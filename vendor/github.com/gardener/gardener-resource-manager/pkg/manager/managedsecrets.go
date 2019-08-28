@@ -44,6 +44,16 @@ func (s *Secret) WithNamespacedName(namespace, name string) *Secret {
 	return s
 }
 
+func (s *Secret) WithLabels(labels map[string]string) *Secret {
+	s.secret.Labels = labels
+	return s
+}
+
+func (s *Secret) WithAnnotations(annotations map[string]string) *Secret {
+	s.secret.Annotations = annotations
+	return s
+}
+
 func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 	s.secret.Data = keyValues
 	return s
@@ -53,6 +63,8 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{ObjectMeta: s.secret.ObjectMeta}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
+		secret.Labels = s.secret.Labels
+		secret.Annotations = s.secret.Annotations
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = s.secret.Data
 		return nil
