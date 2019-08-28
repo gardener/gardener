@@ -87,7 +87,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 
 	// Determine information about external domain for shoot cluster.
 	externalDomain, err := ConstructExternalDomain(context.TODO(), k8sGardenClient.Client(), shoot, secret, defaultDomains)
-	if err != nil {
+	if err != nil && !(IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
 		return nil, err
 	}
 	shootObj.ExternalDomain = externalDomain
@@ -413,7 +413,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		externalDomain.ExcludeZones = shoot.Spec.DNS.ExcludeZones
 
 	default:
-		return nil, fmt.Errorf("unable to figure out which secret should be used for dns")
+		return nil, &IncompleteDNSConfigError{}
 	}
 
 	return externalDomain, nil

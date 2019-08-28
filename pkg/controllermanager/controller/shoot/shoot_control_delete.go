@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -45,24 +46,8 @@ import (
 )
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
-// It receives a Garden object <garden> which stores the Shoot object.
+// It receives an Operation object <o> which stores the Shoot object.
 func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alpha1.LastError {
-	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
-	// cluster. This implies that there can not be any resource which we have to delete.
-	// We accept the deletion.
-	if len(o.Shoot.Info.Status.UID) == 0 {
-		o.Logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
-		return nil
-	}
-	// If the shoot has never been scheduled (this is the case e.g when the scheduler cannot find a seed for the shoot), the gardener controller manager has never reconciled it.
-	// This implies that there can not be any resource which we have to delete.
-	// We accept the deletion.
-	if o.Shoot.Info.Spec.Cloud.Seed == nil {
-		o.Logger.Info("`.spec.cloud.seed` is empty, assuming Shoot cluster has never been scheduled - thus never existed. Deletion accepted.")
-		return nil
-	}
-
-	// We create botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
 	if err := utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 		botanist, err = botanistpkg.New(o)
@@ -449,11 +434,10 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 
 		f = g.Compile()
 	)
-	err = f.Run(flow.Opts{
+	if err := f.Run(flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: o.ReportShootProgress,
-	})
-	if err != nil {
+	}); err != nil {
 		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1alpha1helper.LastError(gardencorev1alpha1helper.FormatLastErrDescription(err), gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err))...)
 	}
@@ -465,14 +449,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error {
 	var (
 		status = o.Shoot.Info.Status
-		now    = metav1.Now()
+		now    = metav1.NewTime(time.Now().UTC())
 	)
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-			if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardencorev1alpha1.LastOperationTypeDelete) {
+			if status.RetryCycleStartTime == nil ||
+				(status.LastOperation != nil && status.LastOperation.Type != gardencorev1alpha1.LastOperationTypeDelete) ||
+				o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
+				o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
+				(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateFailed) {
+
 				shoot.Status.RetryCycleStartTime = &now
 			}
+
 			if len(status.TechnicalID) == 0 {
 				shoot.Status.TechnicalID = o.Shoot.SeedNamespace
 			}
