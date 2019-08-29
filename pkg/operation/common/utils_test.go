@@ -40,7 +40,7 @@ var _ = Describe("common", func() {
 			It("should return a cluster IP as string", func() {
 				var (
 					ip   = "100.64.0.0"
-					cidr = gardencorev1alpha1.CIDR(ip + "/13")
+					cidr = ip + "/13"
 				)
 
 				result := ComputeClusterIP(cidr, 10)

@@ -510,7 +510,7 @@ problems reported.
 
 ## Create the Shoot resource
 
-Update the fields in [`example/90-shoot-azure.yaml`](../../example/90-shoot-azure.yaml):
+Update the fields in [`example/90-deprecated-shoot-azure.yaml`](../../example/90-deprecated-shoot-azure.yaml):
 * **spec.cloud.region**: `eastus` (this must match the seed cluster's region)
 * **spec.dns.domain**: This is used to specify the base domain for
   your api (and other in the future) endpoint(s). For example when
@@ -531,19 +531,19 @@ sed -i \
   -e "s/domain: johndoe-azure.garden-dev.example.com/domain: $SHOOT_DOMAIN/" \
   -e "/domain:/a\ \ \ \ hostedZoneID: $HOSTED_ZONE_ID" \
   -e "s/email: john.doe@example.com/email: $KUBE_LEGO_EMAIL/" \
-  example/90-shoot-azure.yaml
+  example/90-deprecated-shoot-azure.yaml
 ```
 
 And let's create the Shoot resource:
 ```
-kubectl apply -f example/90-shoot-azure.yaml
+kubectl apply -f example/90-deprecated-shoot-azure.yaml
 ```
 
 After creating the Shoot resource, gardener-controller-manager will
 pick it up and start provisioning the Shoot cluster.
 
 ```
-$ kubectl get -f example/90-shoot-azure.yaml
+$ kubectl get -f example/90-deprecated-shoot-azure.yaml
 NAME            CLOUDPROFILE   VERSION   SEED    DOMAIN                                      OPERATION    PROGRESS   APISERVER   CONTROL     NODES       SYSTEM      AGE
 johndoe-azure   azure          1.12.3    azure   johndoe-azure.garden-dev.your.domain.here   Processing   15         <unknown>   <unknown>   <unknown>   <unknown>   16s
 ```

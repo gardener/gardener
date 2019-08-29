@@ -94,7 +94,7 @@ var _ = Describe("Strategy", func() {
 
 				shoot.Spec.Cloud.GCP = &garden.GCPCloud{
 					Networks: garden.GCPNetworks{
-						Workers: []garden.CIDR{"1.1.1.1/32", "1.1.1.2/32"},
+						Workers: []string{"1.1.1.1/32", "1.1.1.2/32"},
 					},
 				}
 				oldShoot := newShoot("foo")
@@ -102,8 +102,8 @@ var _ = Describe("Strategy", func() {
 
 				strategy.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
 
-				Expect(shoot.Spec.Cloud.GCP.Networks.Workers).To(ConsistOf(garden.CIDR("1.1.1.1/32")))
-				Expect(oldShoot.Spec.Cloud.GCP.Networks.Workers).To(ConsistOf(garden.CIDR("1.1.1.1/32")))
+				Expect(shoot.Spec.Cloud.GCP.Networks.Workers).To(ConsistOf("1.1.1.1/32"))
+				Expect(oldShoot.Spec.Cloud.GCP.Networks.Workers).To(ConsistOf("1.1.1.1/32"))
 			})
 		})
 		Context("invalid Openstack network CIRDs", func() {
@@ -112,7 +112,7 @@ var _ = Describe("Strategy", func() {
 
 				shoot.Spec.Cloud.OpenStack = &garden.OpenStackCloud{
 					Networks: garden.OpenStackNetworks{
-						Workers: []garden.CIDR{"1.1.1.1/32", "1.1.1.2/32"},
+						Workers: []string{"1.1.1.1/32", "1.1.1.2/32"},
 					},
 				}
 				oldShoot := newShoot("foo")
@@ -120,8 +120,8 @@ var _ = Describe("Strategy", func() {
 
 				strategy.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
 
-				Expect(shoot.Spec.Cloud.OpenStack.Networks.Workers).To(ConsistOf(garden.CIDR("1.1.1.1/32")))
-				Expect(oldShoot.Spec.Cloud.OpenStack.Networks.Workers).To(ConsistOf(garden.CIDR("1.1.1.1/32")))
+				Expect(shoot.Spec.Cloud.OpenStack.Networks.Workers).To(ConsistOf("1.1.1.1/32"))
+				Expect(oldShoot.Spec.Cloud.OpenStack.Networks.Workers).To(ConsistOf("1.1.1.1/32"))
 			})
 		})
 	})

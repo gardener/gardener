@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -117,7 +116,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 }
 
 func calculateExtensions(gardenClient client.Client, shoot *gardenv1beta1.Shoot, seedNamespace string) (map[string]Extension, error) {
-	var controllerRegistrations = &corev1alpha1.ControllerRegistrationList{}
+	var controllerRegistrations = &gardencorev1alpha1.ControllerRegistrationList{}
 	if err := gardenClient.List(context.TODO(), controllerRegistrations); err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func (s *Shoot) GetNodeCount() int {
 }
 
 // GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
-func (s *Shoot) GetK8SNetworks() (*gardencorev1alpha1.K8SNetworks, error) {
+func (s *Shoot) GetK8SNetworks() (*gardenv1beta1.K8SNetworks, error) {
 	return gardenv1beta1helper.GetK8SNetworks(s.Info)
 }
 
@@ -239,7 +238,7 @@ func (s *Shoot) GetZones() []string {
 }
 
 // GetPodNetwork returns the pod network CIDR for the Shoot cluster.
-func (s *Shoot) GetPodNetwork() gardencorev1alpha1.CIDR {
+func (s *Shoot) GetPodNetwork() string {
 	k8sNetworks, err := s.GetK8SNetworks()
 	if err != nil {
 		return ""
@@ -248,7 +247,7 @@ func (s *Shoot) GetPodNetwork() gardencorev1alpha1.CIDR {
 }
 
 // GetServiceNetwork returns the service network CIDR for the Shoot cluster.
-func (s *Shoot) GetServiceNetwork() gardencorev1alpha1.CIDR {
+func (s *Shoot) GetServiceNetwork() string {
 	k8sNetworks, err := s.GetK8SNetworks()
 	if err != nil {
 		return ""
@@ -257,7 +256,7 @@ func (s *Shoot) GetServiceNetwork() gardencorev1alpha1.CIDR {
 }
 
 // GetNodeNetwork returns the node network CIDR for the Shoot cluster.
-func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
+func (s *Shoot) GetNodeNetwork() string {
 	k8sNetworks, err := s.GetK8SNetworks()
 	if err != nil {
 		return ""
@@ -398,18 +397,24 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		}
 		externalDomain.SecretData = secret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Provider
+		externalDomain.IncludeDomains = shoot.Spec.DNS.IncludeDomains
+		externalDomain.ExcludeDomains = shoot.Spec.DNS.ExcludeDomains
 		externalDomain.IncludeZones = shoot.Spec.DNS.IncludeZones
 		externalDomain.ExcludeZones = shoot.Spec.DNS.ExcludeZones
 
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider
+		externalDomain.IncludeDomains = defaultDomain.IncludeDomains
+		externalDomain.ExcludeDomains = defaultDomain.ExcludeDomains
 		externalDomain.IncludeZones = defaultDomain.IncludeZones
 		externalDomain.ExcludeZones = defaultDomain.ExcludeZones
 
 	case shoot.Spec.DNS.Provider != nil && shoot.Spec.DNS.SecretName == nil:
 		externalDomain.SecretData = shootSecret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Provider
+		externalDomain.IncludeDomains = shoot.Spec.DNS.IncludeDomains
+		externalDomain.ExcludeDomains = shoot.Spec.DNS.ExcludeDomains
 		externalDomain.IncludeZones = shoot.Spec.DNS.IncludeZones
 		externalDomain.ExcludeZones = shoot.Spec.DNS.ExcludeZones
 
@@ -425,7 +430,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 const ExtensionDefaultTimeout = 3 * time.Minute
 
 // MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in extensions is also represented in the registration.
-func MergeExtensions(registrations []corev1alpha1.ControllerRegistration, extensions []gardenv1beta1.Extension, namespace string) (map[string]Extension, error) {
+func MergeExtensions(registrations []gardencorev1alpha1.ControllerRegistration, extensions []gardenv1beta1.Extension, namespace string) (map[string]Extension, error) {
 	var (
 		typeToExtension    = make(map[string]Extension)
 		requiredExtensions = make(map[string]Extension)

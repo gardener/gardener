@@ -82,25 +82,25 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	// Remove those 2 checks after several releases.
 	if gcp := newShoot.Spec.Cloud.GCP; gcp != nil {
 		if len(gcp.Networks.Workers) > 1 {
-			gcp.Networks.Workers = []garden.CIDR{gcp.Networks.Workers[0]}
+			gcp.Networks.Workers = []string{gcp.Networks.Workers[0]}
 		}
 	}
 
 	if gcp := oldShoot.Spec.Cloud.GCP; gcp != nil {
 		if len(gcp.Networks.Workers) > 1 {
-			gcp.Networks.Workers = []garden.CIDR{gcp.Networks.Workers[0]}
+			gcp.Networks.Workers = []string{gcp.Networks.Workers[0]}
 		}
 	}
 
 	if openstack := newShoot.Spec.Cloud.OpenStack; openstack != nil {
 		if len(openstack.Networks.Workers) > 1 {
-			openstack.Networks.Workers = []garden.CIDR{openstack.Networks.Workers[0]}
+			openstack.Networks.Workers = []string{openstack.Networks.Workers[0]}
 		}
 	}
 
 	if openstack := oldShoot.Spec.Cloud.OpenStack; openstack != nil {
 		if len(openstack.Networks.Workers) > 1 {
-			openstack.Networks.Workers = []garden.CIDR{openstack.Networks.Workers[0]}
+			openstack.Networks.Workers = []string{openstack.Networks.Workers[0]}
 		}
 	}
 

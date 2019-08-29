@@ -15,14 +15,13 @@
 package utils
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sNetworks gardencorev1alpha1.K8SNetworks, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sNetworks gardenv1beta1.K8SNetworks, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 

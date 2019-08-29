@@ -78,7 +78,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 		volumeType1Usable   = false
 	)
 
-	Describe("core.gardener.cloud/v1alpha1.Seed roundtrip", func() {
+	Describe("core.gardener.cloud/v1alpha1.CloudProfile roundtrip", func() {
 		Context("AWS provider", func() {
 			var (
 				providerConfig = &awsv1alpha1.CloudProfileConfig{
@@ -1167,7 +1167,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 		})
 	})
 
-	Describe("garden.sapcloud.io/v1beta1.Seed roundtrip", func() {
+	Describe("garden.sapcloud.io/v1beta1.CloudProfile roundtrip", func() {
 		Context("AWS provider", func() {
 			var (
 				providerConfig = &awsv1alpha1.CloudProfileConfig{

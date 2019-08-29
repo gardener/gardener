@@ -20,6 +20,10 @@ func (c *FakeCoreV1alpha1) BackupEntries(namespace string) v1alpha1.BackupEntryI
 	return &FakeBackupEntries{c, namespace}
 }
 
+func (c *FakeCoreV1alpha1) CloudProfiles() v1alpha1.CloudProfileInterface {
+	return &FakeCloudProfiles{c}
+}
+
 func (c *FakeCoreV1alpha1) ControllerInstallations() v1alpha1.ControllerInstallationInterface {
 	return &FakeControllerInstallations{c}
 }
@@ -32,8 +36,24 @@ func (c *FakeCoreV1alpha1) Plants(namespace string) v1alpha1.PlantInterface {
 	return &FakePlants{c, namespace}
 }
 
+func (c *FakeCoreV1alpha1) Projects() v1alpha1.ProjectInterface {
+	return &FakeProjects{c}
+}
+
+func (c *FakeCoreV1alpha1) Quotas(namespace string) v1alpha1.QuotaInterface {
+	return &FakeQuotas{c, namespace}
+}
+
+func (c *FakeCoreV1alpha1) SecretBindings(namespace string) v1alpha1.SecretBindingInterface {
+	return &FakeSecretBindings{c, namespace}
+}
+
 func (c *FakeCoreV1alpha1) Seeds() v1alpha1.SeedInterface {
 	return &FakeSeeds{c}
+}
+
+func (c *FakeCoreV1alpha1) Shoots(namespace string) v1alpha1.ShootInterface {
+	return &FakeShoots{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

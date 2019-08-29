@@ -76,7 +76,9 @@ var _ = Describe("dns", func() {
 					Name:      shootName,
 					Namespace: namespace,
 				},
-				Spec: garden.ShootSpec{},
+				Spec: garden.ShootSpec{
+					DNS: &garden.DNS{},
+				},
 			}
 		)
 
@@ -89,7 +91,11 @@ var _ = Describe("dns", func() {
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 
 			shootBase.Spec.DNS.Domain = nil
-			shootBase.Spec.DNS.Provider = &provider
+			shootBase.Spec.DNS.Providers = []garden.DNSProvider{
+				{
+					Type: &provider,
+				},
+			}
 			shoot = shootBase
 		})
 
@@ -106,7 +112,7 @@ var _ = Describe("dns", func() {
 		Context("provider is not 'unmanaged'", func() {
 			BeforeEach(func() {
 				shoot.Spec.DNS.Domain = nil
-				shoot.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = nil
 			})
 
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
@@ -117,7 +123,7 @@ var _ = Describe("dns", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.DNS.Provider).To(BeNil())
+				Expect(shoot.Spec.DNS.Providers).To(BeNil())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 			})
 
@@ -132,7 +138,7 @@ var _ = Describe("dns", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.DNS.Provider).To(BeNil())
+				Expect(shoot.Spec.DNS.Providers).To(BeNil())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 			})
 

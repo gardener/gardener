@@ -28,9 +28,9 @@ import (
 var _ = Describe("utils", func() {
 	Describe("#ValidateNetworkDisjointedness", func() {
 		var (
-			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
-			seedServicesCIDR = garden.CIDR("10.241.0.0/17")
-			seedNodesCIDR    = garden.CIDR("10.240.0.0/16")
+			seedPodsCIDR     = "10.241.128.0/17"
+			seedServicesCIDR = "10.241.0.0/17"
+			seedNodesCIDR    = "10.240.0.0/16"
 
 			seedNetworks = garden.SeedNetworks{
 				Pods:     seedPodsCIDR,
@@ -41,9 +41,9 @@ var _ = Describe("utils", func() {
 
 		It("should pass the validation", func() {
 			var (
-				podsCIDR     = garden.CIDR("10.242.128.0/17")
-				servicesCIDR = garden.CIDR("10.242.0.0/17")
-				nodesCIDR    = garden.CIDR("10.241.0.0/16")
+				podsCIDR     = "10.242.128.0/17"
+				servicesCIDR = "10.242.0.0/17"
+				nodesCIDR    = "10.241.0.0/16"
 
 				validK8sNetworks = garden.K8SNetworks{
 					Pods:     &podsCIDR,

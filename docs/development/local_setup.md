@@ -263,6 +263,6 @@ Moreover, it hid too many things and came with a bunch of limitations, making th
 
 ## Additional information
 
-In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/90-shoot-azure.yaml#L10) for an example Shoot manifest).
+In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/90-deprecated-shoot-azure.yaml#L10) for an example Shoot manifest).
 
 Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.

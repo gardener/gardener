@@ -528,7 +528,7 @@ type SeedSpec struct {
 	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
-	BlockCIDRs []gardencorev1alpha1.CIDR `json:"blockCIDRs,omitempty"`
+	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
 	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
 	// +optional
 	Visible *bool `json:"visible,omitempty"`
@@ -568,11 +568,11 @@ type SeedCloud struct {
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes gardencorev1alpha1.CIDR `json:"nodes"`
+	Nodes string `json:"nodes"`
 	// Pods is the CIDR of the pod network.
-	Pods gardencorev1alpha1.CIDR `json:"pods"`
+	Pods string `json:"pods"`
 	// Services is the CIDR of the service network.
-	Services gardencorev1alpha1.CIDR `json:"services"`
+	Services string `json:"services"`
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional
 	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty"`
@@ -582,10 +582,10 @@ type SeedNetworks struct {
 type ShootNetworks struct {
 	// Pods is the CIDR of the pod network.
 	// +optional
-	Pods *gardencorev1alpha1.CIDR `json:"pods,omitempty"`
+	Pods *string `json:"pods,omitempty"`
 	// Services is the CIDR of the service network.
 	// +optional
-	Services *gardencorev1alpha1.CIDR `json:"services,omitempty"`
+	Services *string `json:"services,omitempty"`
 }
 
 ////////////////////////////////////////////////////
@@ -707,9 +707,6 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty"`
-	// DEPRECATED: This field will be removed in a future version.
-	// +optional
-	Backup *Backup `json:"backup,omitempty"`
 	// Cloud contains information about the cloud environment and their specific settings.
 	Cloud Cloud `json:"cloud"`
 	// DNS contains information about the DNS settings of the Shoot.
@@ -774,7 +771,7 @@ const CalicoNetworkType = "calico"
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// Type identifies the type of the networking plugin
 	Type string `json:"type"`
 	// ProviderConfig is the configuration passed to network resource.
@@ -831,15 +828,15 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC `json:"vpc"`
 	// Internal is a list of private subnets to create (used for internal load balancers).
-	Internal []gardencorev1alpha1.CIDR `json:"internal"`
+	Internal []string `json:"internal"`
 	// Public is a list of public subnets to create (used for bastion and load balancers).
-	Public []gardencorev1alpha1.CIDR `json:"public"`
+	Public []string `json:"public"`
 	// Workers is a list of worker subnets (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
+	Workers []string `json:"workers"`
 }
 
 // AWSVPC contains either an id (of an existing VPC) or the CIDR (for a VPC to be created).
@@ -849,7 +846,7 @@ type AWSVPC struct {
 	ID *string `json:"id,omitempty"`
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR *gardencorev1alpha1.CIDR `json:"cidr,omitempty"`
+	CIDR *string `json:"cidr,omitempty"`
 }
 
 // AWSWorker is the definition of a worker group.
@@ -883,16 +880,16 @@ type AlicloudVPC struct {
 	ID *string `json:"id,omitempty"`
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR *gardencorev1alpha1.CIDR `json:"cidr,omitempty"`
+	CIDR *string `json:"cidr,omitempty"`
 }
 
 // AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
 type AlicloudNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AlicloudVPC `json:"vpc"`
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
+	Workers []string `json:"workers"`
 }
 
 // AlicloudWorker is the definition of a worker group.
@@ -921,7 +918,7 @@ type PacketCloud struct {
 
 // PacketNetworks holds information about the Kubernetes and infrastructure networks.
 type PacketNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 }
 
 // PacketWorker is the definition of a worker group.
@@ -957,11 +954,11 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet `json:"vnet"`
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers gardencorev1alpha1.CIDR `json:"workers"`
+	Workers string `json:"workers"`
 }
 
 // AzureVNet indicates whether to use an existing VNet or create a new one.
@@ -971,7 +968,7 @@ type AzureVNet struct {
 	Name *string `json:"name,omitempty"`
 	// CIDR is a CIDR range for a new VNet.
 	// +optional
-	CIDR *gardencorev1alpha1.CIDR `json:"cidr,omitempty"`
+	CIDR *string `json:"cidr,omitempty"`
 }
 
 // AzureWorker is the definition of a worker group.
@@ -1000,15 +997,15 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
 	VPC *GCPVPC `json:"vpc,omitempty"`
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
+	Workers []string `json:"workers"`
 	// Internal is a private subnet (used for internal load balancers).
 	// +optional
-	Internal *gardencorev1alpha1.CIDR `json:"internal,omitempty"`
+	Internal *string `json:"internal,omitempty"`
 }
 
 // GCPVPC indicates whether to use an existing VPC or create a new one.
@@ -1066,12 +1063,12 @@ type OpenStackLoadBalancerClass struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
+	K8SNetworks `json:",inline"`
 	// Router indicates whether to use an existing router or create a new one.
 	// +optional
 	Router *OpenStackRouter `json:"router,omitempty"`
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
+	Workers []string `json:"workers"`
 }
 
 // OpenStackRouter indicates whether to use an existing router or create a new one.
@@ -1118,6 +1115,9 @@ type Worker struct {
 	// Kubelet contains configuration settings for the kubelet.
 	// +optional
 	Kubelet *KubeletConfig `json:"kubelet,omitempty"`
+	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
+	// +optional
+	CABundle *string `json:"caBundle,omitempty"`
 }
 
 var (
@@ -1244,14 +1244,6 @@ type Kube2IAMRole struct {
 	Policy string `json:"policy"`
 }
 
-// Backup - DEPRECATED: This struct will be removed in a future version.
-type Backup struct {
-	// DEPRECATED: This field will be removed in a future version.
-	Schedule string `json:"schedule"`
-	// DEPRECATED: This field will be removed in a future version.
-	Maximum int `json:"maximum"`
-}
-
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster.
@@ -1267,6 +1259,14 @@ type DNS struct {
 	// domain is used for this shoot.
 	// +optional
 	Provider *string `json:"provider,omitempty"`
+	// IncludeDomains is a list of domains that shall be included. Only relevant if not the default
+	// domain is used for this shoot.
+	// +optional
+	IncludeDomains []string `json:"includeDomains,omitempty"`
+	// ExcludeDomains is a list of domains that shall be excluded. Only relevant if not the default
+	// domain is used for this shoot.
+	// +optional
+	ExcludeDomains []string `json:"excludeDomains,omitempty"`
 	// IncludeZones is a list of hosted zone IDs that shall be included. Only relevant if not the default
 	// domain is used for this shoot.
 	// +optional
@@ -1478,13 +1478,8 @@ type AdmissionPlugin struct {
 	// Name is the name of the plugin.
 	Name string `json:"name"`
 	// Config is the configuration of the plugin.
-	// NOTE: After a discussion with @mvladev we decided to not use the runtime.RawExtension type for the configuration
-	// for now as there seems to be a bug with the OpenAPI generation which would make kubectl not correctly validate
-	// the objects (see also https://github.com/kubernetes-sigs/cluster-api/issues/137). We keep it as string for now
-	// and will later migrate the Go type to runtime.RawExtension once the issues have been resolved.
-	// SEE ALSO: https://github.com/gardener/gardener/pull/322
 	// +optional
-	Config *string `json:"config,omitempty"`
+	Config *gardencorev1alpha1.ProviderConfig `json:"config,omitempty"`
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
@@ -1903,11 +1898,24 @@ type BackupInfrastructureStatus struct {
 
 const (
 	// DefaultPodNetworkCIDR is a constant for the default pod network CIDR of a Shoot cluster.
-	DefaultPodNetworkCIDR = gardencorev1alpha1.CIDR("100.96.0.0/11")
+	DefaultPodNetworkCIDR = "100.96.0.0/11"
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
-	DefaultServiceNetworkCIDR = gardencorev1alpha1.CIDR("100.64.0.0/13")
+	DefaultServiceNetworkCIDR = "100.64.0.0/13"
 	// DefaultPodNetworkCIDRAlicloud is a constant for the default pod network CIDR of a Alicloud Shoot cluster.
-	DefaultPodNetworkCIDRAlicloud = gardencorev1alpha1.CIDR("100.64.0.0/11")
+	DefaultPodNetworkCIDRAlicloud = "100.64.0.0/11"
 	// DefaultServiceNetworkCIDRAlicloud is a constant for the default service network CIDR of a Alicloud Shoot cluster.
-	DefaultServiceNetworkCIDRAlicloud = gardencorev1alpha1.CIDR("100.104.0.0/13")
+	DefaultServiceNetworkCIDRAlicloud = "100.104.0.0/13"
 )
+
+// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+type K8SNetworks struct {
+	// Nodes is the CIDR of the node network.
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
+	// Pods is the CIDR of the pod network.
+	// +optional
+	Pods *string `json:"pods,omitempty"`
+	// Services is the CIDR of the service network.
+	// +optional
+	Services *string `json:"services,omitempty"`
+}

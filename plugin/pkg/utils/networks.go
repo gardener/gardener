@@ -58,8 +58,8 @@ func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks
 	return allErrs
 }
 
-func networksIntersect(cidr1, cidr2 garden.CIDR) bool {
-	_, net1, err1 := net.ParseCIDR(string(cidr1))
-	_, net2, err2 := net.ParseCIDR(string(cidr2))
+func networksIntersect(cidr1, cidr2 string) bool {
+	_, net1, err1 := net.ParseCIDR(cidr1)
+	_, net2, err2 := net.ParseCIDR(cidr2)
 	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
 }

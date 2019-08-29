@@ -27,9 +27,11 @@ type Garden struct {
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
-	Domain       string
-	Provider     string
-	SecretData   map[string][]byte
-	IncludeZones []string
-	ExcludeZones []string
+	Domain         string
+	Provider       string
+	SecretData     map[string][]byte
+	IncludeDomains []string
+	ExcludeDomains []string
+	IncludeZones   []string
+	ExcludeZones   []string
 }

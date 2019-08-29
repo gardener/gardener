@@ -30,6 +30,7 @@ import (
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
 	secretbindingstore "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
+	shootstore "github.com/gardener/gardener/pkg/registry/garden/shoot/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -90,6 +91,10 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
+
+	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	storage["shoots"] = shootStorage.Shoot
+	storage["shoots/status"] = shootStorage.Status
 
 	return storage
 }

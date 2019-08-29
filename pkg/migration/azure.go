@@ -39,9 +39,8 @@ func GardenV1beta1ShootToAzureV1alpha1InfrastructureConfig(shoot *gardenv1beta1.
 	}
 
 	var vnet azurev1alpha1.VNet
-	if shoot.Spec.Cloud.Azure.Networks.VNet.CIDR != nil {
-		cidr := string(*shoot.Spec.Cloud.Azure.Networks.VNet.CIDR)
-		vnet.CIDR = &cidr
+	if c := shoot.Spec.Cloud.Azure.Networks.VNet.CIDR; c != nil {
+		vnet.CIDR = c
 	}
 	if shoot.Spec.Cloud.Azure.Networks.VNet.Name != nil {
 		vnet.Name = shoot.Spec.Cloud.Azure.Networks.VNet.Name
@@ -55,7 +54,7 @@ func GardenV1beta1ShootToAzureV1alpha1InfrastructureConfig(shoot *gardenv1beta1.
 		ResourceGroup: resourceGroup,
 		Networks: azurev1alpha1.NetworkConfig{
 			VNet:    vnet,
-			Workers: string(shoot.Spec.Cloud.Azure.Networks.Workers),
+			Workers: shoot.Spec.Cloud.Azure.Networks.Workers,
 		},
 	}, nil
 }

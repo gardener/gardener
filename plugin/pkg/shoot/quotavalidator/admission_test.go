@@ -132,42 +132,44 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			shootSpecCloudGCEBase = garden.GCPCloud{
-				Workers: []garden.GCPWorker{
-					{
-						Worker: garden.Worker{
-							Name:          "test-worker-1",
-							MachineType:   machineTypeName,
-							AutoScalerMax: 1,
-							AutoScalerMin: 1,
-						},
-						VolumeType: volumeTypeName,
-						VolumeSize: "30Gi",
+			workersBase = []garden.Worker{
+				{
+					Name: "test-worker-1",
+					Machine: garden.Machine{
+						Type: machineTypeName,
+					},
+					Maximum: 1,
+					Minimum: 1,
+					Volume: &garden.Volume{
+						Size: "30Gi",
+						Type: volumeTypeName,
 					},
 				},
 			}
 
-			shootSpecCloudGCE2Worker = garden.GCPCloud{
-				Workers: []garden.GCPWorker{
-					{
-						Worker: garden.Worker{
-							Name:          "test-worker-1",
-							MachineType:   machineTypeName,
-							AutoScalerMax: 1,
-							AutoScalerMin: 1,
-						},
-						VolumeType: volumeTypeName,
-						VolumeSize: "30Gi",
+			workersBase2 = []garden.Worker{
+				{
+					Name: "test-worker-1",
+					Machine: garden.Machine{
+						Type: machineTypeName,
 					},
-					{
-						Worker: garden.Worker{
-							Name:          "test-worker-2",
-							MachineType:   machineTypeName,
-							AutoScalerMax: 1,
-							AutoScalerMin: 1,
-						},
-						VolumeType: volumeTypeName,
-						VolumeSize: "30Gi",
+					Maximum: 1,
+					Minimum: 1,
+					Volume: &garden.Volume{
+						Size: "30Gi",
+						Type: volumeTypeName,
+					},
+				},
+				{
+					Name: "test-worker-2",
+					Machine: garden.Machine{
+						Type: machineTypeName,
+					},
+					Maximum: 1,
+					Minimum: 1,
+					Volume: &garden.Volume{
+						Size: "30Gi",
+						Type: volumeTypeName,
 					},
 				},
 			}
@@ -178,12 +180,10 @@ var _ = Describe("quotavalidator", func() {
 					Name:      "test-shoot",
 				},
 				Spec: garden.ShootSpec{
-					Cloud: garden.Cloud{
-						Profile: "profile",
-						SecretBindingRef: corev1.LocalObjectReference{
-							Name: "test-binding",
-						},
-						GCP: &shootSpecCloudGCEBase,
+					CloudProfileName:  "profile",
+					SecretBindingName: "test-binding",
+					Provider: garden.Provider{
+						Workers: workersBase,
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.0.1",
@@ -229,7 +229,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail because the limits of at least one quota are exceeded", func() {
-				shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 2
+				shoot.Spec.Provider.Workers[0].Maximum = 2
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Validate(attrs, nil)
@@ -248,7 +248,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail because shoot with 2 workers exhaust quota limits", func() {
-				shoot.Spec.Cloud.GCP = &shootSpecCloudGCE2Worker
+				shoot.Spec.Provider.Workers = workersBase2
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Validate(attrs, nil)

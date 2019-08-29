@@ -20,12 +20,12 @@ import (
 	"os"
 	"strconv"
 
+	helper "github.com/gardener/gardener/.test-defs/cmd"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/test/integration/framework"
 	"github.com/sirupsen/logrus"
-	helper "github.com/gardener/gardener/.test-defs/cmd"
 )
 
 var (
@@ -46,7 +46,7 @@ var (
 	autoScalerMax     *int
 
 	// required for openstack
-	floatingPoolName string
+	floatingPoolName     string
 	loadBalancerProvider string
 
 	testLogger *logrus.Logger
@@ -94,7 +94,7 @@ func init() {
 
 	shootArtifactPath = os.Getenv("SHOOT_ARTIFACT_PATH")
 	if shootArtifactPath == "" {
-		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
+		shootArtifactPath = fmt.Sprintf("example/90-deprecated-shoot-%s.yaml", cloudprovider)
 	}
 	machineType = os.Getenv("MACHINE_TYPE")
 	if autoScalerMinEnv := os.Getenv("AUTOSCALER_MIN"); autoScalerMinEnv != "" {

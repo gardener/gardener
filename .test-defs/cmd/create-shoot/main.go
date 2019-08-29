@@ -98,7 +98,7 @@ func init() {
 
 	shootArtifactPath = os.Getenv("SHOOT_ARTIFACT_PATH")
 	if shootArtifactPath == "" {
-		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
+		shootArtifactPath = fmt.Sprintf("example/90-deprecated-shoot-%s.yaml", cloudprovider)
 	}
 	seed = os.Getenv("SEED")
 	machineImage = os.Getenv("MACHINE_IMAGE")

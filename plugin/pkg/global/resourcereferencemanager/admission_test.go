@@ -151,13 +151,9 @@ var _ = Describe("resourcereferencemanager", func() {
 					Finalizers: finalizers,
 				},
 				Spec: garden.ShootSpec{
-					Cloud: garden.Cloud{
-						Profile: cloudProfileName,
-						Seed:    &seedName,
-						SecretBindingRef: corev1.LocalObjectReference{
-							Name: bindingName,
-						},
-					},
+					CloudProfileName:  cloudProfileName,
+					SeedName:          &seedName,
+					SecretBindingName: bindingName,
 					Kubernetes: garden.Kubernetes{
 						KubeAPIServer: &garden.KubeAPIServerConfig{
 							AuditConfig: &garden.AuditConfig{

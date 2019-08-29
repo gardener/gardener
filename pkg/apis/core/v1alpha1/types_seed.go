@@ -58,7 +58,7 @@ type SeedSpec struct {
 	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
-	BlockCIDRs []CIDR `json:"blockCIDRs,omitempty"`
+	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
 	// DNS contains DNS-relevant information about this seed cluster.
 	DNS SeedDNS `json:"dns"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
@@ -112,11 +112,11 @@ type SeedDNS struct {
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes CIDR `json:"nodes"`
+	Nodes string `json:"nodes"`
 	// Pods is the CIDR of the pod network.
-	Pods CIDR `json:"pods"`
+	Pods string `json:"pods"`
 	// Services is the CIDR of the service network.
-	Services CIDR `json:"services"`
+	Services string `json:"services"`
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional
 	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty"`
@@ -126,10 +126,10 @@ type SeedNetworks struct {
 type ShootNetworks struct {
 	// Pods is the CIDR of the pod network.
 	// +optional
-	Pods *CIDR `json:"pods,omitempty"`
+	Pods *string `json:"pods,omitempty"`
 	// Services is the CIDR of the service network.
 	// +optional
-	Services *CIDR `json:"services,omitempty"`
+	Services *string `json:"services,omitempty"`
 }
 
 // SeedProvider defines the provider type and region for this Seed cluster.

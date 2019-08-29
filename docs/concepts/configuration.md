@@ -43,7 +43,7 @@ The Gardener requires some secrets in order to work properly. These secrets are:
 The described secrets are expected to be stored in the so-called **Garden namespace**. In case the Gardener runs inside a Kubernetes cluster, the Garden namespace is the namespace the Gardener is deployed in. In case it runs outside (local development), the Garden namespace must be specified via a command line flag (see below).
 The secrets are determined based on labels with key `garden.sapcloud.io/role`. Please take a look on the above linked examples.
 
-The Seed cluster which is used to deploy the control plane of a Shoot cluster can be specified by the user in the Shoot manifest (see [here](../../example/90-shoot-azure.yaml#L10)). If it is not specified, the Gardener will try to find an adequate Seed cluster (one deployed in the same region at the same cloud provider) automatically.
+The Seed cluster which is used to deploy the control plane of a Shoot cluster can be specified by the user in the Shoot manifest (see [here](../../example/90-deprecated-shoot-azure.yaml#L10)). If it is not specified, the Gardener will try to find an adequate Seed cluster (one deployed in the same region at the same cloud provider) automatically.
 
 The cloud provider secrets can be stored in any namespace. With [`SecretBindings`](../../example/80-secretbinding-cloudprovider-aws.yaml) one can reference a secret in the same or in another namespace. These binding objects can also be used to reference `Quotas` for the specific secret.
 

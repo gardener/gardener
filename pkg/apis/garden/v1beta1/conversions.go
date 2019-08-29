@@ -23,10 +23,14 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 
+	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
+	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 	azureinstall "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/install"
 	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
+	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
 	openstackinstall "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
+	packetv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,36 +42,6 @@ import (
 
 func init() {
 	localSchemeBuilder.Register(addConversionFuncs)
-}
-
-func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
-	if err := autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s); err != nil {
-		return err
-	}
-
-	if in.MaxSurge == nil {
-		out.MaxSurge = DefaultWorkerMaxSurge
-	} else {
-		out.MaxSurge = *in.MaxSurge
-	}
-	if in.MaxUnavailable == nil {
-		out.MaxUnavailable = DefaultWorkerMaxUnavailable
-	} else {
-		out.MaxUnavailable = *in.MaxUnavailable
-	}
-
-	return nil
-}
-
-func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
-	if err := autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s); err != nil {
-		return err
-	}
-
-	out.MaxSurge = &in.MaxSurge
-	out.MaxUnavailable = &in.MaxUnavailable
-
-	return nil
 }
 
 // Convert_v1beta1_MachineVersion_To_garden_MachineVersion
@@ -593,10 +567,19 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 				return err
 			}
 			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
-			if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
-				// If an error occurs then the provider config information contains invalid syntax, and in this
-				// case we don't want to fail here. We rather don't try to migrate.
-				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			switch {
+			case providerConfig.Object != nil:
+				var ok bool
+				cloudProfileConfig = providerConfig.Object.(*azurev1alpha1.CloudProfileConfig)
+				if !ok {
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
+			case providerConfig.Raw != nil:
+				if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
 			}
 		}
 		if len(cloudProfileConfig.MachineImages) == 0 {
@@ -789,10 +772,19 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 				return err
 			}
 			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
-			if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
-				// If an error occurs then the provider config information contains invalid syntax, and in this
-				// case we don't want to fail here. We rather don't try to migrate.
-				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			switch {
+			case providerConfig.Object != nil:
+				var ok bool
+				cloudProfileConfig = providerConfig.Object.(*openstackv1alpha1.CloudProfileConfig)
+				if !ok {
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
+			case providerConfig.Raw != nil:
+				if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
 			}
 		}
 		if len(cloudProfileConfig.MachineImages) == 0 {
@@ -1279,4 +1271,1271 @@ func volumeTypesHaveName(volumeTypes []garden.VolumeType, name string) bool {
 		}
 	}
 	return false
+}
+
+func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_Shoot_To_garden_Shoot(in, out, s); err != nil {
+		return err
+	}
+
+	var networking garden.Networking
+	if in.Spec.Networking != nil {
+		if err := Convert_v1beta1_Networking_To_garden_Networking(in.Spec.Networking, &networking, s); err != nil {
+			return err
+		}
+	}
+	out.Spec.Networking = networking
+
+	var dns garden.DNS
+	if err := autoConvert_v1beta1_DNS_To_garden_DNS(&in.Spec.DNS, &dns, s); err != nil {
+		return err
+	}
+
+	var provider garden.DNSProvider
+	if in.Spec.DNS.ExcludeDomains != nil || in.Spec.DNS.ExcludeZones != nil || in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.Provider != nil || in.Spec.DNS.SecretName != nil {
+		provider.SecretName = in.Spec.DNS.SecretName
+		provider.Type = in.Spec.DNS.Provider
+
+		var domains *garden.DNSIncludeExclude
+		if in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.ExcludeDomains != nil {
+			domains = &garden.DNSIncludeExclude{}
+			for _, val := range in.Spec.DNS.IncludeDomains {
+				domains.Include = append(domains.Include, val)
+			}
+			for _, val := range in.Spec.DNS.ExcludeDomains {
+				domains.Exclude = append(domains.Exclude, val)
+			}
+		}
+		provider.Domains = domains
+
+		var zones *garden.DNSIncludeExclude
+		if in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.ExcludeZones != nil {
+			zones = &garden.DNSIncludeExclude{}
+			for _, val := range in.Spec.DNS.IncludeZones {
+				zones.Include = append(zones.Include, val)
+			}
+			for _, val := range in.Spec.DNS.ExcludeZones {
+				zones.Exclude = append(zones.Exclude, val)
+			}
+		}
+		provider.Zones = zones
+
+		dns.Providers = append(dns.Providers, provider)
+	}
+
+	if additionalProviders, ok := in.Annotations[garden.MigrationShootDNSProviders]; ok {
+		var providers []garden.DNSProvider
+		if err := json.Unmarshal([]byte(additionalProviders), &providers); err != nil {
+			return err
+		}
+		dns.Providers = append(dns.Providers, providers...)
+	}
+	out.Spec.DNS = &dns
+
+	var workerMigrationInfo garden.WorkerMigrationInfo
+	if data, ok := in.Annotations[garden.MigrationShootWorkers]; ok {
+		if err := json.Unmarshal([]byte(data), &workerMigrationInfo); err != nil {
+			return err
+		}
+	}
+
+	switch {
+	case in.Spec.Cloud.AWS != nil:
+		out.Spec.Provider.Type = "aws"
+
+		infrastructureConfig := &awsv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: awsv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		if len(in.Spec.Cloud.AWS.Networks.Internal) != len(in.Spec.Cloud.AWS.Zones) {
+			return fmt.Errorf("aws internal networks must have same number of entries like zones")
+		}
+		if len(in.Spec.Cloud.AWS.Networks.Public) != len(in.Spec.Cloud.AWS.Zones) {
+			return fmt.Errorf("aws public networks must have same number of entries like zones")
+		}
+		if len(in.Spec.Cloud.AWS.Networks.Workers) != len(in.Spec.Cloud.AWS.Zones) {
+			return fmt.Errorf("aws workers networks must have same number of entries like zones")
+		}
+
+		zones := make([]awsv1alpha1.Zone, 0, len(in.Spec.Cloud.AWS.Zones))
+		for i, zone := range in.Spec.Cloud.AWS.Zones {
+			zones = append(zones, awsv1alpha1.Zone{
+				Name:     zone,
+				Internal: in.Spec.Cloud.AWS.Networks.Internal[i],
+				Public:   in.Spec.Cloud.AWS.Networks.Public[i],
+				Workers:  in.Spec.Cloud.AWS.Networks.Workers[i],
+			})
+		}
+
+		var vpcCIDR *string
+		if c := in.Spec.Cloud.AWS.Networks.VPC.CIDR; c != nil {
+			cidr := *c
+			vpcCIDR = &cidr
+		}
+
+		infrastructureConfig.Networks = awsv1alpha1.Networks{
+			VPC: awsv1alpha1.VPC{
+				ID:   in.Spec.Cloud.AWS.Networks.VPC.ID,
+				CIDR: vpcCIDR,
+			},
+			Zones: zones,
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &awsv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: awsv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		var cloudControllerManager *awsv1alpha1.CloudControllerManagerConfig
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			cloudControllerManager = &awsv1alpha1.CloudControllerManagerConfig{
+				FeatureGates: in.Spec.Kubernetes.CloudControllerManager.FeatureGates,
+			}
+		}
+		controlPlaneConfig.CloudControllerManager = cloudControllerManager
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.AWS.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+				Volume: &garden.Volume{
+					Size: worker.VolumeSize,
+					Type: worker.VolumeType,
+				},
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			if w.Zones == nil {
+				w.Zones = in.Spec.Cloud.AWS.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.AWS.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.AWS.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.AWS.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.AWS.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.AWS.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.AWS.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.AWS.Networks.Services
+		}
+
+	case in.Spec.Cloud.Azure != nil:
+		out.Spec.Provider.Type = "azure"
+
+		infrastructureConfig := &azurev1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		var resourceGroup *azurev1alpha1.ResourceGroup
+		if in.Spec.Cloud.Azure.ResourceGroup != nil {
+			resourceGroup = &azurev1alpha1.ResourceGroup{
+				Name: in.Spec.Cloud.Azure.ResourceGroup.Name,
+			}
+		}
+
+		var vnet azurev1alpha1.VNet
+		if in.Spec.Cloud.Azure.Networks.VNet.CIDR != nil {
+			cidr := string(*in.Spec.Cloud.Azure.Networks.VNet.CIDR)
+			vnet.CIDR = &cidr
+		}
+		if in.Spec.Cloud.Azure.Networks.VNet.Name != nil {
+			vnet.Name = in.Spec.Cloud.Azure.Networks.VNet.Name
+		}
+
+		infrastructureConfig.ResourceGroup = resourceGroup
+		infrastructureConfig.Networks = azurev1alpha1.NetworkConfig{
+			VNet:    vnet,
+			Workers: in.Spec.Cloud.Azure.Networks.Workers,
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &azurev1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		var cloudControllerManager *azurev1alpha1.CloudControllerManagerConfig
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			cloudControllerManager = &azurev1alpha1.CloudControllerManagerConfig{
+				FeatureGates: in.Spec.Kubernetes.CloudControllerManager.FeatureGates,
+			}
+		}
+		controlPlaneConfig.CloudControllerManager = cloudControllerManager
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.Azure.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+				Volume: &garden.Volume{
+					Size: worker.VolumeSize,
+					Type: worker.VolumeType,
+				},
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.Azure.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Azure.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.Azure.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Azure.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.Azure.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Azure.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.Azure.Networks.Services
+		}
+
+	case in.Spec.Cloud.GCP != nil:
+		out.Spec.Provider.Type = "gcp"
+
+		infrastructureConfig := &gcpv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		if len(in.Spec.Cloud.GCP.Networks.Workers) != 1 {
+			return fmt.Errorf("gcp worker networks must only have exactly one entry")
+		}
+		if len(in.Spec.Cloud.GCP.Zones) == 0 {
+			return fmt.Errorf("gcp zones must have at least one entry")
+		}
+
+		var vpc *gcpv1alpha1.VPC
+		if in.Spec.Cloud.GCP.Networks.VPC != nil {
+			vpc = &gcpv1alpha1.VPC{
+				Name: in.Spec.Cloud.GCP.Networks.VPC.Name,
+			}
+		}
+
+		var internalCIDR *string
+		if c := in.Spec.Cloud.GCP.Networks.Internal; c != nil {
+			cidr := *c
+			internalCIDR = &cidr
+		}
+
+		infrastructureConfig.Networks = gcpv1alpha1.NetworkConfig{
+			VPC:      vpc,
+			Worker:   in.Spec.Cloud.GCP.Networks.Workers[0],
+			Internal: internalCIDR,
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &gcpv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		var cloudControllerManager *gcpv1alpha1.CloudControllerManagerConfig
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			cloudControllerManager = &gcpv1alpha1.CloudControllerManagerConfig{
+				FeatureGates: in.Spec.Kubernetes.CloudControllerManager.FeatureGates,
+			}
+		}
+		controlPlaneConfig.CloudControllerManager = cloudControllerManager
+		controlPlaneConfig.Zone = in.Spec.Cloud.GCP.Zones[0]
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.GCP.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+				Volume: &garden.Volume{
+					Size: worker.VolumeSize,
+					Type: worker.VolumeType,
+				},
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			if w.Zones == nil {
+				w.Zones = in.Spec.Cloud.GCP.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.GCP.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.GCP.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.GCP.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.GCP.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.GCP.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.GCP.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.GCP.Networks.Services
+		}
+
+	case in.Spec.Cloud.OpenStack != nil:
+		out.Spec.Provider.Type = "openstack"
+
+		infrastructureConfig := &openstackv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		if len(in.Spec.Cloud.OpenStack.Networks.Workers) != 1 {
+			return fmt.Errorf("openstack worker networks must only have exactly one entry")
+		}
+
+		var router *openstackv1alpha1.Router
+		if in.Spec.Cloud.OpenStack.Networks.Router != nil {
+			router = &openstackv1alpha1.Router{
+				ID: in.Spec.Cloud.OpenStack.Networks.Router.ID,
+			}
+		}
+
+		infrastructureConfig.FloatingPoolName = in.Spec.Cloud.OpenStack.FloatingPoolName
+		infrastructureConfig.Networks = openstackv1alpha1.Networks{
+			Router: router,
+			Worker: in.Spec.Cloud.OpenStack.Networks.Workers[0],
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &openstackv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		var cloudControllerManager *openstackv1alpha1.CloudControllerManagerConfig
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			cloudControllerManager = &openstackv1alpha1.CloudControllerManagerConfig{
+				FeatureGates: in.Spec.Kubernetes.CloudControllerManager.FeatureGates,
+			}
+		}
+
+		var loadBalancerClasses = make([]openstackv1alpha1.LoadBalancerClass, 0, len(in.Spec.Cloud.OpenStack.LoadBalancerClasses))
+		for _, loadBalancerClass := range in.Spec.Cloud.OpenStack.LoadBalancerClasses {
+			loadBalancerClasses = append(loadBalancerClasses, openstackv1alpha1.LoadBalancerClass{
+				Name:              loadBalancerClass.Name,
+				FloatingSubnetID:  loadBalancerClass.FloatingSubnetID,
+				FloatingNetworkID: loadBalancerClass.FloatingNetworkID,
+				SubnetID:          loadBalancerClass.SubnetID,
+			})
+		}
+
+		controlPlaneConfig.CloudControllerManager = cloudControllerManager
+		controlPlaneConfig.LoadBalancerProvider = in.Spec.Cloud.OpenStack.LoadBalancerProvider
+		controlPlaneConfig.LoadBalancerClasses = loadBalancerClasses
+		controlPlaneConfig.Zone = in.Spec.Cloud.OpenStack.Zones[0]
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.OpenStack.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			if w.Zones == nil {
+				w.Zones = in.Spec.Cloud.OpenStack.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.OpenStack.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.OpenStack.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.OpenStack.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.OpenStack.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.OpenStack.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.OpenStack.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.OpenStack.Networks.Services
+		}
+
+	case in.Spec.Cloud.Alicloud != nil:
+		out.Spec.Provider.Type = "alicloud"
+
+		infrastructureConfig := &alicloudv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: alicloudv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		if len(in.Spec.Cloud.Alicloud.Networks.Workers) != len(in.Spec.Cloud.Alicloud.Zones) {
+			return fmt.Errorf("alicloud workers networks must have same number of entries like zones")
+		}
+		if len(in.Spec.Cloud.Alicloud.Zones) == 0 {
+			return fmt.Errorf("alicloud zones must have at least one entry")
+		}
+
+		zones := make([]alicloudv1alpha1.Zone, 0, len(in.Spec.Cloud.Alicloud.Zones))
+		for i, zone := range in.Spec.Cloud.Alicloud.Zones {
+			zones = append(zones, alicloudv1alpha1.Zone{
+				Name:   zone,
+				Worker: in.Spec.Cloud.Alicloud.Networks.Workers[i],
+			})
+		}
+
+		var vpcCIDR *string
+		if c := in.Spec.Cloud.Alicloud.Networks.VPC.CIDR; c != nil {
+			cidr := *c
+			vpcCIDR = &cidr
+		}
+
+		infrastructureConfig.Networks = alicloudv1alpha1.Networks{
+			VPC: alicloudv1alpha1.VPC{
+				ID:   in.Spec.Cloud.Alicloud.Networks.VPC.ID,
+				CIDR: vpcCIDR,
+			},
+			Zones: zones,
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &alicloudv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: alicloudv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		var cloudControllerManager *alicloudv1alpha1.CloudControllerManagerConfig
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			cloudControllerManager = &alicloudv1alpha1.CloudControllerManagerConfig{
+				FeatureGates: in.Spec.Kubernetes.CloudControllerManager.FeatureGates,
+			}
+		}
+		controlPlaneConfig.CloudControllerManager = cloudControllerManager
+		controlPlaneConfig.Zone = in.Spec.Cloud.Alicloud.Zones[0]
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.Alicloud.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+				Volume: &garden.Volume{
+					Size: worker.VolumeSize,
+					Type: worker.VolumeType,
+				},
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			if w.Zones == nil {
+				w.Zones = in.Spec.Cloud.Alicloud.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.Alicloud.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Alicloud.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.Alicloud.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Alicloud.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.Alicloud.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Alicloud.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.Alicloud.Networks.Services
+		}
+
+	case in.Spec.Cloud.Packet != nil:
+		out.Spec.Provider.Type = "packet"
+
+		infrastructureConfig := &packetv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: packetv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+
+		data, err := json.Marshal(infrastructureConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		controlPlaneConfig := &packetv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: packetv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+
+		data, err = json.Marshal(controlPlaneConfig)
+		if err != nil {
+			return err
+		}
+		out.Spec.Provider.ControlPlaneConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Raw: data,
+			},
+		}
+
+		var workers []garden.Worker
+		out.Spec.Provider.Workers = nil
+
+		for _, worker := range in.Spec.Cloud.Packet.Workers {
+			w := garden.Worker{
+				Annotations: worker.Annotations,
+				CABundle:    worker.CABundle,
+				Labels:      worker.Labels,
+				Name:        worker.Name,
+				Machine: garden.Machine{
+					Type: worker.MachineType,
+				},
+				Maximum:        worker.AutoScalerMax,
+				Minimum:        worker.AutoScalerMin,
+				MaxSurge:       worker.MaxSurge,
+				MaxUnavailable: worker.MaxUnavailable,
+				Taints:         worker.Taints,
+				Volume: &garden.Volume{
+					Size: worker.VolumeSize,
+					Type: worker.VolumeType,
+				},
+			}
+
+			var machineImage *garden.ShootMachineImage
+			if worker.MachineImage != nil {
+				machineImage = &garden.ShootMachineImage{}
+				if err := autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(worker.MachineImage, machineImage, s); err != nil {
+					return err
+				}
+			}
+			w.Machine.Image = machineImage
+
+			if worker.Kubelet != nil {
+				kubeletConfig := &garden.KubeletConfig{}
+				if err := autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(worker.Kubelet, kubeletConfig, s); err != nil {
+					return err
+				}
+				w.Kubernetes = &garden.WorkerKubernetes{Kubelet: kubeletConfig}
+			}
+
+			if data, ok := workerMigrationInfo[worker.Name]; ok {
+				w.ProviderConfig = data.ProviderConfig
+				w.Zones = data.Zones
+			}
+
+			if w.Zones == nil {
+				w.Zones = in.Spec.Cloud.Packet.Zones
+			}
+
+			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
+			workers = append(workers, w)
+		}
+		out.Spec.Cloud.Packet.Workers = workers
+
+		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Packet.Networks.Nodes != nil {
+			out.Spec.Networking.Nodes = *in.Spec.Cloud.Packet.Networks.Nodes
+		}
+		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Packet.Networks.Pods != nil {
+			out.Spec.Networking.Pods = in.Spec.Cloud.Packet.Networks.Pods
+		}
+		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Packet.Networks.Services != nil {
+			out.Spec.Networking.Services = in.Spec.Cloud.Packet.Networks.Services
+		}
+
+	default:
+		if data, ok := in.Annotations[garden.MigrationShootProvider]; ok {
+			var provider garden.Provider
+			if err := json.Unmarshal([]byte(data), &provider); err != nil {
+				return err
+			}
+			out.Spec.Provider = provider
+		}
+	}
+
+	out.Spec.CloudProfileName = in.Spec.Cloud.Profile
+	out.Spec.Region = in.Spec.Cloud.Region
+	out.Spec.SecretBindingName = in.Spec.Cloud.SecretBindingRef.Name
+	out.Spec.SeedName = in.Spec.Cloud.Seed
+
+	return nil
+}
+
+func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conversion.Scope) error {
+	if err := autoConvert_garden_Shoot_To_v1beta1_Shoot(in, out, s); err != nil {
+		return err
+	}
+
+	networking := &Networking{}
+	if err := Convert_garden_Networking_To_v1beta1_Networking(&in.Spec.Networking, networking, s); err != nil {
+		return err
+	}
+	out.Spec.Networking = networking
+
+	var dns DNS
+	if in.Spec.DNS != nil {
+		if err := autoConvert_garden_DNS_To_v1beta1_DNS(in.Spec.DNS, &dns, s); err != nil {
+			return err
+		}
+
+		if len(in.Spec.DNS.Providers) > 0 {
+			dns.Provider = in.Spec.DNS.Providers[0].Type
+			dns.SecretName = in.Spec.DNS.Providers[0].SecretName
+
+			if in.Spec.DNS.Providers[0].Domains != nil {
+				dns.IncludeDomains = in.Spec.DNS.Providers[0].Domains.Include
+				dns.ExcludeDomains = in.Spec.DNS.Providers[0].Domains.Exclude
+			}
+
+			if in.Spec.DNS.Providers[0].Zones != nil {
+				dns.IncludeZones = in.Spec.DNS.Providers[0].Zones.Include
+				dns.ExcludeZones = in.Spec.DNS.Providers[0].Zones.Exclude
+			}
+		}
+
+		if len(in.Spec.DNS.Providers) > 1 {
+			data, err := json.Marshal(in.Spec.DNS.Providers[1:])
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootDNSProviders, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootDNSProviders)
+		}
+	}
+	out.Spec.DNS = dns
+
+	out.Spec.Cloud.Profile = in.Spec.CloudProfileName
+	out.Spec.Cloud.Region = in.Spec.Region
+	out.Spec.Cloud.SecretBindingRef.Name = in.Spec.SecretBindingName
+	out.Spec.Cloud.Seed = in.Spec.SeedName
+
+	if in.Spec.Cloud.AWS != nil || in.Spec.Cloud.Azure != nil || in.Spec.Cloud.GCP != nil || in.Spec.Cloud.OpenStack != nil || in.Spec.Cloud.Alicloud != nil || in.Spec.Cloud.Packet != nil {
+		workerMigrationInfo := make(garden.WorkerMigrationInfo, len(in.Spec.Provider.Workers))
+		for _, worker := range in.Spec.Provider.Workers {
+			workerMigrationInfo[worker.Name] = garden.WorkerMigrationData{
+				ProviderConfig: worker.ProviderConfig,
+				Zones:          worker.Zones,
+			}
+		}
+		data, err := json.Marshal(workerMigrationInfo)
+		if err != nil {
+			return err
+		}
+		metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootWorkers, string(data))
+	} else {
+		data, err := json.Marshal(in.Spec.Provider)
+		if err != nil {
+			return err
+		}
+		metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootProvider, string(data))
+	}
+
+	return nil
+}
+
+func Convert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	return autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in, out, s)
+}
+
+func Convert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in, out, s)
+}
+
+func Convert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, out *ShootStatus, s conversion.Scope) error {
+	if err := autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in, out, s); err != nil {
+		return err
+	}
+
+	if in.Seed != nil {
+		out.Seed = *in.Seed
+	} else {
+		out.Seed = ""
+	}
+
+	return nil
+}
+
+func Convert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in, out, s); err != nil {
+		return err
+	}
+
+	if len(in.Seed) > 0 {
+		out.Seed = &in.Seed
+	} else {
+		out.Seed = nil
+	}
+
+	return nil
+}
+
+func Convert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Scope) error {
+	return autoConvert_garden_DNS_To_v1beta1_DNS(in, out, s)
+}
+
+func Convert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
+	return autoConvert_v1beta1_DNS_To_garden_DNS(in, out, s)
+}
+
+func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
+	return autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s)
+}
+
+func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
+	return autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s)
+}
+
+func Convert_garden_Worker_To_v1beta1_AWSWorker(in *garden.Worker, out *AWSWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	if in.Volume != nil {
+		out.VolumeSize = in.Volume.Size
+		out.VolumeType = in.Volume.Type
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_AWSWorker_To_garden_Worker(in *AWSWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Worker_To_v1beta1_AzureWorker(in *garden.Worker, out *AzureWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	if in.Volume != nil {
+		out.VolumeSize = in.Volume.Size
+		out.VolumeType = in.Volume.Type
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_AzureWorker_To_garden_Worker(in *AzureWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Worker_To_v1beta1_GCPWorker(in *garden.Worker, out *GCPWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	if in.Volume != nil {
+		out.VolumeSize = in.Volume.Size
+		out.VolumeType = in.Volume.Type
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_GCPWorker_To_garden_Worker(in *GCPWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Worker_To_v1beta1_OpenStackWorker(in *garden.Worker, out *OpenStackWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_OpenStackWorker_To_garden_Worker(in *OpenStackWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Worker_To_v1beta1_AlicloudWorker(in *garden.Worker, out *AlicloudWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	if in.Volume != nil {
+		out.VolumeSize = in.Volume.Size
+		out.VolumeType = in.Volume.Type
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_AlicloudWorker_To_garden_Worker(in *AlicloudWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Worker_To_v1beta1_PacketWorker(in *garden.Worker, out *PacketWorker, s conversion.Scope) error {
+	out.Name = in.Name
+	out.MachineType = in.Machine.Type
+	out.AutoScalerMin = in.Minimum
+	out.AutoScalerMax = in.Maximum
+	out.MaxSurge = in.MaxSurge
+	out.MaxUnavailable = in.MaxUnavailable
+	out.Annotations = in.Annotations
+	out.Labels = in.Labels
+	out.Taints = in.Taints
+	out.CABundle = in.CABundle
+
+	var machineImage *ShootMachineImage
+	if in.Machine.Image != nil {
+		machineImage = &ShootMachineImage{}
+		if err := autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in.Machine.Image, machineImage, s); err != nil {
+			return err
+		}
+		out.MachineImage = machineImage
+	}
+
+	if in.Volume != nil {
+		out.VolumeSize = in.Volume.Size
+		out.VolumeType = in.Volume.Type
+	}
+
+	var kubeletConfig *KubeletConfig
+	if in.Kubernetes != nil {
+		kubeletConfig = &KubeletConfig{}
+		if err := autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in.Kubernetes.Kubelet, kubeletConfig, s); err != nil {
+			return err
+		}
+	}
+	out.Kubelet = kubeletConfig
+
+	return nil
+}
+
+func Convert_v1beta1_PacketWorker_To_garden_Worker(in *PacketWorker, out *garden.Worker, s conversion.Scope) error {
+	return nil
+}
+
+func Convert_garden_Networking_To_v1beta1_Networking(in *garden.Networking, out *Networking, s conversion.Scope) error {
+	if err := autoConvert_garden_Networking_To_v1beta1_Networking(in, out, s); err != nil {
+		return err
+	}
+
+	out.K8SNetworks = K8SNetworks{
+		Nodes:    &in.Nodes,
+		Pods:     in.Pods,
+		Services: in.Services,
+	}
+
+	return nil
+}
+
+func Convert_v1beta1_Networking_To_garden_Networking(in *Networking, out *garden.Networking, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_Networking_To_garden_Networking(in, out, s); err != nil {
+		return err
+	}
+
+	if in.K8SNetworks.Nodes != nil {
+		out.Nodes = *in.K8SNetworks.Nodes
+	}
+	out.Pods = in.K8SNetworks.Pods
+	out.Services = in.K8SNetworks.Services
+
+	return nil
 }

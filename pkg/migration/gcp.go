@@ -44,7 +44,7 @@ func GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 
 	var internalCIDR *string
 	if c := shoot.Spec.Cloud.GCP.Networks.Internal; c != nil {
-		cidr := string(*c)
+		cidr := *c
 		internalCIDR = &cidr
 	}
 
@@ -55,7 +55,7 @@ func GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		},
 		Networks: gcpv1alpha1.NetworkConfig{
 			VPC:      vpc,
-			Worker:   string(shoot.Spec.Cloud.GCP.Networks.Workers[0]),
+			Worker:   shoot.Spec.Cloud.GCP.Networks.Workers[0],
 			Internal: internalCIDR,
 		},
 	}, nil

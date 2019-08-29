@@ -25,7 +25,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,9 +41,9 @@ var _ = Describe("validator", func() {
 			project               garden.Project
 			shoot                 garden.Shoot
 
-			podCIDR     = garden.CIDR("100.96.0.0/11")
-			serviceCIDR = garden.CIDR("100.64.0.0/13")
-			nodesCIDR   = garden.CIDR("10.250.0.0/16")
+			podCIDR     = "100.96.0.0/11"
+			serviceCIDR = "100.64.0.0/13"
+			nodesCIDR   = "10.250.0.0/16"
 			k8sNetworks = garden.K8SNetworks{
 				Pods:     &podCIDR,
 				Services: &serviceCIDR,
@@ -64,9 +63,9 @@ var _ = Describe("validator", func() {
 			validMachineImageVersions     = []garden.ExpirableVersion{{Version: "0.0.1"}}
 			validShootMachineImageVersion = "0.0.1"
 
-			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
-			seedServicesCIDR = garden.CIDR("10.241.0.0/17")
-			seedNodesCIDR    = garden.CIDR("10.240.0.0/16")
+			seedPodsCIDR     = "10.241.128.0/17"
+			seedServicesCIDR = "10.241.0.0/17"
+			seedNodesCIDR    = "10.240.0.0/16"
 
 			projectBase = garden.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +80,7 @@ var _ = Describe("validator", func() {
 					Name: "profile",
 				},
 				Spec: garden.CloudProfileSpec{
-					Type: "aws",
+					Type: "unknown",
 					Kubernetes: garden.KubernetesSettings{
 						Versions: []garden.ExpirableVersion{{Version: "1.6.4"}},
 					},
@@ -142,20 +141,43 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: garden.ShootSpec{
-					Cloud: garden.Cloud{
-						Profile: "profile",
-						Region:  "europe",
-						Seed:    &seedName,
-						SecretBindingRef: corev1.LocalObjectReference{
-							Name: "my-secret",
+					CloudProfileName:  "profile",
+					Region:            "europe",
+					SecretBindingName: "my-secret",
+					SeedName:          &seedName,
+					DNS: &garden.DNS{
+						Domain: test.MakeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
+						Providers: []garden.DNSProvider{
+							{
+								Type: &unmanagedDNSProvider,
+							},
 						},
-					},
-					DNS: garden.DNS{
-						Provider: &unmanagedDNSProvider,
-						Domain:   test.MakeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.6.4",
+					},
+					Networking: garden.Networking{
+						Nodes:    *k8sNetworks.Nodes,
+						Pods:     k8sNetworks.Pods,
+						Services: k8sNetworks.Services,
+					},
+					Provider: garden.Provider{
+						Type: "unknown",
+						Workers: []garden.Worker{
+							{
+								Name: "worker-name",
+								Machine: garden.Machine{
+									Type: "machine-type-1",
+								},
+								Minimum: 1,
+								Maximum: 1,
+								Volume: &garden.Volume{
+									Size: "40Gi",
+									Type: "volume-type-1",
+								},
+								Zones: []string{"europe-a"},
+							},
+						},
 					},
 				},
 			}
@@ -163,9 +185,9 @@ var _ = Describe("validator", func() {
 
 		BeforeEach(func() {
 			project = projectBase
-			cloudProfile = cloudProfileBase
+			cloudProfile = *cloudProfileBase.DeepCopy()
 			seed = seedBase
-			shoot = shootBase
+			shoot = *shootBase.DeepCopy()
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
@@ -193,52 +215,19 @@ var _ = Describe("validator", func() {
 		// The verification of protection is independent of the Cloud Provider (being checked before). We use AWS.
 		Context("VALIDATION: Shoot references a Seed already -  validate user provided seed regarding protection", func() {
 			var (
-				oldShoot   *garden.Shoot
-				awsProfile = &garden.AWSProfile{
-					Constraints: garden.AWSConstraints{
-						DNSProviders: []garden.DNSProviderConstraint{
-							{
-								Name: garden.DNSUnmanaged,
-							},
-						},
-					},
-				}
-				workers = []garden.AWSWorker{
-					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
-						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
-					},
-				}
-				zones        = []string{"europe-a"}
-				machineImage = &garden.ShootMachineImage{
-					Name:    validMachineImageName,
-					Version: validShootMachineImageVersion,
-				}
-				awsCloud = &garden.AWSCloud{}
+				oldShoot *garden.Shoot
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
-				awsCloud.Networks = garden.AWSNetworks{K8SNetworks: k8sNetworks}
-				awsCloud.Workers = workers
-				awsCloud.Zones = zones
-				awsCloud.MachineImage = machineImage
-				cloudProfile.Spec.AWS = awsProfile
-				shoot.Spec.Cloud.AWS = awsCloud
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 
 				// set seed name
-				shoot.Spec.Cloud.Seed = &seedName
+				shoot.Spec.SeedName = &seedName
 
 				// set old shoot for update
 				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.Cloud.Seed = nil
+				oldShoot.Spec.SeedName = nil
 			})
 
 			It("create should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
@@ -490,7 +479,7 @@ var _ = Describe("validator", func() {
 
 		It("should reject because the cloud provider in shoot and profile differ", func() {
 			cloudProfile.Spec.Type = "gcp"
-			shoot.Spec.Cloud.AWS = &garden.AWSCloud{}
+			shoot.Spec.Provider.Type = "aws"
 
 			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -514,16 +503,18 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.AWSWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &garden.Volume{
+							Size: "10Gi",
+							Type: "volume-type-1",
+						},
 					},
 				}
 				zones        = []string{"europe-a"}
@@ -535,8 +526,8 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				awsCloud.Networks = garden.AWSNetworks{K8SNetworks: k8sNetworks}
 				awsCloud.Workers = workers
 				awsCloud.Zones = zones
@@ -544,10 +535,11 @@ var _ = Describe("validator", func() {
 				cloudProfile.Spec.Type = "aws"
 				cloudProfile.Spec.AWS = awsProfile
 				shoot.Spec.Cloud.AWS = awsCloud
+				shoot.Spec.Provider.Type = "aws"
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -587,21 +579,6 @@ var _ = Describe("validator", func() {
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.AWS.Networks.Services = &seedServicesCIDR
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -810,10 +787,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should not reject due to an usable machine type", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
 					},
 				}
@@ -829,10 +806,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to a not usable machine type", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-old",
+						Machine: garden.Machine{
+							Type: "machine-type-old",
 						},
 					},
 				}
@@ -849,10 +826,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -869,12 +846,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeType: "not-allowed",
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
 					},
 				}
 
@@ -935,16 +914,18 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.AzureWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &garden.Volume{
+							Size: "10Gi",
+							Type: "volume-type-1",
+						},
 					},
 				}
 				machineImage = &garden.ShootMachineImage{
@@ -955,18 +936,19 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				cloudProfile.Spec.Azure = azureProfile
 				azureCloud.Networks = garden.AzureNetworks{K8SNetworks: k8sNetworks}
 				azureCloud.Workers = workers
 				azureCloud.MachineImage = machineImage
 				cloudProfile.Spec.Type = "azure"
+				shoot.Spec.Provider.Type = "azure"
 				shoot.Spec.Cloud.Azure = azureCloud
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -1006,21 +988,6 @@ var _ = Describe("validator", func() {
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.Azure.Networks.Services = &seedServicesCIDR
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1134,10 +1101,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -1154,12 +1121,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeType: "not-allowed",
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
 					},
 				}
 
@@ -1175,7 +1144,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid region where no fault domain count has been specified", func() {
-				shoot.Spec.Cloud.Region = "asia"
+				shoot.Spec.Region = "asia"
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1189,7 +1158,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid region where no update domain count has been specified", func() {
-				shoot.Spec.Cloud.Region = "australia"
+				shoot.Spec.Region = "australia"
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1214,16 +1183,18 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.GCPWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &garden.Volume{
+							Size: "10Gi",
+							Type: "volume-type-1",
+						},
 					},
 				}
 				zones        = []string{"europe-a"}
@@ -1235,19 +1206,20 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				gcpCloud.Networks = garden.GCPNetworks{K8SNetworks: k8sNetworks}
 				gcpCloud.Workers = workers
 				gcpCloud.Zones = zones
 				gcpCloud.MachineImage = machineImage
 				cloudProfile.Spec.Type = "gcp"
+				shoot.Spec.Provider.Type = "gcp"
 				cloudProfile.Spec.GCP = gcpProfile
 				shoot.Spec.Cloud.GCP = gcpCloud
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -1299,21 +1271,6 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 
@@ -1415,10 +1372,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -1435,12 +1392,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeType: "not-allowed",
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
 					},
 				}
 
@@ -1481,16 +1440,18 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.PacketWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &garden.Volume{
+							Size: "10Gi",
+							Type: "volume-type-1",
+						},
 					},
 				}
 				zones        = []string{"europe-a"}
@@ -1502,19 +1463,20 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				packetCloud.Networks = garden.PacketNetworks{K8SNetworks: k8sNetworks}
 				packetCloud.Workers = workers
 				packetCloud.Zones = zones
 				packetCloud.MachineImage = machineImage
 				cloudProfile.Spec.Type = "packet"
+				shoot.Spec.Provider.Type = "packet"
 				cloudProfile.Spec.Packet = packetProfile
 				shoot.Spec.Cloud.Packet = packetCloud
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -1540,21 +1502,6 @@ var _ = Describe("validator", func() {
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.Packet.Networks.Services = &seedServicesCIDR
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1668,10 +1615,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -1688,12 +1635,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeType: "not-allowed",
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
 					},
 				}
 
@@ -1744,14 +1693,14 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.OpenStackWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
+						Minimum: 1,
+						Maximum: 1,
 					},
 				}
 				zones        = []string{"europe-a"}
@@ -1763,8 +1712,8 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				openStackCloud.FloatingPoolName = "pool"
 				openStackCloud.LoadBalancerProvider = "haproxy"
 				openStackCloud.Networks = garden.OpenStackNetworks{K8SNetworks: k8sNetworks}
@@ -1772,12 +1721,13 @@ var _ = Describe("validator", func() {
 				openStackCloud.Zones = zones
 				openStackCloud.MachineImage = machineImage
 				cloudProfile.Spec.Type = "openstack"
+				shoot.Spec.Provider.Type = "openstack"
 				cloudProfile.Spec.OpenStack = openStackProfile
 				shoot.Spec.Cloud.OpenStack = openStackCloud
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -1817,21 +1767,6 @@ var _ = Describe("validator", func() {
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.OpenStack.Networks.Services = &seedServicesCIDR
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1986,10 +1921,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -2031,16 +1966,18 @@ var _ = Describe("validator", func() {
 						},
 					},
 				}
-				workers = []garden.AlicloudWorker{
+				workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							Name:          "worker-name",
-							MachineType:   "machine-type-1",
-							AutoScalerMin: 1,
-							AutoScalerMax: 1,
+						Name: "worker-name",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeSize: "10Gi",
-						VolumeType: "volume-type-1",
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &garden.Volume{
+							Size: "10Gi",
+							Type: "volume-type-1",
+						},
 					},
 				}
 				zones        = []string{"europe-a"}
@@ -2052,19 +1989,20 @@ var _ = Describe("validator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile = cloudProfileBase
-				shoot = shootBase
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
 				aliCloud.Networks = garden.AlicloudNetworks{K8SNetworks: k8sNetworks}
 				aliCloud.Workers = workers
 				aliCloud.Zones = zones
 				aliCloud.MachineImage = machineImage
 				cloudProfile.Spec.Type = "alicloud"
+				shoot.Spec.Provider.Type = "alicloud"
 				cloudProfile.Spec.Alicloud = alicloudProfile
 				shoot.Spec.Cloud.Alicloud = aliCloud
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
-				shoot.Spec.Cloud.Seed = nil
+				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -2104,21 +2042,6 @@ var _ = Describe("validator", func() {
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.Alicloud.Networks.Services = &seedServicesCIDR
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
-
-			It("should reject due to an invalid dns provider", func() {
-				provider := "some-provider"
-				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2232,10 +2155,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine type", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "not-allowed",
+						Machine: garden.Machine{
+							Type: "not-allowed",
 						},
 					},
 				}
@@ -2252,12 +2175,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
-						VolumeType: "not-allowed",
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
 					},
 				}
 
@@ -2287,10 +2212,10 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an machine type is not available in shoot zones", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
-						Worker: garden.Worker{
-							MachineType: "machine-type-1",
+						Machine: garden.Machine{
+							Type: "machine-type-1",
 						},
 					},
 				}
@@ -2309,13 +2234,383 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an volume type is not available in shoot zones", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
-						VolumeType: "volume-type-1",
+						Volume: &garden.Volume{
+							Type: "volume-type-1",
+						},
 					},
 				}
 
 				cloudProfile.Spec.Regions[0].Zones[0].UnavailableVolumeTypes = []string{"volume-type-1"}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+		})
+
+		Context("tests for unknown provider", func() {
+			var workers = []garden.Worker{
+				{
+					Name: "worker-name",
+					Machine: garden.Machine{
+						Type: "machine-type-1",
+					},
+					Minimum: 1,
+					Maximum: 1,
+					Volume: &garden.Volume{
+						Size: "10Gi",
+						Type: "volume-type-1",
+					},
+					Zones: []string{"europe-a"},
+				},
+			}
+
+			BeforeEach(func() {
+				cloudProfile = *cloudProfileBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
+				shoot.Spec.Provider.Workers = workers
+			})
+
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.SeedName = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the shoot node and the seed node networks intersect", func() {
+				shoot.Spec.Networking.Nodes = seedNodesCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the shoot pod and the seed pod networks intersect", func() {
+				shoot.Spec.Networking.Pods = &seedPodsCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the shoot service and the seed service networks intersect", func() {
+				shoot.Spec.Networking.Services = &seedServicesCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is a subdomain of a domain already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				subdomain := fmt.Sprintf("subdomain.%s", *anotherShoot.Spec.DNS.Domain)
+				shoot.Spec.DNS.Domain = &subdomain
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is a subdomain of a domain already used by another shoot (case one)", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				subdomain := fmt.Sprintf("subdomain.%s", *anotherShoot.Spec.DNS.Domain)
+				shoot.Spec.DNS.Domain = &subdomain
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is a subdomain of a domain already used by another shoot (case two)", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				shoot.Spec.DNS.Domain = &baseDomain
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow because the specified domain is not a subdomain of a domain already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				anotherDomain := fmt.Sprintf("someprefix%s", *anotherShoot.Spec.DNS.Domain)
+				shoot.Spec.DNS.Domain = &anotherDomain
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(BeNil())
+			})
+
+			It("should reject due to an invalid kubernetes version", func() {
+				shoot.Spec.Kubernetes.Version = "1.2.3"
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should default a major.minor kubernetes version to latest patch version", func() {
+				shoot.Spec.Kubernetes.Version = "1.6"
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
+			})
+
+			It("should reject: default only exactly matching minor kubernetes version", func() {
+				shoot.Spec.Kubernetes.Version = "1.8"
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to a machine image with expiration date in the past", func() {
+				imageVersionExpired := "0.0.1-beta"
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    validMachineImageName,
+					Version: imageVersionExpired,
+				}
+
+				timeInThePast := metav1.Now().Add(time.Second * -1000)
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
+					Name: validMachineImageName,
+					Versions: []garden.ExpirableVersion{
+						{
+							Version:        imageVersionExpired,
+							ExpirationDate: &metav1.Time{Time: timeInThePast},
+						},
+					},
+				}, garden.CloudProfileMachineImage{
+					Name: "other-image-name",
+					Versions: []garden.ExpirableVersion{
+						{
+							Version: imageVersionExpired,
+						},
+					},
+				})
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should not reject due to an usable machine type", func() {
+				shoot.Spec.Provider.Workers = []garden.Worker{
+					{
+						Machine: garden.Machine{
+							Type: "machine-type-1",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject due to a not usable machine type", func() {
+				shoot.Spec.Provider.Workers = []garden.Worker{
+					{
+						Machine: garden.Machine{
+							Type: "machine-type-old",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid machine type", func() {
+				shoot.Spec.Provider.Workers = []garden.Worker{
+					{
+						Machine: garden.Machine{
+							Type: "not-allowed",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid volume type", func() {
+				shoot.Spec.Provider.Workers = []garden.Worker{
+					{
+						Machine: garden.Machine{
+							Type: "machine-type-1",
+						},
+						Volume: &garden.Volume{
+							Type: "not-allowed",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone", func() {
+				shoot.Spec.Provider.Workers[0].Zones = []string{"invalid-zone"}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

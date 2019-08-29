@@ -168,8 +168,8 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1alp
 }
 
 // NetworksIntersect returns true if the given network CIDRs intersect.
-func NetworksIntersect(cidr1, cidr2 gardencorev1alpha1.CIDR) bool {
-	_, net1, err1 := net.ParseCIDR(string(cidr1))
-	_, net2, err2 := net.ParseCIDR(string(cidr2))
+func NetworksIntersect(cidr1, cidr2 string) bool {
+	_, net1, err1 := net.ParseCIDR(cidr1)
+	_, net2, err2 := net.ParseCIDR(cidr2)
 	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
 }

@@ -29,6 +29,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,7 +67,7 @@ func (b *Botanist) DeployExternalDomainDNSRecord(ctx context.Context) error {
 		return nil
 	}
 
-	if err := b.deployDNSProvider(ctx, DNSPurposeExternal, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, []string{*b.Shoot.ExternalClusterDomain}, nil, b.Shoot.ExternalDomain.IncludeZones, b.Shoot.ExternalDomain.ExcludeZones); err != nil {
+	if err := b.deployDNSProvider(ctx, DNSPurposeExternal, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, sets.NewString(append(b.Shoot.ExternalDomain.IncludeDomains, *b.Shoot.ExternalClusterDomain)...).List(), b.Shoot.ExternalDomain.ExcludeDomains, b.Shoot.ExternalDomain.IncludeZones, b.Shoot.ExternalDomain.ExcludeZones); err != nil {
 		return err
 	}
 	if err := b.deployDNSEntry(ctx, DNSPurposeExternal, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)); err != nil {

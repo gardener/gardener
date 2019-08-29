@@ -4,8 +4,8 @@ osc:
   reloadConfigFilePath: /var/lib/...
   secretName: cpu-worker-0
 
-#caBundle: |
-#  root certificates
+# caBundle: |
+#   root certificates
 images:
   hyperkube: image-repository
   pause-container: image-repository
@@ -19,7 +19,7 @@ worker:
     caCert: abcd
     cpuCFSQuota: true
     cpuManagerPolicy: none
-#    podPIDsLimit: 24
+  # podPIDsLimit: 24
     maxPods: 110
     evictionPressureTransitionPeriod: 4m0s
     evictionMaxPodGracePeriod: 90
@@ -47,8 +47,6 @@ worker:
       imageFSInodesFree: 0Mi
       nodeFSAvailable: 0Mi
       nodeFSInodesFree: 0Mi
-
     featureGates: {}
-  #     CustomResourceValidation: true
-  #     RotateKubeletServerCertificate: false
-
+    # CustomResourceValidation: true
+    # RotateKubeletServerCertificate: false

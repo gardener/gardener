@@ -66,6 +66,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&garden.SecretBindingList{},
 		&garden.Seed{},
 		&garden.SeedList{},
+		&garden.Shoot{},
+		&garden.ShootList{},
 	)
 	return nil
 }

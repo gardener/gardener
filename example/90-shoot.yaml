@@ -1,0 +1,244 @@
+apiVersion: core.gardener.cloud/v1alpha1
+kind: Shoot
+metadata:
+  name: crazy-botany
+  namespace: garden-dev
+spec:
+  secretBindingName: my-provider-account
+  cloudProfileName: cloudprofile1
+  region: europe-central-1
+  provider:
+    type: <some-provider-name> # {aws,azure,gcp,...}
+    infrastructureConfig:
+      <some-provider-specific-infrastructure-config>
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-infrastructure.yaml#L56-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L43-L53
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-infrastructure.yaml#L63-L71
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-infrastructure.yaml#L53-L57
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-infrastructure.yaml#L56-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-infrastructure.yaml#L48-L49
+    controlPlaneConfig:
+      <some-provider-specific-controlplane-config>
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-controlplane.yaml#L60-L65
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-controlplane.yaml#L60-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-controlplane.yaml#L61-L66
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-controlplane.yaml#L59-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-controlplane.yaml#L64-L70
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-controlplane.yaml#L60-L61
+    workers:
+    - name: cpu-worker
+      minimum: 3
+      maximum: 5
+    # maxSurge: 1
+    # maxUnavailable: 0
+      machine:
+        type: m5.large
+        image:
+          name: <some-image-name>
+          version: <some-image-version>
+        # providerConfig:
+        #   <some-machine-image-specific-configuration>
+      volume:
+        type: gp2
+        size: 20Gi
+    # providerConfig:
+    #   <some-provider-specific-worker-config>
+    # labels:
+    #   key: value
+    # annotations:
+    #   key: value
+    # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    # - key: foo
+    #   value: bar
+    #   effect: NoSchedule
+    # caBundle: <some-ca-bundle-to-be-installed-to-all-nodes-in-this-pool>
+    # kubernetes:
+    #   kubelet:
+    #     cpuCFSQuota: true
+    #     cpuManagerPolicy: none
+    #     podPidsLimit: 10
+    #     maxPods: 110
+    #     evictionPressureTransitionPeriod: 4m0s
+    #     evictionMaxPodGracePeriod: 90
+    #     evictionHard:
+    #       memoryAvailable: 100Mi
+    #       imageFSAvailable: 5%
+    #       imageFSInodesFree: 5%
+    #       nodeFSAvailable: 5%
+    #       nodeFSInodesFree: 5%
+    #     evictionSoft:
+    #       memoryAvailable: 200Mi
+    #       imageFSAvailable: 10%
+    #       imageFSInodesFree: 10%
+    #       nodeFSAvailable: 10%
+    #       nodeFSInodesFree: 10%
+    #     evictionSoftGracePeriod:
+    #       memoryAvailable: 1m30s
+    #       imageFSAvailable: 1m30s
+    #       imageFSInodesFree: 1m30s
+    #       nodeFSAvailable: 1m30s
+    #       nodeFSInodesFree: 1m30s
+    #     evictionMinimumReclaim:
+    #       memoryAvailable: 0Mi
+    #       imageFSAvailable: 0Mi
+    #       imageFSInodesFree: 0Mi
+    #       nodeFSAvailable: 0Mi
+    #       nodeFSInodesFree: 0Mi
+    #     featureGates:
+    #       SomeKubernetesFeature: true
+    # zones: # optional, only relevant if the provider supports availability zones
+    # - europe-central-1a
+    # - europe-central-1b
+  kubernetes:
+    version: 1.15.1
+  # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
+  # kubeAPIServer:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #   oidcConfig:
+  #     caBundle: |
+  #       -----BEGIN CERTIFICATE-----
+  #       Li4u
+  #       -----END CERTIFICATE-----
+  #     clientID: client-id
+  #     groupsClaim: groups-claim
+  #     groupsPrefix: groups-prefix
+  #     issuerURL: https://identity.example.com
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #     signingAlgs:
+  #     - RS256
+  #     - some-other-algorithm
+  #-#-# only usable with Kubernetes >= 1.11
+  #     requiredClaims:
+  #       key: value
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config:
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
+  # kubeControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   horizontalPodAutoscaler:
+  #     syncPeriod: 30s
+  #     tolerance: 0.1
+  #-#-# only usable with Kubernetes < 1.12
+  #     downscaleDelay: 15m0s
+  #     upscaleDelay: 1m0s
+  #-#-# only usable with Kubernetes >= 1.12
+  #     downscaleStabilization: 5m0s
+  #     initialReadinessDelay: 30s
+  #     cpuInitializationPeriod: 5m0s
+  # kubeScheduler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeProxy:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   mode: IPVS
+  # kubelet:
+  #   cpuCFSQuota: true
+  #   cpuManagerPolicy: none
+  #   podPidsLimit: 10
+  #   maxPods: 110
+  #   evictionPressureTransitionPeriod: 4m0s
+  #   evictionMaxPodGracePeriod: 90
+  #   evictionHard:
+  #     memoryAvailable: 100Mi
+  #     imageFSAvailable: 5%
+  #     imageFSInodesFree: 5%
+  #     nodeFSAvailable: 5%
+  #     nodeFSInodesFree: 5%
+  #   evictionSoft:
+  #     memoryAvailable: 200Mi
+  #     imageFSAvailable: 10%
+  #     imageFSInodesFree: 10%
+  #     nodeFSAvailable: 10%
+  #     nodeFSInodesFree: 10%
+  #   evictionSoftGracePeriod:
+  #     memoryAvailable: 1m30s
+  #     imageFSAvailable: 1m30s
+  #     imageFSInodesFree: 1m30s
+  #     nodeFSAvailable: 1m30s
+  #     nodeFSInodesFree: 1m30s
+  #   evictionMinimumReclaim:
+  #     memoryAvailable: 0Mi
+  #     imageFSAvailable: 0Mi
+  #     imageFSInodesFree: 0Mi
+  #     nodeFSAvailable: 0Mi
+  #     nodeFSInodesFree: 0Mi
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
+  #   scaleDownUnneededTime: 30m
+  #   scaleDownDelayAfterAdd: 60m
+  #   scaleDownDelayAfterFailure: 10m
+  #   scaleDownDelayAfterDelete: 10s
+  #   scanInterval: 10s
+  dns:
+    # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
+    # automatically compute a correct domain based on the default domains in the garden cluster.
+    domain: crazy-botany.core.my-custom-domain.com
+  # providers:
+  # - type: aws-route53
+  #   secretName: my-custom-domain-secret
+  #   domains:
+  #     include:
+  #     - my-custom-domain.com
+  #     - my-other-custom-domain.com
+  #     exclude:
+  #     - yet-another-custom-domain.com
+  #   zones:
+  #     include:
+  #     - zone-id-1
+  #     exclude:
+  #     - zone-id-2
+  extensions:
+  - type: foobar
+  # providerConfig:
+  #   apiVersion: foobar.extensions.gardener.cloud/v1alpha1
+  #   kind: FooBarConfig
+  #   foo: bar
+  networking:
+    type: calico
+    pods: 100.96.0.0/11
+    nodes: 10.250.0.0/16
+    services: 100.64.0.0/13
+  # providerConfig:
+  #   apiVersion: calico.extensions.gardener.cloud/v1alpha1
+  #   kind: NetworkConfig
+  #   ipam:
+  #     type: host-local
+  #     cidr: usePodCIDR
+  #   backend: bird
+  # See also: https://github.com/gardener/gardener/blob/master/docs/proposals/03-networking.md
+  maintenance:
+    timeWindow:
+      begin: 220000+0100
+      end: 230000+0100
+    autoUpdate:
+      kubernetesVersion: true
+      machineImageVersion: true
+# hibernation:
+#   enabled: false
+#   schedules:
+#   - start: "0 20 * * *" # Start hibernation every day at 8PM
+#     end: "0 6 * * *"    # Stop hibernation every day at 6AM
+#     location: "America/Los_Angeles" # Specify a location for the cron to run in
+  addons:
+    nginx-ingress:
+      enabled: false
+    # loadBalancerSourceRanges: []
+    kubernetes-dashboard:
+      enabled: true
+    # authenticationMode: basic # allowed values: basic,token

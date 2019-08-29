@@ -136,3 +136,29 @@ type Gardener struct {
 	// Version is the version of the Gardener which last acted on a resource.
 	Version string `json:"version"`
 }
+
+const (
+	// GardenerName is the value in a Garden resource's `.metadata.finalizers[]` array on which the Gardener will react
+	// when performing a delete request on a resource.
+	GardenerName = "gardener"
+	// ExternalGardenerName is the value in a Kubernetes core resources `.metadata.finalizers[]` array on which the
+	// Gardener will react when performing a delete request on a resource.
+	ExternalGardenerName = "garden.sapcloud.io/gardener"
+)
+
+const (
+	// EventReconciling indicates that the a Reconcile operation started.
+	EventReconciling = "Reconciling"
+	// EventReconciled indicates that the a Reconcile operation was successful.
+	EventReconciled = "Reconciled"
+	// EventReconcileError indicates that the a Reconcile operation failed.
+	EventReconcileError = "ReconcileError"
+	// EventDeleting indicates that the a Delete operation started.
+	EventDeleting = "Deleting"
+	// EventDeleted indicates that the a Delete operation was successful.
+	EventDeleted = "Deleted"
+	// EventDeleteError indicates that the a Delete operation failed.
+	EventDeleteError = "DeleteError"
+	// EventOperationPending
+	EventOperationPending = "OperationPending"
+)

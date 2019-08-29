@@ -17,7 +17,6 @@ package common_test
 import (
 	"net"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/operation/common"
 
 	. "github.com/onsi/ginkgo"
@@ -25,9 +24,7 @@ import (
 )
 
 var _ = Describe("networkpolicies", func() {
-
 	Describe("#AllPrivateNetworkBlocks", func() {
-
 		It("should contain correct CIDRs", func() {
 			result := AllPrivateNetworkBlocks()
 			_, block8, _ := net.ParseCIDR("10.0.0.0/8")
@@ -36,38 +33,32 @@ var _ = Describe("networkpolicies", func() {
 			_, carrierGradeBlock, _ := net.ParseCIDR("100.64.0.0/10")
 			Expect(result).To(ConsistOf(*block8, *block12, *block16, *carrierGradeBlock))
 		})
-
 	})
 
 	Describe("#ToExceptNetworks", func() {
-
 		It("should return correct result", func() {
-
 			result, err := ToExceptNetworks(AllPrivateNetworkBlocks(), "10.10.0.0/24", "172.16.1.0/24", "192.168.1.0/24", "100.64.1.0/24")
 			expectedResult := []interface{}{
 				map[string]interface{}{
 					"network": "10.0.0.0/8",
-					"except":  []gardencorev1alpha1.CIDR{"10.10.0.0/24"},
+					"except":  []string{"10.10.0.0/24"},
 				},
 				map[string]interface{}{
 					"network": "172.16.0.0/12",
-					"except":  []gardencorev1alpha1.CIDR{"172.16.1.0/24"},
+					"except":  []string{"172.16.1.0/24"},
 				},
 				map[string]interface{}{
 					"network": "192.168.0.0/16",
-					"except":  []gardencorev1alpha1.CIDR{"192.168.1.0/24"},
+					"except":  []string{"192.168.1.0/24"},
 				},
 				map[string]interface{}{
 					"network": "100.64.0.0/10",
-					"except":  []gardencorev1alpha1.CIDR{"100.64.1.0/24"},
+					"except":  []string{"100.64.1.0/24"},
 				},
 			}
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(ConsistOf(expectedResult))
-
 		})
-
 	})
-
 })

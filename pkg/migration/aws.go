@@ -44,16 +44,15 @@ func GardenV1beta1ShootToAWSV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 	for i, zone := range shoot.Spec.Cloud.AWS.Zones {
 		zones = append(zones, awsv1alpha1.Zone{
 			Name:     zone,
-			Internal: string(shoot.Spec.Cloud.AWS.Networks.Internal[i]),
-			Public:   string(shoot.Spec.Cloud.AWS.Networks.Public[i]),
-			Workers:  string(shoot.Spec.Cloud.AWS.Networks.Workers[i]),
+			Internal: shoot.Spec.Cloud.AWS.Networks.Internal[i],
+			Public:   shoot.Spec.Cloud.AWS.Networks.Public[i],
+			Workers:  shoot.Spec.Cloud.AWS.Networks.Workers[i],
 		})
 	}
 
 	var vpcCIDR *string
 	if c := shoot.Spec.Cloud.AWS.Networks.VPC.CIDR; c != nil {
-		cidr := string(*c)
-		vpcCIDR = &cidr
+		vpcCIDR = c
 	}
 
 	return &awsv1alpha1.InfrastructureConfig{
