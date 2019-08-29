@@ -120,6 +120,10 @@ const (
 	LabelShootProvider = "shoot.gardener.cloud/provider"
 	// LabelNetworkingProvider is used to identify the networking provider for the cni plugin.
 	LabelNetworkingProvider = "networking.shoot.gardener.cloud/provider"
+	// LabelExtensionConfiguration is used to identify the provider's configuration which will be added to Gardener configuration
+	LabelExtensionConfiguration = "extensions.gardener.cloud/configuration"
+	// LabelLogging is a constant for a label for logging stack configurations
+	LabelLogging = "logging"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
@@ -172,6 +176,12 @@ const (
 	OperatingSystemConfigFilePathKernelSettings = "/etc/sysctl.d/99-k8s-general.conf"
 	// OperatingSystemConfigFilePathKubeletConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
 	OperatingSystemConfigFilePathKubeletConfig = "/var/lib/kubelet/config/kubelet"
+
+
+	// FluentBitConfigMapKubernetesFilterConfig is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
+	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"
+	// FluentBitConfigMapParserConfig is a constant for the Fluent Bit ConfigMap's section regarding Parses for common container types
+	FluentBitConfigMapParser = "parsers.conf"
 
 	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"

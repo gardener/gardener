@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
@@ -299,6 +300,8 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		fluentdReplicaCount   int32
 		loggingEnabled        = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 		existingSecretsMap    = map[string]*corev1.Secret{}
+		filters               = strings.Builder{}
+		parsers               = strings.Builder{}
 	)
 
 	if loggingEnabled {
@@ -328,6 +331,20 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		sgFluentdCredentials := deployedSecretsMap["fluentd-es-sg-credentials"]
 		sgFluentdPassword = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPassword])
 		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPasswordBcryptHash])
+
+		// Read extension provider specific configuration
+		existingConfigMaps := &corev1.ConfigMapList{}
+		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
+			client.InNamespace(common.GardenNamespace),
+			client.MatchingLabels(map[string]string{v1alpha1.LabelExtensionConfiguration: v1alpha1.LabelLogging})); err != nil {
+			return err
+		}
+
+		// Read all filters and parsers coming from the extension provider configurations
+		for _, cm := range existingConfigMaps.Items {
+			filters.WriteString(fmt.Sprintln(cm.Data[v1alpha1.FluentBitConfigMapKubernetesFilter]))
+			parsers.WriteString(fmt.Sprintln(cm.Data[v1alpha1.FluentBitConfigMapParser]))
+		}
 	} else {
 		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -480,6 +497,12 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 				"sgUsername":   "fluentd",
 				"sgPassword":   sgFluentdPassword,
 				"storage":      seed.GetValidVolumeSize("9Gi"),
+			},
+			"fluentbit": map[string]interface{}{
+				"extensions": map[string]interface{}{
+					"parsers": parsers.String(),
+					"filters": filters.String(),
+				},
 			},
 		},
 		"alertmanager": alertManagerConfig,

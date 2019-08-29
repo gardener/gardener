@@ -30,3 +30,6 @@ fluentbit:
     role: logging
   ports:
     metrics: 2020
+  extensions:
+    filters: ""
+    parsers: ""
