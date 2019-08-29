@@ -141,7 +141,6 @@ func (c *defaultSeedControl) Reconcile(obj *gardenv1beta1.Seed) error {
 	}
 
 	if seed.DeletionTimestamp != nil {
-
 		if seed.Spec.Backup != nil {
 			if err := waitUntilBackupBucketDeleted(ctx, c.k8sGardenClient.Client(), seed, logger); err != nil {
 				return err
@@ -173,11 +172,7 @@ func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Clien
 	var lastError *gardencorev1alpha1.LastError
 
 	if err := retry.UntilTimeout(ctx, time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
-		region := seed.Spec.Cloud.Region
-		if seed.Spec.Backup.Region != nil {
-			region = *seed.Spec.Backup.Region
-		}
-		backupBucketName := common.GenerateBackupBucketName(string(seed.Spec.Backup.Provider), region, seed.UID)
+		backupBucketName := string(seed.UID)
 		bb := &gardencorev1alpha1.BackupBucket{}
 
 		if err := gardenClient.Get(ctx, kutil.Key(backupBucketName), bb); err != nil {

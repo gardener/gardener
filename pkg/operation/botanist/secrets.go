@@ -17,7 +17,6 @@ package botanist
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os/exec"
@@ -29,7 +28,6 @@ import (
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -1051,14 +1049,6 @@ func generateOpenVPNTLSAuth() ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
-}
-
-func computeSecretCheckSum(data map[string][]byte) string {
-	jsonString, err := json.Marshal(data)
-	if err != nil {
-		return ""
-	}
-	return utils.ComputeSHA256Hex(jsonString)
 }
 
 func gardenEtcdEncryptionSecretName(shootName string) string {

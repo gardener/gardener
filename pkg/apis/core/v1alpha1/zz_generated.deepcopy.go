@@ -21,8 +21,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -138,6 +139,11 @@ func (in *BackupBucketStatus) DeepCopyInto(out *BackupBucketStatus) {
 		in, out := &in.LastError, &out.LastError
 		*out = new(LastError)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.GeneratedSecretRef != nil {
+		in, out := &in.GeneratedSecretRef, &out.GeneratedSecretRef
+		*out = new(v1.SecretReference)
+		**out = **in
 	}
 	return
 }
@@ -538,7 +544,7 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 	}
 	if in.ReconcileTimeout != nil {
 		in, out := &in.ReconcileTimeout, &out.ReconcileTimeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return

@@ -521,10 +521,7 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 		}
 
 		// If backupEntry doesn't already exists, we have to assign backupBucket to backupEntry.
-		bucketName = common.GenerateBackupBucketName(b.Seed.Info.Name, b.Seed.Info.Spec.Cloud.Region, b.Seed.Info.UID)
-		if b.Seed.Info.Spec.Backup.Region != nil && len(*b.Seed.Info.Spec.Backup.Region) != 0 {
-			bucketName = common.GenerateBackupBucketName(b.Seed.Info.Name, *b.Seed.Info.Spec.Backup.Region, b.Seed.Info.UID)
-		}
+		bucketName = string(b.Seed.Info.UID)
 		seedName = &b.Seed.Info.Name
 	} else {
 		bucketName = backupEntry.Spec.BucketName

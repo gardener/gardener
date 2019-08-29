@@ -136,12 +136,17 @@ func makeDescription(stats *flow.Stats) string {
 // deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
 func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	bb := &gardencorev1alpha1.BackupBucket{}
-	if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), bb); err != nil {
-		a.logger.Errorf("Failed to find associated backupBucket %s with err: %v ", a.backupEntry.Spec.BucketName, err)
+	if err := a.waitUntilCoreBackupBucketReconciled(ctx, bb); err != nil {
+		a.logger.Errorf("associated backupBucket %s is not ready yet with err: %v ", a.backupEntry.Spec.BucketName, err)
 		return err
 	}
 
-	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient, &bb.Spec.SecretRef)
+	coreSecretRef := &bb.Spec.SecretRef
+	if bb.Status.GeneratedSecretRef != nil {
+		coreSecretRef = bb.Status.GeneratedSecretRef
+	}
+
+	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient, coreSecretRef)
 	if err != nil {
 		return err
 	}
@@ -188,6 +193,24 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		}
 		return nil
 	})
+}
+
+// waitUntilCoreBackupBucketReconciled waits until core.BackupBucket resource reconciled from seed.
+func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1alpha1.BackupBucket) error {
+	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
+		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), bb); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if err := health.CheckBackupBucket(bb); err != nil {
+			a.logger.WithError(err).Error("BackupBucket did not get ready yet")
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	}); err != nil {
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
+	}
+	return nil
 }
 
 // waitUntilBackupEntryExtensionReconciled waits until BackupEntry Extention resource reconciled from seed.

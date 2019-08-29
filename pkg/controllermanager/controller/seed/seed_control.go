@@ -349,7 +349,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 
 	backupBucket := &gardencorev1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: common.GenerateBackupBucketName(string(seed.Spec.Backup.Provider), region, seed.UID),
+			Name: string(seed.UID),
 		},
 	}
 
@@ -382,16 +382,9 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 }
 
 func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardenv1beta1.Seed) error {
-	// By default, we assume the seed.Spec.Backup.Provider matches the seed.Spec.Backup.Cloud as per the validation logic.
-	// However, if the backup region is specified we take it.
-	region := seed.Spec.Cloud.Region
-	if seed.Spec.Backup.Region != nil {
-		region = *seed.Spec.Backup.Region
-	}
-
 	backupBucket := &gardencorev1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: common.GenerateBackupBucketName(string(seed.Spec.Backup.Provider), region, seed.UID),
+			Name: string(seed.UID),
 		},
 	}
 

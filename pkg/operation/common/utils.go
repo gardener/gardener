@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -115,12 +116,6 @@ func GenerateBackupInfrastructureName(seedNamespace string, shootUID types.UID) 
 // GenerateBackupNamespaceName returns Backup namespace name created from provided <backupInfrastructureName>.
 func GenerateBackupNamespaceName(backupInfrastructureName string) string {
 	return fmt.Sprintf("%s--%s", BackupNamespacePrefix, backupInfrastructureName)
-}
-
-// GenerateBackupBucketName returns BackupBucket resource name created from provided <provider>, <region> and <seedUID>.
-func GenerateBackupBucketName(provider, region string, seedUID types.UID) string {
-	// Bucket name length's common maximum limit is 63 across cloud provider.
-	return fmt.Sprintf("%s--%s--%s", provider, region, []byte(seedUID))
 }
 
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
@@ -258,12 +253,22 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 }
 
 // ComputeSecretCheckSum computes the sha256 checksum of secret data.
-func ComputeSecretCheckSum(data map[string][]byte) string {
-	jsonString, err := json.Marshal(data)
-	if err != nil {
-		return ""
+func ComputeSecretCheckSum(m map[string][]byte) string {
+	var (
+		hash string
+		keys []string
+	)
+
+	for k := range m {
+		keys = append(keys, k)
 	}
-	return utils.ComputeSHA256Hex(jsonString)
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		hash += utils.ComputeSHA256Hex(m[k])
+	}
+
+	return utils.ComputeSHA256Hex([]byte(hash))
 }
 
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.

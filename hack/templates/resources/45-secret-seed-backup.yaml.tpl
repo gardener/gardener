@@ -27,7 +27,7 @@
     entity="AWS account"
     bucket="bucket"
   elif cloud == "azure" or cloud == "az":
-    entity="Azure storage account"
+    entity="Azure subscription"
     bucket="container"
   elif cloud == "gcp":
     entity="GCP project"
@@ -57,8 +57,10 @@ data:
   secretAccessKey: ${value("data.secretAccessKey", "base64(secret-access-key)")}
   % endif
   % if cloud == "azure" or cloud == "az":
-  storageAccountKey: ${value("data.storageAccountKey", "base64(storage-account-key)")}
-  storageAccountName: ${value("data.storageAccountName", "base64(storage-account-name)")}
+  tenantID: ${value("data.tenantID", "base64(uuid-of-tenant)")}
+  subscriptionID: ${value("data.subscriptionID", "base64(uuid-of-subscription)")}
+  clientID: ${value("data.clientID", "base64(uuid-of-client)")}
+  clientSecret: ${value("data.clientSecret", "base64(client-secret)")}
   % endif
   % if cloud == "alicloud":
   accessKeyID: ${value("data.accessKeyID", "base64(access-key-id)")}

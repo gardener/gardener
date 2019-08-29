@@ -25,9 +25,10 @@ import (
 
 	core "github.com/gardener/gardener/pkg/apis/core"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -660,6 +661,7 @@ func autoConvert_v1alpha1_BackupBucketStatus_To_core_BackupBucketStatus(in *Back
 	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.GeneratedSecretRef = (*v1.SecretReference)(unsafe.Pointer(in.GeneratedSecretRef))
 	return nil
 }
 
@@ -672,6 +674,7 @@ func autoConvert_core_BackupBucketStatus_To_v1alpha1_BackupBucketStatus(in *core
 	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.GeneratedSecretRef = (*v1.SecretReference)(unsafe.Pointer(in.GeneratedSecretRef))
 	return nil
 }
 
@@ -1056,7 +1059,7 @@ func autoConvert_v1alpha1_ControllerResource_To_core_ControllerResource(in *Cont
 	out.Kind = in.Kind
 	out.Type = in.Type
 	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
-	out.ReconcileTimeout = (*v1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
+	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	return nil
 }
 
@@ -1069,7 +1072,7 @@ func autoConvert_core_ControllerResource_To_v1alpha1_ControllerResource(in *core
 	out.Kind = in.Kind
 	out.Type = in.Type
 	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
-	out.ReconcileTimeout = (*v1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
+	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	return nil
 }
 
@@ -1173,7 +1176,7 @@ func Convert_core_Kubernetes_To_v1alpha1_Kubernetes(in *core.Kubernetes, out *Ku
 func autoConvert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
-	out.LastUpdateTime = (*v1.Time)(unsafe.Pointer(in.LastUpdateTime))
+	out.LastUpdateTime = (*metav1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
 }
 
@@ -1185,7 +1188,7 @@ func Convert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastE
 func autoConvert_core_LastError_To_v1alpha1_LastError(in *core.LastError, out *LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
-	out.LastUpdateTime = (*v1.Time)(unsafe.Pointer(in.LastUpdateTime))
+	out.LastUpdateTime = (*metav1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
 }
 

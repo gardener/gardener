@@ -349,6 +349,38 @@ func CheckExtensionObject(obj extensionsv1alpha1.Object) error {
 	return nil
 }
 
+// CheckBackupBucket checks if an backup bucket Object is healthy or not.
+// An extension object is healthy if
+// * Its observed generation is up-to-date
+// * No gardener.cloud/operation is set
+// * No lastError is in the status
+// * A last operation is state succeeded is present
+func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
+	status := obj.Status
+	if status.ObservedGeneration != obj.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", status.ObservedGeneration, obj.Generation)
+	}
+
+	op, ok := obj.GetAnnotations()[gardencorev1alpha1.GardenerOperation]
+	if ok {
+		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
+	}
+
+	if lastErr := status.LastError; lastErr != nil {
+		return fmt.Errorf("backup bucket encountered error during reconciliation: %s", lastErr.GetDescription())
+	}
+
+	lastOp := status.LastOperation
+	if lastOp == nil {
+		return fmt.Errorf("backup bucket did not record a last operation yet")
+	}
+
+	if lastOp.GetState() != gardencorev1alpha1.LastOperationStateSucceeded {
+		return fmt.Errorf("backup bucket state is not succeeded but %v", lastOp.GetState())
+	}
+	return nil
+}
+
 // Now determines the current time.
 var Now = time.Now
 
