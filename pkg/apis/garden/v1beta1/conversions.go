@@ -23,10 +23,17 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 
+	azureinstall "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/install"
+	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
+	openstackinstall "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/install"
+	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/klog"
 )
 
 func init() {
@@ -430,4 +437,838 @@ func Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec(in *garden.QuotaSpec, out *Qu
 	}
 
 	return nil
+}
+
+func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *garden.CloudProfile, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_CloudProfile_To_garden_CloudProfile(in, out, s); err != nil {
+		return err
+	}
+
+	if out.Annotations == nil {
+		out.Annotations = make(map[string]string)
+	}
+
+	switch {
+	case in.Spec.AWS != nil:
+		out.Spec.Type = "aws"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.AWS.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.AWS.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.AWS.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		for _, machineType := range in.Spec.AWS.Constraints.MachineTypes {
+			var o garden.MachineType
+			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
+		}
+
+		for _, volumeType := range in.Spec.AWS.Constraints.VolumeTypes {
+			var o garden.VolumeType
+			if err := autoConvert_v1beta1_VolumeType_To_garden_VolumeType(&volumeType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o)
+		}
+
+		for _, zone := range in.Spec.AWS.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name: name,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
+	case in.Spec.Azure != nil:
+		out.Spec.Type = "azure"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.Azure.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.Azure.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.Azure.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		for _, machineType := range in.Spec.Azure.Constraints.MachineTypes {
+			var o garden.MachineType
+			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
+		}
+
+		for _, volumeType := range in.Spec.Azure.Constraints.VolumeTypes {
+			var o garden.VolumeType
+			if err := autoConvert_v1beta1_VolumeType_To_garden_VolumeType(&volumeType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o)
+		}
+
+		if regionsJSON, ok := in.Annotations[garden.MigrationCloudProfileRegions]; ok {
+			var regions []garden.Region
+			if err := json.Unmarshal([]byte(regionsJSON), &regions); err != nil {
+				return err
+			}
+			out.Spec.Regions = regions
+		} else {
+			out.Spec.Regions = nil
+		}
+
+		providerConfig := &garden.ProviderConfig{}
+		if pc, ok := in.Annotations[garden.MigrationCloudProfileProviderConfig]; ok {
+			if err := json.Unmarshal([]byte(pc), providerConfig); err != nil {
+				return err
+			}
+		}
+		cloudProfileConfig := &azurev1alpha1.CloudProfileConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "CloudProfileConfig",
+			},
+		}
+		if providerConfig != nil {
+			extensionsScheme := runtime.NewScheme()
+			if err := azureinstall.AddToScheme(extensionsScheme); err != nil {
+				return err
+			}
+			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+			if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
+				// If an error occurs then the provider config information contains invalid syntax, and in this
+				// case we don't want to fail here. We rather don't try to migrate.
+				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			}
+		}
+		if len(cloudProfileConfig.MachineImages) == 0 {
+			cloudProfileConfig.MachineImages = []azurev1alpha1.MachineImages{}
+		}
+		cloudProfileConfig.CountFaultDomains = nil
+		for _, c := range in.Spec.Azure.CountFaultDomains {
+			if !azureV1alpha1DomainCountsHaveRegion(cloudProfileConfig.CountUpdateDomains, c.Region) {
+				cloudProfileConfig.CountFaultDomains = append(cloudProfileConfig.CountFaultDomains, azurev1alpha1.DomainCount{
+					Region: c.Region,
+					Count:  c.Count,
+				})
+			}
+		}
+		cloudProfileConfig.CountUpdateDomains = nil
+		for _, c := range in.Spec.Azure.CountUpdateDomains {
+			if !azureV1alpha1DomainCountsHaveRegion(cloudProfileConfig.CountUpdateDomains, c.Region) {
+				cloudProfileConfig.CountUpdateDomains = append(cloudProfileConfig.CountUpdateDomains, azurev1alpha1.DomainCount{
+					Region: c.Region,
+					Count:  c.Count,
+				})
+			}
+		}
+		out.Spec.ProviderConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Object: cloudProfileConfig,
+			},
+		}
+
+	case in.Spec.GCP != nil:
+		out.Spec.Type = "gcp"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.GCP.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.GCP.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.GCP.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		for _, machineType := range in.Spec.GCP.Constraints.MachineTypes {
+			var o garden.MachineType
+			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
+		}
+
+		for _, volumeType := range in.Spec.GCP.Constraints.VolumeTypes {
+			var o garden.VolumeType
+			if err := autoConvert_v1beta1_VolumeType_To_garden_VolumeType(&volumeType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o)
+		}
+
+		for _, zone := range in.Spec.GCP.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name: name,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
+	case in.Spec.OpenStack != nil:
+		out.Spec.Type = "openstack"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.OpenStack.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.OpenStack.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		if volumeTypesJSON, ok := in.Annotations[garden.MigrationCloudProfileVolumeTypes]; ok {
+			var volumeTypes []garden.VolumeType
+			if err := json.Unmarshal([]byte(volumeTypesJSON), &volumeTypes); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = volumeTypes
+		} else {
+			out.Spec.VolumeTypes = nil
+		}
+
+		for _, machineType := range in.Spec.OpenStack.Constraints.MachineTypes {
+			var o garden.MachineType
+			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType.MachineType, &o, s); err != nil {
+				return err
+			}
+			o.Storage = &garden.MachineTypeStorage{
+				Size: machineType.VolumeSize,
+				Type: machineType.VolumeType,
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
+
+			if !volumeTypesHaveName(out.Spec.VolumeTypes, machineType.Name) {
+				out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, garden.VolumeType{
+					Name:   machineType.Name,
+					Class:  machineType.VolumeType,
+					Usable: machineType.Usable,
+				})
+			}
+		}
+
+		for _, zone := range in.Spec.OpenStack.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name: name,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
+		providerConfig := &garden.ProviderConfig{}
+		if pc, ok := in.Annotations[garden.MigrationCloudProfileProviderConfig]; ok {
+			if err := json.Unmarshal([]byte(pc), providerConfig); err != nil {
+				return err
+			}
+		}
+		cloudProfileConfig := &openstackv1alpha1.CloudProfileConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "CloudProfileConfig",
+			},
+		}
+		if providerConfig != nil {
+			extensionsScheme := runtime.NewScheme()
+			if err := openstackinstall.AddToScheme(extensionsScheme); err != nil {
+				return err
+			}
+			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+			if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
+				// If an error occurs then the provider config information contains invalid syntax, and in this
+				// case we don't want to fail here. We rather don't try to migrate.
+				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			}
+		}
+		if len(cloudProfileConfig.MachineImages) == 0 {
+			cloudProfileConfig.MachineImages = []openstackv1alpha1.MachineImages{}
+		}
+		cloudProfileConfig.Constraints.LoadBalancerProviders = nil
+		for _, p := range in.Spec.OpenStack.Constraints.LoadBalancerProviders {
+			if !openstackV1alpha1LoadBalancerProvidersHaveProvider(cloudProfileConfig.Constraints.LoadBalancerProviders, p.Name) {
+				cloudProfileConfig.Constraints.LoadBalancerProviders = append(cloudProfileConfig.Constraints.LoadBalancerProviders, openstackv1alpha1.LoadBalancerProvider{
+					Name: p.Name,
+				})
+			}
+		}
+		cloudProfileConfig.Constraints.FloatingPools = nil
+		for _, p := range in.Spec.OpenStack.Constraints.FloatingPools {
+			if !openstackV1alpha1FloatingPoolsHavePool(cloudProfileConfig.Constraints.FloatingPools, p.Name) {
+				var loadBalancerClasses []openstackv1alpha1.LoadBalancerClass
+				for _, c := range p.LoadBalancerClasses {
+					loadBalancerClasses = append(loadBalancerClasses, openstackv1alpha1.LoadBalancerClass{
+						Name:              c.Name,
+						FloatingSubnetID:  c.FloatingSubnetID,
+						FloatingNetworkID: c.FloatingNetworkID,
+						SubnetID:          c.SubnetID,
+					})
+				}
+				cloudProfileConfig.Constraints.FloatingPools = append(cloudProfileConfig.Constraints.FloatingPools, openstackv1alpha1.FloatingPool{
+					Name:                p.Name,
+					LoadBalancerClasses: loadBalancerClasses,
+				})
+			}
+		}
+		cloudProfileConfig.DNSServers = in.Spec.OpenStack.DNSServers
+		cloudProfileConfig.DHCPDomain = in.Spec.OpenStack.DHCPDomain
+		cloudProfileConfig.KeyStoneURL = in.Spec.OpenStack.KeyStoneURL
+		cloudProfileConfig.RequestTimeout = in.Spec.OpenStack.RequestTimeout
+		out.Spec.ProviderConfig = &garden.ProviderConfig{
+			RawExtension: runtime.RawExtension{
+				Object: cloudProfileConfig,
+			},
+		}
+
+	case in.Spec.Alicloud != nil:
+		out.Spec.Type = "alicloud"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.Alicloud.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.Alicloud.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		availableMachineTypesPerZone := map[string][]string{}
+		for _, machineType := range in.Spec.Alicloud.Constraints.MachineTypes {
+			var o garden.AlicloudMachineType
+			if err := autoConvert_v1beta1_AlicloudMachineType_To_garden_AlicloudMachineType(&machineType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o.MachineType)
+			for _, zone := range machineType.Zones {
+				availableMachineTypesPerZone[zone] = append(availableMachineTypesPerZone[zone], machineType.Name)
+			}
+		}
+
+		availableVolumeTypesPerZone := map[string][]string{}
+		for _, volumeType := range in.Spec.Alicloud.Constraints.VolumeTypes {
+			var o garden.AlicloudVolumeType
+			if err := autoConvert_v1beta1_AlicloudVolumeType_To_garden_AlicloudVolumeType(&volumeType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o.VolumeType)
+			for _, zone := range volumeType.Zones {
+				availableVolumeTypesPerZone[zone] = append(availableVolumeTypesPerZone[zone], volumeType.Name)
+			}
+		}
+
+		for _, zone := range in.Spec.Alicloud.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				var unavailableMachineTypes []string
+				for _, machineType := range in.Spec.Alicloud.Constraints.MachineTypes {
+					if !zoneHasAlicloudType(availableMachineTypesPerZone, name, machineType.Name) {
+						unavailableMachineTypes = append(unavailableMachineTypes, machineType.Name)
+					}
+				}
+				var unavailableVolumeTypes []string
+				for _, volumeType := range in.Spec.Alicloud.Constraints.VolumeTypes {
+					if !zoneHasAlicloudType(availableVolumeTypesPerZone, name, volumeType.Name) {
+						unavailableVolumeTypes = append(unavailableVolumeTypes, volumeType.Name)
+					}
+				}
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name:                    name,
+					UnavailableMachineTypes: unavailableMachineTypes,
+					UnavailableVolumeTypes:  unavailableVolumeTypes,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
+	case in.Spec.Packet != nil:
+		out.Spec.Type = "packet"
+
+		versions := map[string]struct{}{}
+		for _, version := range in.Spec.Packet.Constraints.Kubernetes.OfferedVersions {
+			versions[version.Version] = struct{}{}
+			out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+				Version:        version.Version,
+				ExpirationDate: version.ExpirationDate,
+			})
+		}
+		for _, version := range in.Spec.Packet.Constraints.Kubernetes.Versions {
+			if _, ok := versions[version]; !ok {
+				out.Spec.Kubernetes.Versions = append(out.Spec.Kubernetes.Versions, garden.ExpirableVersion{
+					Version: version,
+				})
+			}
+		}
+
+		for _, image := range in.Spec.Packet.Constraints.MachineImages {
+			i := garden.CloudProfileMachineImage{Name: image.Name}
+			if len(image.Version) > 0 {
+				i.Versions = append(i.Versions, garden.ExpirableVersion{
+					Version: image.Version,
+				})
+			}
+			for _, version := range image.Versions {
+				if version.Version != image.Version {
+					i.Versions = append(i.Versions, garden.ExpirableVersion{
+						Version:        version.Version,
+						ExpirationDate: version.ExpirationDate,
+					})
+				}
+			}
+			out.Spec.MachineImages = append(out.Spec.MachineImages, i)
+		}
+
+		for _, machineType := range in.Spec.Packet.Constraints.MachineTypes {
+			var o garden.MachineType
+			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
+		}
+
+		for _, volumeType := range in.Spec.Packet.Constraints.VolumeTypes {
+			var o garden.VolumeType
+			if err := autoConvert_v1beta1_VolumeType_To_garden_VolumeType(&volumeType, &o, s); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o)
+		}
+
+		for _, zone := range in.Spec.Packet.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name: name,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
+	default:
+		if providerType, ok := in.Annotations[garden.MigrationCloudProfileType]; ok {
+			out.Spec.Type = providerType
+		} else {
+			out.Spec.Type = ""
+		}
+
+		if kubernetesJSON, ok := in.Annotations[garden.MigrationCloudProfileKubernetes]; ok {
+			var kubernetes garden.KubernetesSettings
+			if err := json.Unmarshal([]byte(kubernetesJSON), &kubernetes); err != nil {
+				return err
+			}
+			out.Spec.Kubernetes = kubernetes
+		} else {
+			out.Spec.Kubernetes = garden.KubernetesSettings{}
+		}
+
+		if machineTypesJSON, ok := in.Annotations[garden.MigrationCloudProfileMachineTypes]; ok {
+			var machineTypes []garden.MachineType
+			if err := json.Unmarshal([]byte(machineTypesJSON), &machineTypes); err != nil {
+				return err
+			}
+			out.Spec.MachineTypes = machineTypes
+		} else {
+			out.Spec.MachineTypes = nil
+		}
+
+		if machineImagesJSON, ok := in.Annotations[garden.MigrationCloudProfileMachineImages]; ok {
+			var machineImages []garden.CloudProfileMachineImage
+			if err := json.Unmarshal([]byte(machineImagesJSON), &machineImages); err != nil {
+				return err
+			}
+			out.Spec.MachineImages = machineImages
+		} else {
+			out.Spec.MachineImages = nil
+		}
+
+		if regionsJSON, ok := in.Annotations[garden.MigrationCloudProfileRegions]; ok {
+			var regions []garden.Region
+			if err := json.Unmarshal([]byte(regionsJSON), &regions); err != nil {
+				return err
+			}
+			out.Spec.Regions = regions
+		} else {
+			out.Spec.Regions = nil
+		}
+
+		if volumeTypesJSON, ok := in.Annotations[garden.MigrationCloudProfileVolumeTypes]; ok {
+			var volumeTypes []garden.VolumeType
+			if err := json.Unmarshal([]byte(volumeTypesJSON), &volumeTypes); err != nil {
+				return err
+			}
+			out.Spec.VolumeTypes = volumeTypes
+		} else {
+			out.Spec.VolumeTypes = nil
+		}
+	}
+
+	if out.Spec.Regions == nil {
+		out.Spec.Regions = []garden.Region{}
+	}
+
+	if seedSelectorJSON, ok := in.Annotations[garden.MigrationCloudProfileSeedSelector]; ok {
+		var seedSelector metav1.LabelSelector
+		if err := json.Unmarshal([]byte(seedSelectorJSON), &seedSelector); err != nil {
+			return err
+		}
+		out.Spec.SeedSelector = &seedSelector
+	} else {
+		out.Spec.SeedSelector = nil
+	}
+
+	if providerConfigJSON, ok := in.Annotations[garden.MigrationCloudProfileProviderConfig]; ok {
+		var providerConfig garden.ProviderConfig
+		if err := json.Unmarshal([]byte(providerConfigJSON), &providerConfig); err != nil {
+			return err
+		}
+		out.Spec.ProviderConfig = &providerConfig
+	} else {
+		out.Spec.ProviderConfig = nil
+	}
+
+	return nil
+}
+
+func Convert_garden_CloudProfile_To_v1beta1_CloudProfile(in *garden.CloudProfile, out *CloudProfile, s conversion.Scope) error {
+	if err := autoConvert_garden_CloudProfile_To_v1beta1_CloudProfile(in, out, s); err != nil {
+		return err
+	}
+
+	switch in.Spec.Type {
+	case "aws":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.AWS == nil {
+				out.Spec.AWS = &AWSProfile{}
+			}
+			out.Spec.AWS.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+
+	case "azure":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.Azure == nil {
+				out.Spec.Azure = &AzureProfile{}
+			}
+			out.Spec.Azure.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+		if len(in.Spec.Regions) > 0 {
+			data, err := json.Marshal(in.Spec.Regions)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileRegions] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileRegions)
+		}
+
+	case "gcp":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.GCP == nil {
+				out.Spec.GCP = &GCPProfile{}
+			}
+			out.Spec.GCP.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+
+	case "openstack":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.OpenStack == nil {
+				out.Spec.OpenStack = &OpenStackProfile{}
+			}
+			out.Spec.OpenStack.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+		if len(in.Spec.VolumeTypes) > 0 {
+			data, err := json.Marshal(in.Spec.VolumeTypes)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileVolumeTypes] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileVolumeTypes)
+		}
+
+	case "alicloud":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.Alicloud == nil {
+				out.Spec.Alicloud = &AlicloudProfile{}
+			}
+			out.Spec.Alicloud.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+
+	case "packet":
+		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
+			if out.Spec.Packet == nil {
+				out.Spec.Packet = &PacketProfile{}
+			}
+			out.Spec.Packet.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
+		}
+
+	default:
+		out.Annotations[garden.MigrationCloudProfileType] = in.Spec.Type
+
+		data, err := json.Marshal(in.Spec.Kubernetes)
+		if err != nil {
+			return err
+		}
+		out.Annotations[garden.MigrationCloudProfileKubernetes] = string(data)
+
+		if len(in.Spec.MachineImages) > 0 {
+			data, err := json.Marshal(in.Spec.MachineImages)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileMachineImages] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileMachineImages)
+		}
+
+		if len(in.Spec.MachineTypes) > 0 {
+			data, err := json.Marshal(in.Spec.MachineTypes)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileMachineTypes] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileMachineTypes)
+		}
+
+		if len(in.Spec.Regions) > 0 {
+			data, err := json.Marshal(in.Spec.Regions)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileRegions] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileRegions)
+		}
+
+		if len(in.Spec.VolumeTypes) > 0 {
+			data, err := json.Marshal(in.Spec.VolumeTypes)
+			if err != nil {
+				return err
+			}
+			out.Annotations[garden.MigrationCloudProfileVolumeTypes] = string(data)
+		} else {
+			delete(out.Annotations, garden.MigrationCloudProfileVolumeTypes)
+		}
+	}
+
+	if in.Spec.ProviderConfig != nil {
+		data, err := json.Marshal(in.Spec.ProviderConfig)
+		if err != nil {
+			return err
+		}
+		out.Annotations[garden.MigrationCloudProfileProviderConfig] = string(data)
+	} else {
+		delete(out.Annotations, garden.MigrationCloudProfileProviderConfig)
+	}
+
+	if in.Spec.SeedSelector != nil {
+		data, err := json.Marshal(in.Spec.SeedSelector)
+		if err != nil {
+			return err
+		}
+		out.Annotations[garden.MigrationCloudProfileSeedSelector] = string(data)
+	} else {
+		delete(out.Annotations, garden.MigrationCloudProfileSeedSelector)
+	}
+
+	return nil
+}
+
+func Convert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
+	return autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in, out, s)
+}
+
+func Convert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudProfileSpec, out *garden.CloudProfileSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in, out, s)
+}
+
+func stringSliceToDNSProviderConstraint(slice []string) []DNSProviderConstraint {
+	dnsConstraints := make([]DNSProviderConstraint, 0, len(slice))
+	for _, s := range slice {
+		dnsConstraints = append(dnsConstraints, DNSProviderConstraint{s})
+	}
+	return dnsConstraints
+}
+
+func zoneHasAlicloudType(typesPerZone map[string][]string, name, typeName string) bool {
+	types, ok := typesPerZone[name]
+	if !ok {
+		return false
+	}
+
+	for _, t := range types {
+		if t == typeName {
+			return true
+		}
+	}
+	return false
+}
+
+func azureV1alpha1DomainCountsHaveRegion(domainCount []azurev1alpha1.DomainCount, regionName string) bool {
+	for _, d := range domainCount {
+		if d.Region == regionName {
+			return true
+		}
+	}
+	return false
+}
+
+func openstackV1alpha1LoadBalancerProvidersHaveProvider(providers []openstackv1alpha1.LoadBalancerProvider, providerName string) bool {
+	for _, p := range providers {
+		if p.Name == providerName {
+			return true
+		}
+	}
+	return false
+}
+
+func openstackV1alpha1FloatingPoolsHavePool(pools []openstackv1alpha1.FloatingPool, poolName string) bool {
+	for _, p := range pools {
+		if p.Name == poolName {
+			return true
+		}
+	}
+	return false
+}
+
+func volumeTypesHaveName(volumeTypes []garden.VolumeType, name string) bool {
+	for _, v := range volumeTypes {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
 }

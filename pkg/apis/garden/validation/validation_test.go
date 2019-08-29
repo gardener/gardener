@@ -25,6 +25,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,12 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("validation", func() {
@@ -118,15 +117,23 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateCloudProfile(cloudProfile)
 
-			Expect(errorList).To(HaveLen(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.type"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.versions"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machineImages"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machineTypes"),
+				}))))
 		})
 
 		Context("tests for AWS cloud profiles", func() {
@@ -156,6 +163,19 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 						},
+						Type: "aws",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -341,7 +361,6 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(errorList).To(HaveLen(2))
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal(fmt.Sprintf("spec.%s.constraints.machineImages.expirationDate", fldPath)),
@@ -407,18 +426,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("volume types validation", func() {
-				It("should enforce that at least one volume type has been defined", func() {
-					awsCloudProfile.Spec.AWS.Constraints.VolumeTypes = []garden.VolumeType{}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
-					}))
-				})
-
 				It("should enforce uniqueness of volume type names", func() {
 					awsCloudProfile.Spec.AWS.Constraints.VolumeTypes = []garden.VolumeType{
 						awsCloudProfile.Spec.AWS.Constraints.VolumeTypes[0],
@@ -516,6 +523,19 @@ var _ = Describe("validation", func() {
 								},
 							},
 						},
+						Type: "azure",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -676,18 +696,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("volume types validation", func() {
-				It("should enforce that at least one volume type has been defined", func() {
-					azureCloudProfile.Spec.Azure.Constraints.VolumeTypes = []garden.VolumeType{}
-
-					errorList := ValidateCloudProfile(azureCloudProfile)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
-					}))
-				})
-
 				It("should enforce uniqueness of volume type names", func() {
 					azureCloudProfile.Spec.Azure.Constraints.VolumeTypes = []garden.VolumeType{
 						azureCloudProfile.Spec.Azure.Constraints.VolumeTypes[0],
@@ -814,6 +822,19 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 						},
+						Type: "gcp",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -1046,18 +1067,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("volume types validation", func() {
-				It("should enforce that at least one volume type has been defined", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes = []garden.VolumeType{}
-
-					errorList := ValidateCloudProfile(gcpCloudProfile)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
-					}))
-				})
-
 				It("should enforce uniqueness of volume type names", func() {
 					gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes = []garden.VolumeType{
 						gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes[0],
@@ -1155,6 +1164,19 @@ var _ = Describe("validation", func() {
 							},
 							KeyStoneURL: "http://url-to-keystone/v3",
 						},
+						Type: "openstack",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -1494,7 +1516,7 @@ var _ = Describe("validation", func() {
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.keyStoneURL", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.keystoneURL", fldPath)),
 					}))
 				})
 			})
@@ -1573,6 +1595,19 @@ var _ = Describe("validation", func() {
 								Zones: zonesConstraint,
 							},
 						},
+						Type: "alicloud",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -1826,18 +1861,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("volume types validation", func() {
-				It("should enforce that at least one volume type has been defined", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{}
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
-					}))
-				})
-
 				It("should enforce uniqueness of volume type names", func() {
 					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{
 						alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes[0],
@@ -1954,6 +1977,19 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 						},
+						Type: "packet",
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
 					},
 				}
 			})
@@ -2168,17 +2204,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("volume types validation", func() {
-				It("should enforce that at least one volume type has been defined", func() {
-					packetProfile.Spec.Packet.Constraints.VolumeTypes = []garden.VolumeType{}
-
-					errorList := ValidateCloudProfile(packetProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
-					}))))
-				})
-
 				It("should enforce uniqueness of volume type names", func() {
 					packetProfile.Spec.Packet.Constraints.VolumeTypes = []garden.VolumeType{
 						packetProfile.Spec.Packet.Constraints.VolumeTypes[0],
@@ -2239,6 +2264,348 @@ var _ = Describe("validation", func() {
 			})
 		})
 		// END PACKET
+
+		Context("tests for unknown cloud profiles", func() {
+			var (
+				regionName = "region1"
+				zoneName   = "zone1"
+
+				unknownCloudProfile *garden.CloudProfile
+			)
+
+			BeforeEach(func() {
+				unknownCloudProfile = &garden.CloudProfile{
+					ObjectMeta: metadata,
+					Spec: garden.CloudProfileSpec{
+						Type: "unknown",
+						SeedSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
+						Kubernetes: garden.KubernetesSettings{
+							Versions: []garden.ExpirableVersion{{Version: "1.11.4"}},
+						},
+						MachineImages: []garden.CloudProfileMachineImage{
+							{
+								Name: "some-machineimage",
+								Versions: []garden.ExpirableVersion{
+									{Version: "1.2.3"},
+								},
+							},
+						},
+						Regions: []garden.Region{
+							{
+								Name: regionName,
+								Zones: []garden.AvailabilityZone{
+									{Name: zoneName},
+								},
+							},
+						},
+						MachineTypes: machineTypesConstraint,
+						VolumeTypes:  volumeTypesConstraint,
+					},
+				}
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateCloudProfile(unknownCloudProfile)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid not specifying a type", func() {
+				unknownCloudProfile.Spec.Type = ""
+
+				errorList := ValidateCloudProfile(unknownCloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.type"),
+				}))))
+			})
+
+			It("should forbid ca bundles with unsupported format", func() {
+				unknownCloudProfile.Spec.CABundle = makeStringPointer("unsupported")
+
+				errorList := ValidateCloudProfile(unknownCloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.caBundle"),
+				}))))
+			})
+
+			Context("kubernetes version constraints", func() {
+				It("should enforce that at least one version has been defined", func() {
+					unknownCloudProfile.Spec.Kubernetes.Versions = []garden.ExpirableVersion{}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.kubernetes.versions"),
+					}))))
+				})
+
+				It("should forbid versions of a not allowed pattern", func() {
+					unknownCloudProfile.Spec.Kubernetes.Versions = []garden.ExpirableVersion{{Version: "1.11"}}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.versions[0]"),
+					}))))
+				})
+
+				It("should forbid expiration date on latest kubernetes version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					unknownCloudProfile.Spec.Kubernetes.Versions = []garden.ExpirableVersion{
+						{
+							Version: "1.1.0",
+						},
+						{
+							Version:        "1.2.0",
+							ExpirationDate: expirationDate,
+						},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.versions[].expirationDate"),
+					}))))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					unknownCloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages"),
+					}))))
+				})
+
+				It("should forbid duplicate names in list of machine images", func() {
+					unknownCloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.ExpirableVersion{
+								{Version: "3.4.6"},
+							},
+						},
+						{
+							Name: "some-machineimage",
+							Versions: []garden.ExpirableVersion{
+								{Version: "3.4.5"},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.machineImages[1]"),
+					}))))
+				})
+
+				It("should forbid machine images with no version", func() {
+					unknownCloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+						{Name: "some-machineimage"},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions"),
+					}))))
+				})
+
+				It("should forbid nonSemVer machine image versions", func() {
+					unknownCloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.ExpirableVersion{
+								{
+									Version: "0.1.2"},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.ExpirableVersion{
+								{
+									Version: "a.b.c",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineImages"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineImages[1].versions[0].version"),
+					}))))
+				})
+
+				It("should forbid expiration date on latest machine image version", func() {
+					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+					unknownCloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []garden.ExpirableVersion{
+								{
+									Version:        "0.1.2",
+									ExpirationDate: expirationDate,
+								},
+								{
+									Version: "0.1.1",
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []garden.ExpirableVersion{
+								{
+									Version:        "0.1.1",
+									ExpirationDate: expirationDate,
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.machineImages.expirationDate"),
+						"Detail": ContainSubstring("some-machineimage"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.machineImages.expirationDate"),
+						"Detail": ContainSubstring("xy"),
+					}))))
+				})
+			})
+
+			Context("machine types validation", func() {
+				It("should enforce that at least one machine type has been defined", func() {
+					unknownCloudProfile.Spec.MachineTypes = []garden.MachineType{}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineTypes"),
+					}))))
+				})
+
+				It("should enforce uniqueness of machine type names", func() {
+					unknownCloudProfile.Spec.MachineTypes = []garden.MachineType{
+						unknownCloudProfile.Spec.MachineTypes[0],
+						unknownCloudProfile.Spec.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.machineTypes[1].name"),
+					}))))
+				})
+
+				It("should forbid machine types with unsupported property values", func() {
+					unknownCloudProfile.Spec.MachineTypes = invalidMachineTypes
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineTypes[0].name"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineTypes[0].cpu"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineTypes[0].gpu"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineTypes[0].memory"),
+					}))))
+				})
+			})
+
+			Context("regions validation", func() {
+				It("should forbid regions with unsupported name values", func() {
+					unknownCloudProfile.Spec.Regions = []garden.Region{
+						{
+							Name:  "",
+							Zones: []garden.AvailabilityZone{{Name: ""}},
+						},
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.regions[0].name"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.regions[0].zones[0].name"),
+					}))))
+				})
+			})
+
+			Context("volume types validation", func() {
+				It("should enforce uniqueness of volume type names", func() {
+					unknownCloudProfile.Spec.VolumeTypes = []garden.VolumeType{
+						unknownCloudProfile.Spec.VolumeTypes[0],
+						unknownCloudProfile.Spec.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.volumeTypes[1].name"),
+					}))))
+				})
+
+				It("should forbid volume types with unsupported property values", func() {
+					unknownCloudProfile.Spec.VolumeTypes = invalidVolumeTypes
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.volumeTypes[0].name"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.volumeTypes[0].class"),
+					}))))
+				})
+			})
+
+			It("should forbid unsupported seed selectors", func() {
+				unknownCloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
+
+				errorList := ValidateCloudProfile(unknownCloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.seedSelector.matchLabels"),
+				}))))
+			})
+		})
 	})
 
 	Describe("#ValidateProject, #ValidateProjectUpdate", func() {

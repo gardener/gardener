@@ -30,10 +30,9 @@ import (
 )
 
 var _ = Describe("roundtripper seed migration", func() {
-	var scheme *runtime.Scheme
+	scheme := runtime.NewScheme()
 
-	BeforeSuite(func() {
-		scheme = runtime.NewScheme()
+	It("should add the conversion funcs to the scheme", func() {
 		Expect(scheme.AddConversionFuncs(
 			gardencorev1alpha1.Convert_v1alpha1_Seed_To_garden_Seed,
 			gardencorev1alpha1.Convert_garden_Seed_To_v1alpha1_Seed,
@@ -67,7 +66,7 @@ var _ = Describe("roundtripper seed migration", func() {
 		falseVar = false
 	)
 
-	Describe("core/v1alpha1.Seed roundtrip", func() {
+	Describe("core.gardener.cloud/v1alpha1.Seed roundtrip", func() {
 		var (
 			in = &gardencorev1alpha1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -161,7 +160,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			}
 		)
 
-		It("should correctly convert core/v1alpha1.Seed -> garden/v1beta1.Seed -> core/v1alpha1.Seed", func() {
+		It("should correctly convert core.gardener.cloud/v1alpha1.Seed -> garden.sapcloud.io/v1beta1.Seed -> core.gardener.cloud/v1alpha1.Seed", func() {
 			out1 := &garden.Seed{}
 			Expect(scheme.Convert(in, out1, nil)).To(BeNil())
 
@@ -185,7 +184,7 @@ var _ = Describe("roundtripper seed migration", func() {
 		})
 	})
 
-	Describe("garden/v1beta1.Seed roundtrip", func() {
+	Describe("garden.sapcloud.io/v1beta1.Seed roundtrip", func() {
 		var (
 			in = &gardenv1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -272,7 +271,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			}
 		)
 
-		It("should correctly convert garden/v1beta1.Seed -> core/v1alpha1.Seed -> core/v1alpha1.Seed", func() {
+		It("should correctly convert garden.sapcloud.io/v1beta1.Seed -> core.gardener.cloud/v1alpha1.Seed -> garden.sapcloud.io/v1beta1.Seed", func() {
 			out1 := &garden.Seed{}
 			Expect(scheme.Convert(in, out1, nil)).To(BeNil())
 

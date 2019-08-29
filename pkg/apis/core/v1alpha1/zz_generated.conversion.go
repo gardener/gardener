@@ -40,6 +40,16 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
+	if err := s.AddGeneratedConversionFunc((*AvailabilityZone)(nil), (*garden.AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AvailabilityZone_To_garden_AvailabilityZone(a.(*AvailabilityZone), b.(*garden.AvailabilityZone), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.AvailabilityZone)(nil), (*AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_AvailabilityZone_To_v1alpha1_AvailabilityZone(a.(*garden.AvailabilityZone), b.(*AvailabilityZone), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*BackupBucket)(nil), (*core.BackupBucket)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_BackupBucket_To_core_BackupBucket(a.(*BackupBucket), b.(*core.BackupBucket), scope)
 	}); err != nil {
@@ -137,6 +147,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.Cloud)(nil), (*Cloud)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_Cloud_To_v1alpha1_Cloud(a.(*core.Cloud), b.(*Cloud), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfile)(nil), (*garden.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(a.(*CloudProfile), b.(*garden.CloudProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.CloudProfile)(nil), (*CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_CloudProfile_To_v1alpha1_CloudProfile(a.(*garden.CloudProfile), b.(*CloudProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileList)(nil), (*garden.CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileList_To_garden_CloudProfileList(a.(*CloudProfileList), b.(*garden.CloudProfileList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.CloudProfileList)(nil), (*CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_CloudProfileList_To_v1alpha1_CloudProfileList(a.(*garden.CloudProfileList), b.(*CloudProfileList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileSpec)(nil), (*garden.CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileSpec_To_garden_CloudProfileSpec(a.(*CloudProfileSpec), b.(*garden.CloudProfileSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.CloudProfileSpec)(nil), (*CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_CloudProfileSpec_To_v1alpha1_CloudProfileSpec(a.(*garden.CloudProfileSpec), b.(*CloudProfileSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -260,6 +300,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ExpirableVersion)(nil), (*garden.ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ExpirableVersion_To_garden_ExpirableVersion(a.(*ExpirableVersion), b.(*garden.ExpirableVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ExpirableVersion)(nil), (*ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ExpirableVersion_To_v1alpha1_ExpirableVersion(a.(*garden.ExpirableVersion), b.(*ExpirableVersion), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Gardener)(nil), (*garden.Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Gardener_To_garden_Gardener(a.(*Gardener), b.(*garden.Gardener), scope)
 	}); err != nil {
@@ -290,6 +340,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*KubernetesSettings)(nil), (*garden.KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings(a.(*KubernetesSettings), b.(*garden.KubernetesSettings), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.KubernetesSettings)(nil), (*KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(a.(*garden.KubernetesSettings), b.(*KubernetesSettings), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*LastError)(nil), (*core.LastError)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_LastError_To_core_LastError(a.(*LastError), b.(*core.LastError), scope)
 	}); err != nil {
@@ -307,6 +367,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.LastOperation)(nil), (*LastOperation)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_LastOperation_To_v1alpha1_LastOperation(a.(*core.LastOperation), b.(*LastOperation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*garden.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImage_To_garden_MachineImage(a.(*MachineImage), b.(*garden.MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_MachineImage_To_v1alpha1_MachineImage(a.(*garden.MachineImage), b.(*MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineType)(nil), (*garden.MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineType_To_garden_MachineType(a.(*MachineType), b.(*garden.MachineType), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.MachineType)(nil), (*MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_MachineType_To_v1alpha1_MachineType(a.(*garden.MachineType), b.(*MachineType), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineTypeStorage)(nil), (*garden.MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(a.(*MachineTypeStorage), b.(*garden.MachineTypeStorage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.MachineTypeStorage)(nil), (*MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(a.(*garden.MachineTypeStorage), b.(*MachineTypeStorage), scope)
 	}); err != nil {
 		return err
 	}
@@ -440,6 +530,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*Region)(nil), (*garden.Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Region_To_garden_Region(a.(*Region), b.(*garden.Region), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.Region)(nil), (*Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_Region_To_v1alpha1_Region(a.(*garden.Region), b.(*Region), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*SecretBinding)(nil), (*garden.SecretBinding)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_SecretBinding_To_garden_SecretBinding(a.(*SecretBinding), b.(*garden.SecretBinding), scope)
 	}); err != nil {
@@ -570,6 +670,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*VolumeType)(nil), (*garden.VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_VolumeType_To_garden_VolumeType(a.(*VolumeType), b.(*garden.VolumeType), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.VolumeType)(nil), (*VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_VolumeType_To_v1alpha1_VolumeType(a.(*garden.VolumeType), b.(*VolumeType), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*garden.CloudProfileSpec)(nil), (*CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_CloudProfileSpec_To_v1alpha1_CloudProfileSpec(a.(*garden.CloudProfileSpec), b.(*CloudProfileSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*garden.CloudProfile)(nil), (*CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_CloudProfile_To_v1alpha1_CloudProfile(a.(*garden.CloudProfile), b.(*CloudProfile), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*garden.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(a.(*garden.ProjectSpec), b.(*ProjectSpec), scope)
 	}); err != nil {
@@ -582,6 +702,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*garden.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_Seed_To_v1alpha1_Seed(a.(*garden.Seed), b.(*Seed), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*CloudProfileSpec)(nil), (*garden.CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileSpec_To_garden_CloudProfileSpec(a.(*CloudProfileSpec), b.(*garden.CloudProfileSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*CloudProfile)(nil), (*garden.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(a.(*CloudProfile), b.(*garden.CloudProfile), scope)
 	}); err != nil {
 		return err
 	}
@@ -601,6 +731,30 @@ func RegisterConversions(s *runtime.Scheme) error {
 		return err
 	}
 	return nil
+}
+
+func autoConvert_v1alpha1_AvailabilityZone_To_garden_AvailabilityZone(in *AvailabilityZone, out *garden.AvailabilityZone, s conversion.Scope) error {
+	out.Name = in.Name
+	out.UnavailableMachineTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableMachineTypes))
+	out.UnavailableVolumeTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableVolumeTypes))
+	return nil
+}
+
+// Convert_v1alpha1_AvailabilityZone_To_garden_AvailabilityZone is an autogenerated conversion function.
+func Convert_v1alpha1_AvailabilityZone_To_garden_AvailabilityZone(in *AvailabilityZone, out *garden.AvailabilityZone, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AvailabilityZone_To_garden_AvailabilityZone(in, out, s)
+}
+
+func autoConvert_garden_AvailabilityZone_To_v1alpha1_AvailabilityZone(in *garden.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
+	out.Name = in.Name
+	out.UnavailableMachineTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableMachineTypes))
+	out.UnavailableVolumeTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableVolumeTypes))
+	return nil
+}
+
+// Convert_garden_AvailabilityZone_To_v1alpha1_AvailabilityZone is an autogenerated conversion function.
+func Convert_garden_AvailabilityZone_To_v1alpha1_AvailabilityZone(in *garden.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
+	return autoConvert_garden_AvailabilityZone_To_v1alpha1_AvailabilityZone(in, out, s)
 }
 
 func autoConvert_v1alpha1_BackupBucket_To_core_BackupBucket(in *BackupBucket, out *core.BackupBucket, s conversion.Scope) error {
@@ -853,6 +1007,140 @@ func autoConvert_core_Cloud_To_v1alpha1_Cloud(in *core.Cloud, out *Cloud, s conv
 // Convert_core_Cloud_To_v1alpha1_Cloud is an autogenerated conversion function.
 func Convert_core_Cloud_To_v1alpha1_Cloud(in *core.Cloud, out *Cloud, s conversion.Scope) error {
 	return autoConvert_core_Cloud_To_v1alpha1_Cloud(in, out, s)
+}
+
+func autoConvert_v1alpha1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *garden.CloudProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_CloudProfileSpec_To_garden_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func autoConvert_garden_CloudProfile_To_v1alpha1_CloudProfile(in *garden.CloudProfile, out *CloudProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_garden_CloudProfileSpec_To_v1alpha1_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func autoConvert_v1alpha1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfileList, out *garden.CloudProfileList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]garden.CloudProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_v1alpha1_CloudProfileList_To_garden_CloudProfileList is an autogenerated conversion function.
+func Convert_v1alpha1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfileList, out *garden.CloudProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CloudProfileList_To_garden_CloudProfileList(in, out, s)
+}
+
+func autoConvert_garden_CloudProfileList_To_v1alpha1_CloudProfileList(in *garden.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]CloudProfile, len(*in))
+		for i := range *in {
+			if err := Convert_garden_CloudProfile_To_v1alpha1_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_garden_CloudProfileList_To_v1alpha1_CloudProfileList is an autogenerated conversion function.
+func Convert_garden_CloudProfileList_To_v1alpha1_CloudProfileList(in *garden.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
+	return autoConvert_garden_CloudProfileList_To_v1alpha1_CloudProfileList(in, out, s)
+}
+
+func autoConvert_v1alpha1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudProfileSpec, out *garden.CloudProfileSpec, s conversion.Scope) error {
+	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	if err := Convert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+		return err
+	}
+	out.MachineImages = *(*[]garden.CloudProfileMachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineTypes != nil {
+		in, out := &in.MachineTypes, &out.MachineTypes
+		*out = make([]garden.MachineType, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_MachineType_To_garden_MachineType(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineTypes = nil
+	}
+	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.Regions = *(*[]garden.Region)(unsafe.Pointer(&in.Regions))
+	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
+	out.Type = in.Type
+	if in.VolumeTypes != nil {
+		in, out := &in.VolumeTypes, &out.VolumeTypes
+		*out = make([]garden.VolumeType, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_VolumeType_To_garden_VolumeType(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.VolumeTypes = nil
+	}
+	return nil
+}
+
+func autoConvert_garden_CloudProfileSpec_To_v1alpha1_CloudProfileSpec(in *garden.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
+	// WARNING: in.AWS requires manual conversion: does not exist in peer-type
+	// WARNING: in.Azure requires manual conversion: does not exist in peer-type
+	// WARNING: in.GCP requires manual conversion: does not exist in peer-type
+	// WARNING: in.OpenStack requires manual conversion: does not exist in peer-type
+	// WARNING: in.Alicloud requires manual conversion: does not exist in peer-type
+	// WARNING: in.Packet requires manual conversion: does not exist in peer-type
+	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	if err := Convert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+		return err
+	}
+	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineTypes != nil {
+		in, out := &in.MachineTypes, &out.MachineTypes
+		*out = make([]MachineType, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineType_To_v1alpha1_MachineType(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineTypes = nil
+	}
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.Regions = *(*[]Region)(unsafe.Pointer(&in.Regions))
+	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
+	out.Type = in.Type
+	if in.VolumeTypes != nil {
+		in, out := &in.VolumeTypes, &out.VolumeTypes
+		*out = make([]VolumeType, len(*in))
+		for i := range *in {
+			if err := Convert_garden_VolumeType_To_v1alpha1_VolumeType(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.VolumeTypes = nil
+	}
+	return nil
 }
 
 func autoConvert_v1alpha1_ClusterInfo_To_core_ClusterInfo(in *ClusterInfo, out *core.ClusterInfo, s conversion.Scope) error {
@@ -1155,6 +1443,28 @@ func Convert_core_Endpoint_To_v1alpha1_Endpoint(in *core.Endpoint, out *Endpoint
 	return autoConvert_core_Endpoint_To_v1alpha1_Endpoint(in, out, s)
 }
 
+func autoConvert_v1alpha1_ExpirableVersion_To_garden_ExpirableVersion(in *ExpirableVersion, out *garden.ExpirableVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	return nil
+}
+
+// Convert_v1alpha1_ExpirableVersion_To_garden_ExpirableVersion is an autogenerated conversion function.
+func Convert_v1alpha1_ExpirableVersion_To_garden_ExpirableVersion(in *ExpirableVersion, out *garden.ExpirableVersion, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ExpirableVersion_To_garden_ExpirableVersion(in, out, s)
+}
+
+func autoConvert_garden_ExpirableVersion_To_v1alpha1_ExpirableVersion(in *garden.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	return nil
+}
+
+// Convert_garden_ExpirableVersion_To_v1alpha1_ExpirableVersion is an autogenerated conversion function.
+func Convert_garden_ExpirableVersion_To_v1alpha1_ExpirableVersion(in *garden.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
+	return autoConvert_garden_ExpirableVersion_To_v1alpha1_ExpirableVersion(in, out, s)
+}
+
 func autoConvert_v1alpha1_Gardener_To_garden_Gardener(in *Gardener, out *garden.Gardener, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
@@ -1223,6 +1533,26 @@ func Convert_core_Kubernetes_To_v1alpha1_Kubernetes(in *core.Kubernetes, out *Ku
 	return autoConvert_core_Kubernetes_To_v1alpha1_Kubernetes(in, out, s)
 }
 
+func autoConvert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings(in *KubernetesSettings, out *garden.KubernetesSettings, s conversion.Scope) error {
+	out.Versions = *(*[]garden.ExpirableVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings is an autogenerated conversion function.
+func Convert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings(in *KubernetesSettings, out *garden.KubernetesSettings, s conversion.Scope) error {
+	return autoConvert_v1alpha1_KubernetesSettings_To_garden_KubernetesSettings(in, out, s)
+}
+
+func autoConvert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(in *garden.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
+	out.Versions = *(*[]ExpirableVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings is an autogenerated conversion function.
+func Convert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(in *garden.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
+	return autoConvert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(in, out, s)
+}
+
 func autoConvert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
@@ -1273,6 +1603,80 @@ func autoConvert_core_LastOperation_To_v1alpha1_LastOperation(in *core.LastOpera
 // Convert_core_LastOperation_To_v1alpha1_LastOperation is an autogenerated conversion function.
 func Convert_core_LastOperation_To_v1alpha1_LastOperation(in *core.LastOperation, out *LastOperation, s conversion.Scope) error {
 	return autoConvert_core_LastOperation_To_v1alpha1_LastOperation(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]garden.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineImage_To_garden_MachineImage is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImage_To_garden_MachineImage(in, out, s)
+}
+
+func autoConvert_garden_MachineImage_To_v1alpha1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]ExpirableVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_garden_MachineImage_To_v1alpha1_MachineImage is an autogenerated conversion function.
+func Convert_garden_MachineImage_To_v1alpha1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
+	return autoConvert_garden_MachineImage_To_v1alpha1_MachineImage(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
+	out.CPU = in.CPU
+	out.GPU = in.GPU
+	out.Memory = in.Memory
+	out.Name = in.Name
+	out.Storage = (*garden.MachineTypeStorage)(unsafe.Pointer(in.Storage))
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	return nil
+}
+
+// Convert_v1alpha1_MachineType_To_garden_MachineType is an autogenerated conversion function.
+func Convert_v1alpha1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineType_To_garden_MachineType(in, out, s)
+}
+
+func autoConvert_garden_MachineType_To_v1alpha1_MachineType(in *garden.MachineType, out *MachineType, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	out.CPU = in.CPU
+	out.GPU = in.GPU
+	out.Storage = (*MachineTypeStorage)(unsafe.Pointer(in.Storage))
+	out.Memory = in.Memory
+	return nil
+}
+
+// Convert_garden_MachineType_To_v1alpha1_MachineType is an autogenerated conversion function.
+func Convert_garden_MachineType_To_v1alpha1_MachineType(in *garden.MachineType, out *MachineType, s conversion.Scope) error {
+	return autoConvert_garden_MachineType_To_v1alpha1_MachineType(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(in *MachineTypeStorage, out *garden.MachineTypeStorage, s conversion.Scope) error {
+	out.Size = in.Size
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage is an autogenerated conversion function.
+func Convert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(in *MachineTypeStorage, out *garden.MachineTypeStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(in, out, s)
+}
+
+func autoConvert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in *garden.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
+	out.Size = in.Size
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage is an autogenerated conversion function.
+func Convert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in *garden.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
+	return autoConvert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in, out, s)
 }
 
 func autoConvert_v1alpha1_Plant_To_core_Plant(in *Plant, out *core.Plant, s conversion.Scope) error {
@@ -1605,6 +2009,28 @@ func Convert_garden_QuotaSpec_To_v1alpha1_QuotaSpec(in *garden.QuotaSpec, out *Q
 	return autoConvert_garden_QuotaSpec_To_v1alpha1_QuotaSpec(in, out, s)
 }
 
+func autoConvert_v1alpha1_Region_To_garden_Region(in *Region, out *garden.Region, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Zones = *(*[]garden.AvailabilityZone)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_v1alpha1_Region_To_garden_Region is an autogenerated conversion function.
+func Convert_v1alpha1_Region_To_garden_Region(in *Region, out *garden.Region, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Region_To_garden_Region(in, out, s)
+}
+
+func autoConvert_garden_Region_To_v1alpha1_Region(in *garden.Region, out *Region, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Zones = *(*[]AvailabilityZone)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_garden_Region_To_v1alpha1_Region is an autogenerated conversion function.
+func Convert_garden_Region_To_v1alpha1_Region(in *garden.Region, out *Region, s conversion.Scope) error {
+	return autoConvert_garden_Region_To_v1alpha1_Region(in, out, s)
+}
+
 func autoConvert_v1alpha1_SecretBinding_To_garden_SecretBinding(in *SecretBinding, out *garden.SecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.SecretRef = in.SecretRef
@@ -1934,4 +2360,28 @@ func autoConvert_garden_ShootNetworks_To_v1alpha1_ShootNetworks(in *garden.Shoot
 // Convert_garden_ShootNetworks_To_v1alpha1_ShootNetworks is an autogenerated conversion function.
 func Convert_garden_ShootNetworks_To_v1alpha1_ShootNetworks(in *garden.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
 	return autoConvert_garden_ShootNetworks_To_v1alpha1_ShootNetworks(in, out, s)
+}
+
+func autoConvert_v1alpha1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden.VolumeType, s conversion.Scope) error {
+	out.Class = in.Class
+	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	return nil
+}
+
+// Convert_v1alpha1_VolumeType_To_garden_VolumeType is an autogenerated conversion function.
+func Convert_v1alpha1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden.VolumeType, s conversion.Scope) error {
+	return autoConvert_v1alpha1_VolumeType_To_garden_VolumeType(in, out, s)
+}
+
+func autoConvert_garden_VolumeType_To_v1alpha1_VolumeType(in *garden.VolumeType, out *VolumeType, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	out.Class = in.Class
+	return nil
+}
+
+// Convert_garden_VolumeType_To_v1alpha1_VolumeType is an autogenerated conversion function.
+func Convert_garden_VolumeType_To_v1alpha1_VolumeType(in *garden.VolumeType, out *VolumeType, s conversion.Scope) error {
+	return autoConvert_garden_VolumeType_To_v1alpha1_VolumeType(in, out, s)
 }

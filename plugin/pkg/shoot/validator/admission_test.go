@@ -51,6 +51,8 @@ var _ = Describe("validator", func() {
 				Nodes:    &nodesCIDR,
 			}
 
+			falseVar = false
+
 			seedName      = "seed"
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
@@ -59,7 +61,7 @@ var _ = Describe("validator", func() {
 			baseDomain           = "example.com"
 
 			validMachineImageName         = "some-machineimage"
-			validMachineImageVersions     = []garden.MachineImageVersion{{Version: "0.0.1"}}
+			validMachineImageVersions     = []garden.ExpirableVersion{{Version: "0.0.1"}}
 			validShootMachineImageVersion = "0.0.1"
 
 			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
@@ -78,7 +80,49 @@ var _ = Describe("validator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "profile",
 				},
-				Spec: garden.CloudProfileSpec{},
+				Spec: garden.CloudProfileSpec{
+					Type: "aws",
+					Kubernetes: garden.KubernetesSettings{
+						Versions: []garden.ExpirableVersion{{Version: "1.6.4"}},
+					},
+					MachineImages: []garden.CloudProfileMachineImage{
+						{
+							Name:     validMachineImageName,
+							Versions: validMachineImageVersions,
+						},
+					},
+					MachineTypes: []garden.MachineType{
+						{
+							Name:   "machine-type-1",
+							CPU:    resource.MustParse("2"),
+							GPU:    resource.MustParse("0"),
+							Memory: resource.MustParse("100Gi"),
+						},
+						{
+							Name:   "machine-type-old",
+							CPU:    resource.MustParse("2"),
+							GPU:    resource.MustParse("0"),
+							Memory: resource.MustParse("100Gi"),
+							Usable: &falseVar,
+						},
+					},
+					VolumeTypes: []garden.VolumeType{
+						{
+							Name:  "volume-type-1",
+							Class: "super-premium",
+						},
+					},
+					Regions: []garden.Region{
+						{
+							Name:  "europe",
+							Zones: []garden.AvailabilityZone{{Name: "europe-a"}},
+						},
+						{
+							Name:  "asia",
+							Zones: []garden.AvailabilityZone{{Name: "asia-a"}},
+						},
+					},
+				},
 			}
 			seedBase = garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -149,53 +193,12 @@ var _ = Describe("validator", func() {
 		// The verification of protection is independent of the Cloud Provider (being checked before). We use AWS.
 		Context("VALIDATION: Shoot references a Seed already -  validate user provided seed regarding protection", func() {
 			var (
-				falseVar   = false
 				oldShoot   *garden.Shoot
 				awsProfile = &garden.AWSProfile{
 					Constraints: garden.AWSConstraints{
 						DNSProviders: []garden.DNSProviderConstraint{
 							{
 								Name: garden.DNSUnmanaged,
-							},
-						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.MachineType{
-							{
-								Name:   "machine-type-1",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-							},
-							{
-								Name:   "machine-type-old",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-								Usable: &falseVar,
-							},
-						},
-						VolumeTypes: []garden.VolumeType{
-							{
-								Name:  "volume-type-1",
-								Class: "super-premium",
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
 							},
 						},
 					},
@@ -486,7 +489,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should reject because the cloud provider in shoot and profile differ", func() {
-			cloudProfile.Spec.GCP = &garden.GCPProfile{}
+			cloudProfile.Spec.Type = "gcp"
 			shoot.Spec.Cloud.AWS = &garden.AWSCloud{}
 
 			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -502,52 +505,11 @@ var _ = Describe("validator", func() {
 
 		Context("tests for AWS cloud", func() {
 			var (
-				falseVar   = false
 				awsProfile = &garden.AWSProfile{
 					Constraints: garden.AWSConstraints{
 						DNSProviders: []garden.DNSProviderConstraint{
 							{
 								Name: garden.DNSUnmanaged,
-							},
-						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.MachineType{
-							{
-								Name:   "machine-type-1",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-							},
-							{
-								Name:   "machine-type-old",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-								Usable: &falseVar,
-							},
-						},
-						VolumeTypes: []garden.VolumeType{
-							{
-								Name:  "volume-type-1",
-								Class: "super-premium",
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
 							},
 						},
 					},
@@ -579,6 +541,7 @@ var _ = Describe("validator", func() {
 				awsCloud.Workers = workers
 				awsCloud.Zones = zones
 				awsCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "aws"
 				cloudProfile.Spec.AWS = awsProfile
 				shoot.Spec.Cloud.AWS = awsCloud
 			})
@@ -762,8 +725,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -778,8 +741,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -818,17 +781,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.AWS.Constraints.MachineImages = append(cloudProfile.Spec.AWS.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -950,29 +913,6 @@ var _ = Describe("validator", func() {
 								Name: garden.DNSUnmanaged,
 							},
 						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.MachineType{
-							{
-								Name:   "machine-type-1",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-							},
-						},
-						VolumeTypes: []garden.VolumeType{
-							{
-								Name:  "volume-type-1",
-								Class: "super-premium",
-							},
-						},
 					},
 					CountFaultDomains: []garden.AzureDomainCount{
 						{
@@ -1021,6 +961,7 @@ var _ = Describe("validator", func() {
 				azureCloud.Networks = garden.AzureNetworks{K8SNetworks: k8sNetworks}
 				azureCloud.Workers = workers
 				azureCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "azure"
 				shoot.Spec.Cloud.Azure = azureCloud
 			})
 
@@ -1108,8 +1049,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1124,8 +1065,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1164,17 +1105,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.Azure.Constraints.MachineImages = append(cloudProfile.Spec.Azure.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -1271,39 +1212,6 @@ var _ = Describe("validator", func() {
 								Name: garden.DNSUnmanaged,
 							},
 						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.MachineType{
-							{
-								Name:   "machine-type-1",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-							},
-						},
-						VolumeTypes: []garden.VolumeType{
-							{
-								Name:  "volume-type-1",
-								Class: "super-premium",
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
-							},
-						},
 					},
 				}
 				workers = []garden.GCPWorker{
@@ -1333,6 +1241,7 @@ var _ = Describe("validator", func() {
 				gcpCloud.Workers = workers
 				gcpCloud.Zones = zones
 				gcpCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "gcp"
 				cloudProfile.Spec.GCP = gcpProfile
 				shoot.Spec.Cloud.GCP = gcpCloud
 			})
@@ -1421,8 +1330,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1437,8 +1346,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1477,17 +1386,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.GCP.Constraints.MachineImages = append(cloudProfile.Spec.GCP.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -1570,39 +1479,6 @@ var _ = Describe("validator", func() {
 								Name: garden.DNSUnmanaged,
 							},
 						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.MachineType{
-							{
-								Name:   "machine-type-1",
-								CPU:    resource.MustParse("2"),
-								GPU:    resource.MustParse("0"),
-								Memory: resource.MustParse("100Gi"),
-							},
-						},
-						VolumeTypes: []garden.VolumeType{
-							{
-								Name:  "volume-type-1",
-								Class: "super-premium",
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
-							},
-						},
 					},
 				}
 				workers = []garden.PacketWorker{
@@ -1632,6 +1508,7 @@ var _ = Describe("validator", func() {
 				packetCloud.Workers = workers
 				packetCloud.Zones = zones
 				packetCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "packet"
 				cloudProfile.Spec.Packet = packetProfile
 				shoot.Spec.Cloud.Packet = packetCloud
 			})
@@ -1706,8 +1583,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1722,8 +1599,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1762,17 +1639,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.Packet.Constraints.MachineImages = append(cloudProfile.Spec.Packet.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -1860,40 +1737,9 @@ var _ = Describe("validator", func() {
 								Name: "pool",
 							},
 						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
 						LoadBalancerProviders: []garden.OpenStackLoadBalancerProvider{
 							{
 								Name: "haproxy",
-							},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.OpenStackMachineType{
-							{
-								MachineType: garden.MachineType{
-									Name:   "machine-type-1",
-									CPU:    resource.MustParse("2"),
-									GPU:    resource.MustParse("0"),
-									Memory: resource.MustParse("100Gi"),
-								},
-								VolumeType: "default",
-								VolumeSize: resource.MustParse("20Gi"),
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
 							},
 						},
 					},
@@ -1925,6 +1771,7 @@ var _ = Describe("validator", func() {
 				openStackCloud.Workers = workers
 				openStackCloud.Zones = zones
 				openStackCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "openstack"
 				cloudProfile.Spec.OpenStack = openStackProfile
 				shoot.Spec.Cloud.OpenStack = openStackCloud
 			})
@@ -2040,8 +1887,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2056,8 +1903,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2110,17 +1957,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.OpenStack.Constraints.MachineImages = append(cloudProfile.Spec.OpenStack.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -2173,56 +2020,13 @@ var _ = Describe("validator", func() {
 			})
 		})
 
-		Context("tests for Ali cloud", func() {
+		Context("tests for Alicloud", func() {
 			var (
 				alicloudProfile = &garden.AlicloudProfile{
 					Constraints: garden.AlicloudConstraints{
 						DNSProviders: []garden.DNSProviderConstraint{
 							{
 								Name: garden.DNSUnmanaged,
-							},
-						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{{Version: "1.6.4"}},
-						},
-						MachineImages: []garden.MachineImage{
-							{
-								Name:     validMachineImageName,
-								Versions: validMachineImageVersions,
-							},
-						},
-						MachineTypes: []garden.AlicloudMachineType{
-							{
-								MachineType: garden.MachineType{
-									Name:   "machine-type-1",
-									CPU:    resource.MustParse("2"),
-									GPU:    resource.MustParse("0"),
-									Memory: resource.MustParse("100Gi"),
-								},
-								Zones: []string{
-									"europe-a",
-								},
-							},
-						},
-						VolumeTypes: []garden.AlicloudVolumeType{
-							{
-								VolumeType: garden.VolumeType{
-									Name:  "volume-type-1",
-									Class: "standard",
-								},
-								Zones: []string{
-									"europe-a",
-								},
-							},
-						},
-						Zones: []garden.Zone{
-							{
-								Region: "europe",
-								Names:  []string{"europe-a"},
-							},
-							{
-								Region: "asia",
-								Names:  []string{"asia-a"},
 							},
 						},
 					},
@@ -2254,6 +2058,7 @@ var _ = Describe("validator", func() {
 				aliCloud.Workers = workers
 				aliCloud.Zones = zones
 				aliCloud.MachineImage = machineImage
+				cloudProfile.Spec.Type = "alicloud"
 				cloudProfile.Spec.Alicloud = alicloudProfile
 				shoot.Spec.Cloud.Alicloud = aliCloud
 			})
@@ -2342,8 +2147,8 @@ var _ = Describe("validator", func() {
 
 			It("should default a major.minor kubernetes version to latest patch version", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.6.6"}
-				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions, highestPatchVersion, garden.KubernetesVersion{Version: "1.7.1"}, garden.KubernetesVersion{Version: "1.7.2"})
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.6.6"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, garden.ExpirableVersion{Version: "1.7.1"}, garden.ExpirableVersion{Version: "1.7.2"})
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2358,8 +2163,8 @@ var _ = Describe("validator", func() {
 
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
-				highestPatchVersion := garden.KubernetesVersion{Version: "1.81.5"}
-				cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = append(cloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions, garden.KubernetesVersion{Version: "1.81.0"}, highestPatchVersion)
+				highestPatchVersion := garden.ExpirableVersion{Version: "1.81.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, garden.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2398,17 +2203,17 @@ var _ = Describe("validator", func() {
 				}
 
 				timeInThePast := metav1.Now().Add(time.Second * -1000)
-				cloudProfile.Spec.Alicloud.Constraints.MachineImages = append(cloudProfile.Spec.Alicloud.Constraints.MachineImages, garden.MachineImage{
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
 					Name: validMachineImageName,
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version:        imageVersionExpired,
 							ExpirationDate: &metav1.Time{Time: timeInThePast},
 						},
 					},
-				}, garden.MachineImage{
+				}, garden.CloudProfileMachineImage{
 					Name: "other-image-name",
-					Versions: []garden.MachineImageVersion{
+					Versions: []garden.ExpirableVersion{
 						{
 							Version: imageVersionExpired,
 						},
@@ -2490,7 +2295,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
-				shoot.Spec.Cloud.Alicloud.Zones = []string{"cn-beijing-a"}
+				cloudProfile.Spec.Regions[0].Zones[0].UnavailableMachineTypes = []string{"machine-type-1"}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -2510,7 +2315,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
-				shoot.Spec.Cloud.Alicloud.Zones = []string{"cn-beijing-a"}
+				cloudProfile.Spec.Regions[0].Zones[0].UnavailableVolumeTypes = []string{"volume-type-1"}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

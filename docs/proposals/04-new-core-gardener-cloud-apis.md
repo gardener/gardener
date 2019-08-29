@@ -8,7 +8,7 @@
     * [Goals](#goals)
     * [Non-Goals](#non-goals)
 * [Proposal](#proposal)
-    * [`ProviderProfile` resource](#providerprofile-resource)
+    * [`CloudProfile` resource](#cloudprofile-resource)
     * [`Seed` resource](#seed-resource)
     * [`Project` resource](#project-resource)
     * [`SecretBinding` resource](#secretbinding-resource)
@@ -46,30 +46,13 @@ In order to achieve the same, we have to provide proper APIs.
 In GEP-1 we already have proposed a first version for new `CloudProfile` and `Shoot` resources.
 In order to deprecate the existing/old `garden.sapcloud.io/v1beta1` API group (and remove it, eventually) we should move all existing resources to the new `core.gardener.cloud/v1alpha1` API group.
 
-### `ProviderProfile` resource
-
-Special note: The `CloudProfile` will be renamed to `ProviderProfile`.
+### `CloudProfile` resource
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: backup-secret
-  namespace: garden
-type: Opaque
-data:
-  # <some-provider-specific data keys>
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-backupbucket.yaml#L9-L11
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-backupbucket.yaml#L9
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
-
----
 apiVersion: core.gardener.cloud/v1alpha1
-kind: ProviderProfile
+kind: CloudProfile
 metadata:
-  name: providerprofile1
+  name: cloudprofile1
 spec:
   type: <some-provider-name> # {aws,azure,gcp,...}
 # Optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
@@ -85,26 +68,6 @@ spec:
     - version: 1.10.6
     - version: 1.10.5
       expirationDate: 2020-04-05T01:02:03Z # optional
-  backup: # See https://github.com/gardener/gardener/blob/master/docs/proposals/02-backupinfra.md.
-    type: <some-provider-name> # {aws,azure,gcp,...}
-  # region: eu-west-1
-    secretRef:
-      name: backup-secret
-      namespace: garden
-  machineTypes:
-  - name: m5.large
-    cpu: "2"
-    gpu: "0"
-    memory: 8Gi
-  # storage: 20Gi # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
-    usable: true
-  volume:
-    minimumSize: 20Gi
-    types: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
-    - name: gp2
-      class: standard
-    - name: io1
-      class: premium
   machineImages:
   - name: coreos
     versions:
@@ -114,6 +77,18 @@ spec:
   - name: ubuntu
     versions:
     - version: 18.04.201906170
+  machineTypes:
+  - name: m5.large
+    cpu: "2"
+    gpu: "0"
+    memory: 8Gi
+  # storage: 20Gi # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
+    usable: true
+  volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
+  - name: gp2
+    class: standard
+  - name: io1
+    class: premium
   regions:
   - name: europe-central-1
     zones: # optional (not needed in every environment)
@@ -121,22 +96,22 @@ spec:
     - name: europe-central-1b
     - name: europe-central-1c
     # unavailableMachineTypes: # optional, list of machine types defined above that are not available in this zone
-    # - name: m5.large
+    # - m5.large
     # unavailableVolumeTypes: # optional, list of volume types defined above that are not available in this zone
-    # - name: io1
+    # - io1
 # CA bundle that will be installed onto every shoot machine that is using this provider profile.
 # caBundle: |
 #   -----BEGIN CERTIFICATE-----
 #   ...
 #   -----END CERTIFICATE-----
   providerConfig:
-    <some-provider-specific-controlplane-config>
+    <some-provider-specific-cloudprofile-config>
     # We don't have concrete examples for every existing provider yet, but these are the proposals:
     #
     # Example for Alicloud:
     #
     # apiVersion: alicloud.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 2023.5.0
@@ -146,7 +121,7 @@ spec:
     # Example for AWS:
     #
     # apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 1967.5.0
@@ -158,7 +133,7 @@ spec:
     # Example for Azure:
     #
     # apiVersion: azure.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 1967.5.0
@@ -176,7 +151,7 @@ spec:
     # Example for GCP:
     #
     # apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 2023.5.0
@@ -186,7 +161,7 @@ spec:
     # Example for OpenStack:
     #
     # apiVersion: openstack.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 2023.5.0
@@ -212,7 +187,7 @@ spec:
     # Example for Packet:
     #
     # apiVersion: packet.provider.extensions.gardener.cloud/v1alpha1
-    # kind: ProviderProfileConfig
+    # kind: CloudProfileConfig
     # machineImages:
     # - name: coreos
     #   version: 2079.3.0
@@ -232,6 +207,21 @@ metadata:
 type: Opaque
 data:
   kubeconfig: base64(kubeconfig-for-seed-cluster)
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-secret
+  namespace: garden
+type: Opaque
+data:
+  # <some-provider-specific data keys>
+  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-backupbucket.yaml#L9-L11
+  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L9-L10
+  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-backupbucket.yaml#L9
+  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
 apiVersion: core.gardener.cloud/v1alpha1
@@ -268,6 +258,12 @@ spec:
   - key: seed.gardener.cloud/invisible
   blockCIDRs:
   - 169.254.169.254/32
+  backup: # See https://github.com/gardener/gardener/blob/master/docs/proposals/02-backupinfra.md.
+    type: <some-provider-name> # {aws,azure,gcp,...}
+  # region: eu-west-1
+    secretRef:
+      name: backup-secret
+      namespace: garden
 status:
   conditions:
   - lastTransitionTime: "2020-07-14T19:16:42Z"
@@ -406,10 +402,10 @@ data:
 apiVersion: core.gardener.cloud/v1alpha1
 kind: BackupBucket
 metadata:
-  name: providerprofile1-random[:5]
+  name: <seed-provider-type>-<region>-<seed-uid>
   ownerReferences:
-  - kind: ProviderProfile
-    name: providerprofile1
+  - kind: Seed
+    name: seed1
 spec:
   provider:
     type: <some-provider-name> # {aws,azure,gcp,...}
@@ -463,7 +459,7 @@ metadata:
     name: crazy-botany
     uid: 19a9538b-5058-11e9-b5a6-5e696cab3bc8
 spec:
-  bucketName: providerprofile1-random[:5]
+  bucketName: cloudprofile1-random[:5]
   seed: seed1
 status:
   lastOperation:
@@ -493,7 +489,7 @@ spec:
 # seedName: seed1
   provider:
     type: <some-provider-name> # {aws,azure,gcp,...}
-    profileName: providerprofile1
+    profileName: cloudprofile1
     region: europe-central-1
     infrastructure:
       <some-provider-specific-infrastructure-config>

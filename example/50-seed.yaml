@@ -11,6 +11,14 @@ spec:
   secretRef:
     name: seed-secret
     namespace: garden
+# Configuration of backup object store provider into which the backups will be stored.
+# If you don't want to have backups then don't specify the `.spec.backup` key.
+  backup:
+    type: <provider-name> # e.g., aws, azure, gcp, ...
+    region: europe-1
+    secretRef:
+      name: backup-secret
+      namespace: garden
   dns:
     ingressDomain: dev.my-seed.example.com
   networks: # seed and shoot networks must be disjunct

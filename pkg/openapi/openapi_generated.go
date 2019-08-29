@@ -34,6 +34,7 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone":                      schema_pkg_apis_core_v1alpha1_AvailabilityZone(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucket":                          schema_pkg_apis_core_v1alpha1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketList":                      schema_pkg_apis_core_v1alpha1_BackupBucketList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider":                  schema_pkg_apis_core_v1alpha1_BackupBucketProvider(ref),
@@ -44,6 +45,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntrySpec":                       schema_pkg_apis_core_v1alpha1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryStatus":                     schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Cloud":                                 schema_pkg_apis_core_v1alpha1_Cloud(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile":                          schema_pkg_apis_core_v1alpha1_CloudProfile(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfileList":                      schema_pkg_apis_core_v1alpha1_CloudProfileList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfileSpec":                      schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo":                           schema_pkg_apis_core_v1alpha1_ClusterInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition":                             schema_pkg_apis_core_v1alpha1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":                  schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
@@ -56,11 +60,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":            schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                    schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                              schema_pkg_apis_core_v1alpha1_Endpoint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion":                      schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener":                              schema_pkg_apis_core_v1alpha1_Gardener(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.K8SNetworks":                           schema_pkg_apis_core_v1alpha1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes":                            schema_pkg_apis_core_v1alpha1_Kubernetes(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings":                    schema_pkg_apis_core_v1alpha1_KubernetesSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError":                             schema_pkg_apis_core_v1alpha1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation":                         schema_pkg_apis_core_v1alpha1_LastOperation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage":                          schema_pkg_apis_core_v1alpha1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType":                           schema_pkg_apis_core_v1alpha1_MachineType(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineTypeStorage":                    schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant":                                 schema_pkg_apis_core_v1alpha1_Plant(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantList":                             schema_pkg_apis_core_v1alpha1_PlantList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec":                             schema_pkg_apis_core_v1alpha1_PlantSpec(ref),
@@ -74,6 +83,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Quota":                                 schema_pkg_apis_core_v1alpha1_Quota(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaList":                             schema_pkg_apis_core_v1alpha1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaSpec":                             schema_pkg_apis_core_v1alpha1_QuotaSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region":                                schema_pkg_apis_core_v1alpha1_Region(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBinding":                         schema_pkg_apis_core_v1alpha1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingList":                     schema_pkg_apis_core_v1alpha1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
@@ -88,6 +98,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume":                            schema_pkg_apis_core_v1alpha1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                    schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                         schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType":                            schema_pkg_apis_core_v1alpha1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud":                             schema_pkg_apis_garden_v1beta1_AWSCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints":                       schema_pkg_apis_garden_v1beta1_AWSConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks":                          schema_pkg_apis_garden_v1beta1_AWSNetworks(ref),
@@ -163,6 +174,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage":                         schema_pkg_apis_garden_v1beta1_MachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImageVersion":                  schema_pkg_apis_garden_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType":                          schema_pkg_apis_garden_v1beta1_MachineType(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage":                   schema_pkg_apis_garden_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance":                          schema_pkg_apis_garden_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate":                schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow":                schema_pkg_apis_garden_v1beta1_MaintenanceTimeWindow(ref),
@@ -467,6 +479,55 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/runtime.Unknown":                                                   schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
 		"k8s.io/apimachinery/pkg/util/intstr.IntOrString":                                           schema_apimachinery_pkg_util_intstr_IntOrString(ref),
 		"k8s.io/apimachinery/pkg/version.Info":                                                      schema_k8sio_apimachinery_pkg_version_Info(ref),
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_AvailabilityZone(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AvailabilityZone is an availability zone.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is an an availability zone name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"unavailableMachineTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UnavailableMachineTypes is a list of machine type names that are not availability in this zone.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"unavailableVolumeTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UnavailableVolumeTypes is a list of volume type names that are not availability in this zone.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 
@@ -854,6 +915,196 @@ func schema_pkg_apis_core_v1alpha1_Cloud(ref common.ReferenceCallback) common.Op
 				Required: []string{"type", "region"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CloudProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudProfile represents certain properties about a provider environment.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec defines the provider environment properties.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfileSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfileSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CloudProfileList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudProfileList is a collection of CloudProfiles.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of CloudProfiles.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudProfileSpec is the specification of a CloudProfile. It must contain exactly one of its defined keys.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"caBundle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"kubernetes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings"),
+						},
+					},
+					"machineImages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage"),
+									},
+								},
+							},
+						},
+					},
+					"machineTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType"),
+									},
+								},
+							},
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig contains provider-specific configuration for the profile.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
+					"regions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Regions contains constraints regarding allowed values for regions and zones.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region"),
+									},
+								},
+							},
+						},
+					},
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the name of the provider.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"volumeTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "regions", "type"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -1331,6 +1582,35 @@ func schema_pkg_apis_core_v1alpha1_Endpoint(ref common.ReferenceCallback) common
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExpirableVersion contains a version and an expiration date.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this version expires.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Gardener(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1418,6 +1698,34 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 				Required: []string{"version"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_KubernetesSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"},
 	}
 }
 
@@ -1511,6 +1819,125 @@ func schema_pkg_apis_core_v1alpha1_LastOperation(ref common.ReferenceCallback) c
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImage defines the name and multiple versions of the machine image in any environment.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains versions and expiration dates of the machine image",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "versions"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MachineType(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineType contains certain properties of a machine type.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPU is the number of CPUs for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"gpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GPU is the number of GPUs for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"memory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Memory is the amount of memory for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the machine type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Storage is the amount of storage associated with the root volume of this machine type.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineTypeStorage"),
+						},
+					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the machine type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"cpu", "gpu", "memory", "name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineTypeStorage is the amount of storage associated with the root volume of this machine type.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Size is the storage size.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the storage.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"size", "type"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -2059,6 +2486,42 @@ func schema_pkg_apis_core_v1alpha1_QuotaSpec(ref common.ReferenceCallback) commo
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Region(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Region contains certain properties of a region.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is a region name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is a list of availability zones in this region.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone"},
 	}
 }
 
@@ -2626,6 +3089,41 @@ func schema_pkg_apis_core_v1alpha1_ShootNetworks(ref common.ReferenceCallback) c
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_VolumeType(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "VolumeType contains certain properties of a volume type.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class is the class of the volume type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the volume type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the volume type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"class", "name"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_AWSCloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2760,7 +3258,7 @@ func schema_pkg_apis_garden_v1beta1_AWSConstraints(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
@@ -3288,7 +3786,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
@@ -3329,6 +3827,12 @@ func schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref common.ReferenceCall
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Storage is the amount of storage associated with the root volume of this machine type.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage"),
+						},
+					},
 					"memory": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Memory is the amount of memory for this machine type.",
@@ -3353,7 +3857,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -3791,7 +4295,7 @@ func schema_pkg_apis_garden_v1beta1_AzureConstraints(ref common.ReferenceCallbac
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes"},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes"},
 			},
 		},
 		Dependencies: []string{
@@ -4878,7 +5382,7 @@ func schema_pkg_apis_garden_v1beta1_GCPConstraints(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
@@ -6173,6 +6677,12 @@ func schema_pkg_apis_garden_v1beta1_MachineType(ref common.ReferenceCallback) co
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Storage is the amount of storage associated with the root volume of this machine type.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage"),
+						},
+					},
 					"memory": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Memory is the amount of memory for this machine type.",
@@ -6181,6 +6691,35 @@ func schema_pkg_apis_garden_v1beta1_MachineType(ref common.ReferenceCallback) co
 					},
 				},
 				Required: []string{"name", "cpu", "gpu", "memory"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_MachineTypeStorage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineTypeStorage is the amount of storage associated with the root volume of this machine type.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Size is the storage size.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the storage.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"size", "type"},
 			},
 		},
 		Dependencies: []string{
@@ -6642,7 +7181,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
+				Required: []string{"floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
@@ -6782,6 +7321,12 @@ func schema_pkg_apis_garden_v1beta1_OpenStackMachineType(ref common.ReferenceCal
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Storage is the amount of storage associated with the root volume of this machine type.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage"),
+						},
+					},
 					"memory": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Memory is the amount of memory for this machine type.",
@@ -6806,7 +7351,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackMachineType(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -7190,7 +7735,7 @@ func schema_pkg_apis_garden_v1beta1_PacketConstraints(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 			},
 		},
 		Dependencies: []string{

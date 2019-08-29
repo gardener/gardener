@@ -63,6 +63,9 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["backupentries"] = backupEntryStorage.BackupEntry
 	storage["backupentries/status"] = backupEntryStorage.Status
 
+	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
+	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
 
@@ -81,13 +84,12 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	quotaStorage := quotastore.NewStorage(restOptionsGetter)
 	storage["quotas"] = quotaStorage.Quota
 
-	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
+	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
+	storage["secretbindings"] = secretBindingStorage.SecretBinding
+
 	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
-
-	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
-	storage["secretbindings"] = secretBindingStorage.SecretBinding
 
 	return storage
 }
