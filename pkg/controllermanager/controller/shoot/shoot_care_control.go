@@ -204,7 +204,7 @@ func (c *defaultCareControl) updateShootConditions(shoot *gardenv1beta1.Shoot, c
 }
 
 // garbageCollection cleans the Seed and the Shoot cluster from no longer required
-// objects. It receives a Garden object <garden> which stores the Shoot object.
+// objects. It receives a botanist object <botanist> which stores the Shoot object.
 func garbageCollection(initShootClients func() error, botanist *botanistpkg.Botanist) {
 	var (
 		qualifiedShootName = fmt.Sprintf("%s/%s", botanist.Shoot.Info.Namespace, botanist.Shoot.Info.Name)

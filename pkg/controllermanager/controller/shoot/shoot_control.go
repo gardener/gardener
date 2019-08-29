@@ -21,22 +21,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
-
-	"github.com/gardener/gardener/pkg/controllermanager/controller/utils"
-
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -175,11 +171,6 @@ func (c *Controller) deleteShoot(shoot *gardenv1beta1.Shoot, o *operation.Operat
 		return reconcile.Result{}, nil
 	}
 
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardenv1beta1.EventDeleting, "Deleting Shoot cluster")
-	if err := c.updateShootStatusDeleteStart(o); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		lastErr := gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not check and sync Shoot with Seed: %v", err))
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, lastErr.Description)
@@ -196,20 +187,44 @@ func (c *Controller) deleteShoot(shoot *gardenv1beta1.Shoot, o *operation.Operat
 		return reconcile.Result{}, nil
 	}
 
-	if shoot.Spec.Cloud.Seed != nil {
-		if err := c.runDeleteShootFlow(o); err != nil {
-			c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, err.Description)
-			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusDeleteError(o, err))
-		}
+	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
+	// cluster. This implies that there can not be any resource which we have to delete.
+	// We accept the deletion.
+	if len(o.Shoot.Info.Status.UID) == 0 {
+		o.Logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
+		return c.finalizeShootDeletion(shoot, o)
+	}
 
-		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
-			lastErr := &gardencorev1alpha1.LastError{Description: fmt.Sprintf("Could not delete Cluster resource in seed: %s", err)}
-			c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, lastErr.Description)
-			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusDeleteError(o, lastErr))
-		}
+	// If the shoot has never been scheduled (this is the case e.g when the scheduler cannot find a seed for the shoot),
+	// the gardener controller manager has never reconciled it. This implies that there can not be any resource which we
+	// have to delete. We accept the deletion.
+	if o.Shoot.Info.Spec.Cloud.Seed == nil {
+		o.Logger.Info("`.spec.cloud.seed` is empty, assuming Shoot cluster has never been scheduled - thus never existed. Deletion accepted.")
+		return c.finalizeShootDeletion(shoot, o)
+	}
+
+	// Trigger regular shoot deletion flow.
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardenv1beta1.EventDeleting, "Deleting Shoot cluster")
+	if err := c.updateShootStatusDeleteStart(o); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := c.runDeleteShootFlow(o); err != nil {
+		c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, err.Description)
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusDeleteError(o, err))
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardenv1beta1.EventDeleted, "Deleted Shoot cluster")
+	return c.finalizeShootDeletion(shoot, o)
+}
+
+func (c *Controller) finalizeShootDeletion(shoot *gardenv1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
+	if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
+		lastErr := gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
+		c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, lastErr.Description)
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusDeleteError(o, lastErr))
+	}
+
 	return reconcile.Result{}, c.updateShootStatusDeleteSuccess(o)
 }
 

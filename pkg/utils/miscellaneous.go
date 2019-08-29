@@ -106,8 +106,8 @@ func TimeElapsed(timestamp *metav1.Time, duration time.Duration) bool {
 	}
 
 	var (
-		end = metav1.NewTime(timestamp.Time.Add(duration))
-		now = metav1.Now()
+		end = metav1.NewTime(timestamp.Time.UTC().Add(duration))
+		now = metav1.NewTime(time.Now().UTC())
 	)
 	return !now.Before(&end)
 }

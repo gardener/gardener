@@ -33,13 +33,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/version"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
-// It receives a Garden object <garden> which stores the Shoot object and the operation type.
+// It receives an Operation object <o> which stores the Shoot object.
 func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
 	// We create the botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
@@ -375,15 +376,19 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 }
 
 func (c *Controller) updateShootStatusResetRetry(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
-	now := metav1.Now()
+	now := metav1.NewTime(time.Now().UTC())
 	return c.updateShootStatusReconcile(o, operationType, gardencorev1alpha1.LastOperationStateError, &now)
 }
 
 func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	var retryCycleStartTime *metav1.Time
 
-	if o.Shoot.Info.Status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
-		now := metav1.Now()
+	if o.Shoot.Info.Status.RetryCycleStartTime == nil ||
+		o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
+		o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
+		(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateFailed) {
+
+		now := metav1.NewTime(time.Now().UTC())
 		retryCycleStartTime = &now
 	}
 
