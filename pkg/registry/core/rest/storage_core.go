@@ -24,6 +24,7 @@ import (
 
 	// garden storage for migration
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
+	projectstore "github.com/gardener/gardener/pkg/registry/garden/project/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +66,10 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	plantStorage := plantstore.NewStorage(restOptionsGetter)
 	storage["plants"] = plantStorage.Plant
 	storage["plants/status"] = plantStorage.Status
+
+	projectStorage := projectstore.NewStorage(restOptionsGetter)
+	storage["projects"] = projectStorage.Project
+	storage["projects/status"] = projectStorage.Status
 
 	return storage
 }

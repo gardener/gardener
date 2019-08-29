@@ -594,11 +594,8 @@ func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorLi
 func ValidateProjectSpec(projectSpec *garden.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	for i, member := range projectSpec.Members {
-		allErrs = append(allErrs, ValidateSubject(member, fldPath.Child("members").Index(i))...)
-	}
-	for i, viewer := range projectSpec.Viewers {
-		allErrs = append(allErrs, ValidateSubject(viewer, fldPath.Child("viewers").Index(i))...)
+	for i, member := range projectSpec.ProjectMembers {
+		allErrs = append(allErrs, ValidateSubject(member.Subject, fldPath.Child("members").Index(i))...)
 	}
 	if createdBy := projectSpec.CreatedBy; createdBy != nil {
 		allErrs = append(allErrs, ValidateSubject(*createdBy, fldPath.Child("createdBy"))...)

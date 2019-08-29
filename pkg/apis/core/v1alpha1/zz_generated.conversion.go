@@ -25,6 +25,7 @@ import (
 
 	core "github.com/gardener/gardener/pkg/apis/core"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
+	rbacv1 "k8s.io/api/rbac/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
@@ -258,6 +259,56 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*Project)(nil), (*garden.Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Project_To_garden_Project(a.(*Project), b.(*garden.Project), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.Project)(nil), (*Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_Project_To_v1alpha1_Project(a.(*garden.Project), b.(*Project), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectList)(nil), (*garden.ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectList_To_garden_ProjectList(a.(*ProjectList), b.(*garden.ProjectList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ProjectList)(nil), (*ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProjectList_To_v1alpha1_ProjectList(a.(*garden.ProjectList), b.(*ProjectList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectMember)(nil), (*garden.ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectMember_To_garden_ProjectMember(a.(*ProjectMember), b.(*garden.ProjectMember), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ProjectMember)(nil), (*ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProjectMember_To_v1alpha1_ProjectMember(a.(*garden.ProjectMember), b.(*ProjectMember), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectSpec)(nil), (*garden.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(a.(*ProjectSpec), b.(*garden.ProjectSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(a.(*garden.ProjectSpec), b.(*ProjectSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectStatus)(nil), (*garden.ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectStatus_To_garden_ProjectStatus(a.(*ProjectStatus), b.(*garden.ProjectStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ProjectStatus)(nil), (*ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProjectStatus_To_v1alpha1_ProjectStatus(a.(*garden.ProjectStatus), b.(*ProjectStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ProviderConfig)(nil), (*core.ProviderConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ProviderConfig_To_core_ProviderConfig(a.(*ProviderConfig), b.(*core.ProviderConfig), scope)
 	}); err != nil {
@@ -368,6 +419,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*garden.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(a.(*garden.ProjectSpec), b.(*ProjectSpec), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*garden.SeedSpec)(nil), (*SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_SeedSpec_To_v1alpha1_SeedSpec(a.(*garden.SeedSpec), b.(*SeedSpec), scope)
 	}); err != nil {
@@ -375,6 +431,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*garden.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_Seed_To_v1alpha1_Seed(a.(*garden.Seed), b.(*Seed), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*ProjectSpec)(nil), (*garden.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(a.(*ProjectSpec), b.(*garden.ProjectSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -931,6 +992,144 @@ func autoConvert_core_PlantStatus_To_v1alpha1_PlantStatus(in *core.PlantStatus, 
 // Convert_core_PlantStatus_To_v1alpha1_PlantStatus is an autogenerated conversion function.
 func Convert_core_PlantStatus_To_v1alpha1_PlantStatus(in *core.PlantStatus, out *PlantStatus, s conversion.Scope) error {
 	return autoConvert_core_PlantStatus_To_v1alpha1_PlantStatus(in, out, s)
+}
+
+func autoConvert_v1alpha1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_ProjectStatus_To_garden_ProjectStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_Project_To_garden_Project is an autogenerated conversion function.
+func Convert_v1alpha1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Project_To_garden_Project(in, out, s)
+}
+
+func autoConvert_garden_Project_To_v1alpha1_Project(in *garden.Project, out *Project, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_garden_ProjectStatus_To_v1alpha1_ProjectStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_garden_Project_To_v1alpha1_Project is an autogenerated conversion function.
+func Convert_garden_Project_To_v1alpha1_Project(in *garden.Project, out *Project, s conversion.Scope) error {
+	return autoConvert_garden_Project_To_v1alpha1_Project(in, out, s)
+}
+
+func autoConvert_v1alpha1_ProjectList_To_garden_ProjectList(in *ProjectList, out *garden.ProjectList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]garden.Project, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_Project_To_garden_Project(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ProjectList_To_garden_ProjectList is an autogenerated conversion function.
+func Convert_v1alpha1_ProjectList_To_garden_ProjectList(in *ProjectList, out *garden.ProjectList, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ProjectList_To_garden_ProjectList(in, out, s)
+}
+
+func autoConvert_garden_ProjectList_To_v1alpha1_ProjectList(in *garden.ProjectList, out *ProjectList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Project, len(*in))
+		for i := range *in {
+			if err := Convert_garden_Project_To_v1alpha1_Project(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_garden_ProjectList_To_v1alpha1_ProjectList is an autogenerated conversion function.
+func Convert_garden_ProjectList_To_v1alpha1_ProjectList(in *garden.ProjectList, out *ProjectList, s conversion.Scope) error {
+	return autoConvert_garden_ProjectList_To_v1alpha1_ProjectList(in, out, s)
+}
+
+func autoConvert_v1alpha1_ProjectMember_To_garden_ProjectMember(in *ProjectMember, out *garden.ProjectMember, s conversion.Scope) error {
+	out.Subject = in.Subject
+	out.Role = in.Role
+	return nil
+}
+
+// Convert_v1alpha1_ProjectMember_To_garden_ProjectMember is an autogenerated conversion function.
+func Convert_v1alpha1_ProjectMember_To_garden_ProjectMember(in *ProjectMember, out *garden.ProjectMember, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ProjectMember_To_garden_ProjectMember(in, out, s)
+}
+
+func autoConvert_garden_ProjectMember_To_v1alpha1_ProjectMember(in *garden.ProjectMember, out *ProjectMember, s conversion.Scope) error {
+	out.Subject = in.Subject
+	out.Role = in.Role
+	return nil
+}
+
+// Convert_garden_ProjectMember_To_v1alpha1_ProjectMember is an autogenerated conversion function.
+func Convert_garden_ProjectMember_To_v1alpha1_ProjectMember(in *garden.ProjectMember, out *ProjectMember, s conversion.Scope) error {
+	return autoConvert_garden_ProjectMember_To_v1alpha1_ProjectMember(in, out, s)
+}
+
+func autoConvert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
+	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
+	out.Description = (*string)(unsafe.Pointer(in.Description))
+	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
+	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	// WARNING: in.Members requires manual conversion: does not exist in peer-type
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	return nil
+}
+
+func autoConvert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(in *garden.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
+	out.Description = (*string)(unsafe.Pointer(in.Description))
+	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
+	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	// WARNING: in.ProjectMembers requires manual conversion: does not exist in peer-type
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	return nil
+}
+
+func autoConvert_v1alpha1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Phase = garden.ProjectPhase(in.Phase)
+	return nil
+}
+
+// Convert_v1alpha1_ProjectStatus_To_garden_ProjectStatus is an autogenerated conversion function.
+func Convert_v1alpha1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ProjectStatus_To_garden_ProjectStatus(in, out, s)
+}
+
+func autoConvert_garden_ProjectStatus_To_v1alpha1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Phase = ProjectPhase(in.Phase)
+	return nil
+}
+
+// Convert_garden_ProjectStatus_To_v1alpha1_ProjectStatus is an autogenerated conversion function.
+func Convert_garden_ProjectStatus_To_v1alpha1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
+	return autoConvert_garden_ProjectStatus_To_v1alpha1_ProjectStatus(in, out, s)
 }
 
 func autoConvert_v1alpha1_ProviderConfig_To_core_ProviderConfig(in *ProviderConfig, out *core.ProviderConfig, s conversion.Scope) error {

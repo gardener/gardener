@@ -1,7 +1,7 @@
 # Project objects logically group team members, secrets, and Shoot clusters. They result in Kubernetes namespaces
 # prefixed with "garden-".
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: garden.sapcloud.io/v1beta1
 kind: Project
 metadata:
   name: dev
@@ -14,11 +14,10 @@ spec:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
-    role: admin
+  viewers:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: bob.doe@example.com
-    role: viewer
 # description: "This is my first project"
 # purpose: "Experimenting with Gardener"
   # The `spec.namespace` field is optional and will be initialized if unset - the resulting

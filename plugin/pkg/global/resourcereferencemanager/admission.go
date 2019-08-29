@@ -255,13 +255,16 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 
 		if project.Spec.Owner != nil {
 			ownerPartOfMember := false
-			for _, member := range project.Spec.Members {
-				if member == *project.Spec.Owner {
+			for _, member := range project.Spec.ProjectMembers {
+				if member.Subject == *project.Spec.Owner {
 					ownerPartOfMember = true
 				}
 			}
 			if !ownerPartOfMember {
-				project.Spec.Members = append(project.Spec.Members, *project.Spec.Owner)
+				project.Spec.ProjectMembers = append(project.Spec.ProjectMembers, garden.ProjectMember{
+					Subject: *project.Spec.Owner,
+					Role:    garden.ProjectMemberAdmin,
+				})
 			}
 		}
 	}

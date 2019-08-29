@@ -89,3 +89,33 @@ func Convert_garden_SeedSpec_To_v1alpha1_SeedSpec(in *garden.SeedSpec, out *Seed
 func Convert_v1alpha1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
 	return autoConvert_v1alpha1_SeedSpec_To_garden_SeedSpec(in, out, s)
 }
+
+func Convert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	for _, member := range in.Members {
+		out.ProjectMembers = append(out.ProjectMembers, garden.ProjectMember{
+			Subject: member.Subject,
+			Role:    member.Role,
+		})
+	}
+
+	return nil
+}
+
+func Convert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(in *garden.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_garden_ProjectSpec_To_v1alpha1_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	for _, member := range in.ProjectMembers {
+		out.Members = append(out.Members, ProjectMember{
+			Subject: member.Subject,
+			Role:    member.Role,
+		})
+	}
+
+	return nil
+}

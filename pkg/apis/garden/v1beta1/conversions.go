@@ -327,3 +327,42 @@ func Convert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedS
 func Convert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
 	return autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in, out, s)
 }
+
+func Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	for _, member := range in.Members {
+		out.ProjectMembers = append(out.ProjectMembers, garden.ProjectMember{
+			Subject: member,
+			Role:    garden.ProjectMemberAdmin,
+		})
+	}
+
+	for _, viewer := range in.Viewers {
+		out.ProjectMembers = append(out.ProjectMembers, garden.ProjectMember{
+			Subject: viewer,
+			Role:    garden.ProjectMemberViewer,
+		})
+	}
+
+	return nil
+}
+
+func Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	for _, member := range in.ProjectMembers {
+		if member.Role == garden.ProjectMemberAdmin {
+			out.Members = append(out.Members, member.Subject)
+		}
+		if member.Role == garden.ProjectMemberViewer {
+			out.Viewers = append(out.Viewers, member.Subject)
+		}
+	}
+
+	return nil
+}

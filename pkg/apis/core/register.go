@@ -54,6 +54,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&garden.SeedList{},
 		&Plant{},
 		&PlantList{},
+		&garden.Project{},
+		&garden.ProjectList{},
 	)
 	return nil
 }

@@ -55,6 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SeedList{},
 		&Plant{},
 		&PlantList{},
+		&Project{},
+		&ProjectList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
