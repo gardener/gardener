@@ -510,10 +510,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Spec.Members).To(ContainElement(Equal(rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     defaultUserName,
+				Expect(project.Spec.ProjectMembers).To(ContainElement(Equal(garden.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     rbacv1.UserKind,
+						Name:     defaultUserName,
+					},
+					Role: garden.ProjectMemberAdmin,
 				})))
 			})
 		})

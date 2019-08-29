@@ -2260,18 +2260,22 @@ var _ = Describe("validation", func() {
 						Kind:     rbacv1.UserKind,
 						Name:     "john.doe@example.com",
 					},
-					Members: []rbacv1.Subject{
+					ProjectMembers: []garden.ProjectMember{
 						{
-							APIGroup: "rbac.authorization.k8s.io",
-							Kind:     rbacv1.UserKind,
-							Name:     "alice.doe@example.com",
+							Subject: rbacv1.Subject{
+								APIGroup: "rbac.authorization.k8s.io",
+								Kind:     rbacv1.UserKind,
+								Name:     "alice.doe@example.com",
+							},
+							Role: garden.ProjectMemberAdmin,
 						},
-					},
-					Viewers: []rbacv1.Subject{
 						{
-							APIGroup: "rbac.authorization.k8s.io",
-							Kind:     rbacv1.UserKind,
-							Name:     "bob.doe@example.com",
+							Subject: rbacv1.Subject{
+								APIGroup: "rbac.authorization.k8s.io",
+								Kind:     rbacv1.UserKind,
+								Name:     "bob.doe@example.com",
+							},
+							Role: garden.ProjectMemberViewer,
 						},
 					},
 				},
@@ -2343,7 +2347,12 @@ var _ = Describe("validation", func() {
 
 				project.Spec.Owner = &subject
 				project.Spec.CreatedBy = &subject
-				project.Spec.Members = []rbacv1.Subject{subject}
+				project.Spec.ProjectMembers = []garden.ProjectMember{
+					{
+						Subject: subject,
+						Role: garden.ProjectMemberAdmin,
+					},
+				}
 
 				errList := ValidateProject(project)
 

@@ -10,6 +10,7 @@
 * [Proposal](#proposal)
     * [`ProviderProfile` resource](#providerprofile-resource)
     * [`Seed` resource](#seed-resource)
+    * [`Project` resource](#project-resource)
     * [`SecretBinding` resource](#secretbinding-resource)
     * [`Quota` resource](#quota-resource)
     * [`BackupBucket` resource](#backupbucket-resource)
@@ -280,6 +281,39 @@ status:
     name: gardener-controller-manager-7fhn9ikan73n-7jhka
     version: 1.0.0
   observedGeneration: 1
+```
+
+### `Project` resource
+
+Special note: The `members` and `viewers` field of the `garden.sapcloud.io/v1beta1.Project` resource will be merged together into one `members` field.
+Every member will have a role that is either `admin` or `viewer`.
+This will allow us to add new roles without changing the API.
+
+```yaml
+apiVersion: core.gardener.cloud/v1alpha1
+kind: Project
+metadata:
+  name: example
+spec:
+  description: Example project
+  members:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: john.doe@example.com
+    role: admin
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: joe.doe@example.com
+    role: viewer
+  namespace: garden-example
+  owner:
+    apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: john.doe@example.com
+  purpose: Example project
+status:
+  observedGeneration: 1
+  phase: Ready
 ```
 
 ### `SecretBinding` resource

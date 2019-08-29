@@ -15,9 +15,24 @@
 package v1alpha1
 
 import (
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
+}
+
+// SetDefaults_Project sets default values for Project objects.
+func SetDefaults_Project(obj *Project) {
+	if obj.Spec.Owner != nil && len(obj.Spec.Owner.APIGroup) == 0 {
+		switch obj.Spec.Owner.Kind {
+		case rbacv1.ServiceAccountKind:
+			obj.Spec.Owner.APIGroup = ""
+		case rbacv1.UserKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		case rbacv1.GroupKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		}
+	}
 }

@@ -56,6 +56,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantList":                             schema_pkg_apis_core_v1alpha1_PlantList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec":                             schema_pkg_apis_core_v1alpha1_PlantSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus":                           schema_pkg_apis_core_v1alpha1_PlantStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Project":                               schema_pkg_apis_core_v1alpha1_Project(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectList":                           schema_pkg_apis_core_v1alpha1_ProjectList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember":                         schema_pkg_apis_core_v1alpha1_ProjectMember(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectSpec":                           schema_pkg_apis_core_v1alpha1_ProjectSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectStatus":                         schema_pkg_apis_core_v1alpha1_ProjectStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                        schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup":                            schema_pkg_apis_core_v1alpha1_SeedBackup(ref),
@@ -1302,6 +1307,239 @@ func schema_pkg_apis_core_v1alpha1_PlantStatus(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Project(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Project holds certain properties about a Gardener project.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec defines the project properties.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Most recently observed status of the Project.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ProjectList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectList is a collection of Projects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of Projects.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Project"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Project", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ProjectMember(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectMember is a member of a project.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\". If the Authorizer does not recognized the kind value, the Authorizer should report an error.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIGroup holds the API group of the referenced subject. Defaults to \"\" for ServiceAccount subjects. Defaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the object being referenced.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty the Authorizer should report an error.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"role": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Role represents the role of this member.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"kind", "name", "role"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ProjectSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectSpec is the specification of a Project.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"createdBy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project.",
+							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
+						},
+					},
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Description is a human-readable description of what the project is used for.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"owner": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Owner is a subject representing a user name, an email address, or any other identifier of a user owning the project.",
+							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
+						},
+					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is a human-readable explanation of the project's purpose.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"members": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Members is a list of subjects representing a user name, an email address, or any other identifier of a user, group, or service account that has a certain role.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember"),
+									},
+								},
+							},
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember", "k8s.io/api/rbac/v1.Subject"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ProjectStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectStatus holds the most recently observed status of the project.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this project.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase is the current phase of the project.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
