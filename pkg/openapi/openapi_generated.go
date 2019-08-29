@@ -5109,7 +5109,7 @@ func schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref common.ReferenceCa
 					},
 					"offeredVersions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters",
+							Description: "OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5121,7 +5121,6 @@ func schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"offeredVersions"},
 			},
 		},
 		Dependencies: []string{

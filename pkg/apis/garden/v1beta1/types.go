@@ -302,8 +302,9 @@ type KubernetesConstraints struct {
 	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).
 	// +optional
 	Versions []string `json:"versions,omitempty"`
-	// OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters
-	OfferedVersions []KubernetesVersion `json:"offeredVersions"`
+	// OfferedVersions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.
+	// +optional
+	OfferedVersions []KubernetesVersion `json:"offeredVersions,omitempty"`
 }
 
 // KubernetesVersion contains the version code and optional expiration date for a kubernetes version
