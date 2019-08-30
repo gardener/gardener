@@ -53,6 +53,8 @@ var _ = Describe("roundtripper seed migration", func() {
 		podsCIDR                           = gardencorev1alpha1.CIDR("6.7.8.9/10")
 		servicesCIDR                       = gardencorev1alpha1.CIDR("11.12.13.14/15")
 		blockCIDR                          = gardencorev1alpha1.CIDR("16.17.18.19/20")
+		shootDefaultPodCIDR                = gardencorev1alpha1.CIDR("100.96.0.0/11")
+		shootDefaultServiceCIDR            = gardencorev1alpha1.CIDR("100.64.0.0/13")
 		minimumVolumeSize                  = "20Gi"
 		minimumVolumeSizeQuantity, _       = resource.ParseQuantity(minimumVolumeSize)
 		volumeProviderPurpose1             = "etcd-main"
@@ -90,6 +92,10 @@ var _ = Describe("roundtripper seed migration", func() {
 						Nodes:    nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
+						ShootDefaults: &gardencorev1alpha1.ShootNetworks{
+							Pods:     &shootDefaultPodCIDR,
+							Services: &shootDefaultServiceCIDR,
+						},
 					},
 					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
 					Taints: []gardencorev1alpha1.SeedTaint{
@@ -143,6 +149,10 @@ var _ = Describe("roundtripper seed migration", func() {
 						Nodes:    nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
+						ShootDefaults: &gardenv1beta1.ShootNetworks{
+							Pods:     &shootDefaultPodCIDR,
+							Services: &shootDefaultServiceCIDR,
+						},
 					},
 					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
 					Protected:  &trueVar,
@@ -200,6 +210,10 @@ var _ = Describe("roundtripper seed migration", func() {
 						Nodes:    nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
+						ShootDefaults: &gardenv1beta1.ShootNetworks{
+							Pods:     &shootDefaultPodCIDR,
+							Services: &shootDefaultServiceCIDR,
+						},
 					},
 					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
 					Protected:  &trueVar,
@@ -231,6 +245,10 @@ var _ = Describe("roundtripper seed migration", func() {
 						Nodes:    nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
+						ShootDefaults: &gardencorev1alpha1.ShootNetworks{
+							Pods:     &shootDefaultPodCIDR,
+							Services: &shootDefaultServiceCIDR,
+						},
 					},
 					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
 					Taints: []gardencorev1alpha1.SeedTaint{

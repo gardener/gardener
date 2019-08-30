@@ -68,5 +68,8 @@ spec:
     nodes: ${value("spec.networks.nodes", "10.240.0.0/16")}
     pods: ${value("spec.networks.pods", "10.241.128.0/17")}
     services: ${value("spec.networks.services", "10.241.0.0/17")}
+  # shootDefaults:
+  #   pods: ${value("spec.networks.shootDefaults.pods", "100.96.0.0/11")}
+  #   services: ${value("spec.networks.shootDefaults.services", "100.64.0.0/13")}
   blockCIDRs:
   - ${value("spec.cloud.region", metadataServiceCIDR)}

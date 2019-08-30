@@ -117,6 +117,19 @@ type SeedNetworks struct {
 	Pods CIDR `json:"pods"`
 	// Services is the CIDR of the service network.
 	Services CIDR `json:"services"`
+	// ShootDefaults contains the default networks CIDRs for shoots.
+	// +optional
+	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty"`
+}
+
+// ShootNetworks contains the default networks CIDRs for shoots.
+type ShootNetworks struct {
+	// Pods is the CIDR of the pod network.
+	// +optional
+	Pods *CIDR `json:"pods,omitempty"`
+	// Services is the CIDR of the service network.
+	// +optional
+	Services *CIDR `json:"services,omitempty"`
 }
 
 // SeedProvider defines the provider type and region for this Seed cluster.

@@ -556,6 +556,19 @@ type SeedNetworks struct {
 	Pods gardencorev1alpha1.CIDR `json:"pods"`
 	// Services is the CIDR of the service network.
 	Services gardencorev1alpha1.CIDR `json:"services"`
+	// ShootDefaults contains the default networks CIDRs for shoots.
+	// +optional
+	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty"`
+}
+
+// ShootNetworks contains the default networks CIDRs for shoots.
+type ShootNetworks struct {
+	// Pods is the CIDR of the pod network.
+	// +optional
+	Pods *gardencorev1alpha1.CIDR `json:"pods,omitempty"`
+	// Services is the CIDR of the service network.
+	// +optional
+	Services *gardencorev1alpha1.CIDR `json:"services,omitempty"`
 }
 
 ////////////////////////////////////////////////////
@@ -1870,3 +1883,14 @@ type BackupInfrastructureStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
+
+const (
+	// DefaultPodNetworkCIDR is a constant for the default pod network CIDR of a Shoot cluster.
+	DefaultPodNetworkCIDR = gardencorev1alpha1.CIDR("100.96.0.0/11")
+	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
+	DefaultServiceNetworkCIDR = gardencorev1alpha1.CIDR("100.64.0.0/13")
+	// DefaultPodNetworkCIDRAlicloud is a constant for the default pod network CIDR of a Alicloud Shoot cluster.
+	DefaultPodNetworkCIDRAlicloud = gardencorev1alpha1.CIDR("100.64.0.0/11")
+	// DefaultServiceNetworkCIDRAlicloud is a constant for the default service network CIDR of a Alicloud Shoot cluster.
+	DefaultServiceNetworkCIDRAlicloud = gardencorev1alpha1.CIDR("100.104.0.0/13")
+)

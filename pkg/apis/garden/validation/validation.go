@@ -728,8 +728,17 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		cidrvalidation.NewCIDR(seedSpec.Networks.Pods, networksPath.Child("pods")),
 		cidrvalidation.NewCIDR(seedSpec.Networks.Services, networksPath.Child("services")),
 	}
+	if shootDefaults := seedSpec.Networks.ShootDefaults; shootDefaults != nil {
+		if shootDefaults.Pods != nil {
+			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, networksPath.Child("shootDefaults", "pods")))
+		}
+		if shootDefaults.Services != nil {
+			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Services, networksPath.Child("shootDefaults", "services")))
+		}
+	}
+
 	allErrs = append(allErrs, validateCIDRParse(networks...)...)
-	allErrs = append(allErrs, validateCIDROVerlap(networks, networks, false)...)
+	allErrs = append(allErrs, validateCIDROverlap(networks, networks, false)...)
 
 	if seedSpec.Backup != nil {
 		if len(seedSpec.Backup.Provider) == 0 {
@@ -1177,9 +1186,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		allErrs = append(allErrs, validateCIDRsAreCanonical(awsPath, aws.Networks.VPC.CIDR, &nodes, &pods, &services, aws.Networks.Internal, aws.Networks.Public, aws.Networks.Workers)...)
 
 		// make sure that VPC cidrs don't overlap with eachother
-		allErrs = append(allErrs, validateCIDROVerlap(allVPCCIDRs, allVPCCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap(allVPCCIDRs, allVPCCIDRs, false)...)
 
-		allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{pods, services}, allVPCCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap([]cidrvalidation.CIDR{pods, services}, allVPCCIDRs, false)...)
 
 		workersPath := awsPath.Child("workers")
 		if len(aws.Workers) == 0 {
@@ -1311,16 +1320,16 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			internalCIDR := make([]cidrvalidation.CIDR, 0, 1)
 			internalCIDR = append(internalCIDR, cidrvalidation.NewCIDR(*gcp.Networks.Internal, gcpPath.Child("networks", "internal")))
 			allErrs = append(allErrs, validateCIDRParse(internalCIDR...)...)
-			allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{pods, services}, internalCIDR, false)...)
-			allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{nodes}, internalCIDR, false)...)
-			allErrs = append(allErrs, validateCIDROVerlap(workerCIDRs, internalCIDR, false)...)
+			allErrs = append(allErrs, validateCIDROverlap([]cidrvalidation.CIDR{pods, services}, internalCIDR, false)...)
+			allErrs = append(allErrs, validateCIDROverlap([]cidrvalidation.CIDR{nodes}, internalCIDR, false)...)
+			allErrs = append(allErrs, validateCIDROverlap(workerCIDRs, internalCIDR, false)...)
 		}
 
 		allErrs = append(allErrs, validateCIDRParse(workerCIDRs...)...)
-		allErrs = append(allErrs, validateCIDROVerlap(workerCIDRs, workerCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap(workerCIDRs, workerCIDRs, false)...)
 
-		allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{pods, services}, workerCIDRs, false)...)
-		allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{nodes}, workerCIDRs, true)...)
+		allErrs = append(allErrs, validateCIDROverlap([]cidrvalidation.CIDR{pods, services}, workerCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap([]cidrvalidation.CIDR{nodes}, workerCIDRs, true)...)
 
 		if gcp.Networks.VPC != nil && len(gcp.Networks.VPC.Name) == 0 {
 			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "vpc", "name"), gcp.Networks.VPC.Name, "vpc name must not be empty when vpc key is provided"))
@@ -1390,7 +1399,7 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, workerCIDR.ValidateParse()...)
 		}
 
-		allErrs = append(allErrs, validateCIDROVerlap(workerCIDRs, workerCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap(workerCIDRs, workerCIDRs, false)...)
 
 		if nodes != nil {
 			allErrs = append(allErrs, nodes.ValidateSubset(workerCIDRs...)...)
@@ -1448,7 +1457,7 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, workerCIDR.ValidateParse()...)
 		}
 
-		allErrs = append(allErrs, validateCIDROVerlap(workerCIDRs, workerCIDRs, false)...)
+		allErrs = append(allErrs, validateCIDROverlap(workerCIDRs, workerCIDRs, false)...)
 
 		if nodes != nil {
 			allErrs = append(allErrs, nodes.ValidateSubset(workerCIDRs...)...)
@@ -1595,7 +1604,11 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS, oldSpec.Cloud.AWS, awsPath)...)
 		return allErrs
 	} else if newSpec.Cloud.AWS != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks, oldSpec.Cloud.AWS.Networks, awsPath.Child("networks"))...)
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.AWS.Networks.K8SNetworks, newSpec.Cloud.AWS.Networks.K8SNetworks, awsPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.VPC, oldSpec.Cloud.AWS.Networks.VPC, awsPath.Child("networks", "vpc"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Internal, oldSpec.Cloud.AWS.Networks.Internal, awsPath.Child("networks", "internal"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Public, oldSpec.Cloud.AWS.Networks.Public, awsPath.Child("networks", "public"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Workers, oldSpec.Cloud.AWS.Networks.Workers, awsPath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Zones, oldSpec.Cloud.AWS.Zones, awsPath.Child("zones"))...)
 	}
 
@@ -1604,8 +1617,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure, oldSpec.Cloud.Azure, azurePath)...)
 		return allErrs
 	} else if newSpec.Cloud.Azure != nil {
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.Azure.Networks.K8SNetworks, newSpec.Cloud.Azure.Networks.K8SNetworks, azurePath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks.VNet, oldSpec.Cloud.Azure.Networks.VNet, azurePath.Child("networks", "vnet"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks.Workers, oldSpec.Cloud.Azure.Networks.Workers, azurePath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.ResourceGroup, oldSpec.Cloud.Azure.ResourceGroup, azurePath.Child("resourceGroup"))...)
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks, oldSpec.Cloud.Azure.Networks, azurePath.Child("networks"))...)
 	}
 
 	gcpPath := fldPath.Child("cloud", "gcp")
@@ -1613,7 +1628,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP, oldSpec.Cloud.GCP, gcpPath)...)
 		return allErrs
 	} else if newSpec.Cloud.GCP != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks, oldSpec.Cloud.GCP.Networks, gcpPath.Child("networks"))...)
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.GCP.Networks.K8SNetworks, newSpec.Cloud.GCP.Networks.K8SNetworks, gcpPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks.VPC, oldSpec.Cloud.GCP.Networks.VPC, gcpPath.Child("networks", "vpc"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks.Internal, oldSpec.Cloud.GCP.Networks.Internal, gcpPath.Child("networks", "internal"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks.Workers, oldSpec.Cloud.GCP.Networks.Workers, gcpPath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Zones, oldSpec.Cloud.GCP.Zones, gcpPath.Child("zones"))...)
 	}
 
@@ -1622,7 +1640,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack, oldSpec.Cloud.OpenStack, openStackPath)...)
 		return allErrs
 	} else if newSpec.Cloud.OpenStack != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks, oldSpec.Cloud.OpenStack.Networks, openStackPath.Child("networks"))...)
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.OpenStack.Networks.K8SNetworks, newSpec.Cloud.OpenStack.Networks.K8SNetworks, openStackPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks.Router, oldSpec.Cloud.OpenStack.Networks.Router, openStackPath.Child("networks", "router"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks.Workers, oldSpec.Cloud.OpenStack.Networks.Workers, openStackPath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones, openStackPath.Child("zones"))...)
 	}
 
@@ -1631,7 +1651,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud, oldSpec.Cloud.Alicloud, alicloudPath)...)
 		return allErrs
 	} else if newSpec.Cloud.Alicloud != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks, oldSpec.Cloud.Alicloud.Networks, alicloudPath.Child("networks"))...)
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.Alicloud.Networks.K8SNetworks, newSpec.Cloud.Alicloud.Networks.K8SNetworks, alicloudPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks.VPC, oldSpec.Cloud.Alicloud.Networks.VPC, alicloudPath.Child("networks", "vpc"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks.Workers, oldSpec.Cloud.Alicloud.Networks.Workers, alicloudPath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones, alicloudPath.Child("zones"))...)
 	}
 
@@ -1640,7 +1662,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet, oldSpec.Cloud.Packet, packetPath)...)
 		return allErrs
 	} else if newSpec.Cloud.Packet != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Networks, oldSpec.Cloud.Packet.Networks, packetPath.Child("networks"))...)
+		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.Packet.Networks.K8SNetworks, newSpec.Cloud.Packet.Networks.K8SNetworks, packetPath.Child("networks"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Zones, oldSpec.Cloud.Packet.Zones, packetPath.Child("zones"))...)
 	}
 
@@ -1648,6 +1670,20 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+	return allErrs
+}
+
+func validateK8SNetworksImmutability(oldNetworks, newNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if oldNetworks.Pods != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Pods, oldNetworks.Pods, fldPath.Child("pods"))...)
+	}
+	if oldNetworks.Services != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Services, oldNetworks.Services, fldPath.Child("services"))...)
+	}
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Nodes, oldNetworks.Nodes, fldPath.Child("nodes"))...)
+
 	return allErrs
 }
 
@@ -1774,7 +1810,7 @@ func validateCIDRParse(cidrPaths ...cidrvalidation.CIDR) (allErrs field.ErrorLis
 	return allErrs
 }
 
-func validateCIDROVerlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bool) (allErrs field.ErrorList) {
+func validateCIDROverlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bool) (allErrs field.ErrorList) {
 	for _, left := range leftPaths {
 		if left == nil {
 			continue
@@ -1840,27 +1876,21 @@ func transformK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) (nod
 		nodes = cidrvalidation.NewCIDR(*networks.Nodes, fldPath.Child("nodes"))
 		allErrs = append(allErrs, nodes.ValidateParse()...)
 		cidrs = append(cidrs, nodes)
-	} else {
-		allErrs = append(allErrs, field.Required(fldPath.Child("nodes"), "nodes CIDR cannot be unset"))
 	}
 
 	if networks.Pods != nil {
 		pods = cidrvalidation.NewCIDR(*networks.Pods, fldPath.Child("pods"))
 		allErrs = append(allErrs, pods.ValidateParse()...)
 		cidrs = append(cidrs, pods)
-	} else {
-		allErrs = append(allErrs, field.Required(fldPath.Child("pods"), "pods CIDR cannot be unset"))
 	}
 
 	if networks.Services != nil {
 		services = cidrvalidation.NewCIDR(*networks.Services, fldPath.Child("services"))
 		allErrs = append(allErrs, services.ValidateParse()...)
 		cidrs = append(cidrs, services)
-	} else {
-		allErrs = append(allErrs, field.Required(fldPath.Child("services"), "services CIDR cannot be unset"))
 	}
-	allErrs = append(allErrs, validateCIDROVerlap(cidrs, cidrs, false)...)
 
+	allErrs = append(allErrs, validateCIDROverlap(cidrs, cidrs, false)...)
 	return nodes, pods, services, allErrs
 }
 

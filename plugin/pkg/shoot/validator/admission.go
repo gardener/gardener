@@ -270,6 +270,18 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		allErrs field.ErrorList
 	)
 
+	if seed != nil {
+		if shoot.Spec.Networking == nil {
+			shoot.Spec.Networking = &garden.Networking{}
+		}
+		if shoot.Spec.Networking.Pods == nil && seed.Spec.Networks.ShootDefaults != nil {
+			shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
+		}
+		if shoot.Spec.Networking.Services == nil && seed.Spec.Networks.ShootDefaults != nil {
+			shoot.Spec.Networking.Services = seed.Spec.Networks.ShootDefaults.Services
+		}
+	}
+
 	switch cloudProviderInShoot {
 	case garden.CloudProviderAWS:
 		if shoot.Spec.Cloud.AWS.MachineImage == nil {
@@ -283,6 +295,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		for idx, worker := range shoot.Spec.Cloud.AWS.Workers {
 			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.AWS.Workers[idx].MachineImage = shoot.Spec.Cloud.AWS.MachineImage
+			}
+		}
+
+		if seed != nil {
+			if shoot.Spec.Cloud.AWS.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.AWS.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "aws", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.AWS.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.AWS.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "aws", "networks", "services"), "services is required"))
+				}
 			}
 		}
 
@@ -303,6 +333,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 		}
 
+		if seed != nil {
+			if shoot.Spec.Cloud.Azure.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Azure.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "azure", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.Azure.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Azure.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "azure", "networks", "services"), "services is required"))
+				}
+			}
+		}
+
 		allErrs = validateAzure(validationContext)
 
 	case garden.CloudProviderGCP:
@@ -317,6 +365,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		for idx, worker := range shoot.Spec.Cloud.GCP.Workers {
 			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.GCP.Workers[idx].MachineImage = shoot.Spec.Cloud.GCP.MachineImage
+			}
+		}
+
+		if seed != nil {
+			if shoot.Spec.Cloud.GCP.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.GCP.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "gcp", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.GCP.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.GCP.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "gcp", "networks", "services"), "services is required"))
+				}
 			}
 		}
 
@@ -337,6 +403,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 		}
 
+		if seed != nil {
+			if shoot.Spec.Cloud.OpenStack.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.OpenStack.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "openstack", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.OpenStack.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.OpenStack.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "openstack", "networks", "services"), "services is required"))
+				}
+			}
+		}
+
 		allErrs = validateOpenStack(validationContext)
 
 	case garden.CloudProviderPacket:
@@ -354,6 +438,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			}
 		}
 
+		if seed != nil {
+			if shoot.Spec.Cloud.Packet.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Packet.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "packet", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.Packet.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Packet.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "packet", "networks", "services"), "services is required"))
+				}
+			}
+		}
+
 		allErrs = validatePacket(validationContext)
 
 	case garden.CloudProviderAlicloud:
@@ -368,6 +470,24 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		for idx, worker := range shoot.Spec.Cloud.Alicloud.Workers {
 			if shoot.DeletionTimestamp == nil && worker.MachineImage == nil {
 				shoot.Spec.Cloud.Alicloud.Workers[idx].MachineImage = shoot.Spec.Cloud.Alicloud.MachineImage
+			}
+		}
+
+		if seed != nil {
+			if shoot.Spec.Cloud.Alicloud.Networks.Pods == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Alicloud.Networks.Pods = seed.Spec.Networks.ShootDefaults.Pods
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "alicloud", "networks", "pods"), "pods is required"))
+				}
+			}
+
+			if shoot.Spec.Cloud.Alicloud.Networks.Services == nil {
+				if seed.Spec.Networks.ShootDefaults != nil {
+					shoot.Spec.Cloud.Alicloud.Networks.Services = seed.Spec.Networks.ShootDefaults.Services
+				} else {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "cloud", "alicloud", "networks", "services"), "services is required"))
+				}
 			}
 		}
 
