@@ -109,6 +109,11 @@ func (in *BackupBucketSpec) DeepCopy() *BackupBucketSpec {
 func (in *BackupBucketStatus) DeepCopyInto(out *BackupBucketStatus) {
 	*out = *in
 	in.DefaultStatus.DeepCopyInto(&out.DefaultStatus)
+	if in.GeneratedSecretRef != nil {
+		in, out := &in.GeneratedSecretRef, &out.GeneratedSecretRef
+		*out = new(v1.SecretReference)
+		**out = **in
+	}
 	return
 }
 
