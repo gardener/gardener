@@ -151,8 +151,7 @@ type ControlInterface interface {
 }
 
 // NewDefaultPlantControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Plants. updater is the UpdaterInterface used
-// to update the status of Plants.
+// implements the documented semantics for Plants.
 func NewDefaultPlantControl(k8sGardenClient kubernetes.Interface, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, plantsLister gardencorelisters.PlantLister, secretLister kubecorev1listers.SecretLister) ControlInterface {
 	return &defaultPlantControl{
 		k8sGardenClient: k8sGardenClient,

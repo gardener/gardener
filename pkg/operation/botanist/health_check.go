@@ -616,7 +616,7 @@ func (b *Botanist) checkClusterNodes(
 		return exitCondition, err
 	}
 
-	c := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready")
+	c := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready.")
 	return &c, nil
 }
 

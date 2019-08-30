@@ -94,9 +94,8 @@ type ControlInterface interface {
 }
 
 // NewDefaultControllerRegistrationControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for ControllerRegistrations. updater is the UpdaterInterface used
-// to update the status of ControllerRegistrations. You should use an instance returned from NewDefaultControllerRegistrationControl() for any
-// scenario other than testing.
+// implements the documented semantics for ControllerRegistrations. You should use an instance returned from
+// NewDefaultControllerRegistrationControl() for any scenario other than testing.
 func NewDefaultControllerRegistrationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardenlisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
 	return &defaultControllerRegistrationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister}
 }

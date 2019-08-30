@@ -120,9 +120,8 @@ type MaintenanceControlInterface interface {
 }
 
 // NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
-// implements the documented semantics for maintaining Shoots. updater is the UpdaterInterface used
-// to update the spec of Shoots. You should use an instance returned from NewDefaultMaintenanceControl() for any
-// scenario other than testing.
+// implements the documented semantics for maintaining Shoots. You should use an instance returned from
+// NewDefaultMaintenanceControl() for any scenario other than testing.
 func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, recorder record.EventRecorder) MaintenanceControlInterface {
 	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, recorder}
 }

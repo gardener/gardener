@@ -91,9 +91,8 @@ type SeedControlInterface interface {
 }
 
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Seeds. updater is the UpdaterInterface used
-// to update the status of Seeds. You should use an instance returned from NewDefaultSeedControl() for any
-// scenario other than testing.
+// implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
+// for any scenario other than testing.
 func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, controllerRegistrationQueue workqueue.RateLimitingInterface) SeedControlInterface {
 	return &defaultSeedControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, controllerRegistrationLister, controllerInstallationLister, controllerRegistrationQueue}
 }

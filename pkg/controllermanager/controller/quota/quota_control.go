@@ -86,9 +86,8 @@ type ControlInterface interface {
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Quotas. updater is the UpdaterInterface used
-// to update the status of Quotas. You should use an instance returned from NewDefaultControl() for any
-// scenario other than testing.
+// implements the documented semantics for Quotas. You should use an instance returned from NewDefaultControl()
+// for any scenario other than testing.
 func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister}
 }
