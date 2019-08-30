@@ -17,7 +17,6 @@ package botanist
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os/exec"
@@ -29,7 +28,6 @@ import (
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -717,7 +715,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	defer b.mutex.Unlock()
 
 	for name, secret := range b.Secrets {
-		b.CheckSums[name] = computeSecretCheckSum(secret.Data)
+		b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
 	}
 
 	return nil
@@ -727,7 +725,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	var (
-		checksum = computeSecretCheckSum(b.Shoot.Secret.Data)
+		checksum = common.ComputeSecretCheckSum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gardencorev1alpha1.SecretNameCloudProvider,
@@ -1051,14 +1049,6 @@ func generateOpenVPNTLSAuth() ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
-}
-
-func computeSecretCheckSum(data map[string][]byte) string {
-	jsonString, err := json.Marshal(data)
-	if err != nil {
-		return ""
-	}
-	return utils.ComputeSHA256Hex(jsonString)
 }
 
 func gardenEtcdEncryptionSecretName(shootName string) string {

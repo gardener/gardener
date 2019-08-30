@@ -15,6 +15,11 @@
 package azurebotanist
 
 import (
+	"fmt"
+	"net/url"
+
+	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -41,4 +46,28 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	}
 
 	return secretData, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *AzureBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	var (
+		storageAccount = string(secretData["storage-account"])
+		storageKey     = string(secretData["storage-key"])
+		container      = string(secretData[common.BackupBucketName])
+	)
+	credentials, err := azblob.NewSharedKeyCredential(storageAccount, storageKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create shared key credentials: %v", err)
+	}
+
+	p := azblob.NewPipeline(credentials, azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{},
+	})
+	u, err := url.Parse(fmt.Sprintf("https://%s.%s", storageAccount, snapstore.AzureBlobStorageHostName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse service url: %v", err)
+	}
+	serviceURL := azblob.NewServiceURL(*u, p)
+	containerURL := serviceURL.NewContainerURL(container)
+	return snapstore.GetABSSnapstoreFromClient(container, "etcd-main/v1", "", 10, &containerURL)
 }

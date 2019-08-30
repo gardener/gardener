@@ -18,6 +18,8 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
+	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	plantstore "github.com/gardener/gardener/pkg/registry/core/plant/storage"
@@ -50,6 +52,14 @@ func (p StorageProvider) GroupName() string {
 
 func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
+
+	backupBucketStorage := backupbucketstore.NewStorage(restOptionsGetter)
+	storage["backupbuckets"] = backupBucketStorage.BackupBucket
+	storage["backupbuckets/status"] = backupBucketStorage.Status
+
+	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
+	storage["backupentries"] = backupEntryStorage.BackupEntry
+	storage["backupentries/status"] = backupEntryStorage.Status
 
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration

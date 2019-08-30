@@ -22,14 +22,17 @@ type headerSorter struct {
 
 // signHeader signs the header and sets it as the authorization header.
 func (conn Conn) signHeader(req *http.Request, canonicalizedResource string) {
+
+	akIf := conn.config.GetCredentials()
+
 	// Get the final authorization string
-	authorizationStr := "OSS " + conn.config.AccessKeyID + ":" + conn.getSignedStr(req, canonicalizedResource)
+	authorizationStr := "OSS " + akIf.GetAccessKeyID() + ":" + conn.getSignedStr(req, canonicalizedResource, akIf.GetAccessKeySecret())
 
 	// Give the parameter "Authorization" value
 	req.Header.Set(HTTPHeaderAuthorization, authorizationStr)
 }
 
-func (conn Conn) getSignedStr(req *http.Request, canonicalizedResource string) string {
+func (conn Conn) getSignedStr(req *http.Request, canonicalizedResource string, keySecret string) string {
 	// Find out the "x-oss-"'s address in header of the request
 	temp := make(map[string]string)
 
@@ -57,16 +60,27 @@ func (conn Conn) getSignedStr(req *http.Request, canonicalizedResource string) s
 
 	signStr := req.Method + "\n" + contentMd5 + "\n" + contentType + "\n" + date + "\n" + canonicalizedOSSHeaders + canonicalizedResource
 
-	conn.config.WriteLog(Debug, "[Req:%p]signStr:%s.\n", req, signStr)
+	// convert sign to log for easy to view
+	if conn.config.LogLevel >= Debug {
+		var signBuf bytes.Buffer
+		for i := 0; i < len(signStr); i++ {
+			if signStr[i] != '\n' {
+				signBuf.WriteByte(signStr[i])
+			} else {
+				signBuf.WriteString("\\n")
+			}
+		}
+		conn.config.WriteLog(Debug, "[Req:%p]signStr:%s\n", req, signBuf.String())
+	}
 
-	h := hmac.New(func() hash.Hash { return sha1.New() }, []byte(conn.config.AccessKeySecret))
+	h := hmac.New(func() hash.Hash { return sha1.New() }, []byte(keySecret))
 	io.WriteString(h, signStr)
 	signedStr := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 	return signedStr
 }
 
-func (conn Conn) getRtmpSignedStr(bucketName, channelName, playlistName string, expiration int64, params map[string]interface{}) string {
+func (conn Conn) getRtmpSignedStr(bucketName, channelName, playlistName string, expiration int64, keySecret string, params map[string]interface{}) string {
 	if params[HTTPParamAccessKeyID] == nil {
 		return ""
 	}
@@ -88,7 +102,7 @@ func (conn Conn) getRtmpSignedStr(bucketName, channelName, playlistName string, 
 	expireStr := strconv.FormatInt(expiration, 10)
 	signStr := expireStr + "\n" + canonParamsStr + canonResource
 
-	h := hmac.New(func() hash.Hash { return sha1.New() }, []byte(conn.config.AccessKeySecret))
+	h := hmac.New(func() hash.Hash { return sha1.New() }, []byte(keySecret))
 	io.WriteString(h, signStr)
 	signedStr := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	return signedStr

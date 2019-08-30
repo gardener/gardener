@@ -121,29 +121,6 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	})
 }
 
-// WaitUntilBackupInfrastructureReconciled waits until the backup infrastructure within the garden cluster has
-// been reconciled.
-func (b *Botanist) WaitUntilBackupInfrastructureReconciled(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		backupInfrastructures, err := b.K8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Get(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), metav1.GetOptions{})
-		if err != nil {
-			return retry.SevereError(err)
-		}
-		if backupInfrastructures.Status.LastOperation != nil {
-			if backupInfrastructures.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
-				b.Logger.Info("Backup infrastructure has been successfully reconciled.")
-				return retry.Ok()
-			}
-			if backupInfrastructures.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateError {
-				b.Logger.Info("Backup infrastructure has been reconciled with error.")
-				return retry.SevereError(errors.New(backupInfrastructures.Status.LastError.Description))
-			}
-		}
-		b.Logger.Info("Waiting until the backup-infrastructure has been reconciled in the Garden cluster...")
-		return retry.MinorError(fmt.Errorf("backup-infrastructure %q has not yet been reconciled", backupInfrastructures.Name))
-	})
-}
-
 // WaitUntilVPNConnectionExists waits until a port forward connection to the vpn-shoot pod in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilVPNConnectionExists(ctx context.Context) error {
@@ -331,5 +308,28 @@ func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
 
 		b.Logger.Infof("Waiting until all nodes have been deleted in the shoot cluster...")
 		return retry.MinorError(fmt.Errorf("not all nodes have been deleted in the shoot cluster"))
+	})
+}
+
+// WaitUntilBackupEntryInGardenReconciled waits until the backup entry within the garden cluster has
+// been reconciled.
+func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
+		be := &gardencorev1alpha1.BackupEntry{}
+		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupEntryName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), be); err != nil {
+			return retry.SevereError(err)
+		}
+		if be.Status.LastOperation != nil {
+			if be.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
+				b.Logger.Info("Backup entry has been successfully reconciled.")
+				return retry.Ok()
+			}
+			if be.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateError {
+				b.Logger.Info("Backup entry has been reconciled with error.")
+				return retry.SevereError(errors.New(be.Status.LastError.Description))
+			}
+		}
+		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
+		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
 	})
 }

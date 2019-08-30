@@ -2,6 +2,10 @@
 
 package v1alpha1
 
+type BackupBucketExpansion interface{}
+
+type BackupEntryExpansion interface{}
+
 type ControllerInstallationExpansion interface{}
 
 type ControllerRegistrationExpansion interface{}

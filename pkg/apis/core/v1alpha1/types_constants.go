@@ -103,6 +103,9 @@ const (
 	// GardenerOperationReconcile is a constant for the value of the operation annotation describing a reconcile
 	// operation.
 	GardenerOperationReconcile = "reconcile"
+	// GardenerOperationMigrate is a constant for the value of the operation annotation describing a migration
+	// operation.
+	GardenerOperationMigrate = "migrate"
 
 	// GardenRole is a constant for a label that describes a role.
 	GardenRole = "gardener.cloud/role"

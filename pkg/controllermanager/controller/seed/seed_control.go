@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -32,10 +34,12 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -161,6 +165,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	}
 
 	var (
+		ctx         = context.TODO()
 		seed        = obj.DeepCopy()
 		seedJSON, _ = json.Marshal(seed)
 		seedLogger  = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
@@ -174,6 +179,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			return nil
 		}
 
+		if seed.Spec.Backup != nil {
+			if err := deleteBackupBucketInGarden(ctx, c.k8sGardenClient.Client(), seed); err != nil {
+				seedLogger.Error(err.Error())
+				return err
+			}
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootAssociations(seed, c.shootLister)
 		if err != nil {
 			seedLogger.Error(err.Error())
@@ -185,29 +197,40 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			return err
 		}
 
-		if len(associatedShoots) == 0 && len(associatedBackupInfrastructures) == 0 {
-			seedLogger.Info("No Shoots or BackupInfrastructures are referencing the Seed. Deletion accepted.")
+		// As per design, backupBucket's are not tightly coupled with Seed resources. But to reconcile backup bucket on object store, seed
+		// provides the worker node for running backup extension controller. Hence, we do check if there is another Seed available for
+		// running this backup extension controller for associated backup buckets. Otherwise we block the deletion of current seed.
+		// validSeedAvailable, err := validSeedAvailableForBucketRescheduling(ctx, c.k8sGardenClient.Client())
+		// if err != nil {
+		// 	seedLogger.Error(err.Error())
+		// 	return err
+		// }
+		// associatedBackupBuckets := make([]string, 0)
+
+		//if validSeedAvailable {
+		associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, c.k8sGardenClient.Client(), seed.Name)
+		if err != nil {
+			seedLogger.Error(err.Error())
+			return err
+		}
+		//}
+		if len(associatedShoots) == 0 && len(associatedBackupInfrastructures) == 0 && len(associatedBackupBuckets) == 0 {
+			seedLogger.Info("No Shoots or BackupInfrastructures or BackupBuckets are referencing the Seed. Deletion accepted.")
 
 			// Remove finalizer from referenced secret
-			secret, err := c.secretLister.Secrets(seed.Spec.SecretRef.Namespace).Get(seed.Spec.SecretRef.Name)
-			if err == nil {
-				secretFinalizers := sets.NewString(secret.Finalizers...)
-				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
-				secret.Finalizers = secretFinalizers.UnsortedList()
-				if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
-					seedLogger.Error(err.Error())
-					return err
-				}
-			} else if !apierrors.IsNotFound(err) {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      seed.Spec.SecretRef.Name,
+					Namespace: seed.Spec.SecretRef.Namespace,
+				},
+			}
+			if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardenv1beta1.ExternalGardenerName); err != nil {
 				seedLogger.Error(err.Error())
 				return err
 			}
 
 			// Remove finalizer from Seed
-			seedFinalizers := sets.NewString(seed.Finalizers...)
-			seedFinalizers.Delete(gardenv1beta1.GardenerName)
-			seed.Finalizers = seedFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed); err != nil && !apierrors.IsNotFound(err) {
+			if err := controllerutils.RemoveGardenerFinalizer(ctx, c.k8sGardenClient.Client(), seed); err != nil {
 				seedLogger.Error(err.Error())
 				return err
 			}
@@ -221,6 +244,9 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		if len(associatedBackupInfrastructures) != 0 {
 			seedLogger.Infof("%s BackupInfrastructures=%v", parentLogMessage, associatedBackupInfrastructures)
 		}
+		if len(associatedBackupBuckets) != 0 {
+			seedLogger.Infof("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
+		}
 		return errors.New("seed still has references")
 	}
 
@@ -229,19 +255,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
-	secret, err := c.secretLister.Secrets(seed.Spec.SecretRef.Namespace).Get(seed.Spec.SecretRef.Name)
+	secret, err := common.GetSecretFromSecretRef(ctx, c.k8sGardenClient.Client(), &seed.Spec.SecretRef)
 	if err != nil {
 		seedLogger.Error(err.Error())
 		return err
 	}
-	secretFinalizers := sets.NewString(secret.Finalizers...)
-	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
-		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
-		secret.Finalizers = secretFinalizers.UnsortedList()
-		if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); err != nil {
-			seedLogger.Error(err.Error())
-			return err
-		}
+
+	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardenv1beta1.ExternalGardenerName); err != nil {
+		seedLogger.Error(err.Error())
+		return err
 	}
 
 	// Initialize conditions based on the current status.
@@ -285,6 +307,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionTrue, "Passed", "all checks passed")
 	c.updateSeedStatus(seed, conditionSeedAvailable)
 
+	if seed.Spec.Backup != nil {
+		// This should be post updating the seed is available. Since, scheduler will then mostly use
+		// same seed for deploying the backupBucket extension.
+		if err := deployBackupBucketInGarden(ctx, c.k8sGardenClient.Client(), seed); err != nil {
+			seedLogger.Error(err.Error())
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -307,3 +338,68 @@ func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, updateCondit
 
 	return err
 }
+
+func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardenv1beta1.Seed) error {
+	// By default, we assume the seed.Spec.Backup.Provider matches the seed.Spec.Backup.Cloud as per the validation logic.
+	// However, if the backup region is specified we take it.
+	region := seed.Spec.Cloud.Region
+	if seed.Spec.Backup.Region != nil {
+		region = *seed.Spec.Backup.Region
+	}
+
+	backupBucket := &gardencorev1alpha1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: string(seed.UID),
+		},
+	}
+
+	backupSecret, err := common.GetSecretFromSecretRef(ctx, k8sGardenClient, &seed.Spec.Backup.SecretRef)
+	if err != nil {
+		return err
+	}
+	checksum := common.ComputeSecretCheckSum(backupSecret.Data)
+	ownerRef := metav1.NewControllerRef(seed, gardenv1beta1.SchemeGroupVersion.WithKind("Seed"))
+
+	return kutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
+		backupBucket.ObjectMeta.Annotations = map[string]string{
+			common.SecretRefChecksumAnnotation: checksum,
+		}
+		backupBucket.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+		backupBucket.Spec = gardencorev1alpha1.BackupBucketSpec{
+			Provider: gardencorev1alpha1.BackupBucketProvider{
+				Type:   string(seed.Spec.Backup.Provider),
+				Region: region,
+			},
+			SecretRef: corev1.SecretReference{
+				Name:      seed.Spec.Backup.SecretRef.Name,
+				Namespace: seed.Spec.Backup.SecretRef.Namespace,
+			},
+			Seed: &seed.Name, // In future this will be moved to scheduler.
+		}
+
+		return nil
+	})
+}
+
+func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardenv1beta1.Seed) error {
+	backupBucket := &gardencorev1alpha1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: string(seed.UID),
+		},
+	}
+
+	return client.IgnoreNotFound(k8sGardenClient.Delete(ctx, backupBucket))
+}
+
+// func validSeedAvailableForBucketRescheduling(ctx context.Context, c client.Client) (bool, error) {
+// 	seeds := &gardenv1beta1.SeedList{}
+// 	if err := c.List(ctx, seeds); err != nil {
+// 		return false, err
+// 	}
+// 	for _, seed := range seeds.Items {
+// 		if seed.DeletionTimestamp == nil {
+// 			return true, nil
+// 		}
+// 	}
+// 	return false, nil
+// }

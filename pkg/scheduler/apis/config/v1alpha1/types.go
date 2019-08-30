@@ -15,9 +15,10 @@
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"time"
 )
 
 const (
@@ -50,27 +51,55 @@ type CandidateDeterminationStrategy string
 // SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
 type SchedulerConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
-
-	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
-	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
+	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
+	LeaderElection LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// Discovery defines the configuration of the discovery client.
-	Discovery DiscoveryConfiguration `json:"discovery"`
+	Discovery DiscoveryConfiguration `json:"discovery,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	LogLevel string `json:"logLevel"`
+	LogLevel string `json:"logLevel,omitempty"`
 	// Server defines the configuration of the HTTP server.
-	Server ServerConfiguration `json:"server"`
+	Server ServerConfiguration `json:"server,omitempty"`
+	// Scheduler defines the configuration of the schedulers.
+	Schedulers SchedulerControllerConfiguration `json:"schedulers"`
+}
+
+// SchedulerControllerConfiguration defines the configuration of the controllers.
+type SchedulerControllerConfiguration struct {
+	// BackupBucket defines the configuration of the BackupBucket controller.
+	// +optional
+	BackupBucket *BackupBucketSchedulerConfiguration `json:"backupBucket,omitempty"`
+	// Shoot defines the configuration of the Shoot controller.
+	// +optional
+	Shoot *ShootSchedulerConfiguration `json:"shoot,omitempty"`
+}
+
+// BackupBucketSchedulerConfiguration defines the configuration of the BackupBucket to Seed
+// scheduler.
+type BackupBucketSchedulerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// RetrySyncPeriod is the duration how fast BackupBuckets with an errornous operation are
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
+	// +optional
+	RetrySyncPeriod metav1.Duration `json:"retrySyncPeriod,omitempty"`
+}
+
+// ShootSchedulerConfiguration defines the configuration of the Shoot to Seed
+// scheduler.
+type ShootSchedulerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
 	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
 	// re-added to the queue so that the operation can be retried. Defaults to 15s.
 	// +optional
-	RetrySyncPeriod *metav1.Duration `json:"retrySyncPeriod,omitempty"`
-	// ConcurrentSyncs is the number of workers used for the scheduler to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs"`
+	RetrySyncPeriod metav1.Duration `json:"retrySyncPeriod,omitempty"`
+	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
+	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

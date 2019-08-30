@@ -17,8 +17,9 @@ package scheduler
 import (
 	"context"
 	"flag"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	. "github.com/gardener/gardener/test/integration/shoots"
@@ -113,8 +114,8 @@ var _ = Describe("Scheduler testing", func() {
 
 	// Only being executed if Scheduler is configured with SameRegion Strategy
 	CIt("SameRegion Scheduling Strategy Test - should fail because no Seed in same region exists", func(ctx context.Context) {
-		if schedulerGardenerTest.SchedulerConfiguration.Strategy != config.SameRegion {
-			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.SameRegion, schedulerGardenerTest.SchedulerConfiguration.Strategy)
+		if schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy != config.SameRegion {
+			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.SameRegion, schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy)
 			return
 		}
 
@@ -138,8 +139,8 @@ var _ = Describe("Scheduler testing", func() {
 	// Only being executed if Scheduler is configured with Minimal Distance Strategy
 	// Tests if scheduling with MinimalDistance & actual creation of the shoot cluster in different region than the seed control works
 	CIt("Minimal Distance Scheduling Strategy Test", func(ctx context.Context) {
-		if schedulerGardenerTest.SchedulerConfiguration.Strategy != config.MinimalDistance {
-			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.MinimalDistance, schedulerGardenerTest.SchedulerConfiguration.Strategy)
+		if schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy != config.MinimalDistance {
+			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.MinimalDistance, schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy)
 			return
 		}
 		// set shoot to a unsupportedRegion where no seed is deployed

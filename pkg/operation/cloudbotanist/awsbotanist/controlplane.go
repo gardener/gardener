@@ -15,6 +15,11 @@
 package awsbotanist
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -39,4 +44,27 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	}
 
 	return secretData, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *AWSBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	var (
+		accessKeyID     = string(secretData[AccessKeyID])
+		secretAccessKey = string(secretData[SecretAccessKey])
+		region          = string(secretData[Region])
+		bucket          = string(secretData[common.BackupBucketName])
+		awsConfig       = &aws.Config{
+			Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+		}
+		config = &aws.Config{Region: aws.String(region)}
+	)
+
+	s, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	cli := s3.New(s, config)
+
+	return snapstore.NewS3FromClient(bucket, "etcd-main/v1", "", 10, cli), nil
 }

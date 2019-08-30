@@ -124,6 +124,20 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		var defaultBackupInfrastructureDeletionGracePeriodHours = DefaultBackupInfrastructureDeletionGracePeriodHours
 		obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours = &defaultBackupInfrastructureDeletionGracePeriodHours
 	}
+	if obj.Controllers.BackupBucket == nil {
+		obj.Controllers.BackupBucket = &BackupBucketControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.BackupEntry == nil {
+		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.BackupEntry.DeletionGracePeriodHours == nil || *obj.Controllers.BackupEntry.DeletionGracePeriodHours < 0 {
+		var defaultBackupEntryDeletionGracePeriodHours = DefaultBackupInfrastructureDeletionGracePeriodHours
+		obj.Controllers.BackupEntry.DeletionGracePeriodHours = &defaultBackupEntryDeletionGracePeriodHours
+	}
 
 	if obj.Controllers.Plant == nil {
 		obj.Controllers.Plant = &PlantConfiguration{

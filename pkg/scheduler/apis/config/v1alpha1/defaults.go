@@ -16,10 +16,11 @@ package v1alpha1
 
 import (
 	"io/ioutil"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"os"
 	"path/filepath"
 	"time"
+
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
@@ -55,10 +56,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
-	if len(obj.Strategy) == 0 {
-		obj.Strategy = Default
-	}
-
 	if len(obj.Server.HTTP.BindAddress) == 0 {
 		obj.Server.HTTP.BindAddress = "0.0.0.0"
 	}
@@ -76,15 +73,28 @@ func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 		obj.Discovery.DiscoveryCacheDir = &DefaultDiscoveryCacheDir
 	}
 
-	if obj.RetrySyncPeriod == nil {
-		durationVar := metav1.Duration{Duration: 15 * time.Second}
-		obj.RetrySyncPeriod = &durationVar
+	if obj.Schedulers.BackupBucket == nil {
+		obj.Schedulers.BackupBucket = &BackupBucketSchedulerConfiguration{
+			ConcurrentSyncs: 2,
+			RetrySyncPeriod: metav1.Duration{
+				Duration: 15 * time.Second,
+			},
+		}
 	}
 
-	if obj.ConcurrentSyncs == nil {
-		defaultConcurrentSyncs := 5
-		obj.ConcurrentSyncs = &defaultConcurrentSyncs
+	if obj.Schedulers.Shoot == nil {
+		obj.Schedulers.Shoot = &ShootSchedulerConfiguration{
+			ConcurrentSyncs: 5,
+			RetrySyncPeriod: metav1.Duration{
+				Duration: 15 * time.Second,
+			},
+			Strategy: Default,
+		}
 	}
+	if len(obj.Schedulers.Shoot.Strategy) == 0 {
+		obj.Schedulers.Shoot.Strategy = Default
+	}
+
 }
 
 // SetDefaults_ClientConnection sets defaults for the client connection.

@@ -15,7 +15,13 @@
 package gcpbotanist
 
 import (
+	"context"
+
+	"cloud.google.com/go/storage"
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore/gcs"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"google.golang.org/api/option"
 )
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
@@ -38,4 +44,19 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	}
 
 	return secretData, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *GCPBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	var (
+		serviceAccountJSON = secretData[ServiceAccountJSON]
+		bucket             = string(secretData[common.BackupBucketName])
+	)
+	client, err := storage.NewClient(context.TODO(), option.WithCredentialsJSON(serviceAccountJSON), option.WithScopes(storage.ScopeFullControl))
+	if err != nil {
+		return nil, err
+	}
+
+	gcsClient := gcs.AdaptClient(client)
+	return snapstore.NewGCSSnapStoreFromClient(bucket, "etcd-main/v1", "", 10, gcsClient), nil
 }

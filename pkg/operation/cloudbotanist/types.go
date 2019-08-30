@@ -14,6 +14,10 @@
 
 package cloudbotanist
 
+import (
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
+)
+
 // CloudBotanist is an interface which must be implemented by cloud-specific Botanists. The Cloud Botanist
 // is responsible for all operations which require IaaS specific knowledge.
 type CloudBotanist interface {
@@ -25,4 +29,5 @@ type CloudBotanist interface {
 
 	// Control Plane
 	GenerateEtcdBackupConfig() (map[string][]byte, error)
+	GetEtcdBackupSnapstore(map[string][]byte) (snapstore.SnapStore, error)
 }

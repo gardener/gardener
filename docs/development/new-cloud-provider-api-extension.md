@@ -15,12 +15,13 @@ The detailed steps are as follows:
 
 1. Add the cloud provider specific configuration to the template files in [hack/templates/resources](../../hack/templates/resources/) :
   * `CloudProfile` [30-cloudprofile.yaml.tpl](../../hack/templates/resources/30-cloudprofile.yaml.tpl) This is the definition of a profile for this provider.
-  * `Secret` [40-secret-seed.yaml.tpl](../../hack/templates/resources/40-secret-seed.yaml.tpl) This contains the secrets necessary to invoke the cloud provider's API to create blob storage buckets for managing the etcd backups of Shoot clusters, and the kubeconfig to access the Seed cluster. 
+  * `Secret` [40-secret-seed.yaml.tpl](../../hack/templates/resources/40-secret-seed.yaml.tpl) This contains the secrets necessary to invoke the cloud provider's API to create blob storage buckets for managing the etcd backups of Shoot clusters (just for backward compatibility reasons), and the kubeconfig to access the Seed cluster.
+  * `Secret` [45-secret-seed-backup.yaml.tpl](../../hack/templates/resources/45-secret-seed-backup.yaml.tpl) This contains the secrets necessary to invoke the cloud provider's API to create blob storage buckets for managing the etcd backups of Shoot clusters,
   * `Seed`: [50-seed.yaml.tpl](../../hack/templates/resources/50-seed.yaml.tpl) This contains the configuration for the Seed cluster.
   * `Secret`: [70-secret-cloudprovider.yaml.tpl](../../hack/templates/70-secret-cloudprovider.yaml.tpl) This contains the credentials necessary for to invoke the cloud provider's API to deploy the Shoot cluster(s).
   * `SecretBinding`: [80-secretbinding-cloudprovider.yaml.tpl](../../hack/templates/resources/80-secretbinding-cloudprovider.yaml.tpl) This binds the secret defined in the previous step. Ensure that the `secretRef` references the named secret from the previous step.
   * `Shoot`: [90-shoot.yaml.tpl](../../hack/templates/resources/90-shoot.yaml.tpl) This creates an actual Shoot in the given provider, using the `Secret` and `CloudProfile` created earlier.
-2. Add the cloud provider to [hack/generate-examples](../../hack/generate-examples) 
+2. Add the cloud provider to [hack/generate-examples](../../hack/generate-examples)
 3. Run [hack/generate-examples](../../hack/generate-examples) to generate the examples in [example](../../example/)
 4. Update [pkg/apis/garden/helper/helpers.go](../../pkg/apis/garden/helper/helpers.go) to include the cloud provider at the following key points:
     * Select the cloud provider in `DetermineCloudProviderInProfile()`
@@ -30,7 +31,7 @@ The detailed steps are as follows:
 5. Update [pkg/apis/garden/types.go](../../pkg/apis/garden/types.go) to include the cloud provider at the following key points:
     * Define the name of the cloud provider as a key of `CloudProfileSpec struct`, where the value is a pointer to `<provider>Profile`, e.g. `AWS *AWSProfile`. See the existing examples
     * Define the struct for the `<provider>Profile`. See the existing examples. The `Profile` contains all of the properties necessary to call the cloud provider, including constraints, image information, machine type and volume type.
-    * Define the name of the cloud provider as a key of `Cloud struct`, where the value is a pointer to `<provider>Cloud`, e.g. `AWS *AWSCloud`. 
+    * Define the name of the cloud provider as a key of `Cloud struct`, where the value is a pointer to `<provider>Cloud`, e.g. `AWS *AWSCloud`.
     * Define the struct for the `<providerCloud`. See the existing examples. The `Cloud` contains the Shoot specification for the specific deployed Shoot to the given provider.
     * Define a constant `string` alias for the cloud provider as `CloudProvider<provider> CloudProvider = "alias"`. See the existing examples.
 6. Update [pkg/apis/garden/v1beta1/defaults.go](../../pkg/apis/garden/v1beta1/defaults.go) to provide defaults for the cloud provider. See the existing examples.
@@ -40,7 +41,7 @@ The detailed steps are as follows:
     * Select the cloud provider in `DetermineCloudProviderInShoot()`
     * Return the cloud provider in the error at the end of `DetermineCloudProviderInShoot()` if the number of clouds is not 1
     * Return the appropriate image name for the cloud provider in `DetermineMachineImage()`
-    * Return the latest available kubernetes version in `DetermineLatestKubernetesVersion()` 
+    * Return the latest available kubernetes version in `DetermineLatestKubernetesVersion()`
 8. Update [pkg/apis/garden/v1beta1/types.go](../../pkg/apis/garden/v1beta1/types.go) to include the cloud provider at the following key points:
     * Define the name of the cloud provider as a key of `CloudProfileSpec struct`, where the value is a pointer to `<provider>Profile`. Be sure to include json tags on the struct definition.
     * Define the struct for `<provider>Profile`. See the existing examples. The `Profile` contains all of the properties necessary to call the cloud provider, including constraints.
@@ -74,4 +75,3 @@ The details are as follows:
     * Add logic to `switch cloudProviderInShoot` to add a case for the cloud provider, validating that it can get the machine image. The logic here should be minimal, instead calling out to a function that does more detailed validation, e.g. `validateAWS()` or `validateAzure()`, i.e. `validate<Provider>()`.
     * Create the function `validate<Provider>()` that validates all the elements of the request, including sub-functions, if necessary. See existing examples.
 4. Update [plugin/pkg/shoot/validator/admission_test.go](../../plugin/pkg/shoot/validator/admission_test.go) to test logic from the previous step.
-

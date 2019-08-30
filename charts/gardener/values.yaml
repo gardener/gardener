@@ -195,6 +195,13 @@ global:
         backupInfrastructure:
           concurrentSyncs: 20
           syncPeriod: 24h
+        backupBucket:
+          concurrentSyncs: 20
+          syncPeriod: 10m
+        backupEntry:
+          concurrentSyncs: 20
+          syncPeriod: 10m
+          deletionGracePeriodHours: 0
         seed:
           concurrentSyncs: 5
           syncPeriod: 1m
@@ -250,7 +257,6 @@ global:
         cpu: 300m
         memory: 256Mi
     config:
-      candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
       clientConnection:
         acceptContentTypes: application/json
         contentType: application/json
@@ -272,8 +278,14 @@ global:
         http:
           bindAddress: 0.0.0.0
           port: 10251
-#      retrySyncPeriod: 15s
-#      concurrentSyncs: 5
+#     schedulers:
+#       backupBucket:
+#         retrySyncPeriod: 15s
+#         concurrentSyncs: 5
+#       shoot:
+#         retrySyncPeriod: 15s
+#         concurrentSyncs: 5
+#         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
   # Deployment related configuration
   deployment:
     virtualGarden:

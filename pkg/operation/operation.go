@@ -302,7 +302,7 @@ func makeDescription(stats *flow.Stats) string {
 
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
-func (o *Operation) ReportShootProgress(stats *flow.Stats) {
+func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) {
 	var (
 		description    = makeDescription(stats)
 		progress       = stats.ProgressPercent()
@@ -332,7 +332,7 @@ func (o *Operation) ReportShootProgress(stats *flow.Stats) {
 
 // ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
 // by the current progress of the Flow execution.
-func (o *Operation) ReportBackupInfrastructureProgress(stats *flow.Stats) {
+func (o *Operation) ReportBackupInfrastructureProgress(ctx context.Context, stats *flow.Stats) {
 	o.BackupInfrastructure.Status.LastOperation.Description = makeDescription(stats)
 	o.BackupInfrastructure.Status.LastOperation.Progress = stats.ProgressPercent()
 	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()

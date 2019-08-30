@@ -21,8 +21,6 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/client-go/discovery"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -32,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
-	"github.com/gardener/gardener/pkg/scheduler/controller"
+	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/handlers"
 
@@ -40,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"k8s.io/client-go/discovery"
 	diskcache "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
@@ -267,14 +266,15 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 }
 
 func (g *GardenerScheduler) startScheduler(ctx context.Context) {
-	gardenerScheduler := controller.NewGardenerScheduler(g.K8sGardenClient, g.K8sGardenInformers, g.Config, g.Recorder)
+	shootScheduler := shootcontroller.NewGardenerScheduler(g.K8sGardenClient, g.K8sGardenInformers, g.Config, g.Recorder)
+	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(gardenerScheduler)
+	gardenmetrics.RegisterControllerMetrics(shootScheduler) //, backupBucketScheduler)
 
-	go gardenerScheduler.Run(ctx, g.K8sGardenInformers)
-
-	logger.Logger.Infof("Gardener scheduler initialized (with Strategy: %s)", g.Config.Strategy)
+	go shootScheduler.Run(ctx, g.K8sGardenInformers)
+	// TOEnable later
+	// go backupBucketScheduler.Run(ctx, g.K8sGardenCoreInformers)
 
 	// Shutdown handling
 	<-ctx.Done()

@@ -34,6 +34,7 @@ const (
 	BackupSecretName = "etcd-backup"
 
 	// BackupInfrastructureForceDeletion is a constant for an annotation on a Backupinfrastructure indicating that it should be force deleted.
+	// TOREMOVE: remove this with backupinfra controller.
 	BackupInfrastructureForceDeletion = "backupinfrastructure.garden.sapcloud.io/force-deletion"
 
 	// BackupInfrastructureOperation is a constant for an annotation on a Backupinfrastructure indicating that an operation shall be performed.
@@ -288,6 +289,9 @@ const (
 
 	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.garden.sapcloud.io/project"
+
+	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
+	SecretRefChecksumAnnotation = "checksum/secret.data"
 
 	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
 	TerraformerConfigSuffix = ".tf-config"

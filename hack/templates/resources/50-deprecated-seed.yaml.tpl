@@ -73,3 +73,10 @@ spec:
   #   services: ${value("spec.networks.shootDefaults.services", "100.64.0.0/13")}
   blockCIDRs:
   - ${value("spec.cloud.region", metadataServiceCIDR)}
+# Configuration of backup object store provider into which the backups will be stored.
+# backup:
+#  type: ${cloud}
+#  region: ${value("spec.backup.region", region)}
+#  secretRef:
+#    name: ${value("spec.backup.secretRef.name", "backup-secret")}
+#    namespace: ${value("spec.backup.secretRef.namespace", "garden")}

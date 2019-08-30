@@ -81,6 +81,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 		creationPhase             = operationType == gardencorev1alpha1.LastOperationTypeCreate
 		requireKube2IAMDeployment = o.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS && (creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource))
+		allowBackup               = (o.Seed.Info.Spec.Backup != nil)
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -137,19 +138,19 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilInfrastructureReady),
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
-		deployBackupInfrastructure = g.Add(flow.Task{
-			Name: "Deploying backup infrastructure",
-			Fn:   flow.TaskFn(botanist.DeployBackupInfrastructure),
+		deployBackupEntryInGarden = g.Add(flow.Task{
+			Name: "Deploying backup entry",
+			Fn:   flow.TaskFn(botanist.DeployBackupEntryInGarden).DoIf(allowBackup),
 		})
-		waitUntilBackupInfrastructureReconciled = g.Add(flow.Task{
-			Name:         "Waiting until the backup infrastructure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureReconciled),
-			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
+		wailtUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the backup entry has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilBackupEntryInGardenReconciled).DoIf(allowBackup),
+			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled),
+			Fn:           flow.TaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, wailtUntilBackupEntryInGardenReconciled),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",

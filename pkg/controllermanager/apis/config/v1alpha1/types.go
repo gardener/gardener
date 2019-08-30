@@ -55,6 +55,12 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// BackupBucket defines the configuration of the BackupBucket controller.
+	// +optional
+	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket"`
+	// BackupEntry defines the configuration of the BackupEntry controller.
+	// +optional
+	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry"`
 	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
 	BackupInfrastructure BackupInfrastructureControllerConfiguration `json:"backupInfrastructure"`
 	// CloudProfile defines the configuration of the CloudProfile controller.
@@ -239,6 +245,24 @@ type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// BackupBucketControllerConfiguration defines the configuration of the BackupBucket
+// controller.
+type BackupBucketControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// BackupEntryControllerConfiguration defines the configuration of the BackupEntry
+// controller.
+type BackupEntryControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Entry after deletion timestamp is set.
+	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
+	// +optional
+	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
 }
 
 // BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure

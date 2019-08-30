@@ -22,6 +22,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -106,7 +107,7 @@ func (b *Botanist) WaitUntilNetworkIsDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for Network to be deleted...")
-		return retry.MinorError(wrapWithLastError(fmt.Errorf("network is still present"), lastError))
+		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("network is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete Network")
 		if lastError != nil {

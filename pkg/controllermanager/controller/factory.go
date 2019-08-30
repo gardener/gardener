@@ -23,6 +23,8 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	backupbucketcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/backupbucket"
+	backupentrycontroller "github.com/gardener/gardener/pkg/controllermanager/controller/backupentry"
 	backupinfrastructurecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/backupinfrastructure"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerinstallation"
@@ -78,17 +80,21 @@ func NewGardenControllerFactory(k8sGardenClient kubernetes.Interface, gardenInfo
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) {
 	var (
-		cloudProfileInformer           = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
-		secretBindingInformer          = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
-		quotaInformer                  = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
-		projectInformer                = f.k8sGardenInformers.Garden().V1beta1().Projects().Informer()
-		seedInformer                   = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
-		shootInformer                  = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
-		backupInfrastructureInformer   = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
+		//Garden informers
+		cloudProfileInformer         = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
+		secretBindingInformer        = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
+		quotaInformer                = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
+		projectInformer              = f.k8sGardenInformers.Garden().V1beta1().Projects().Informer()
+		seedInformer                 = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
+		shootInformer                = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
+		backupInfrastructureInformer = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
+		// Garden core informers
+		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1alpha1().BackupBuckets().Informer()
+		backupEntryInformer            = f.k8sGardenCoreInformers.Core().V1alpha1().BackupEntries().Informer()
 		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerRegistrations().Informer()
 		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerInstallations().Informer()
 		plantInformer                  = f.k8sGardenCoreInformers.Core().V1alpha1().Plants().Informer()
-
+		// Kubernetes core informers
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
 		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
@@ -100,7 +106,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced) {
 		panic("Timed out waiting for Garden core caches to sync")
 	}
 
@@ -136,6 +142,8 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
 		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.gardenNamespace, f.recorder)
 		backupInfrastructureController   = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
@@ -143,7 +151,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	)
 
 	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(shootController, seedController, quotaController, cloudProfileController, secretBindingController, backupInfrastructureController)
+	gardenmetrics.RegisterControllerMetrics(shootController, seedController, quotaController, cloudProfileController, secretBindingController, backupBucketController, backupEntryController, backupInfrastructureController)
 
 	go shootController.Run(ctx, f.cfg.Controllers.Shoot.ConcurrentSyncs, f.cfg.Controllers.ShootCare.ConcurrentSyncs, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
@@ -151,6 +159,8 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go projectController.Run(ctx, f.cfg.Controllers.Project.ConcurrentSyncs)
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
+	go backupBucketController.Run(ctx, f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
+	go backupEntryController.Run(ctx, f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go backupInfrastructureController.Run(ctx, f.cfg.Controllers.BackupInfrastructure.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go controllerInstallationController.Run(ctx, f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs)

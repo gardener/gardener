@@ -19,9 +19,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/etcd-backup-restore/pkg/miscellaneous"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -29,7 +32,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -38,6 +40,7 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -101,75 +104,6 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
-}
-
-// DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
-// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
-// store the events data. The objectstore is also set up to store the backups.
-func (b *HybridBotanist) DeployETCD() error {
-	secretData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
-	if err != nil {
-		return err
-	}
-
-	// Some cloud botanists do not yet support backup and won't return secret data.
-	if secretData != nil {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.BackupSecretName,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-
-		if err := kutil.CreateOrUpdate(context.TODO(), b.K8sSeedClient.Client(), secret, func() error {
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = secretData
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
-	etcdConfig := map[string]interface{}{
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
-			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
-			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
-		},
-		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
-	}
-
-	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName)
-	if err != nil {
-		return err
-	}
-
-	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
-		etcd["role"] = role
-		if role == common.EtcdRoleMain {
-			// etcd-main emits extensive (histogram) metrics
-			etcd["metrics"] = "extensive"
-		}
-
-		if b.Shoot.HibernationEnabled {
-			statefulset := &appsv1.StatefulSet{}
-			if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			if statefulset.Spec.Replicas == nil {
-				etcd["replicas"] = 0
-			} else {
-				etcd["replicas"] = *statefulset.Spec.Replicas
-			}
-		}
-
-		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool) error {
@@ -530,4 +464,99 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeScheduler, values, nil)
+}
+
+// DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
+// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
+// store the events data. The objectstore is also set up to store the backups.
+func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
+	var (
+		backupInfraName      = common.GenerateBackupInfrastructureName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+		lastSnapshotRevision int64
+	)
+	backupInfra := &gardenv1beta1.BackupInfrastructure{}
+	err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, backupInfraName), backupInfra)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		// if BackupInfra NotFound then its new shoot and we have to do noting w.r.t. backward compatibility.
+	} else {
+		// Support backward compatibility.
+		b.Logger.Infof("Associated backupInfra resource %s found. Looking for latest snapshot revision on it.", backupInfraName)
+		lastSnapshotRevision, err = getLatestSnapshotRevision(b.SeedCloudBotanist)
+		if err != nil {
+			return err
+		}
+		b.Logger.Infof("Found last snapshot with latest revision %d", lastSnapshotRevision)
+	}
+
+	etcdConfig := map[string]interface{}{
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
+			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
+			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
+		},
+		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
+	}
+
+	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName)
+	if err != nil {
+		return err
+	}
+
+	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
+		etcd["role"] = role
+		if role == common.EtcdRoleMain {
+			// etcd-main emits extensive (histogram) metrics
+			etcd["metrics"] = "extensive"
+			if lastSnapshotRevision > 0 {
+				etcd["failBelowRevision"] = lastSnapshotRevision
+			}
+		}
+
+		if b.Shoot.HibernationEnabled {
+			statefulset := &appsv1.StatefulSet{}
+			if err := client.IgnoreNotFound(b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset)); err != nil {
+				return err
+			}
+
+			if statefulset.Spec.Replicas == nil {
+				etcd["replicas"] = 0
+			} else {
+				etcd["replicas"] = *statefulset.Spec.Replicas
+			}
+		}
+
+		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getLatestSnapshotRevision(seedCloudBotanist cloudbotanist.CloudBotanist) (int64, error) {
+	secretData, err := seedCloudBotanist.GenerateEtcdBackupConfig()
+	if err != nil {
+		return 0, err
+	}
+
+	store, err := seedCloudBotanist.GetEtcdBackupSnapstore(secretData)
+	if err != nil {
+		return 0, err
+	}
+
+	fullSnap, deltaSnap, err := miscellaneous.GetLatestFullSnapshotAndDeltaSnapList(store)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(deltaSnap) != 0 {
+		return deltaSnap[len(deltaSnap)-1].LastRevision, nil
+	}
+	if fullSnap != nil {
+		return fullSnap.LastRevision, nil
+	}
+	return 0, nil
 }

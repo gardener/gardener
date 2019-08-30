@@ -14,7 +14,16 @@
 
 package packetbotanist
 
+import (
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
+)
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *PacketBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	return map[string][]byte{}, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *PacketBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	return nil, nil
 }

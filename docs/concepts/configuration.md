@@ -2,10 +2,13 @@
 
 In order to establish different configuration settings for the same cloud environment, one has to define [`CloudProfiles`](../../example/30-cloudprofile-aws.yaml). These profiles define configuration and constraints for allowed values in the Shoot manifest as well.
 
-Seed clusters have their [own resource](../../example/50-seed-aws.yaml) as well. These resources contain metadata about the respective Seed cluster and a reference to a secret holding the credentials (see below).
+Seed clusters have their [own resource](../../example/50-seed-aws.yaml) as well. These resources contain metadata about the respective Seed cluster and a reference to a secret holding the credentials (see below). Also, it contains the backup provider configuration and a reference to a secret holding the credentials to the object store (see below).
 
 The Gardener requires some secrets in order to work properly. These secrets are:
 * *Seed cluster secrets*, contain the credentials of the cloud provider account in which the Seed cluster is deployed, and a Kubeconfig which can be used to authenticate against the Seed cluster's kube-apiserver, please see [this](../../example/40-secret-seed-aws.yaml) for an example.
+
+* *Object store provider secrets*, contains the credentials of the cloud provider account with object store privileges in which backup of the Shoot clusters (currently only etcd backing Shoot cluster) can be stored, please see [this](../../example/45-secret-seed-backup-aws.yaml) for an example.
+  * For each `Seed`, Gardener needs to create a backup infrastructure (AWS S3 bucket equivalent) for the configured backup provider. As mentioned above, the `Seed` has a reference to this secret.
 
 * *Internal domain secrets* (optional), contain the DNS provider credentials (with appropriate privileges) which will be used to create/delete internal DNS records for the Shoot clusters (e.g., `example.com`), please see [this](../../example/10-secret-internal-domain.yaml) for an example.
   * These secrets are used in order to establish a stable endpoint for Shoot clusters which is used internally by all control plane components.
