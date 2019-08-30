@@ -158,10 +158,10 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener,
 		}
 		charts = map[string]managedResourceOptions{
-			"shoot-cloud-config-execution": managedResourceOptions{false, b.generateCloudConfigExecutionChart},
-			"shoot-core":                   managedResourceOptions{false, b.generateCoreAddonsChart},
-			"shoot-core-namespaces":        managedResourceOptions{true, b.generateCoreNamespacesChart},
-			"addons":                       managedResourceOptions{false, b.generateOptionalAddonsChart},
+			"shoot-cloud-config-execution": {false, b.generateCloudConfigExecutionChart},
+			"shoot-core":                   {false, b.generateCoreAddonsChart},
+			"shoot-core-namespaces":        {true, b.generateCoreNamespacesChart},
+			"addons":                       {false, b.generateOptionalAddonsChart},
 		}
 	)
 

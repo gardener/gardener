@@ -81,9 +81,8 @@ type CareControlInterface interface {
 }
 
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
-// implements the documented semantics for caring for Shoots. updater is the UpdaterInterface used
-// to update the status of Shoots. You should use an instance returned from NewDefaultCareControl() for any
-// scenario other than testing.
+// implements the documented semantics for caring for Shoots. You should use an instance returned from NewDefaultCareControl()
+// for any scenario other than testing.
 func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *config.ControllerManagerConfiguration) CareControlInterface {
 	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config}
 }

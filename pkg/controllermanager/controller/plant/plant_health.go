@@ -59,7 +59,7 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 		return exitCondition
 	}
 
-	updatedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready")
+	updatedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready.")
 	return updatedCondition
 }
 

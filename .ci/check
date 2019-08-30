@@ -64,7 +64,7 @@ go vet -mod=vendor ${PACKAGES}
 
 # Execute automatic code formatting directive.
 echo "Running gofmt..."
-gofmt -l -w ${PACKAGES_DIRS}
+gofmt -l -w -s ${PACKAGES_DIRS}
 
 # Execute lint checks.
 echo "Running golint..."

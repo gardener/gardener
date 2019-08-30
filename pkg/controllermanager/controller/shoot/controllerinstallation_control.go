@@ -112,9 +112,8 @@ type ControllerInstallationControlInterface interface {
 }
 
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControllerInstallationControlInterface that
-// implements the documented semantics for maintaining Shoots. updater is the UpdaterInterface used
-// to update the spec of Shoots. You should use an instance returned from NewDefaultControllerInstallationControl() for any
-// scenario other than testing.
+// implements the documented semantics for maintaining Shoots. You should use an instance returned from
+// NewDefaultControllerInstallationControl() for any scenario other than testing.
 func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) ControllerInstallationControlInterface {
 	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder}
 }

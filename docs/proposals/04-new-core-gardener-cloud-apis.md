@@ -687,7 +687,7 @@ status:
     lastTransitionTime: '2020-04-01T16:27:21Z'
     lastUpdateTime: '2020-04-13T14:35:21Z'
     reason: EveryNodeReady
-    message: Every node registered to the cluster is ready
+    message: Every node registered to the cluster is ready.
   - type: SystemComponentsHealthy
     status: 'True'
     lastTransitionTime: '2020-04-03T18:26:28Z'
@@ -755,7 +755,7 @@ status:
     type: APIServerAvailable
   - lastTransitionTime: "2020-04-01T06:26:56Z"
     lastUpdateTime: "2020-04-14T18:00:29Z"
-    message: Every node registered to the cluster is ready
+    message: Every node registered to the cluster is ready.
     reason: EveryNodeReady
     status: "True"
     type: EveryNodeReady

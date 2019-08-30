@@ -89,9 +89,8 @@ type ControlInterface interface {
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for SecretBindings. updater is the UpdaterInterface used
-// to update the status of SecretBindings. You should use an instance returned from NewDefaultControl() for any
-// scenario other than testing.
+// implements the documented semantics for SecretBindings. You should use an instance returned from NewDefaultControl()
+// for any scenario other than testing.
 func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretLister, shootLister}
 }

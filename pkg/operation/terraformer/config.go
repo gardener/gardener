@@ -63,13 +63,13 @@ func (t *Terraformer) SetDeadlineCleaning(d time.Duration) *Terraformer {
 	return t
 }
 
-// SetDeadlinePod configures the deadline while waiting for a the Terraformer pod.
+// SetDeadlinePod configures the deadline while waiting for the Terraformer pod.
 func (t *Terraformer) SetDeadlinePod(d time.Duration) *Terraformer {
 	t.deadlinePod = d
 	return t
 }
 
-// SetDeadlineJob configures the deadline while waiting for a the Terraformer job.
+// SetDeadlineJob configures the deadline while waiting for the Terraformer job.
 func (t *Terraformer) SetDeadlineJob(d time.Duration) *Terraformer {
 	t.deadlineJob = d
 	return t
