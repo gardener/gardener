@@ -34,7 +34,19 @@ var _ = Describe("Machine Image Conversion", func() {
 		expirationDate     = &metav1.Time{Time: time.Now().Add(time.Second * 20)}
 		v1betaMachineImage *MachineImage
 		gardenMachineImage *garden.MachineImage
+
+		scheme *runtime.Scheme
 	)
+
+	BeforeSuite(func() {
+		scheme = runtime.NewScheme()
+		Expect(scheme.AddConversionFuncs(
+			Convert_v1beta1_Seed_To_garden_Seed,
+			Convert_garden_Seed_To_v1beta1_Seed,
+			Convert_v1beta1_Quota_To_garden_Quota,
+			Convert_garden_Quota_To_v1beta1_Quota,
+		)).NotTo(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		v1betaMachineImage = &MachineImage{
@@ -148,16 +160,6 @@ var _ = Describe("Machine Image Conversion", func() {
 	})
 
 	Context("seed conversions", func() {
-		var scheme *runtime.Scheme
-
-		BeforeSuite(func() {
-			scheme = runtime.NewScheme()
-			Expect(scheme.AddConversionFuncs(
-				Convert_v1beta1_Seed_To_garden_Seed,
-				Convert_garden_Seed_To_v1beta1_Seed,
-			)).NotTo(HaveOccurred())
-		})
-
 		var (
 			cloudProfileName             = "cloudprofile1"
 			providerName                 = "provider1"
@@ -365,6 +367,107 @@ var _ = Describe("Machine Image Conversion", func() {
 						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
 						Protected:  &trueVar,
 						Visible:    &trueVar,
+					},
+				}))
+			})
+		})
+	})
+
+	Context("quota conversions", func() {
+		var (
+			metrics = corev1.ResourceList{
+				"foo": resource.Quantity{Format: "bar"},
+			}
+			clusterLifetimeDays = 12
+		)
+
+		Describe("#Convert_v1beta1_Quota_To_garden_Quota", func() {
+			var (
+				out = &garden.Quota{}
+				in  *Quota
+			)
+
+			BeforeEach(func() {
+				in = &Quota{
+					Spec: QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+					},
+				}
+			})
+
+			It("should correctly convert for scope=project", func() {
+				in.Spec.Scope = QuotaScopeProject
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(BeEquivalentTo(&garden.Quota{
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+						Scope: corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1alpha1",
+							Kind:       "Project",
+						},
+					},
+				}))
+			})
+
+			It("should correctly convert for scope=secret", func() {
+				in.Spec.Scope = QuotaScopeSecret
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(BeEquivalentTo(&garden.Quota{
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+						Scope: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+					},
+				}))
+			})
+		})
+
+		Describe("#Convert_garden_Quota_To_v1beta1_Quota", func() {
+			var (
+				out = &Quota{}
+				in  *garden.Quota
+			)
+
+			BeforeEach(func() {
+				in = &garden.Quota{
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+					},
+				}
+			})
+
+			It("should correctly convert for scopeRef=core.gardener.cloud/v1alpha1.Project", func() {
+				in.Spec.Scope = corev1.ObjectReference{
+					APIVersion: "core.gardener.cloud/v1alpha1",
+					Kind:       "Project",
+				}
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&Quota{
+					Spec: QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+						Scope:               QuotaScopeProject,
+					},
+				}))
+			})
+
+			It("should correctly convert for scopeRef=v1.Secret", func() {
+				in.Spec.Scope = corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				}
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&Quota{
+					Spec: QuotaSpec{
+						ClusterLifetimeDays: &clusterLifetimeDays,
+						Metrics:             metrics,
+						Scope:               QuotaScopeSecret,
 					},
 				}))
 			})

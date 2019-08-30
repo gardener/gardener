@@ -71,7 +71,7 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, quota.Name)
-		cells = append(cells, quota.Spec.Scope)
+		cells = append(cells, fmt.Sprintf("%s.%s", quota.Spec.Scope.APIVersion, quota.Spec.Scope.Kind))
 		if clusterLifetimeDays := quota.Spec.ClusterLifetimeDays; clusterLifetimeDays != nil {
 			cells = append(cells, fmt.Sprintf("%d days", *clusterLifetimeDays))
 		} else {

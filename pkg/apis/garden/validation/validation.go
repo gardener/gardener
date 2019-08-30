@@ -864,9 +864,9 @@ func ValidateQuotaStatusUpdate(newQuota, oldQuota *garden.Quota) field.ErrorList
 func ValidateQuotaSpec(quotaSpec *garden.QuotaSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	scope := quotaSpec.Scope
-	if scope != garden.QuotaScopeProject && scope != garden.QuotaScopeSecret {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("scope"), scope, []string{string(garden.QuotaScopeProject), string(garden.QuotaScopeSecret)}))
+	scopeRef := quotaSpec.Scope
+	if _, err := helper.QuotaScope(scopeRef); err != nil {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("scope"), scopeRef, []string{"project", "secret"}))
 	}
 
 	metricsFldPath := fldPath.Child("metrics")

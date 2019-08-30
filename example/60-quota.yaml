@@ -1,12 +1,14 @@
-# Quota object limiting the resources consumed by Shoot clusters either per cloud provider secret or per project/namespace.
+# Quota object limiting the resources consumed by shoot clusters either per provider secret or per project/namespace.
 ---
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1alpha1
 kind: Quota
 metadata:
   name: trial-quota
   namespace: garden-trial
 spec:
-  scope: secret
+  scope: # options are either core.gardener.cloud/v1alpha1.Project or v1.Secret
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Project
 # clusterLifetimeDays: 14
   metrics:
     cpu: "200"

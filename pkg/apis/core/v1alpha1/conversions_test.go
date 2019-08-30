@@ -34,236 +34,240 @@ var _ = Describe("Conversion", func() {
 		Expect(scheme.AddConversionFuncs(
 			Convert_v1alpha1_Seed_To_garden_Seed,
 			Convert_garden_Seed_To_v1alpha1_Seed,
+			Convert_v1alpha1_Quota_To_garden_Quota,
+			Convert_garden_Quota_To_v1alpha1_Quota,
 		)).NotTo(HaveOccurred())
 	})
 
-	var (
-		cloudProfileName = "cloudprofile1"
-		providerName     = "provider1"
-		regionName       = "region1"
-		annotations      = map[string]string{
-			garden.MigrationSeedCloudProfile: cloudProfileName,
-			garden.MigrationSeedCloudRegion:  regionName,
-		}
-		ingressDomain                = "foo.example.com"
-		secretRefName                = "seed-secret"
-		secretRefNamespace           = "garden"
-		nodesCIDR                    = CIDR("1.2.3.4/5")
-		podsCIDR                     = CIDR("6.7.8.9/10")
-		servicesCIDR                 = CIDR("11.12.13.14/15")
-		blockCIDR                    = "16.17.18.19/20"
-		minimumVolumeSize            = "20Gi"
-		minimumVolumeSizeQuantity, _ = resource.ParseQuantity(minimumVolumeSize)
-		volumeProviderPurpose1       = "etcd-main"
-		volumeProviderName1          = "flexvolume"
-		volumeProviderPurpose2       = "foo"
-		volumeProviderName2          = "bar"
-	)
-
-	Describe("#Convert_v1alpha1_Seed_To_garden_Seed", func() {
+	Context("seed conversions", func() {
 		var (
-			out = &garden.Seed{}
-			in  = &Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: annotations,
-				},
-				Spec: SeedSpec{
-					Provider: SeedProvider{
-						Type:   providerName,
-						Region: regionName,
-					},
-					DNS: SeedDNS{
-						IngressDomain: ingressDomain,
-					},
-					SecretRef: corev1.SecretReference{
-						Name:      secretRefName,
-						Namespace: secretRefNamespace,
-					},
-					Networks: SeedNetworks{
-						Nodes:    nodesCIDR,
-						Pods:     podsCIDR,
-						Services: servicesCIDR,
-					},
-					BlockCIDRs: []CIDR{CIDR(blockCIDR)},
-					Taints: []SeedTaint{
-						{
-							Key: SeedTaintProtected,
-						},
-						{
-							Key: SeedTaintInvisible,
-						},
-					},
-					Volume: &SeedVolume{
-						MinimumSize: &minimumVolumeSizeQuantity,
-						Providers: []SeedVolumeProvider{
-							{
-								Purpose: volumeProviderPurpose1,
-								Name:    volumeProviderName1,
-							},
-							{
-								Purpose: volumeProviderPurpose2,
-								Name:    volumeProviderName2,
-							},
-						},
-					},
-				},
+			cloudProfileName = "cloudprofile1"
+			providerName     = "provider1"
+			regionName       = "region1"
+			annotations      = map[string]string{
+				garden.MigrationSeedCloudProfile: cloudProfileName,
+				garden.MigrationSeedCloudRegion:  regionName,
 			}
+			ingressDomain                = "foo.example.com"
+			secretRefName                = "seed-secret"
+			secretRefNamespace           = "garden"
+			nodesCIDR                    = CIDR("1.2.3.4/5")
+			podsCIDR                     = CIDR("6.7.8.9/10")
+			servicesCIDR                 = CIDR("11.12.13.14/15")
+			blockCIDR                    = "16.17.18.19/20"
+			minimumVolumeSize            = "20Gi"
+			minimumVolumeSizeQuantity, _ = resource.ParseQuantity(minimumVolumeSize)
+			volumeProviderPurpose1       = "etcd-main"
+			volumeProviderName1          = "flexvolume"
+			volumeProviderPurpose2       = "foo"
+			volumeProviderName2          = "bar"
 		)
 
-		It("should correctly convert", func() {
-			Expect(scheme.Convert(in, out, nil)).To(BeNil())
-			Expect(out).To(Equal(&garden.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: annotations,
-				},
-				Spec: garden.SeedSpec{
-					Cloud: garden.SeedCloud{
-						Profile: cloudProfileName,
-						Region:  regionName,
+		Describe("#Convert_v1alpha1_Seed_To_garden_Seed", func() {
+			var (
+				out = &garden.Seed{}
+				in  = &Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
 					},
-					Provider: garden.SeedProvider{
-						Type:   providerName,
-						Region: regionName,
-					},
-					IngressDomain: ingressDomain,
-					SecretRef: corev1.SecretReference{
-						Name:      secretRefName,
-						Namespace: secretRefNamespace,
-					},
-					Networks: garden.SeedNetworks{
-						Nodes:    garden.CIDR(nodesCIDR),
-						Pods:     garden.CIDR(podsCIDR),
-						Services: garden.CIDR(servicesCIDR),
-					},
-					BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
-					Taints: []garden.SeedTaint{
-						{
-							Key: SeedTaintProtected,
+					Spec: SeedSpec{
+						Provider: SeedProvider{
+							Type:   providerName,
+							Region: regionName,
 						},
-						{
-							Key: SeedTaintInvisible,
+						DNS: SeedDNS{
+							IngressDomain: ingressDomain,
 						},
-					},
-					Volume: &garden.SeedVolume{
-						MinimumSize: &minimumVolumeSizeQuantity,
-						Providers: []garden.SeedVolumeProvider{
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: SeedNetworks{
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
+						},
+						BlockCIDRs: []CIDR{CIDR(blockCIDR)},
+						Taints: []SeedTaint{
 							{
-								Purpose: volumeProviderPurpose1,
-								Name:    volumeProviderName1,
+								Key: SeedTaintProtected,
 							},
 							{
-								Purpose: volumeProviderPurpose2,
-								Name:    volumeProviderName2,
+								Key: SeedTaintInvisible,
+							},
+						},
+						Volume: &SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
 							},
 						},
 					},
-				},
-			}))
+				}
+			)
+
+			It("should correctly convert", func() {
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&garden.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: garden.SeedSpec{
+						Cloud: garden.SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
+						},
+						Provider: garden.SeedProvider{
+							Type:   providerName,
+							Region: regionName,
+						},
+						IngressDomain: ingressDomain,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: garden.SeedNetworks{
+							Nodes:    garden.CIDR(nodesCIDR),
+							Pods:     garden.CIDR(podsCIDR),
+							Services: garden.CIDR(servicesCIDR),
+						},
+						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						Taints: []garden.SeedTaint{
+							{
+								Key: SeedTaintProtected,
+							},
+							{
+								Key: SeedTaintInvisible,
+							},
+						},
+						Volume: &garden.SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []garden.SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
+							},
+						},
+					},
+				}))
+			})
 		})
-	})
 
-	Describe("#Convert_garden_Seed_To_v1alpha1_Seed", func() {
-		var (
-			out = &Seed{}
-			in  = &garden.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
-						"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
-					},
-				},
-				Spec: garden.SeedSpec{
-					Cloud: garden.SeedCloud{
-						Profile: cloudProfileName,
-						Region:  regionName,
-					},
-					Provider: garden.SeedProvider{
-						Type:   providerName,
-						Region: regionName,
-					},
-					IngressDomain: ingressDomain,
-					SecretRef: corev1.SecretReference{
-						Name:      secretRefName,
-						Namespace: secretRefNamespace,
-					},
-					Networks: garden.SeedNetworks{
-						Nodes:    garden.CIDR(nodesCIDR),
-						Pods:     garden.CIDR(podsCIDR),
-						Services: garden.CIDR(servicesCIDR),
-					},
-					Taints: []garden.SeedTaint{
-						{
-							Key: SeedTaintProtected,
-						},
-						{
-							Key: SeedTaintInvisible,
+		Describe("#Convert_garden_Seed_To_v1alpha1_Seed", func() {
+			var (
+				out = &Seed{}
+				in  = &garden.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
+							"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
 						},
 					},
-					BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
-					Volume: &garden.SeedVolume{
-						MinimumSize: &minimumVolumeSizeQuantity,
-						Providers: []garden.SeedVolumeProvider{
-							{
-								Purpose: volumeProviderPurpose1,
-								Name:    volumeProviderName1,
-							},
-							{
-								Purpose: volumeProviderPurpose2,
-								Name:    volumeProviderName2,
-							},
+					Spec: garden.SeedSpec{
+						Cloud: garden.SeedCloud{
+							Profile: cloudProfileName,
+							Region:  regionName,
 						},
-					},
-				},
-			}
-		)
-
-		It("should correctly convert", func() {
-			Expect(scheme.Convert(in, out, nil)).To(BeNil())
-			Expect(out).To(Equal(&Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: annotations,
-				},
-				Spec: SeedSpec{
-					Provider: SeedProvider{
-						Type:   providerName,
-						Region: regionName,
-					},
-					DNS: SeedDNS{
+						Provider: garden.SeedProvider{
+							Type:   providerName,
+							Region: regionName,
+						},
 						IngressDomain: ingressDomain,
-					},
-					SecretRef: corev1.SecretReference{
-						Name:      secretRefName,
-						Namespace: secretRefNamespace,
-					},
-					Networks: SeedNetworks{
-						Nodes:    nodesCIDR,
-						Pods:     podsCIDR,
-						Services: servicesCIDR,
-					},
-					BlockCIDRs: []CIDR{CIDR(blockCIDR)},
-					Taints: []SeedTaint{
-						{
-							Key: SeedTaintProtected,
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
 						},
-						{
-							Key: SeedTaintInvisible,
+						Networks: garden.SeedNetworks{
+							Nodes:    garden.CIDR(nodesCIDR),
+							Pods:     garden.CIDR(podsCIDR),
+							Services: garden.CIDR(servicesCIDR),
 						},
-					},
-					Volume: &SeedVolume{
-						MinimumSize: &minimumVolumeSizeQuantity,
-						Providers: []SeedVolumeProvider{
+						Taints: []garden.SeedTaint{
 							{
-								Purpose: volumeProviderPurpose1,
-								Name:    volumeProviderName1,
+								Key: SeedTaintProtected,
 							},
 							{
-								Purpose: volumeProviderPurpose2,
-								Name:    volumeProviderName2,
+								Key: SeedTaintInvisible,
+							},
+						},
+						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						Volume: &garden.SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []garden.SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
 							},
 						},
 					},
-				},
-			}))
+				}
+			)
+
+			It("should correctly convert", func() {
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: annotations,
+					},
+					Spec: SeedSpec{
+						Provider: SeedProvider{
+							Type:   providerName,
+							Region: regionName,
+						},
+						DNS: SeedDNS{
+							IngressDomain: ingressDomain,
+						},
+						SecretRef: corev1.SecretReference{
+							Name:      secretRefName,
+							Namespace: secretRefNamespace,
+						},
+						Networks: SeedNetworks{
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
+						},
+						BlockCIDRs: []CIDR{CIDR(blockCIDR)},
+						Taints: []SeedTaint{
+							{
+								Key: SeedTaintProtected,
+							},
+							{
+								Key: SeedTaintInvisible,
+							},
+						},
+						Volume: &SeedVolume{
+							MinimumSize: &minimumVolumeSizeQuantity,
+							Providers: []SeedVolumeProvider{
+								{
+									Purpose: volumeProviderPurpose1,
+									Name:    volumeProviderName1,
+								},
+								{
+									Purpose: volumeProviderPurpose2,
+									Name:    volumeProviderName2,
+								},
+							},
+						},
+					},
+				}))
+			})
 		})
 	})
 })

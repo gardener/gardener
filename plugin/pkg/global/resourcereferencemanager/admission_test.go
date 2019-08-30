@@ -22,6 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +34,6 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 type fakeAuthorizerType struct{}
@@ -117,7 +116,10 @@ var _ = Describe("resourcereferencemanager", func() {
 					Namespace: namespace,
 				},
 				Spec: garden.QuotaSpec{
-					Scope: garden.QuotaScopeProject,
+					Scope: corev1.ObjectReference{
+						APIVersion: "core.gardener.cloud/v1alpha1",
+						Kind:       "Project",
+					},
 				},
 			}
 			secretBinding = garden.SecretBinding{
@@ -281,7 +283,10 @@ var _ = Describe("resourcereferencemanager", func() {
 						Namespace: namespace,
 					},
 					Spec: garden.QuotaSpec{
-						Scope: garden.QuotaScopeSecret,
+						Scope: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
 					},
 				}
 
@@ -313,7 +318,10 @@ var _ = Describe("resourcereferencemanager", func() {
 						Namespace: namespace,
 					},
 					Spec: garden.QuotaSpec{
-						Scope: garden.QuotaScopeProject,
+						Scope: corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1alpha1",
+							Kind:       "Project",
+						},
 					},
 				}
 

@@ -17,17 +17,15 @@ mkdir -p "$PATH_EXAMPLES"
 # render cloud-specific templates
 for cloud in aws azure gcp alicloud openstack packet; do
   echo "* Rendering manifests for cloud '$cloud':"
-  for resource in 30-cloudprofile 40-deprecated-secret-seed 45-secret-seed-backup 50-deprecated-seed 70-secret-cloudprovider 80-secretbinding-cloudprovider 90-shoot; do
-    if [ ! $resource = "45-secret-seed-backup" ] || [ ! $cloud = "packet" ]; then
-      echo "  * Template '$resource' rendered."
-      mako-render --var cloud="$cloud" "$PATH_TEMPLATES/$resource.yaml.tpl" > "$PATH_EXAMPLES/$resource-$cloud.yaml"
-    fi
+  for resource in 30-cloudprofile 40-deprecated-secret-seed 45-deprecated-secret-seed-backup 50-deprecated-seed 70-deprecated-secret-cloudprovider 80-deprecated-secretbinding-cloudprovider 90-shoot; do
+    echo "  * Template '$resource' rendered."
+    mako-render --var cloud="$cloud" "$PATH_TEMPLATES/$resource.yaml.tpl" > "$PATH_EXAMPLES/$resource-$cloud.yaml"
   done
   echo
 done
 
 # render cloud-independent templates
-for template in 05-deprecated-project-dev 25-controllerregistration 25-controllerinstallation 60-quota 95-configmap-custom-audit-policy 100-plant; do
+for template in 05-deprecated-project-dev 25-controllerregistration 25-controllerinstallation 60-deprecated-quota 95-configmap-custom-audit-policy 100-plant; do
   echo "* Template '$template' rendered."
   mako-render "$PATH_TEMPLATES/$template.yaml.tpl" > "$PATH_EXAMPLES/$template.yaml"
 done

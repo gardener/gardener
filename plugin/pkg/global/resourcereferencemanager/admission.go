@@ -16,11 +16,11 @@ package resourcereferencemanager
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -321,14 +321,19 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 			return err
 		}
 
-		if quota.Spec.Scope == garden.QuotaScopeProject {
+		scope, err := helper.QuotaScope(quota.Spec.Scope)
+		if err != nil {
+			return err
+		}
+
+		if scope == "project" {
 			projectQuotaCount++
 		}
-		if quota.Spec.Scope == garden.QuotaScopeSecret {
+		if scope == "secret" {
 			secretQuotaCount++
 		}
 		if projectQuotaCount > 1 || secretQuotaCount > 1 {
-			return fmt.Errorf("Only one quota per scope (%s or %s) can be assigned", garden.QuotaScopeProject, garden.QuotaScopeSecret)
+			return errors.New("Only one quota per scope (project or secret) can be assigned")
 		}
 	}
 

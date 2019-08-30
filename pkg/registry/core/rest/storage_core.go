@@ -27,6 +27,8 @@ import (
 	// garden storage for migration
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
 	projectstore "github.com/gardener/gardener/pkg/registry/garden/project/storage"
+	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
+	secretbindingstore "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,11 +70,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
 	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
 
-	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
-	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
-	storage["seeds"] = seedStorage.Seed
-	storage["seeds/status"] = seedStorage.Status
-
 	plantStorage := plantstore.NewStorage(restOptionsGetter)
 	storage["plants"] = plantStorage.Plant
 	storage["plants/status"] = plantStorage.Status
@@ -80,6 +77,17 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
 	storage["projects/status"] = projectStorage.Status
+
+	quotaStorage := quotastore.NewStorage(restOptionsGetter)
+	storage["quotas"] = quotaStorage.Quota
+
+	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
+	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
+	storage["seeds"] = seedStorage.Seed
+	storage["seeds/status"] = seedStorage.Status
+
+	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
+	storage["secretbindings"] = secretBindingStorage.SecretBinding
 
 	return storage
 }
