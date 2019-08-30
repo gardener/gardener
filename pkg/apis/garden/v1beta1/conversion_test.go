@@ -168,6 +168,8 @@ var _ = Describe("Machine Image Conversion", func() {
 			nodesCIDR                    = gardencorev1alpha1.CIDR("1.2.3.4/5")
 			podsCIDR                     = gardencorev1alpha1.CIDR("6.7.8.9/10")
 			servicesCIDR                 = gardencorev1alpha1.CIDR("11.12.13.14/15")
+			defaultPodCIDR               = DefaultPodNetworkCIDR
+			defaultServiceCIDR           = DefaultServiceNetworkCIDR
 			blockCIDR                    = "16.17.18.19/20"
 			taintKeyOtherOne             = "some-other-taint-key"
 			taintKeyOtherTwo             = "yet-some-other-taint-key"
@@ -355,6 +357,10 @@ var _ = Describe("Machine Image Conversion", func() {
 							Nodes:    nodesCIDR,
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
+							ShootDefaults: &ShootNetworks{
+								Pods:     &defaultPodCIDR,
+								Services: &defaultServiceCIDR,
+							},
 						},
 						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
 						Protected:  &trueVar,

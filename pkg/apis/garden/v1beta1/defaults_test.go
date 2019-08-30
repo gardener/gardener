@@ -51,15 +51,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.AWS.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.96.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.AWS.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
-				})
-
 				Context("nodes", func() {
 					Context("provided VPC CIDR", func() {
 						const vpcCIDR = v1alpha1.CIDR("1.1.0.0/24")
@@ -217,15 +208,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.Azure.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.96.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.Azure.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
-				})
-
 				Context("with one worker", func() {
 					const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
 
@@ -353,15 +335,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.GCP.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.96.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.GCP.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
-				})
-
 				Context("nodes", func() {
 
 					Context("without any workers", func() {
@@ -506,15 +479,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.Alicloud.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.Alicloud.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.104.0.0/13"))))
-				})
-
 				Context("nodes", func() {
 					Context("provided VPC CIDR", func() {
 						const vpcCIDR = v1alpha1.CIDR("1.1.0.0/24")
@@ -674,15 +638,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.OpenStack.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.96.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.OpenStack.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
-				})
-
 				Context("nodes", func() {
 
 					Context("without any workers", func() {
@@ -821,21 +776,12 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			var (
 				packet *v1beta1.PacketCloud
 			)
+
 			BeforeEach(func() {
 				packet = &v1beta1.PacketCloud{}
 				shoot.Spec.Cloud.Packet = packet
 			})
 
-			Context("Shoot Networks", func() {
-
-				It("should set default Pod CIDR", func() {
-					Expect(shoot.Spec.Cloud.Packet.Networks.Pods).To(PointTo(Equal(v1alpha1.CIDR("100.96.0.0/11"))))
-				})
-
-				It("should set default Services CIDR", func() {
-					Expect(shoot.Spec.Cloud.Packet.Networks.Services).To(PointTo(Equal(v1alpha1.CIDR("100.64.0.0/13"))))
-				})
-			})
 			Context("kube controller - NodeCIDRMask", func() {
 
 				Context("Non-nil kube controller NodeCIDRMask", func() {

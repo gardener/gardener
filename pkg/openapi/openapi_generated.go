@@ -73,6 +73,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint":                             schema_pkg_apis_core_v1alpha1_SeedTaint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume":                            schema_pkg_apis_core_v1alpha1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                    schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                         schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud":                             schema_pkg_apis_garden_v1beta1_AWSCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints":                       schema_pkg_apis_garden_v1beta1_AWSConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks":                          schema_pkg_apis_garden_v1beta1_AWSNetworks(ref),
@@ -189,6 +190,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot":                                schema_pkg_apis_garden_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootList":                            schema_pkg_apis_garden_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage":                    schema_pkg_apis_garden_v1beta1_ShootMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootNetworks":                        schema_pkg_apis_garden_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootSpec":                            schema_pkg_apis_garden_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus":                          schema_pkg_apis_garden_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType":                           schema_pkg_apis_garden_v1beta1_VolumeType(ref),
@@ -1736,10 +1738,18 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"shootDefaults": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootDefaults contains the default networks CIDRs for shoots.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks"),
+						},
+					},
 				},
 				Required: []string{"nodes", "pods", "services"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks"},
 	}
 }
 
@@ -1976,6 +1986,33 @@ func schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref common.ReferenceCallba
 					},
 				},
 				Required: []string{"purpose", "name"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootDefaults contains the default networks CIDRs for shoots.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -7324,10 +7361,18 @@ func schema_pkg_apis_garden_v1beta1_SeedNetworks(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"shootDefaults": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootDefaults contains the default networks CIDRs for shoots.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootNetworks"),
+						},
+					},
 				},
 				Required: []string{"nodes", "pods", "services"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootNetworks"},
 	}
 }
 
@@ -7608,6 +7653,33 @@ func schema_pkg_apis_garden_v1beta1_ShootMachineImage(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_ShootNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootDefaults contains the default networks CIDRs for shoots.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

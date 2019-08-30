@@ -17,7 +17,7 @@ package v1beta1
 import (
 	"math"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/utils"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -31,23 +31,18 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
 	var (
-		cloud              = obj.Spec.Cloud
-		defaultPodCIDR     = gardencorev1alpha1.DefaultPodNetworkCIDR
-		defaultServiceCIDR = gardencorev1alpha1.DefaultServiceNetworkCIDR
-		defaultProxyMode   = ProxyModeIPTables
+		cloud            = obj.Spec.Cloud
+		defaultProxyMode = ProxyModeIPTables
 	)
 
 	if obj.Spec.Networking == nil {
 		obj.Spec.Networking = &Networking{}
 	}
+	if len(obj.Spec.Networking.Type) == 0 {
+		obj.Spec.Networking.Type = CalicoNetworkType
+	}
 
 	if cloud.AWS != nil {
-		if cloud.AWS.Networks.Pods == nil {
-			obj.Spec.Cloud.AWS.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.AWS.Networks.Services == nil {
-			obj.Spec.Cloud.AWS.Networks.Services = &defaultServiceCIDR
-		}
 		if cloud.AWS.Networks.Nodes == nil {
 			if cloud.AWS.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
@@ -67,12 +62,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.Azure != nil {
-		if cloud.Azure.Networks.Pods == nil {
-			obj.Spec.Cloud.Azure.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.Azure.Networks.Services == nil {
-			obj.Spec.Cloud.Azure.Networks.Services = &defaultServiceCIDR
-		}
 		if cloud.Azure.Networks.Nodes == nil {
 			obj.Spec.Cloud.Azure.Networks.Nodes = &cloud.Azure.Networks.Workers
 			if obj.Spec.Networking.Nodes == nil {
@@ -85,12 +74,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.GCP != nil {
-		if cloud.GCP.Networks.Pods == nil {
-			obj.Spec.Cloud.GCP.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.GCP.Networks.Services == nil {
-			obj.Spec.Cloud.GCP.Networks.Services = &defaultServiceCIDR
-		}
 		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) == 1 {
 			obj.Spec.Cloud.GCP.Networks.Nodes = &cloud.GCP.Networks.Workers[0]
 			if obj.Spec.Networking.Nodes == nil {
@@ -103,23 +86,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.Alicloud != nil {
-		var (
-			defaultPodCIDRAlicloud     = gardencorev1alpha1.DefaultPodNetworkCIDRAlicloud
-			defaultServiceCIDRAlicloud = gardencorev1alpha1.DefaultServiceNetworkCIDRAlicloud
-		)
-
-		if obj.Spec.Networking.Pods == nil {
-			obj.Spec.Networking.Pods = &defaultPodCIDRAlicloud
-		}
-		if obj.Spec.Networking.Services == nil {
-			obj.Spec.Networking.Services = &defaultServiceCIDRAlicloud
-		}
-		if cloud.Alicloud.Networks.Pods == nil {
-			obj.Spec.Cloud.Alicloud.Networks.Pods = &defaultPodCIDRAlicloud
-		}
-		if cloud.Alicloud.Networks.Services == nil {
-			obj.Spec.Cloud.Alicloud.Networks.Services = &defaultServiceCIDRAlicloud
-		}
 		if cloud.Alicloud.Networks.Nodes == nil {
 			if cloud.Alicloud.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = cloud.Alicloud.Networks.VPC.CIDR
@@ -139,12 +105,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.OpenStack != nil {
-		if cloud.OpenStack.Networks.Pods == nil {
-			obj.Spec.Cloud.OpenStack.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.OpenStack.Networks.Services == nil {
-			obj.Spec.Cloud.OpenStack.Networks.Services = &defaultServiceCIDR
-		}
 		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) == 1 {
 			obj.Spec.Cloud.OpenStack.Networks.Nodes = &cloud.OpenStack.Networks.Workers[0]
 			if obj.Spec.Networking.Nodes == nil {
@@ -157,25 +117,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if cloud.Packet != nil {
-		if cloud.Packet.Networks.Pods == nil {
-			obj.Spec.Cloud.Packet.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.Packet.Networks.Services == nil {
-			obj.Spec.Cloud.Packet.Networks.Services = &defaultServiceCIDR
-		}
 		if obj.Spec.Kubernetes.KubeControllerManager == nil || obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			SetNodeCIDRMaskSize(&obj.Spec.Kubernetes, CalculateDefaultNodeCIDRMaskSize(&obj.Spec.Kubernetes, getShootCloudProviderWorkers(CloudProviderPacket, obj)))
 		}
-	}
-
-	if obj.Spec.Networking.Pods == nil {
-		obj.Spec.Networking.Pods = &defaultPodCIDR
-	}
-	if obj.Spec.Networking.Services == nil {
-		obj.Spec.Networking.Services = &defaultServiceCIDR
-	}
-	if len(obj.Spec.Networking.Type) == 0 {
-		obj.Spec.Networking.Type = CalicoNetworkType
 	}
 
 	trueVar := true
@@ -240,6 +184,33 @@ func SetDefaults_Seed(obj *Seed) {
 	falseVar := false
 	if obj.Spec.Protected == nil {
 		obj.Spec.Protected = &falseVar
+	}
+
+	var (
+		defaultPodCIDR             = DefaultPodNetworkCIDR
+		defaultServiceCIDR         = DefaultServiceNetworkCIDR
+		defaultPodCIDRAlicloud     = DefaultPodNetworkCIDRAlicloud
+		defaultServiceCIDRAlicloud = DefaultServiceNetworkCIDRAlicloud
+	)
+
+	if obj.Spec.Networks.ShootDefaults == nil {
+		obj.Spec.Networks.ShootDefaults = &ShootNetworks{}
+	}
+
+	if v, ok := obj.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil {
+			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
+		}
+		if obj.Spec.Networks.ShootDefaults.Services == nil {
+			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
+		}
+	} else {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil {
+			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
+		}
+		if obj.Spec.Networks.ShootDefaults.Services == nil {
+			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
+		}
 	}
 }
 

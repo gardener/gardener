@@ -317,6 +317,33 @@ func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversio
 		out.Spec.Protected = &falseVar
 	}
 
+	var (
+		defaultPodCIDR             = DefaultPodNetworkCIDR
+		defaultServiceCIDR         = DefaultServiceNetworkCIDR
+		defaultPodCIDRAlicloud     = DefaultPodNetworkCIDRAlicloud
+		defaultServiceCIDRAlicloud = DefaultServiceNetworkCIDRAlicloud
+	)
+
+	if out.Spec.Networks.ShootDefaults == nil {
+		out.Spec.Networks.ShootDefaults = &ShootNetworks{}
+	}
+
+	if v, ok := out.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
+		if out.Spec.Networks.ShootDefaults.Pods == nil {
+			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
+		}
+		if out.Spec.Networks.ShootDefaults.Services == nil {
+			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
+		}
+	} else {
+		if out.Spec.Networks.ShootDefaults.Pods == nil {
+			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
+		}
+		if out.Spec.Networks.ShootDefaults.Services == nil {
+			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
+		}
+	}
+
 	return nil
 }
 

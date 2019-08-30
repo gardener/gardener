@@ -560,6 +560,16 @@ type SeedNetworks struct {
 	Pods CIDR
 	// Services is the CIDR of the service network.
 	Services CIDR
+	// ShootDefaults contains the default networks CIDRs for shoots.
+	ShootDefaults *ShootNetworks
+}
+
+// ShootNetworks contains the default networks CIDRs for shoots.
+type ShootNetworks struct {
+	// Pods is the CIDR of the pod network.
+	Pods *CIDR
+	// Services is the CIDR of the service network.
+	Services *CIDR
 }
 
 // SeedTaint describes a taint on a seed.
