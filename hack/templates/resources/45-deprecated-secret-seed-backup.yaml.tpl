@@ -65,7 +65,6 @@ data:
   % if cloud == "alicloud":
   accessKeyID: ${value("data.accessKeyID", "base64(access-key-id)")}
   accessKeySecret: ${value("data.accessKeySecret", "base64(access-key-secret)")}
-  storageEndpoint: ${value("data.storageEndpoint", "base64(storage-endpoint)")}
   % endif
   % if cloud == "gcp":
   serviceaccount.json: ${value("data.serviceaccountjson", "base64(serviceaccount-json)")}
