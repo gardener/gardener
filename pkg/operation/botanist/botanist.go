@@ -277,9 +277,15 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 		requiredExtensions[extensionsv1alpha1.ExtensionResource].Insert(extensionType)
 	}
 
-	requiredExtensions[extensionsv1alpha1.InfrastructureResource] = sets.NewString(string(b.Shoot.CloudProvider))
-	requiredExtensions[extensionsv1alpha1.WorkerResource] = sets.NewString(string(b.Shoot.CloudProvider))
 	requiredExtensions[extensionsv1alpha1.ControlPlaneResource] = sets.NewString(string(b.Shoot.CloudProvider))
+	requiredExtensions[extensionsv1alpha1.InfrastructureResource] = sets.NewString(string(b.Shoot.CloudProvider))
+	requiredExtensions[extensionsv1alpha1.NetworkResource] = sets.NewString(b.Shoot.Info.Spec.Networking.Type)
+	requiredExtensions[extensionsv1alpha1.WorkerResource] = sets.NewString(string(b.Shoot.CloudProvider))
+
+	if b.Seed.Info.Spec.Backup != nil {
+		requiredExtensions[extensionsv1alpha1.BackupBucketResource] = sets.NewString(string(b.Seed.Info.Spec.Backup.Provider))
+		requiredExtensions[extensionsv1alpha1.BackupEntryResource] = sets.NewString(string(b.Seed.Info.Spec.Backup.Provider))
+	}
 
 	return requiredExtensions
 }

@@ -62,11 +62,15 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 			common.GardenRole:                          common.GardenRoleShoot,
 			gardencorev1alpha1.GardenRole:              common.GardenRoleShoot,
 			common.ShootHibernated:                     strconv.FormatBool(b.Shoot.HibernationEnabled),
-			gardencorev1alpha1.LabelBackupProvider:     string(b.Seed.CloudProvider),
 			gardencorev1alpha1.LabelSeedProvider:       string(b.Seed.CloudProvider),
 			gardencorev1alpha1.LabelShootProvider:      string(b.Shoot.CloudProvider),
 			gardencorev1alpha1.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
 		}
+
+		if b.Seed.Info.Spec.Backup != nil {
+			namespace.Labels[gardencorev1alpha1.LabelBackupProvider] = string(b.Seed.Info.Spec.Backup.Provider)
+		}
+
 		return nil
 	}); err != nil {
 		return err

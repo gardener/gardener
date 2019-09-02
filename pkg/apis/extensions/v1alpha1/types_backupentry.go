@@ -21,6 +21,9 @@ import (
 
 var _ Object = (*BackupEntry)(nil)
 
+// BackupEntryResource is a constant for the name of the BackupEntry resource.
+const BackupEntryResource = "BackupEntry"
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

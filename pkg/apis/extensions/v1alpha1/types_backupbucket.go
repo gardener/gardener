@@ -21,6 +21,9 @@ import (
 
 var _ Object = (*BackupBucket)(nil)
 
+// BackupBucketResource is a constant for the name of the BackupBucket resource.
+const BackupBucketResource = "BackupBucket"
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

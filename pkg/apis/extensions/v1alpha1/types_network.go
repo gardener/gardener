@@ -21,6 +21,9 @@ import (
 
 var _ Object = (*Network)(nil)
 
+// NetworkResource is a constant for the name of the Network resource.
+const NetworkResource = "Network"
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
