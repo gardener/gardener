@@ -230,6 +230,7 @@ func (r *reconciler) updateBackupEntryStatusError(be *gardencorev1alpha1.BackupE
 
 func (r *reconciler) updateBackupEntryStatusSucceeded(be *gardencorev1alpha1.BackupEntry, message string) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
+		be.Status.LastError = nil
 		be.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 			Type:           gardencorev1alpha1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
 			State:          gardencorev1alpha1.LastOperationStateSucceeded,
