@@ -353,16 +353,11 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 		},
 	}
 
-	backupSecret, err := common.GetSecretFromSecretRef(ctx, k8sGardenClient, &seed.Spec.Backup.SecretRef)
-	if err != nil {
-		return err
-	}
-	checksum := common.ComputeSecretCheckSum(backupSecret.Data)
 	ownerRef := metav1.NewControllerRef(seed, gardenv1beta1.SchemeGroupVersion.WithKind("Seed"))
 
 	return kutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
 		backupBucket.ObjectMeta.Annotations = map[string]string{
-			common.SecretRefChecksumAnnotation: checksum,
+			gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
 		}
 		backupBucket.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1alpha1.BackupBucketSpec{
