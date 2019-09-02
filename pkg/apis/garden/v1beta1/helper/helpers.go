@@ -616,6 +616,7 @@ type ShootedSeed struct {
 	MinimumVolumeSize *string
 	APIServer         *ShootedSeedAPIServer
 	BlockCIDRs        []gardencorev1alpha1.CIDR
+	ShootDefaults     *gardenv1beta1.ShootNetworks
 }
 
 type ShootedSeedAPIServer struct {
@@ -673,6 +674,12 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 	shootedSeed.BlockCIDRs = blockCIDRs
 
+	shootDefaults, err := parseShootedSeedShootDefaults(settings)
+	if err != nil {
+		return nil, err
+	}
+	shootedSeed.ShootDefaults = shootDefaults
+
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
 	}
@@ -705,6 +712,29 @@ func parseShootedSeedBlockCIDRs(settings map[string]string) ([]gardencorev1alpha
 	}
 
 	return addresses, nil
+}
+
+func parseShootedSeedShootDefaults(settings map[string]string) (*gardenv1beta1.ShootNetworks, error) {
+	podCIDR, ok1 := settings["shootDefaults.pods"]
+	serviceCIDR, ok2 := settings["shootDefaults.services"]
+
+	if !ok1 && !ok2 {
+		return nil, nil
+	}
+
+	shootNetworks := &gardenv1beta1.ShootNetworks{}
+
+	if ok1 {
+		cidr := gardencorev1alpha1.CIDR(podCIDR)
+		shootNetworks.Pods = &cidr
+	}
+
+	if ok2 {
+		cidr := gardencorev1alpha1.CIDR(serviceCIDR)
+		shootNetworks.Services = &cidr
+	}
+
+	return shootNetworks, nil
 }
 
 func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {

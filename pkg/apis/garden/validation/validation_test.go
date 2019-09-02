@@ -2713,7 +2713,15 @@ var _ = Describe("validation", func() {
 
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks"),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`field is immutable`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`field is immutable`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.nodes"),
 				"Detail": Equal(`field is immutable`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),

@@ -326,7 +326,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
 	if o.Shoot.Info.Namespace == common.GardenNamespace {
 		if o.ShootedSeed != nil {
-			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs); err != nil {
+			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs, o.ShootedSeed.ShootDefaults); err != nil {
 				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
 			}
 		} else {

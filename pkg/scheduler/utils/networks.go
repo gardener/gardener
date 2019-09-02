@@ -15,9 +15,8 @@
 package utils
 
 import (
-	"net"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -33,7 +32,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sN
 	)
 
 	if nodes := k8sNetworks.Nodes; nodes != nil {
-		if networksIntersect(seedNetworks.Nodes, *nodes) {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Nodes, *nodes) {
 			allErrs = append(allErrs, field.Invalid(pathNodes, *nodes, "shoot node network intersects with seed node network"))
 		}
 	} else {
@@ -41,7 +40,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sN
 	}
 
 	if services := k8sNetworks.Services; services != nil {
-		if networksIntersect(seedNetworks.Services, *services) {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Services, *services) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *services, "shoot service network intersects with seed service network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Services == nil {
@@ -49,7 +48,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sN
 	}
 
 	if pods := k8sNetworks.Pods; pods != nil {
-		if networksIntersect(seedNetworks.Pods, *pods) {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Pods, *pods) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *pods, "shoot pod network intersects with seed pod network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Pods == nil {
@@ -57,10 +56,4 @@ func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sN
 	}
 
 	return allErrs
-}
-
-func networksIntersect(cidr1, cidr2 gardencorev1alpha1.CIDR) bool {
-	_, net1, err1 := net.ParseCIDR(string(cidr1))
-	_, net2, err2 := net.ParseCIDR(string(cidr2))
-	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
 }

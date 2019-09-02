@@ -17,6 +17,7 @@ package v1beta1
 import (
 	"math"
 
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -198,17 +199,17 @@ func SetDefaults_Seed(obj *Seed) {
 	}
 
 	if v, ok := obj.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
-		if obj.Spec.Networks.ShootDefaults.Pods == nil {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil && !gardencorev1alpha1helper.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
 			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
 		}
-		if obj.Spec.Networks.ShootDefaults.Services == nil {
+		if obj.Spec.Networks.ShootDefaults.Services == nil && !gardencorev1alpha1helper.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
 			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
 		}
 	} else {
-		if obj.Spec.Networks.ShootDefaults.Pods == nil {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil && !gardencorev1alpha1helper.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDR) {
 			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
 		}
-		if obj.Spec.Networks.ShootDefaults.Services == nil {
+		if obj.Spec.Networks.ShootDefaults.Services == nil && !gardencorev1alpha1helper.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDR) {
 			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
 		}
 	}
