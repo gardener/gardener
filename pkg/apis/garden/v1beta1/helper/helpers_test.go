@@ -529,6 +529,7 @@ var _ = Describe("helper", func() {
 
 			defaultShootedSeed = ShootedSeed{
 				APIServer: &defaultAPIServer,
+				Backup:    &gardenv1beta1.BackupProfile{},
 			}
 		)
 
@@ -591,6 +592,7 @@ var _ = Describe("helper", func() {
 				Protected: &trueVar,
 				Visible:   &trueVar,
 				APIServer: &defaultAPIServer,
+				Backup:    &gardenv1beta1.BackupProfile{},
 			}))
 		})
 
@@ -606,6 +608,7 @@ var _ = Describe("helper", func() {
 				Protected:         &falseVar,
 				Visible:           &falseVar,
 				APIServer:         &defaultAPIServer,
+				Backup:            &gardenv1beta1.BackupProfile{},
 				MinimumVolumeSize: nil,
 			}))
 		})
@@ -622,6 +625,7 @@ var _ = Describe("helper", func() {
 				Protected:         &falseVar,
 				Visible:           &falseVar,
 				APIServer:         &defaultAPIServer,
+				Backup:            &gardenv1beta1.BackupProfile{},
 				MinimumVolumeSize: &defaultMinimumVolumeSize,
 			}))
 		})
@@ -648,6 +652,7 @@ var _ = Describe("helper", func() {
 						MaxReplicas: three,
 					},
 				},
+				Backup: &gardenv1beta1.BackupProfile{},
 			}))
 		})
 
