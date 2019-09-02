@@ -17,9 +17,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"os"
 	"strconv"
+
+	"github.com/ghodss/yaml"
 
 	helper "github.com/gardener/gardener/.test-defs/cmd"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -173,15 +174,6 @@ func main() {
 
 	if err := gardenerTestOperation.AddShoot(ctx, shootObject); err != nil {
 		testLogger.Fatalf("Cannot add shoot %s to test operation: %s", shootName, err.Error())
-	}
-
-	backupInfrastructure, err := helper.GetBackupInfrastructureOfShoot(ctx, shootGardenerTest, shootObject)
-	if err != nil {
-		testLogger.Fatal(err)
-	}
-	helper.UpdateBackupInfrastructureAnnotations(backupInfrastructure)
-	if err := shootGardenerTest.GardenClient.Client().Update(ctx, backupInfrastructure); err != nil {
-		testLogger.Fatalf("Cannot update annotation of backupinfrastructure %s: %s", backupInfrastructure.Name, err.Error())
 	}
 
 	err = gardenerTestOperation.DownloadKubeconfig(ctx, gardenerTestOperation.SeedClient, gardenerTestOperation.ShootSeedNamespace(), gardenv1beta1.GardenerName, fmt.Sprintf("%s/shoot.config", kubeconfigPath))

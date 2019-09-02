@@ -15,13 +15,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/test/integration/framework"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // UpdateWorkerZone updates the zone of the workers.
@@ -162,27 +159,4 @@ func UpdateAnnotations(shoot *gardenv1beta1.Shoot) {
 		shoot.Annotations = map[string]string{}
 	}
 	shoot.Annotations[common.GardenIgnoreAlerts] = "true"
-}
-
-// UpdateBackupInfrastructureAnnotations adds default annotations that should be present on any backupinfrastructure created.
-func UpdateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastructure) {
-	if backup.Annotations == nil {
-		backup.Annotations = map[string]string{}
-	}
-	backup.Annotations[common.BackupInfrastructureForceDeletion] = "true"
-}
-
-// GetBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
-func GetBackupInfrastructureOfShoot(ctx context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
-	backups := &gardenv1beta1.BackupInfrastructureList{}
-	err := shootGardenerTest.GardenClient.Client().List(ctx, backups, client.InNamespace(shootObject.Namespace))
-	if err != nil {
-		return nil, err
-	}
-	for _, backup := range backups.Items {
-		if backup.Spec.ShootUID == shootObject.GetUID() {
-			return &backup, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find backup infrastructure for shoot with uid %s", shootObject.GetUID())
 }
