@@ -72,7 +72,7 @@ func newActuator(gardenClient, seedClient client.Client, bb *gardencorev1alpha1.
 
 func (a *actuator) Reconcile(ctx context.Context) error {
 	var (
-		g = flow.NewGraph("Backup Bucket Creation")
+		g = flow.NewGraph("Backup Bucket Reconciliation")
 
 		deployBackupBucketExtension = g.Add(flow.Task{
 			Name: "Deploying backup bucket extension resource",
@@ -157,24 +157,22 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	}
 
 	// create extension backup bucket resource in seed
-	extensionbackupBucket := &extensionsv1alpha1.BackupBucket{
+	extensionBackupBucket := &extensionsv1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: a.backupBucket.Name,
 		},
 	}
 
-	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionbackupBucket, func() error {
-		extensionbackupBucket.ObjectMeta.Annotations = map[string]string{
-			gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
-		}
-		extensionbackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
+	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
+		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+
+		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: a.backupBucket.Spec.Provider.Type,
 			},
 			Region:    a.backupBucket.Spec.Provider.Region,
 			SecretRef: *extensionSecretRef,
 		}
-		extensionbackupBucket.Status.GeneratedSecretRef = generatedExtensionSecretRef
 		return nil
 	})
 }
@@ -182,8 +180,10 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 // waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extention resource reconciled from seed.
 // It also copies the generatedSecret from seed to garden.
 func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context) error {
-	bb := &extensionsv1alpha1.BackupBucket{}
+	var backupBucket *extensionsv1alpha1.BackupBucket
+
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
+		bb := &extensionsv1alpha1.BackupBucket{}
 		if err := a.seedClient.Get(ctx, kutil.Key(a.backupBucket.Name), bb); err != nil {
 			return retry.SevereError(err)
 		}
@@ -191,17 +191,18 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 			a.logger.WithError(err).Error("Backup bucket did not get ready yet")
 			return retry.MinorError(err)
 		}
+		backupBucket = bb
 		return retry.Ok()
 	}); err != nil {
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
 	}
 
-	if bb.Status.GeneratedSecretRef != nil {
+	if backupBucket.Status.GeneratedSecretRef != nil {
 		coreGeneratedSecretRef := &corev1.SecretReference{
 			Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
 			Namespace: common.GardenNamespace,
 		}
-		if err := copySecret(ctx, a.seedClient, a.gardenClient, bb.Status.GeneratedSecretRef, coreGeneratedSecretRef, finalizerName); err != nil {
+		if err := copySecret(ctx, a.seedClient, a.gardenClient, backupBucket.Status.GeneratedSecretRef, coreGeneratedSecretRef, finalizerName); err != nil {
 			return err
 		}
 
@@ -211,10 +212,10 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				Namespace: coreGeneratedSecretRef.Namespace,
 			},
 		}
-		ownerRef := metav1.NewControllerRef(bb, gardencorev1alpha1.SchemeGroupVersion.WithKind("BackupBucket"))
+		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1alpha1.SchemeGroupVersion.WithKind("BackupBucket"))
 
 		if err := kutil.CreateOrUpdate(ctx, a.gardenClient, coreGeneratedSecret, func() error {
-			coreGeneratedSecret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+			coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			return nil
 		}); err != nil {
 			return err

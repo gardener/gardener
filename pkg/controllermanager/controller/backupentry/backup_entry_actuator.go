@@ -70,7 +70,7 @@ func newActuator(gardenClient, seedClient client.Client, be *gardencorev1alpha1.
 
 func (a *actuator) Reconcile(ctx context.Context) error {
 	var (
-		g = flow.NewGraph("Backup Entry Creation")
+		g = flow.NewGraph("Backup Entry Reconciliation")
 
 		deployBackupEntryExtension = g.Add(flow.Task{
 			Name: "Deploying backup entry extension resource",
@@ -169,17 +169,16 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	}
 
 	// create extension backupEntry resource in seed
-	extensionbackupEntry := &extensionsv1alpha1.BackupEntry{
+	extensionBackupEntry := &extensionsv1alpha1.BackupEntry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: a.backupEntry.Name,
 		},
 	}
 
-	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionbackupEntry, func() error {
-		extensionbackupEntry.ObjectMeta.Annotations = map[string]string{
-			gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
-		}
-		extensionbackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
+	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
+		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+
+		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: bb.Spec.Provider.Type,
 			},
@@ -197,11 +196,12 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 // waitUntilCoreBackupBucketReconciled waits until core.BackupBucket resource reconciled from seed.
 func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1alpha1.BackupBucket) error {
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
-		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), bb); err != nil {
+		backupBucket := &gardencorev1alpha1.BackupBucket{}
+		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), backupBucket); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if err := health.CheckBackupBucket(bb); err != nil {
+		if err := health.CheckBackupBucket(backupBucket); err != nil {
 			a.logger.WithError(err).Error("BackupBucket did not get ready yet")
 			return retry.MinorError(err)
 		}
