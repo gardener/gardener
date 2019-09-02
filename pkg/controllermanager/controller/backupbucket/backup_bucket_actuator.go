@@ -165,7 +165,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionbackupBucket, func() error {
 		extensionbackupBucket.ObjectMeta.Annotations = map[string]string{
-			common.SecretRefChecksumAnnotation: a.backupBucket.Annotations[common.SecretRefChecksumAnnotation],
+			gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
 		}
 		extensionbackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
