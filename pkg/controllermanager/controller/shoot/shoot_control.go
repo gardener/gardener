@@ -219,10 +219,12 @@ func (c *Controller) deleteShoot(shoot *gardenv1beta1.Shoot, o *operation.Operat
 }
 
 func (c *Controller) finalizeShootDeletion(shoot *gardenv1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
-	if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
-		lastErr := gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
-		c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, lastErr.Description)
-		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusDeleteError(o, lastErr))
+	if len(o.Shoot.Info.Status.UID) > 0 {
+		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
+			lastErr := gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
+			c.recorder.Event(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, lastErr.Description)
+			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusDeleteError(o, lastErr))
+		}
 	}
 
 	return reconcile.Result{}, c.updateShootStatusDeleteSuccess(o)
