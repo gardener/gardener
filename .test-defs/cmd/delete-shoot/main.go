@@ -52,6 +52,8 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+	defer ctx.Done()
 	gardenerConfigPath := fmt.Sprintf("%s/gardener.config", kubeconfigPath)
 
 	shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: projectNamespace, Name: shootName}}
@@ -59,8 +61,18 @@ func main() {
 	if err != nil {
 		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
 	}
+	gardenerTestOperations, err := framework.NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, testLogger, shoot)
+	if err != nil {
+		testLogger.Fatalf("Cannot create gardener test  %s: %s", shootName, err.Error())
+	}
 
-	if err := shootGardenerTest.DeleteShoot(context.TODO()); err != nil && !errors.IsNotFound(err) {
+	// Dump gardener state if delete shoot is in exit handler
+	if os.Getenv("TM_PHASE") == "Exit" {
+		gardenerTestOperations.DumpState(ctx)
+	}
+
+	if err := shootGardenerTest.DeleteShoot(ctx); err != nil && !errors.IsNotFound(err) {
+		gardenerTestOperations.DumpState(ctx)
 		testLogger.Fatalf("Cannot delete shoot %s: %s", shootName, err.Error())
 	}
 

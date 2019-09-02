@@ -95,7 +95,7 @@ var _ = Describe("Scheduler testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 		schedulerGardenerTest.ShootGardenerTest.Shoot.Namespace = *schedulerTestNamespace
 
-		gardenerTestOperation, err = NewGardenTestOperation(ctx, schedulerGardenerTest.ShootGardenerTest.GardenClient, schedulerOperationsTestLogger, nil)
+		gardenerTestOperation, err = NewGardenTestOperationWithShoot(ctx, schedulerGardenerTest.ShootGardenerTest.GardenClient, schedulerOperationsTestLogger, nil)
 		Expect(err).ToNot(HaveOccurred())
 	}, InitializationTimeout)
 
