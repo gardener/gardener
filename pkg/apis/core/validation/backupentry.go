@@ -24,7 +24,7 @@ import (
 func ValidateBackupEntry(backupEntry *core.BackupEntry) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&backupEntry.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&backupEntry.ObjectMeta, true, validateBackupEntryName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateBackupEntrySpec(&backupEntry.Spec, field.NewPath("spec"))...)
 
 	return allErrs
@@ -66,4 +66,8 @@ func ValidateBackupEntryStatusUpdate(newBackupEntry, oldBackupEntry *core.Backup
 	allErrs := field.ErrorList{}
 
 	return allErrs
+}
+
+func validateBackupEntryName(name string, prefix bool) []string {
+	return []string{}
 }
