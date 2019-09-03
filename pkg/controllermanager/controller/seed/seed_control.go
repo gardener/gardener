@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/operation/common"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -32,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -320,23 +319,22 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 }
 
 func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, updateConditions ...gardencorev1alpha1.Condition) error {
-	newConditions := gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
 	newStatus := gardenv1beta1.SeedStatus{
-		Conditions:         newConditions,
+		Conditions:         gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, updateConditions...),
 		ObservedGeneration: seed.Generation,
 		Gardener:           *c.identity,
 	}
+
 	if apiequality.Semantic.DeepEqual(seed.Status, newStatus) {
 		return nil
 	}
 
 	seed.Status = newStatus
-	_, err := c.updater.UpdateSeedStatus(seed)
-	if err != nil {
+	if _, err := c.updater.UpdateSeedStatus(seed); err != nil {
 		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
 	}
 
-	return err
+	return nil
 }
 
 func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardenv1beta1.Seed) error {
@@ -356,10 +354,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	ownerRef := metav1.NewControllerRef(seed, gardenv1beta1.SchemeGroupVersion.WithKind("Seed"))
 
 	return kutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
-		backupBucket.ObjectMeta.Annotations = map[string]string{
-			gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
-		}
-		backupBucket.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1alpha1.BackupBucketSpec{
 			Provider: gardencorev1alpha1.BackupBucketProvider{
 				Type:   string(seed.Spec.Backup.Provider),
@@ -371,7 +366,6 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 			},
 			Seed: &seed.Name, // In future this will be moved to scheduler.
 		}
-
 		return nil
 	})
 }

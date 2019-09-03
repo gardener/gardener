@@ -20,8 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -29,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/sirupsen/logrus"
 
@@ -54,11 +53,10 @@ type Actuator interface {
 }
 
 type actuator struct {
-	gardenClient           client.Client
-	seedClient             client.Client
-	logger                 logrus.FieldLogger
-	backupBucket           *gardencorev1alpha1.BackupBucket
-	coreGeneratedSecretRef *corev1.SecretReference
+	gardenClient client.Client
+	seedClient   client.Client
+	logger       logrus.FieldLogger
+	backupBucket *gardencorev1alpha1.BackupBucket
 }
 
 func newActuator(gardenClient, seedClient client.Client, bb *gardencorev1alpha1.BackupBucket, logger logrus.FieldLogger) Actuator {
@@ -121,7 +119,6 @@ func (a *actuator) reportBackupBucketProgress(ctx context.Context, stats *flow.S
 		a.backupBucket.Status.LastOperation.Description = makeDescription(stats)
 		a.backupBucket.Status.LastOperation.Progress = stats.ProgressPercent()
 		a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.Now()
-		a.backupBucket.Status.GeneratedSecretRef = a.coreGeneratedSecretRef
 		return nil
 	}); err != nil {
 		a.logger.Warnf("could not report backupbucket progress with description: %s", makeDescription(stats))
@@ -137,23 +134,23 @@ func makeDescription(stats *flow.Stats) string {
 
 // deployBackupBucketExtension deploys the BackupBucket extension resource in Seed with the required secret.
 func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
-	extensionSecretRef := &corev1.SecretReference{
-		Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-		Namespace: common.GardenNamespace,
-	}
-	if err := copySecret(ctx, a.gardenClient, a.seedClient, &a.backupBucket.Spec.SecretRef, extensionSecretRef, finalizerName); err != nil {
+	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient, &a.backupBucket.Spec.SecretRef)
+	if err != nil {
 		return err
 	}
 
-	var generatedExtensionSecretRef *corev1.SecretReference
-	if a.backupBucket.Status.GeneratedSecretRef != nil {
-		generatedExtensionSecretRef = &corev1.SecretReference{
-			Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
+	extensionSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
 			Namespace: common.GardenNamespace,
-		}
-		if err := copySecret(ctx, a.gardenClient, a.seedClient, a.backupBucket.Status.GeneratedSecretRef, generatedExtensionSecretRef, ""); err != nil {
-			return err
-		}
+		},
+	}
+
+	if err := kutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
+		extensionSecret.Data = coreSecret.DeepCopy().Data
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// create extension backup bucket resource in seed
@@ -170,8 +167,11 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: a.backupBucket.Spec.Provider.Type,
 			},
-			Region:    a.backupBucket.Spec.Provider.Region,
-			SecretRef: *extensionSecretRef,
+			Region: a.backupBucket.Spec.Provider.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      generateBackupBucketSecretName(a.backupBucket.Name),
+				Namespace: common.GardenNamespace,
+			},
 		}
 		return nil
 	})
@@ -187,10 +187,12 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		if err := a.seedClient.Get(ctx, kutil.Key(a.backupBucket.Name), bb); err != nil {
 			return retry.SevereError(err)
 		}
+
 		if err := health.CheckExtensionObject(bb); err != nil {
 			a.logger.WithError(err).Error("Backup bucket did not get ready yet")
 			return retry.MinorError(err)
 		}
+
 		backupBucket = bb
 		return retry.Ok()
 	}); err != nil {
@@ -198,35 +200,54 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 	}
 
 	if backupBucket.Status.GeneratedSecretRef != nil {
-		coreGeneratedSecretRef := &corev1.SecretReference{
-			Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: common.GardenNamespace,
-		}
-		if err := copySecret(ctx, a.seedClient, a.gardenClient, backupBucket.Status.GeneratedSecretRef, coreGeneratedSecretRef, finalizerName); err != nil {
+		generatedSecret, err := common.GetSecretFromSecretRef(ctx, a.seedClient, backupBucket.Status.GeneratedSecretRef)
+		if err != nil {
 			return err
 		}
 
 		coreGeneratedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      coreGeneratedSecretRef.Name,
-				Namespace: coreGeneratedSecretRef.Namespace,
+				Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
+				Namespace: common.GardenNamespace,
 			},
 		}
 		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1alpha1.SchemeGroupVersion.WithKind("BackupBucket"))
 
 		if err := kutil.CreateOrUpdate(ctx, a.gardenClient, coreGeneratedSecret, func() error {
 			coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+			coreGeneratedSecret.Data = generatedSecret.DeepCopy().Data
+
+			finalizers := sets.NewString(coreGeneratedSecret.GetFinalizers()...)
+			finalizers.Insert(finalizerName)
+			coreGeneratedSecret.SetFinalizers(finalizers.UnsortedList())
+
 			return nil
 		}); err != nil {
 			return err
 		}
-		a.coreGeneratedSecretRef = coreGeneratedSecretRef
+
+		return kutil.CreateOrUpdate(ctx, a.gardenClient, a.backupBucket, func() error {
+			a.backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
+				Name:      coreGeneratedSecret.Name,
+				Namespace: coreGeneratedSecret.Namespace,
+			}
+			return nil
+		})
 	}
+
 	return nil
 }
 
 // deleteBackupBucketExtension deletes BackupBucket extension resource in seed .
 func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
+	if err := a.deleteGeneratedBackupBucketSecretInGarden(ctx); err != nil {
+		return err
+	}
+
+	if err := a.deleteBackupBucketExtensionSecret(ctx); err != nil {
+		return err
+	}
+
 	bb := &extensionsv1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: a.backupBucket.Name,
@@ -254,7 +275,7 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 		}
 
 		a.logger.Infof("Waiting for backupBucket to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("worker is still present"), lastError))
+		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {
@@ -263,11 +284,7 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
-	if err := a.deleteGenerateBackupBucketSecret(ctx); err != nil {
-		return err
-	}
-
-	return a.deleteBackupBucketExtensionSecret(ctx)
+	return nil
 }
 
 // deleteBackupBucketExtensionSecret deletes secret referred by BackupBucket extension resource in seed.
@@ -278,29 +295,27 @@ func (a *actuator) deleteBackupBucketExtensionSecret(ctx context.Context) error 
 			Namespace: common.GardenNamespace,
 		},
 	}
-	if err := controllerutils.RemoveFinalizer(ctx, a.seedClient, secret, finalizerName); err != nil {
-		return err
-	}
 
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, secret))
 }
 
-// deleteGenerateBackupBucketSecret deletes generated secret referred by core BackupBucket resource in garden.
-func (a *actuator) deleteGenerateBackupBucketSecret(ctx context.Context) error {
-	if a.backupBucket.Status.GeneratedSecretRef != nil {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      a.backupBucket.Status.GeneratedSecretRef.Name,
-				Namespace: a.backupBucket.Status.GeneratedSecretRef.Namespace,
-			},
-		}
-		if err := controllerutils.RemoveFinalizer(ctx, a.seedClient, secret, finalizerName); err != nil {
-			return err
-		}
-
-		return client.IgnoreNotFound(a.gardenClient.Delete(ctx, secret))
+// deleteGeneratedBackupBucketSecretInGarden deletes generated secret referred by core BackupBucket resource in garden.
+func (a *actuator) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context) error {
+	if a.backupBucket.Status.GeneratedSecretRef == nil {
+		return nil
 	}
-	return nil
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      a.backupBucket.Status.GeneratedSecretRef.Name,
+			Namespace: a.backupBucket.Status.GeneratedSecretRef.Namespace,
+		},
+	}
+
+	if err := controllerutils.RemoveFinalizer(ctx, a.gardenClient, secret, finalizerName); err != nil {
+		return err
+	}
+	return client.IgnoreNotFound(a.gardenClient.Delete(ctx, secret))
 }
 
 func generateBackupBucketSecretName(backupBucketName string) string {
@@ -309,28 +324,4 @@ func generateBackupBucketSecretName(backupBucketName string) string {
 
 func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
 	return fmt.Sprintf("generated-bucket-%s", backupBucketName)
-}
-
-func copySecret(ctx context.Context, srcClient, dstClient client.Client, srcSecretRef, dstSecretRef *corev1.SecretReference, withFinalizer string) error {
-	srcSecret, err := common.GetSecretFromSecretRef(ctx, srcClient, srcSecretRef)
-	if err != nil {
-		return err
-	}
-
-	dstSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dstSecretRef.Name,
-			Namespace: dstSecretRef.Namespace,
-		},
-	}
-
-	return kutil.CreateOrUpdate(ctx, dstClient, dstSecret, func() error {
-		dstSecret.Data = srcSecret.DeepCopy().Data
-		if len(finalizerName) != 0 {
-			finalizers := sets.NewString(dstSecret.GetFinalizers()...)
-			finalizers.Insert(withFinalizer)
-			dstSecret.SetFinalizers(finalizers.UnsortedList())
-		}
-		return nil
-	})
 }

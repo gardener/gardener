@@ -133,11 +133,6 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.Back
 		return reconcile.Result{}, updateErr
 	}
 
-	if updateErr := controllerutils.RemoveGardenerOperationAnnotation(r.ctx, retry.DefaultBackoff, r.client, backupBucket); updateErr != nil {
-		backupBucketLogger.Errorf("Could not remove %q annotation: %+v", gardencorev1alpha1.GardenerOperation, updateErr)
-		return reconcile.Result{}, updateErr
-	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -209,7 +204,7 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupB
 	}
 
 	if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret, gardenv1beta1.ExternalGardenerName); err != nil {
-		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
+		backupBucketLogger.Errorf("Failed to remove external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
 

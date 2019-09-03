@@ -536,10 +536,7 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
 
 	return kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
-		if backupEntry.ObjectMeta.Annotations == nil {
-			backupEntry.ObjectMeta.Annotations = map[string]string{}
-		}
-		backupEntry.ObjectMeta.Annotations[gardencorev1alpha1.GardenerOperation] = gardencorev1alpha1.GardenerOperationReconcile
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardenv1beta1.GardenerName)
 		backupEntry.SetFinalizers(finalizers.UnsortedList())

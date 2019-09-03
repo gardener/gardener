@@ -54,7 +54,7 @@ func RemoveFinalizer(ctx context.Context, c client.Client, obj kutil.Object, fin
 		finalizers.Delete(finalizer)
 		obj.SetFinalizers(finalizers.UnsortedList())
 		return nil
-	}); err != nil {
+	}); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("could not remove %q finalizer: %+v", finalizer, err)
 	}
 
