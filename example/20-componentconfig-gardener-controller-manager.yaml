@@ -49,10 +49,8 @@ controllers:
     deletionGracePeriodHours: 0
   backupBucket:
     concurrentSyncs: 20
-    syncPeriod: 10m
   backupEntry:
     concurrentSyncs: 20
-    syncPeriod: 10m
     deletionGracePeriodHours: 0
 leaderElection:
   leaderElect: true

@@ -15,14 +15,13 @@
 package controllerregistration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/gardener/gardener/pkg/operation/common"
-
-	"github.com/gardener/gardener/pkg/utils"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
@@ -31,11 +30,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilsretry "github.com/gardener/gardener/pkg/utils/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	multierror "github.com/hashicorp/go-multierror"
-
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,6 +186,13 @@ func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration 
 func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(controllerRegistration *gardencorev1alpha1.ControllerRegistration, seed *gardenv1beta1.Seed, installationsMap map[string]string) error {
 	if seed.DeletionTimestamp != nil {
 		if installation, ok := installationsMap[seed.Name]; ok {
+			if seed.Spec.Backup != nil {
+				logger := logger.NewFieldLogger(logger.Logger, "controllerregistration-seed", seed.Name)
+				if err := waitUntilBackupBucketDeleted(context.TODO(), c.k8sGardenClient.Client(), seed, logger); err != nil {
+					return err
+				}
+			}
+
 			if err := c.k8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().Delete(installation, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
@@ -291,6 +300,39 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 		return !sets.NewString(cur.Finalizers...).Has(FinalizerName)
 	})
 	return err
+}
+
+// waitUntilBackupBucketDeleted waits until backup bucket extension resource is deleted in gardener cluster.
+func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardenv1beta1.Seed, logger *logrus.Entry) error {
+	var lastError *gardencorev1alpha1.LastError
+
+	if err := utilsretry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+		backupBucketName := string(seed.UID)
+		bb := &gardencorev1alpha1.BackupBucket{}
+
+		if err := gardenClient.Get(ctx, kutil.Key(backupBucketName), bb); err != nil {
+			if apierrors.IsNotFound(err) {
+				return utilsretry.Ok()
+			}
+			return utilsretry.SevereError(err)
+		}
+
+		if lastErr := bb.Status.LastError; lastErr != nil {
+			logger.Errorf("BackupBucket did not get deleted yet, lastError is: %s", lastErr.Description)
+			lastError = lastErr
+		}
+
+		logger.Infof("Waiting for backupBucket to be deleted...")
+		return utilsretry.MinorError(common.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
+	}); err != nil {
+		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
+		if lastError != nil {
+			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+		}
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+	}
+
+	return nil
 }
 
 func convertObjToMap(in interface{}) (map[string]interface{}, error) {

@@ -197,10 +197,8 @@ global:
           syncPeriod: 24h
         backupBucket:
           concurrentSyncs: 20
-          syncPeriod: 10m
         backupEntry:
           concurrentSyncs: 20
-          syncPeriod: 10m
           deletionGracePeriodHours: 0
         seed:
           concurrentSyncs: 5

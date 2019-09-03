@@ -23,18 +23,17 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/pkg/errors"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -76,14 +75,15 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 			Name: "Deploying backup entry extension resource",
 			Fn:   flow.TaskFn(a.deployBackupEntryExtension).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup entry is reconciled",
 			Fn:           flow.TaskFn(a.waitUntilBackupEntryExtensionReconciled),
 			Dependencies: flow.NewTaskIDs(deployBackupEntryExtension),
 		})
+
 		f = g.Compile()
 	)
+
 	return f.Run(flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: a.reportBackupEntryProgress,
@@ -93,7 +93,8 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 
 func (a *actuator) Delete(ctx context.Context) error {
 	var (
-		g                 = flow.NewGraph("Backup entry deletion")
+		g = flow.NewGraph("Backup Entry deletion")
+
 		deleteBackupEntry = g.Add(flow.Task{
 			Name: "Destroying backup entry extension",
 			Fn:   flow.TaskFn(a.deleteBackupEntryExtension),
@@ -103,8 +104,10 @@ func (a *actuator) Delete(ctx context.Context) error {
 			Fn:           flow.TaskFn(a.waitUntilBackupEntryExtensionDeleted),
 			Dependencies: flow.NewTaskIDs(deleteBackupEntry),
 		})
+
 		f = g.Compile()
 	)
+
 	return f.Run(flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: a.reportBackupEntryProgress,
@@ -132,11 +135,29 @@ func makeDescription(stats *flow.Stats) string {
 	return strings.Join(stats.Running.StringList(), ", ")
 }
 
+// waitUntilCoreBackupBucketReconciled waits until core.BackupBucket resource reconciled from seed.
+func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1alpha1.BackupBucket) error {
+	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
+		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), bb); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if err := health.CheckBackupBucket(bb); err != nil {
+			a.logger.WithError(err).Error("BackupBucket did not get ready yet")
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	}); err != nil {
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for BackupBucket object to become ready: %v", err))
+	}
+	return nil
+}
+
 // deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
 func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	bb := &gardencorev1alpha1.BackupBucket{}
 	if err := a.waitUntilCoreBackupBucketReconciled(ctx, bb); err != nil {
-		a.logger.Errorf("associated backupBucket %s is not ready yet with err: %v ", a.backupEntry.Spec.BucketName, err)
+		a.logger.Errorf("associated BackupBucket %s is not ready yet with err: %v", a.backupEntry.Spec.BucketName, err)
 		return err
 	}
 
@@ -147,10 +168,10 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 
 	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient, coreSecretRef)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "could not get secret referred in core backup bucket")
 	}
 
-	// create secret for extension backup Entry in seed
+	// create secret for extension BackupEntry in seed
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupEntrySecretName(a.backupEntry.Name),
@@ -160,15 +181,12 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 
 	if err := kutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
-		finalizers := sets.NewString(extensionSecret.GetFinalizers()...)
-		finalizers.Insert(finalizerName)
-		extensionSecret.SetFinalizers(finalizers.UnsortedList())
 		return nil
 	}); err != nil {
-		return err
+		return errors.Wrapf(err, "could not reconcile extension secret in seed")
 	}
 
-	// create extension backupEntry resource in seed
+	// create extension BackupEntry resource in seed
 	extensionBackupEntry := &extensionsv1alpha1.BackupEntry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: a.backupEntry.Name,
@@ -193,25 +211,6 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	})
 }
 
-// waitUntilCoreBackupBucketReconciled waits until core.BackupBucket resource reconciled from seed.
-func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1alpha1.BackupBucket) error {
-	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
-		backupBucket := &gardencorev1alpha1.BackupBucket{}
-		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), backupBucket); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckBackupBucket(backupBucket); err != nil {
-			a.logger.WithError(err).Error("BackupBucket did not get ready yet")
-			return retry.MinorError(err)
-		}
-		return retry.Ok()
-	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
-	}
-	return nil
-}
-
 // waitUntilBackupEntryExtensionReconciled waits until BackupEntry Extention resource reconciled from seed.
 func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) error {
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
@@ -233,6 +232,10 @@ func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) 
 
 // deleteBackupEntryExtension deletes BackupEntry extension resource in seed.
 func (a *actuator) deleteBackupEntryExtension(ctx context.Context) error {
+	if err := a.deleteBackupEntryExtensionSecret(ctx); err != nil {
+		return err
+	}
+
 	be := &extensionsv1alpha1.BackupEntry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.backupEntry.Name,
@@ -270,8 +273,7 @@ func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) err
 		}
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
-
-	return a.deleteBackupEntryExtensionSecret(ctx)
+	return nil
 }
 
 // deleteBackupEntryExtensionSecret deletes secret referred by BackupEntry extension resource in seed.
@@ -282,11 +284,7 @@ func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
 			Namespace: common.GardenNamespace,
 		},
 	}
-	if err := client.IgnoreNotFound(a.seedClient.Delete(ctx, extensionSecret)); err != nil {
-		return err
-	}
-
-	return controllerutils.RemoveFinalizer(ctx, a.seedClient, extensionSecret, finalizerName)
+	return client.IgnoreNotFound(a.seedClient.Delete(ctx, extensionSecret))
 }
 
 func generateBackupEntrySecretName(backupEntryName string) string {

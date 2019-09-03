@@ -112,10 +112,8 @@ data:
         {{- end }}
       backupBucket:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupBucket.concurrentSyncs is required" .Values.global.controller.config.controllers.backupBucket.concurrentSyncs }}
-        syncPeriod: {{ required ".Values.global.controller.config.controllers.backupBucket.syncPeriod is required" .Values.global.controller.config.controllers.backupBucket.syncPeriod }}
       backupEntry:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupEntry.concurrentSyncs is required" .Values.global.controller.config.controllers.backupEntry.concurrentSyncs }}
-        syncPeriod: {{ required ".Values.global.controller.config.controllers.backupEntry.syncPeriod is required" .Values.global.controller.config.controllers.backupEntry.syncPeriod }}
         {{- if .Values.global.controller.config.controllers.backupEntry.deletionGracePeriodHours }}
         deletionGracePeriodHours: {{ .Values.global.controller.config.controllers.backupEntry.deletionGracePeriodHours }}
         {{- end }}
