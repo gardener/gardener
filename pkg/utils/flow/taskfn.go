@@ -136,8 +136,8 @@ func Sequential(fns ...TaskFn) TaskFn {
 	}
 }
 
-// Parallel runs the given TaskFns in parallel, collecting their errors in a multierror.
-func Parallel(fns ...TaskFn) TaskFn {
+// ParallelWithSubmitter runs the given TaskFns in parallel with the given Submitter, collecting their errors in a multierror.
+func ParallelWithSubmitter(s Submitter, fns ...TaskFn) TaskFn {
 	return func(ctx context.Context) error {
 		var (
 			wg     sync.WaitGroup
@@ -148,10 +148,10 @@ func Parallel(fns ...TaskFn) TaskFn {
 		for _, fn := range fns {
 			t := fn
 			wg.Add(1)
-			go func() {
+			s.Submit(func() {
 				defer wg.Done()
 				errors <- t(ctx)
-			}()
+			})
 		}
 
 		go func() {
@@ -166,6 +166,11 @@ func Parallel(fns ...TaskFn) TaskFn {
 		}
 		return result
 	}
+}
+
+// Parallel runs the given TaskFns in parallel, collecting their errors in a multierror.
+func Parallel(fns ...TaskFn) TaskFn {
+	return ParallelWithSubmitter(UnlimitedSubmitter, fns...)
 }
 
 // ParallelExitOnError runs the given TaskFns in parallel and stops execution as soon as one TaskFn returns an error.
@@ -200,3 +205,136 @@ func ParallelExitOnError(fns ...TaskFn) TaskFn {
 		return nil
 	}
 }
+
+// Submitter is an interface to run functions in parallel.
+type Submitter interface {
+	// Submit runs the given function asynchronously. This function should not block
+	// during the execution of f.
+	Submit(f func())
+}
+
+func workQueue() (chan<- func(), <-chan func()) {
+	var (
+		out   = make(chan func())
+		in    = make(chan func())
+		queue []func()
+		exit  bool
+	)
+
+	go func() {
+		defer close(out)
+		for len(queue) != 0 || !exit {
+			if len(queue) == 0 {
+				f, ok := <-in
+				if !ok {
+					exit = true
+					continue
+				}
+
+				queue = append(queue, f)
+				continue
+			}
+
+			select {
+			case f, ok := <-in:
+				if !ok {
+					exit = true
+					continue
+				}
+
+				queue = append(queue, f)
+			case out <- queue[0]:
+				queue = queue[1:]
+			}
+		}
+	}()
+
+	return in, out
+}
+
+// LimitSubmitter contains information about the pool size which is used
+// to limit the submission of functions in parallel.
+type LimitSubmitter struct {
+	submitter Submitter
+	in        chan<- func()
+	size      int
+	running   bool
+}
+
+func (l *LimitSubmitter) run(work <-chan func()) {
+	var (
+		exit bool
+		done = make(chan struct{})
+		ct   int
+	)
+	defer close(done)
+
+	for ct > 0 || !exit {
+		if ct < l.size {
+			w, ok := <-work
+			if !ok {
+				exit = true
+				continue
+			}
+
+			if !exit {
+				ct++
+				l.submitter.Submit(func() {
+					w()
+					done <- struct{}{}
+				})
+			}
+			continue
+		}
+
+		<-done
+		ct--
+	}
+}
+
+// Start starts the workers of the LimitSubmitter.
+func (l *LimitSubmitter) Start() {
+	if !l.running {
+		l.running = true
+		in, out := workQueue()
+		go l.run(out)
+		l.in = in
+	}
+}
+
+// Stop stops the workers of the LimitSubmitter.
+func (l *LimitSubmitter) Stop() {
+	if l.running {
+		l.running = false
+		close(l.in)
+		l.in = nil
+	}
+}
+
+// Submit dispatches the given function to the LimitSubmitter.
+// The LimitSubmitter must be started before before calling this function.
+func (l *LimitSubmitter) Submit(f func()) {
+	if !l.running {
+		panic("cannot submit on non-running LimitSubmitter")
+	}
+	l.in <- f
+}
+
+// NewLimitSubmitter returns a new instance of a LimitSubmitter and a submit pool that has the given size.
+func NewLimitSubmitter(submitter Submitter, size int) *LimitSubmitter {
+	s := &LimitSubmitter{
+		submitter: submitter,
+		size:      size,
+	}
+	return s
+}
+
+type unlimitedSubmitter struct{}
+
+// Submit implements Submitter.Submit
+func (unlimitedSubmitter) Submit(f func()) {
+	go f()
+}
+
+// UnlimitedSubmitter is a submitter with an unlimited pool to submit functions.
+var UnlimitedSubmitter = unlimitedSubmitter{}

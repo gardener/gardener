@@ -16,12 +16,15 @@ package flow_test
 
 import (
 	"context"
+	"fmt"
 
 	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"errors"
 	"sync"
@@ -246,6 +249,84 @@ var _ = Describe("Flow", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
+		})
+	})
+
+	Context("LimitSubmitter", func() {
+		Describe("#Submit", func() {
+			DescribeTable("simultaneous submissions",
+				func(n, size int) {
+					var (
+						maxRunning int
+						running    = sets.NewInt()
+						status     = make(chan int)
+						wg         sync.WaitGroup
+						requiredWg sync.WaitGroup
+						s          = flow.NewLimitSubmitter(flow.UnlimitedSubmitter, size)
+					)
+
+					By("Starting the submitter")
+					s.Start()
+					defer s.Stop()
+
+					By("computing the number of maximum simultaneously required running tasks")
+					var simultaneouslyRequired int
+					if n < size {
+						simultaneouslyRequired = n
+					} else {
+						simultaneouslyRequired = size
+					}
+
+					By("Closing the status channel after all tasks have finished")
+					go func() {
+						defer close(status)
+						wg.Wait()
+					}()
+
+					By(fmt.Sprintf("Submitting %d tasks", n))
+					requiredWg.Add(simultaneouslyRequired)
+					wg.Add(n)
+					for i := 1; i <= n; i++ {
+						id := i
+						s.Submit(func() {
+							status <- id
+							if id <= simultaneouslyRequired {
+								requiredWg.Done()
+							}
+							requiredWg.Wait()
+							defer wg.Done()
+							status <- -id
+						})
+					}
+
+					By("Checking when the tasks start and when they finish")
+					for id := range status {
+						if id < 0 {
+							running.Delete(-id)
+						} else {
+							running.Insert(id)
+							if running.Len() > size {
+								Fail(fmt.Sprintf("More than %d tasks were running: %v", size, running.List()))
+							}
+							if running.Len() > maxRunning {
+								maxRunning = running.Len()
+							}
+						}
+					}
+
+					By(fmt.Sprintf("checking that the maximum running size is equal to the maximum possible (%d) size", simultaneouslyRequired))
+					if maxRunning != simultaneouslyRequired {
+						Fail(fmt.Sprintf("Not enough tasks were running: %d/%d", maxRunning, simultaneouslyRequired))
+					}
+				},
+				Entry("5 tasks, 1 capacity", 5, 1),
+				Entry("5 tasks, 2 capacity", 5, 2),
+				Entry("5 tasks, 3 capacity", 5, 3),
+				Entry("5 tasks, 4 capacity", 5, 4),
+				Entry("5 tasks, 5 capacity", 5, 5),
+				Entry("5 tasks, 6 capacity", 5, 6),
+				Entry("5 tasks, 7 capacity", 5, 7),
+			)
 		})
 	})
 })
