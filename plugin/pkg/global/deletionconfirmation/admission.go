@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
@@ -115,17 +116,13 @@ func (d *DeletionConfirmation) Validate(a admission.Attributes, o admission.Obje
 		cacheLookup func() (metav1.Object, error)
 		liveLookup  func() (metav1.Object, error)
 		checkFunc   func(metav1.Object) error
-
-		objectGroupKind = a.GetKind().GroupKind()
-		kindShoot       = garden.Kind("Shoot")
-		kindProject     = garden.Kind("Project")
 	)
 
 	// Ignore all kinds other than Shoot or Project.
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
-	switch objectGroupKind {
-	case kindShoot:
+	switch a.GetKind().GroupKind() {
+	case garden.Kind("Shoot"):
 		listFunc = func() ([]metav1.Object, error) {
 			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
@@ -150,7 +147,7 @@ func (d *DeletionConfirmation) Validate(a admission.Attributes, o admission.Obje
 			return checkIfDeletionIsConfirmed(obj)
 		}
 
-	case kindProject:
+	case garden.Kind("Project"), core.Kind("Project"):
 		listFunc = func() ([]metav1.Object, error) {
 			list, err := d.projectLister.List(labels.Everything())
 			if err != nil {

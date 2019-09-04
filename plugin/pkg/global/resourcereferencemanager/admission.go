@@ -19,6 +19,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -184,7 +185,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 	)
 
 	switch a.GetKind().GroupKind() {
-	case garden.Kind("SecretBinding"):
+	case garden.Kind("SecretBinding"), core.Kind("SecretBinding"):
 		binding, ok := a.GetObject().(*garden.SecretBinding)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
@@ -194,7 +195,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		}
 		err = r.ensureSecretBindingReferences(a, binding)
 
-	case garden.Kind("Seed"):
+	case garden.Kind("Seed"), core.Kind("Seed"):
 		seed, ok := a.GetObject().(*garden.Seed)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
@@ -223,7 +224,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		}
 		err = r.ensureShootReferences(shoot)
 
-	case garden.Kind("Project"):
+	case garden.Kind("Project"), core.Kind("Project"):
 		project, ok := a.GetObject().(*garden.Project)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Project object")
