@@ -83,7 +83,7 @@ var (
 		appsv1.DeploymentProgressing,
 	}
 
-	falseDeploymentConditionTypes = []appsv1.DeploymentConditionType{
+	falseOptionalDeploymentConditionTypes = []appsv1.DeploymentConditionType{
 		appsv1.DeploymentReplicaFailure,
 	}
 )
@@ -118,9 +118,9 @@ func CheckDeployment(deployment *appsv1.Deployment) error {
 		}
 	}
 
-	for _, falseConditionType := range falseDeploymentConditionTypes {
-		conditionType := string(falseConditionType)
-		condition := getDeploymentCondition(deployment.Status.Conditions, falseConditionType)
+	for _, falseOptionalConditionType := range falseOptionalDeploymentConditionTypes {
+		conditionType := string(falseOptionalConditionType)
+		condition := getDeploymentCondition(deployment.Status.Conditions, falseOptionalConditionType)
 		if condition == nil {
 			continue
 		}
