@@ -119,7 +119,7 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		backupProfile = backup.DeepCopy()
 
 		if len(backupProfile.Provider) == 0 {
-			backupProfile.Provider = b.Seed.CloudProvider
+			backupProfile.Provider = b.Shoot.CloudProvider
 		}
 
 		if len(backupProfile.SecretRef.Name) == 0 || len(backupProfile.SecretRef.Namespace) == 0 {
