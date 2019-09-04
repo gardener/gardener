@@ -154,9 +154,19 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 	}
 
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), b.K8sGardenClient.Client(), seed, func() error {
-		seed.ObjectMeta.OwnerReferences = ownerReferences
-		seed.ObjectMeta.Annotations = annotations
-		seed.ObjectMeta.Labels = map[string]string{
+		// Previously we have made the `Shoot` an owner of this `Seed`, but as the `Shoot` is namespaced and the `Seed`
+		// is not this doesn't actually work, see https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/.
+		// This code removes this unsupported owner reference.
+		var ownerRefs []metav1.OwnerReference
+		for _, ownerRef := range seed.OwnerReferences {
+			if !(ownerRef.APIVersion == "garden.sapcloud.io/v1beta1" && ownerRef.Kind == "Shoot") {
+				ownerRefs = append(ownerRefs, ownerRef)
+			}
+		}
+		seed.OwnerReferences = ownerRefs
+
+		seed.Annotations = annotations
+		seed.Labels = map[string]string{
 			common.GardenRole:             common.GardenRoleSeed,
 			gardencorev1alpha1.GardenRole: common.GardenRoleSeed,
 		}
@@ -200,13 +210,30 @@ func (b *Botanist) UnregisterAsSeed() error {
 	if err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Delete(seed.Name, nil); client.IgnoreNotFound(err) != nil {
 		return err
 	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      seed.Spec.SecretRef.Name,
 			Namespace: seed.Spec.SecretRef.Namespace,
 		},
 	}
-	return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(context.TODO(), secret, kubernetes.DefaultDeleteOptionFuncs...))
+	if err := b.K8sGardenClient.Client().Delete(context.TODO(), secret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if seed.Spec.Backup != nil {
+		backupSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      seed.Spec.Backup.SecretRef.Name,
+				Namespace: seed.Spec.Backup.SecretRef.Namespace,
+			},
+		}
+		if err := b.K8sGardenClient.Client().Delete(context.TODO(), backupSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
