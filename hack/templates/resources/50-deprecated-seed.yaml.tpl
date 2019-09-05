@@ -75,7 +75,7 @@ spec:
   - ${value("spec.cloud.region", metadataServiceCIDR)}
 # Configuration of backup object store provider into which the backups will be stored.
 # backup:
-#  type: ${cloud}
+#  provider: ${cloud}
 #  region: ${value("spec.backup.region", region)}
 #  secretRef:
 #    name: ${value("spec.backup.secretRef.name", "backup-secret")}

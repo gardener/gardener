@@ -23,7 +23,7 @@ spec:
   - 192.80.8.124/32
 # Configuration of backup object store provider into which the backups will be stored.
 # backup:
-#  type: packet
+#  provider: packet
 #  region: ewr1
 #  secretRef:
 #    name: backup-secret
