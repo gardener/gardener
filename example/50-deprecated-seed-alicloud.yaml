@@ -25,7 +25,7 @@ spec:
   - 100.100.100.200/32
 # Configuration of backup object store provider into which the backups will be stored.
 # backup:
-#  type: alicloud
+#  provider: alicloud
 #  region: cn-beijing
 #  secretRef:
 #    name: backup-secret

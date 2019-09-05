@@ -23,7 +23,7 @@ spec:
   - 169.254.169.254/32
 # Configuration of backup object store provider into which the backups will be stored.
 # backup:
-#  type: openstack
+#  provider: openstack
 #  region: europe-1
 #  secretRef:
 #    name: backup-secret
