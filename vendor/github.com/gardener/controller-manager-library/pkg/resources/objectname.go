@@ -38,7 +38,7 @@ func NewObjectNameFor(p ObjectNameProvider) ObjectName {
 	return NewObjectName(p.Namespace(), p.Name())
 }
 
-func NewObjectName(names ...string) ObjectName {
+func NewObjectName(names ...string) objectName {
 	switch len(names) {
 	case 1:
 		return objectName{"", names[0]}
@@ -47,6 +47,14 @@ func NewObjectName(names ...string) ObjectName {
 	default:
 		panic(fmt.Errorf("objectname has one or two arguments (got %d)", len(names)))
 	}
+}
+
+func (this objectName) GetNamespace() string {
+	return this.namespace
+}
+
+func (this objectName) GetName() string {
+	return this.name
 }
 
 func (this objectName) Namespace() string {

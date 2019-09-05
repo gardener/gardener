@@ -17,9 +17,11 @@
 package resources
 
 import (
-	"github.com/gardener/controller-manager-library/pkg/informerfactories"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"reflect"
 	"sync"
+
+	"github.com/gardener/controller-manager-library/pkg/informerfactories"
 
 	"github.com/gardener/controller-manager-library/pkg/logger"
 
@@ -36,9 +38,13 @@ type Internal interface {
 	I_get(data ObjectData) error
 	I_update(data ObjectData) (ObjectData, error)
 	I_updateStatus(data ObjectData) (ObjectData, error)
-	I_delete(data ObjectData) error
+	I_delete(data ObjectDataName) error
 
-	I_getInformer() (GenericInformer, error)
+	I_modifyByName(name ObjectDataName, status_only, create bool, modifier Modifier) (Object, bool, error)
+	I_modify(data ObjectData, status_only, read, create bool, modifier Modifier) (ObjectData, bool, error)
+
+	I_getInformer(namespace string, optionsFunc TweakListOptionsFunc) (GenericInformer, error)
+	I_lookupInformer(namespace string) (GenericInformer, error)
 	I_list(namespace string) ([]Object, error)
 }
 
@@ -97,14 +103,14 @@ func (this *_i_resource) I_get(data ObjectData) error {
 		Into(data)
 }
 
-func (this *_i_resource) I_delete(data ObjectData) error {
+func (this *_i_resource) I_delete(data ObjectDataName) error {
 	return this.objectRequest(this.client.Delete(), data).
 		Body(&metav1.DeleteOptions{}).
 		Do().
 		Error()
 }
 
-func (this *_i_resource) I_getInformer() (GenericInformer, error) {
+func (this *_i_resource) I_getInformer(namespace string, optionsFunc TweakListOptionsFunc) (GenericInformer, error) {
 	if this.cache != nil {
 		return this.cache, nil
 	}
@@ -119,7 +125,7 @@ func (this *_i_resource) I_getInformer() (GenericInformer, error) {
 	if this.IsUnstructured() {
 		informers = this.context.SharedInformerFactory().Unstructured()
 	}
-	informer, err := informers.InformerFor(this.gvk)
+	informer, err := informers.FilteredInformerFor(this.gvk, namespace, optionsFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +133,36 @@ func (this *_i_resource) I_getInformer() (GenericInformer, error) {
 		return nil, err
 	}
 
-	this.cache = informer
-	return this.cache, nil
+	if namespace == "" && optionsFunc == nil {
+		this.cache = informer
+	}
+	return informer, nil
+}
+
+func (this *_i_resource) I_lookupInformer(namespace string) (GenericInformer, error) {
+	if this.cache != nil {
+		return this.cache, nil
+	}
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	if this.cache != nil {
+		return this.cache, nil
+	}
+
+	informers := this.context.SharedInformerFactory().Structured()
+	if this.IsUnstructured() {
+		informers = this.context.SharedInformerFactory().Unstructured()
+	}
+	informer, err := informers.LookupInformerFor(this.gvk, namespace)
+	if err != nil {
+		return nil, err
+	}
+	if err := informerfactories.Start(this.context.ctx, informers, informer.Informer().HasSynced); err != nil {
+		return nil, err
+	}
+
+	return informer, nil
 }
 
 func (this *_i_resource) I_list(namespace string) ([]Object, error) {
@@ -140,4 +174,80 @@ func (this *_i_resource) I_list(namespace string) ([]Object, error) {
 		return nil, err
 	}
 	return this.handleList(result)
+}
+
+func (this *_i_resource) I_modifyByName(name ObjectDataName, status_only, create bool, modifier Modifier) (Object, bool, error) {
+	data := this.helper.CreateData()
+	data.SetName(name.GetName())
+	data.SetNamespace(name.GetNamespace())
+
+	data, mod, err := this.I_modify(data, status_only, true, create, modifier)
+	if err == nil {
+		return this.helper.ObjectAsResource(data), mod, err
+	}
+	return nil, mod, err
+}
+
+func (this *_i_resource) I_modify(data ObjectData, status_only, read, create bool, modifier Modifier) (ObjectData, bool, error) {
+	var lasterr error
+	var err error
+
+	if read {
+		err = this.I_get(data)
+	}
+
+	cnt := 10
+
+	if create {
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return nil, false, err
+			}
+			_, err := modifier(data)
+			if err != nil {
+				return nil, false, err
+			}
+			created, err := this.I_create(data)
+			if err == nil {
+				return created, true, nil
+			}
+			if !errors.IsAlreadyExists(err) {
+				return nil, false, err
+			}
+			err = this.I_get(data)
+			if err != nil {
+				return nil, false, err
+			}
+		}
+	}
+
+	for cnt > 0 {
+		mod, err := modifier(data)
+		if !mod {
+			if err == nil {
+				return data, mod, err
+			}
+			return nil, mod, err
+		}
+		if err == nil {
+			var modified ObjectData
+			if status_only {
+				modified, lasterr = this.I_updateStatus(data)
+			} else {
+				modified, lasterr = this.I_update(data)
+			}
+			if lasterr == nil {
+				return modified, mod, nil
+			}
+			if !errors.IsConflict(lasterr) {
+				return nil, mod, lasterr
+			}
+			err = this.I_get(data)
+		}
+		if err != nil {
+			return nil, mod, err
+		}
+		cnt--
+	}
+	return data, true, lasterr
 }

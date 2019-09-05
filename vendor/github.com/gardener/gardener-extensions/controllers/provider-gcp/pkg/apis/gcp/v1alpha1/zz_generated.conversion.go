@@ -24,7 +24,6 @@ import (
 	unsafe "unsafe"
 
 	gcp "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -43,6 +42,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*gcp.CloudControllerManagerConfig)(nil), (*CloudControllerManagerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_gcp_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(a.(*gcp.CloudControllerManagerConfig), b.(*CloudControllerManagerConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileConfig)(nil), (*gcp.CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileConfig_To_gcp_CloudProfileConfig(a.(*CloudProfileConfig), b.(*gcp.CloudProfileConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*gcp.CloudProfileConfig)(nil), (*CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_gcp_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(a.(*gcp.CloudProfileConfig), b.(*CloudProfileConfig), scope)
 	}); err != nil {
 		return err
 	}
@@ -73,6 +82,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*gcp.InfrastructureStatus)(nil), (*InfrastructureStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_gcp_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(a.(*gcp.InfrastructureStatus), b.(*InfrastructureStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*gcp.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImage_To_gcp_MachineImage(a.(*MachineImage), b.(*gcp.MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*gcp.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_gcp_MachineImage_To_v1alpha1_MachineImage(a.(*gcp.MachineImage), b.(*MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImageVersion)(nil), (*gcp.MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImageVersion_To_gcp_MachineImageVersion(a.(*MachineImageVersion), b.(*gcp.MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*gcp.MachineImageVersion)(nil), (*MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_gcp_MachineImageVersion_To_v1alpha1_MachineImageVersion(a.(*gcp.MachineImageVersion), b.(*MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImages)(nil), (*gcp.MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImages_To_gcp_MachineImages(a.(*MachineImages), b.(*gcp.MachineImages), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*gcp.MachineImages)(nil), (*MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_gcp_MachineImages_To_v1alpha1_MachineImages(a.(*gcp.MachineImages), b.(*MachineImages), scope)
 	}); err != nil {
 		return err
 	}
@@ -116,11 +155,21 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*WorkerStatus)(nil), (*gcp.WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WorkerStatus_To_gcp_WorkerStatus(a.(*WorkerStatus), b.(*gcp.WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*gcp.WorkerStatus)(nil), (*WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_gcp_WorkerStatus_To_v1alpha1_WorkerStatus(a.(*gcp.WorkerStatus), b.(*WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
 func autoConvert_v1alpha1_CloudControllerManagerConfig_To_gcp_CloudControllerManagerConfig(in *CloudControllerManagerConfig, out *gcp.CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -130,13 +179,33 @@ func Convert_v1alpha1_CloudControllerManagerConfig_To_gcp_CloudControllerManager
 }
 
 func autoConvert_gcp_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *gcp.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
 // Convert_gcp_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig is an autogenerated conversion function.
 func Convert_gcp_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *gcp.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
 	return autoConvert_gcp_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_CloudProfileConfig_To_gcp_CloudProfileConfig(in *CloudProfileConfig, out *gcp.CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]gcp.MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_CloudProfileConfig_To_gcp_CloudProfileConfig is an autogenerated conversion function.
+func Convert_v1alpha1_CloudProfileConfig_To_gcp_CloudProfileConfig(in *CloudProfileConfig, out *gcp.CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CloudProfileConfig_To_gcp_CloudProfileConfig(in, out, s)
+}
+
+func autoConvert_gcp_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *gcp.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_gcp_CloudProfileConfig_To_v1alpha1_CloudProfileConfig is an autogenerated conversion function.
+func Convert_gcp_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *gcp.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_gcp_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_ControlPlaneConfig_To_gcp_ControlPlaneConfig(in *ControlPlaneConfig, out *gcp.ControlPlaneConfig, s conversion.Scope) error {
@@ -211,10 +280,78 @@ func Convert_gcp_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in *gcp.I
 	return autoConvert_gcp_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in, out, s)
 }
 
+func autoConvert_v1alpha1_MachineImage_To_gcp_MachineImage(in *MachineImage, out *gcp.MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_v1alpha1_MachineImage_To_gcp_MachineImage is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImage_To_gcp_MachineImage(in *MachineImage, out *gcp.MachineImage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImage_To_gcp_MachineImage(in, out, s)
+}
+
+func autoConvert_gcp_MachineImage_To_v1alpha1_MachineImage(in *gcp.MachineImage, out *MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_gcp_MachineImage_To_v1alpha1_MachineImage is an autogenerated conversion function.
+func Convert_gcp_MachineImage_To_v1alpha1_MachineImage(in *gcp.MachineImage, out *MachineImage, s conversion.Scope) error {
+	return autoConvert_gcp_MachineImage_To_v1alpha1_MachineImage(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImageVersion_To_gcp_MachineImageVersion(in *MachineImageVersion, out *gcp.MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_v1alpha1_MachineImageVersion_To_gcp_MachineImageVersion is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImageVersion_To_gcp_MachineImageVersion(in *MachineImageVersion, out *gcp.MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImageVersion_To_gcp_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_gcp_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *gcp.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Image = in.Image
+	return nil
+}
+
+// Convert_gcp_MachineImageVersion_To_v1alpha1_MachineImageVersion is an autogenerated conversion function.
+func Convert_gcp_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *gcp.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_gcp_MachineImageVersion_To_v1alpha1_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImages_To_gcp_MachineImages(in *MachineImages, out *gcp.MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]gcp.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineImages_To_gcp_MachineImages is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImages_To_gcp_MachineImages(in *MachineImages, out *gcp.MachineImages, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImages_To_gcp_MachineImages(in, out, s)
+}
+
+func autoConvert_gcp_MachineImages_To_v1alpha1_MachineImages(in *gcp.MachineImages, out *MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_gcp_MachineImages_To_v1alpha1_MachineImages is an autogenerated conversion function.
+func Convert_gcp_MachineImages_To_v1alpha1_MachineImages(in *gcp.MachineImages, out *MachineImages, s conversion.Scope) error {
+	return autoConvert_gcp_MachineImages_To_v1alpha1_MachineImages(in, out, s)
+}
+
 func autoConvert_v1alpha1_NetworkConfig_To_gcp_NetworkConfig(in *NetworkConfig, out *gcp.NetworkConfig, s conversion.Scope) error {
 	out.VPC = (*gcp.VPC)(unsafe.Pointer(in.VPC))
-	out.Internal = (*corev1alpha1.CIDR)(unsafe.Pointer(in.Internal))
-	out.Worker = corev1alpha1.CIDR(in.Worker)
+	out.Internal = (*string)(unsafe.Pointer(in.Internal))
+	out.Worker = in.Worker
 	return nil
 }
 
@@ -225,8 +362,8 @@ func Convert_v1alpha1_NetworkConfig_To_gcp_NetworkConfig(in *NetworkConfig, out 
 
 func autoConvert_gcp_NetworkConfig_To_v1alpha1_NetworkConfig(in *gcp.NetworkConfig, out *NetworkConfig, s conversion.Scope) error {
 	out.VPC = (*VPC)(unsafe.Pointer(in.VPC))
-	out.Internal = (*corev1alpha1.CIDR)(unsafe.Pointer(in.Internal))
-	out.Worker = corev1alpha1.CIDR(in.Worker)
+	out.Internal = (*string)(unsafe.Pointer(in.Internal))
+	out.Worker = in.Worker
 	return nil
 }
 
@@ -301,4 +438,24 @@ func autoConvert_gcp_VPC_To_v1alpha1_VPC(in *gcp.VPC, out *VPC, s conversion.Sco
 // Convert_gcp_VPC_To_v1alpha1_VPC is an autogenerated conversion function.
 func Convert_gcp_VPC_To_v1alpha1_VPC(in *gcp.VPC, out *VPC, s conversion.Scope) error {
 	return autoConvert_gcp_VPC_To_v1alpha1_VPC(in, out, s)
+}
+
+func autoConvert_v1alpha1_WorkerStatus_To_gcp_WorkerStatus(in *WorkerStatus, out *gcp.WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]gcp.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_WorkerStatus_To_gcp_WorkerStatus is an autogenerated conversion function.
+func Convert_v1alpha1_WorkerStatus_To_gcp_WorkerStatus(in *WorkerStatus, out *gcp.WorkerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WorkerStatus_To_gcp_WorkerStatus(in, out, s)
+}
+
+func autoConvert_gcp_WorkerStatus_To_v1alpha1_WorkerStatus(in *gcp.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_gcp_WorkerStatus_To_v1alpha1_WorkerStatus is an autogenerated conversion function.
+func Convert_gcp_WorkerStatus_To_v1alpha1_WorkerStatus(in *gcp.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	return autoConvert_gcp_WorkerStatus_To_v1alpha1_WorkerStatus(in, out, s)
 }

@@ -17,6 +17,7 @@
 package resources
 
 import (
+	"k8s.io/api/core/v1"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,8 +97,12 @@ func (this *_resource) ResourceContext() ResourceContext {
 }
 
 func (this *_resource) AddRawEventHandler(handlers cache.ResourceEventHandlerFuncs) error {
-	logger.Infof("adding resourcename for %s", this.gvk)
-	informer, err := this.self.I_getInformer()
+	return this.AddRawSelectedEventHandler(handlers, "", nil)
+}
+
+func (this *_resource) AddRawSelectedEventHandler(handlers cache.ResourceEventHandlerFuncs, namespace string, optionsFunc TweakListOptionsFunc) error {
+	logger.Infof("adding watch for %s", this.gvk)
+	informer, err := this.self.I_getInformer(namespace, optionsFunc)
 	if err != nil {
 		return err
 	}
@@ -109,6 +114,18 @@ func (this *_resource) AddEventHandler(handlers ResourceEventHandlerFuncs) error
 	return this.AddRawEventHandler(*convert(this, &handlers))
 }
 
+func (this *_resource) AddSelectedEventHandler(handlers ResourceEventHandlerFuncs, namespace string, optionsFunc TweakListOptionsFunc) error {
+	return this.AddRawSelectedEventHandler(*convert(this, &handlers), namespace, optionsFunc)
+}
+
+func (this *_resource) NormalEventf(name ObjectDataName, reason, msgfmt string, args ...interface{}) {
+	this.Resources().Eventf(this.helper.CreateData(name), v1.EventTypeNormal, reason, msgfmt, args...)
+}
+
+func (this *_resource) WarningEventf(name ObjectDataName, reason, msgfmt string, args ...interface{}) {
+	this.Resources().Eventf(this.helper.CreateData(name), v1.EventTypeWarning, reason, msgfmt, args...)
+}
+
 func (this *_resource) namespacedRequest(req *restclient.Request, namespace string) *restclient.Request {
 	if this.Namespaced() {
 		return req.Namespace(namespace).Resource(this.Name())
@@ -116,13 +133,13 @@ func (this *_resource) namespacedRequest(req *restclient.Request, namespace stri
 	return req.Resource(this.Name())
 }
 
-func (this *_resource) resourceRequest(req *restclient.Request, obj ObjectData, sub ...string) *restclient.Request {
+func (this *_resource) resourceRequest(req *restclient.Request, obj ObjectDataName, sub ...string) *restclient.Request {
 	if this.Namespaced() && obj != nil {
 		req = req.Namespace(obj.GetNamespace())
 	}
 	return req.Resource(this.Name()).SubResource(sub...)
 }
 
-func (this *_resource) objectRequest(req *restclient.Request, obj ObjectData, sub ...string) *restclient.Request {
+func (this *_resource) objectRequest(req *restclient.Request, obj ObjectDataName, sub ...string) *restclient.Request {
 	return this.resourceRequest(req, obj, sub...).Name(obj.GetName())
 }

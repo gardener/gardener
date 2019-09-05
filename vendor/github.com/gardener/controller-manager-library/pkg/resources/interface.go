@@ -26,6 +26,9 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
+type KeyFilter func(key ClusterObjectKey) bool
+type ObjectFilter func(obj Object) bool
+
 type GroupKindProvider interface {
 	GroupKind() schema.GroupKind
 }
@@ -148,6 +151,11 @@ type ObjectName interface {
 	ForGroupKind(gk schema.GroupKind) ObjectKey
 }
 
+type ObjectDataName interface {
+	GetName() string
+	GetNamespace() string
+}
+
 type ObjectData interface {
 	metav1.Object
 	runtime.Object
@@ -163,6 +171,7 @@ type Interface interface {
 	GroupVersionKind() schema.GroupVersionKind
 	Info() *Info
 	ResourceContext() ResourceContext
+	AddSelectedEventHandler(eventHandlers ResourceEventHandlerFuncs, namespace string, optionsFunc TweakListOptionsFunc) error
 	AddEventHandler(eventHandlers ResourceEventHandlerFuncs) error
 	AddRawEventHandler(handlers cache.ResourceEventHandlerFuncs) error
 
@@ -178,7 +187,15 @@ type Interface interface {
 	Create(ObjectData) (Object, error)
 	CreateOrUpdate(obj ObjectData) (Object, error)
 	Update(ObjectData) (Object, error)
+	Modify(obj ObjectData, modifier Modifier) (ObjectData, bool, error)
+	ModifyByName(obj ObjectDataName, modifier Modifier) (Object, bool, error)
+	ModifyStatus(obj ObjectData, modifier Modifier) (ObjectData, bool, error)
+	ModifyStatusByName(obj ObjectDataName, modifier Modifier) (Object, bool, error)
 	Delete(ObjectData) error
+	DeleteByName(ObjectDataName) error
+
+	NormalEventf(name ObjectDataName, reason, msgfmt string, args ...interface{})
+	WarningEventf(name ObjectDataName, reason, msgfmt string, args ...interface{})
 
 	Namespace(name string) Namespaced
 
@@ -213,4 +230,10 @@ type Resources interface {
 
 	CreateObject(ObjectData) (Object, error)
 	CreateOrUpdateObject(obj ObjectData) (Object, error)
+
+	DeleteObject(obj ObjectData) error
 }
+
+// TweakListOptionsFunc defines the signature of a helper function
+// that wants to provide more listing options to API
+type TweakListOptionsFunc func(*metav1.ListOptions)

@@ -47,9 +47,8 @@ func NewObject(data ObjectData, cluster Cluster, resource Internal) Object {
 }
 
 func (this *_object) DeepCopy() Object {
-	r := &_object{AbstractObject{}, this.cluster, this.resource}
-	r.AbstractObject = NewAbstractObject(&_i_object{r}, this.ObjectData.DeepCopyObject().(ObjectData))
-	return r
+	data := this.ObjectData.DeepCopyObject().(ObjectData)
+	return NewObject(data, this.cluster, this.resource)
 }
 
 /////////////////////////////////////////////////////////////////////////////////

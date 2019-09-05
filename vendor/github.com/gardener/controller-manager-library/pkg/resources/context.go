@@ -19,6 +19,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"sync"
 	"time"
 
@@ -40,6 +41,8 @@ type ResourceContext interface {
 
 	GetPreferred(gk schema.GroupKind) (*Info, error)
 	Get(gvk schema.GroupVersionKind) (*Info, error)
+
+	GetServerVersion() *semver.Version
 }
 
 type resourceContext struct {

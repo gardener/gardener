@@ -15,8 +15,6 @@
 package gcp
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,9 +33,9 @@ type NetworkConfig struct {
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC *VPC
 	// Internal is a private subnet (used for internal load balancers).
-	Internal *gardencorev1alpha1.CIDR
+	Internal *string
 	// Workers is the worker subnet range to create (used for the VMs).
-	Worker gardencorev1alpha1.CIDR
+	Worker string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

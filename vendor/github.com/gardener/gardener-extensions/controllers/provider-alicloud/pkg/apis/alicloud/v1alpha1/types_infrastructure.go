@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,7 +44,7 @@ type VPC struct {
 	ID *string `json:"id,omitempty"`
 	// CIDR is the CIDR of a VPC to create.
 	// +optional
-	CIDR *gardencorev1alpha1.CIDR `json:"cidr,omitempty"`
+	CIDR *string `json:"cidr,omitempty"`
 }
 
 // VPCStatus contains output information about the VPC.
@@ -91,7 +90,7 @@ type Zone struct {
 	// Name is the name of a zone.
 	Name string `json:"name"`
 	// Worker specifies the worker CIDR to use.
-	Worker gardencorev1alpha1.CIDR `json:"worker"`
+	Worker string `json:"worker"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

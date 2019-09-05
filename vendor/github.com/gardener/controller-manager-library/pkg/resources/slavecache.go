@@ -20,9 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type OwnerFilter func(key ClusterObjectKey) bool
-
-func NewGroupKindFilter(gk schema.GroupKind) OwnerFilter {
+func NewGroupKindFilter(gk schema.GroupKind) KeyFilter {
 	return func(key ClusterObjectKey) bool {
 		return key.GroupKind() == gk
 	}
@@ -41,8 +39,13 @@ func NewSlaveCache() *SlaveCache {
 	return &SlaveCache{*NewSubObjectCache(func(o Object) ClusterObjectKeySet { return o.GetOwners() })}
 }
 
-func (this *SlaveCache) AddOwnerFilter(filters ...OwnerFilter) *SlaveCache {
+func (this *SlaveCache) AddOwnerFilter(filters ...KeyFilter) *SlaveCache {
 	this.cache.AddOwnerFilter(filters...)
+	return this
+}
+
+func (this *SlaveCache) AddSlaveFilter(filters ...ObjectFilter) *SlaveCache {
+	this.cache.AddSubObjectFilter(filters...)
 	return this
 }
 
@@ -90,12 +93,20 @@ func (this *SlaveCache) UpdateSlave(obj Object) error {
 	return this.cache.UpdateSubObject(obj)
 }
 
+// Deprecated: Please use GetByOwner
 func (this *SlaveCache) Get(obj Object) []Object {
-	return this.cache.Get(obj)
+	return this.cache.GetByOwner(obj)
+}
+func (this *SlaveCache) GetByOwner(obj Object) []Object {
+	return this.cache.GetByOwner(obj)
 }
 
+// Deprecated: Please use GetByOwnerKey
 func (this *SlaveCache) GetByKey(key ClusterObjectKey) []Object {
-	return this.cache.GetByKey(key)
+	return this.cache.GetByOwnerKey(key)
+}
+func (this *SlaveCache) GetByOwnerKey(key ClusterObjectKey) []Object {
+	return this.cache.GetByOwnerKey(key)
 }
 
 func (this *SlaveCache) AddSlave(obj Object, slave Object) error {
