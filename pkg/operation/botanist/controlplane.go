@@ -65,6 +65,7 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 			gardencorev1alpha1.LabelSeedProvider:       string(b.Seed.CloudProvider),
 			gardencorev1alpha1.LabelShootProvider:      string(b.Shoot.CloudProvider),
 			gardencorev1alpha1.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
+			gardencorev1alpha1.LabelBackupProvider:     string(b.Seed.CloudProvider),
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
