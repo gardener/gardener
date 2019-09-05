@@ -45,50 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// CronJobs is a constant for a Kubernetes resource with the same name.
-	CronJobs = "cronjobs"
-
-	// CustomResourceDefinitions is a constant for a Kubernetes resource with the same name.
-	CustomResourceDefinitions = "customresourcedefinitions"
-
-	// DaemonSets is a constant for a Kubernetes resource with the same name.
-	DaemonSets = "daemonsets"
-
-	// Deployments is a constant for a Kubernetes resource with the same name.
-	Deployments = "deployments"
-
-	// Ingresses is a constant for a Kubernetes resource with the same name.
-	Ingresses = "ingresses"
-
-	// Jobs is a constant for a Kubernetes resource with the same name.
-	Jobs = "jobs"
-
-	// Namespaces is a constant for a Kubernetes resource with the same name.
-	Namespaces = "namespaces"
-
-	// PersistentVolumeClaims is a constant for a Kubernetes resource with the same name.
-	PersistentVolumeClaims = "persistentvolumeclaims"
-
-	// PersistentVolumes is a constant for a Kubernetes resource with the same name.
-	PersistentVolumes = "persistentvolumes"
-
-	// Pods is a constant for a Kubernetes resource with the same name.
-	Pods = "pods"
-
-	// ReplicaSets is a constant for a Kubernetes resource with the same name.
-	ReplicaSets = "replicasets"
-
-	// ReplicationControllers is a constant for a Kubernetes resource with the same name.
-	ReplicationControllers = "replicationcontrollers"
-
-	// Services is a constant for a Kubernetes resource with the same name.
-	Services = "services"
-
-	// StatefulSets is a constant for a Kubernetes resource with the same name.
-	StatefulSets = "statefulsets"
-)
-
 var (
 	// GardenScheme is the scheme used in the Garden cluster.
 	GardenScheme = runtime.NewScheme()
