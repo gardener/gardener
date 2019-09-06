@@ -105,7 +105,7 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 				"controller": map[string]interface{}{
 					"resources": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu":    "1000m",
+							"cpu":    "1500m",
 							"memory": "2048Mi",
 						},
 					},
