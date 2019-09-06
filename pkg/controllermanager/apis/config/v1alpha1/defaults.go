@@ -187,10 +187,28 @@ func SetDefaults_ClientConnection(obj *componentbaseconfigv1alpha1.ClientConnect
 	}
 }
 
-// SetDefaults_GardenerClientConnection sets defaults for the client connection.
-func SetDefaults_GardenerClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
+// SetDefaults_SeedClientConnection sets defaults for the client connection.
+func SetDefaults_SeedClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// Gardener does not yet support protobuf, however, the recommend default client connection config uses it.
+	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
+	if len(obj.AcceptContentTypes) == 0 {
+		obj.AcceptContentTypes = "application/json"
+	}
+	if len(obj.ContentType) == 0 {
+		obj.ContentType = "application/json"
+	}
+	if obj.QPS == 0.0 {
+		obj.QPS = 50.0
+	}
+	if obj.Burst == 0 {
+		obj.Burst = 100
+	}
+}
+
+// SetDefaults_ShootClientConnection sets defaults for the client connection.
+func SetDefaults_ShootClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
+	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
+	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
 	if len(obj.AcceptContentTypes) == 0 {
 		obj.AcceptContentTypes = "application/json"
 	}

@@ -25,9 +25,15 @@ import (
 // ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
 type ControllerManagerConfiguration struct {
 	metav1.TypeMeta
-	// ClientConnection specifies the kubeconfig file and client connection
-	// settings for the proxy server to use when communicating with the gardener-apiserver.
+	// ClientConnection specifies the kubeconfig file and the client connection settings
+	// for the proxy server to use when communicating with the garden apiserver.
 	ClientConnection componentbaseconfig.ClientConnectionConfiguration
+	// SeedClientConnection specifies the client connection settings for the proxy server
+	// to use when communicating with the seed apiserver.
+	SeedClientConnection componentbaseconfig.ClientConnectionConfiguration
+	// ShootClientConnection specifies the client connection settings for the proxy server
+	// to use when communicating with the shoot apiserver.
+	ShootClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration
 	// LeaderElection defines the configuration of leader election client.

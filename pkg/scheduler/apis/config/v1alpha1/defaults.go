@@ -115,24 +115,6 @@ func SetDefaults_ClientConnection(obj *componentbaseconfigv1alpha1.ClientConnect
 	}
 }
 
-// SetDefaults_GardenerClientConnection sets defaults for the client connection.
-func SetDefaults_GardenerClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// Gardener does not yet support protobuf, however, the recommend default client connection config uses it.
-	if len(obj.AcceptContentTypes) == 0 {
-		obj.AcceptContentTypes = "application/json"
-	}
-	if len(obj.ContentType) == 0 {
-		obj.ContentType = "application/json"
-	}
-	if obj.QPS == 0.0 {
-		obj.QPS = 50.0
-	}
-	if obj.Burst == 0 {
-		obj.Burst = 100
-	}
-}
-
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
 func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)

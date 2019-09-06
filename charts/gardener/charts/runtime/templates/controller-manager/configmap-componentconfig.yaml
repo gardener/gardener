@@ -26,6 +26,16 @@ data:
       {{- if .Values.global.controller.kubeconfig }}
       kubeconfig: /etc/gardener-controller-manager/kubeconfig/kubeconfig
       {{- end }}
+    seedClientConnection:
+      acceptContentTypes: {{ required ".Values.global.controller.config.seedClientConnection.acceptContentTypes is required" .Values.global.controller.config.seedClientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.global.controller.config.seedClientConnection.contentType is required" .Values.global.controller.config.seedClientConnection.contentType }}
+      qps: {{ required ".Values.global.controller.config.seedClientConnection.qps is required" .Values.global.controller.config.seedClientConnection.qps }}
+      burst: {{ required ".Values.global.controller.config.seedClientConnection.burst is required" .Values.global.controller.config.seedClientConnection.burst }}
+    shootClientConnection:
+      acceptContentTypes: {{ required ".Values.global.controller.config.shootClientConnection.acceptContentTypes is required" .Values.global.controller.config.shootClientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.global.controller.config.shootClientConnection.contentType is required" .Values.global.controller.config.shootClientConnection.contentType }}
+      qps: {{ required ".Values.global.controller.config.shootClientConnection.qps is required" .Values.global.controller.config.shootClientConnection.qps }}
+      burst: {{ required ".Values.global.controller.config.shootClientConnection.burst is required" .Values.global.controller.config.shootClientConnection.burst }}
     controllers:
       {{- if .Values.global.controller.config.controllers.cloudProfile }}
       cloudProfile:

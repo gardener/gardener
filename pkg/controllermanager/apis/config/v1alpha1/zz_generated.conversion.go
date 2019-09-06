@@ -435,6 +435,12 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_config_ControllerMan
 	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
 		return err
 	}
+	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.SeedClientConnection, &out.SeedClientConnection, s); err != nil {
+		return err
+	}
+	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.ShootClientConnection, &out.ShootClientConnection, s); err != nil {
+		return err
+	}
 	if err := Convert_v1alpha1_ControllerManagerControllerConfiguration_To_config_ControllerManagerControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {
 		return err
 	}
@@ -461,6 +467,12 @@ func Convert_v1alpha1_ControllerManagerConfiguration_To_config_ControllerManager
 
 func autoConvert_config_ControllerManagerConfiguration_To_v1alpha1_ControllerManagerConfiguration(in *config.ControllerManagerConfiguration, out *ControllerManagerConfiguration, s conversion.Scope) error {
 	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
+		return err
+	}
+	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.SeedClientConnection, &out.SeedClientConnection, s); err != nil {
+		return err
+	}
+	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ShootClientConnection, &out.ShootClientConnection, s); err != nil {
 		return err
 	}
 	if err := Convert_config_ControllerManagerControllerConfiguration_To_v1alpha1_ControllerManagerControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {

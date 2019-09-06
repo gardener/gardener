@@ -152,11 +152,10 @@ func (o *Operation) InitializeSeedClients() error {
 	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret,
-		kubernetes.WithClientConnectionOptions(o.Config.ClientConnection),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.SeedScheme,
-			}),
+		kubernetes.WithClientConnectionOptions(o.Config.SeedClientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
 	)
 	if err != nil {
 		return err
@@ -198,11 +197,10 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardenv1beta1.GardenerName,
-		kubernetes.WithClientConnectionOptions(o.Config.ClientConnection),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.ShootScheme,
-			}),
+		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.ShootScheme,
+		}),
 	)
 	if err != nil {
 		return err
