@@ -342,6 +342,12 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 }
 
 func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
+	// The new core.gardener.cloud/v1alpha1.Seed resource does no longer reference a cloud profile.
+	// We only have to check it a value was given.
+	if len(seed.Spec.Cloud.Profile) == 0 {
+		return nil
+	}
+
 	if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {
 		return err
 	}
