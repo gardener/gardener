@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"time"
 
@@ -25,13 +24,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -152,40 +150,55 @@ func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx conte
 		return nil
 	}
 
-	if err := b.rewriteSecrets(ctx); err != nil {
-		message := fmt.Sprintf("failed to rewrite secrets for etcd encryption: %v", err)
-		b.Logger.Error(message)
-		return errors.New(message)
-	}
-	b.Logger.Info("Successfully rewrote all secrets after etcd encryption config changed")
+	shortChecksum := kutil.TruncateLabelValue(checksum)
 
+	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in
+	// case this function fails for some reason.
+	notCurrentChecksum, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.NotEquals, []string{shortChecksum})
+	if err != nil {
+		return err
+	}
+	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, notCurrentChecksum, func(m metav1.Object) {
+		kutil.SetMetaDataLabel(m, common.EtcdEncryptionChecksumLabelName, shortChecksum)
+	}); len(errorList) > 0 {
+		return fmt.Errorf("could not add checksum label for all shoot secrets: %+v", errorList)
+	}
+	b.Logger.Info("Successfully updated all secrets in the shoot after etcd encryption config changed")
+
+	// Remove checksum label from all secrets in shoot again.
+	hasChecksumLabelKey, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.Exists, nil)
+	if err != nil {
+		return err
+	}
+	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, hasChecksumLabelKey, func(m metav1.Object) {
+		delete(m.GetLabels(), common.EtcdEncryptionChecksumLabelName)
+	}); len(errorList) > 0 {
+		return fmt.Errorf("could not remove checksum label from all shoot secrets: %+v", errorList)
+	}
+	b.Logger.Info("Successfully removed all added secret labels in the shoot after etcd encryption config changed")
+
+	// Update etcd encryption secret in seed to have the correct checksum annotation.
 	oldSecret := secret.DeepCopy()
 	kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionChecksumAnnotationName, checksum)
 	return b.K8sSeedClient.Client().Patch(ctx, secret, client.MergeFrom(oldSecret))
 }
 
-const poolSize = 20
-
-func (b *Botanist) rewriteSecrets(ctx context.Context) error {
+func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, labelRequirement *labels.Requirement, mutateLabelsFunc func(m metav1.Object)) []error {
 	secretList := &corev1.SecretList{}
-	if err := b.K8sShootClient.Client().List(ctx, secretList); err != nil {
-		return err
+	if err := b.K8sShootClient.Client().List(ctx, secretList, client.UseListOptions(&client.ListOptions{LabelSelector: labels.NewSelector().Add(*labelRequirement)})); err != nil {
+		return []error{err}
 	}
 
-	var (
-		fns        = make([]flow.TaskFn, 0, meta.LenList(secretList))
-		emptyPatch = client.ConstantPatch(types.MergePatchType, []byte("{}"))
-	)
-
+	var errorList []error
 	for _, s := range secretList.Items {
-		secret := s
-		fns = append(fns, func(ctx context.Context) error {
-			return b.K8sShootClient.Client().Patch(ctx, &secret, emptyPatch)
-		})
+		secretCopy := s.DeepCopy()
+		mutateLabelsFunc(&s)
+		patch := client.MergeFrom(secretCopy)
+
+		if err := b.K8sShootClient.Client().Patch(ctx, &s, patch); err != nil {
+			errorList = append(errorList, err)
+		}
 	}
 
-	submitter := flow.NewLimitSubmitter(flow.UnlimitedSubmitter, poolSize)
-	submitter.Start()
-	defer submitter.Stop()
-	return flow.ParallelWithSubmitter(submitter, fns...)(ctx)
+	return errorList
 }
