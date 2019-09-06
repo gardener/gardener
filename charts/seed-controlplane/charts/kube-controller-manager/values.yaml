@@ -22,7 +22,7 @@ objectCount: 4
 resources:
   requests:
     cpu:
-      base: 40
+      base: 100
       perObject: 4
       weight: 5
       unit: m
@@ -33,12 +33,12 @@ resources:
       unit: Mi
   limits:
     cpu:
-      base: 200
-      perObject: 7
-      weight: 5
+      base: 400
+      perObject: 15
+      weight: 10
       unit: m
     memory:
-      base: 256
-      perObject: 50
-      weight: 5
+      base: 512
+      perObject: 125
+      weight: 10
       unit: Mi
