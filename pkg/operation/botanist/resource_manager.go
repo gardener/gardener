@@ -49,7 +49,7 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 
 		objCopy := obj.DeepCopy()
 		kutil.SetMetaDataLabel(objCopy, ManagedResourceLabelKeyOrigin, ManagedResourceLabelValueGardener)
-		if err := b.K8sSeedClient.Client().Patch(ctx, obj, client.MergeFrom(objCopy)); err != nil {
+		if err := b.K8sSeedClient.Client().Patch(ctx, objCopy, client.MergeFrom(obj)); err != nil {
 			return err
 		}
 	}
