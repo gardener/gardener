@@ -1,12 +1,13 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+    ]
   },
   "description": "",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1566913546161,
+  "iteration": 1567692408172,
   "links": [],
   "panels": [
     {
@@ -18,8 +19,8 @@
       "description": "Shows how many API Servers are running for the selected shoot.",
       "fill": 0,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 9,
+        "w": 8,
         "x": 0,
         "y": 0
       },
@@ -105,9 +106,9 @@
       "description": "Shows the number of nodes that the selected cluster has.",
       "fill": 0,
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
+        "h": 9,
+        "w": 8,
+        "x": 8,
         "y": 0
       },
       "id": 6,
@@ -188,13 +189,100 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "decimals": 0,
+      "description": "Shows the total number of pods in the shoot's control plane at any given time.",
+      "fill": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 10,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"$shoot\"})\n",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "pods",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Pod Count",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "description": "Shows the CPU usage of the control plane for the selected shoot.",
       "fill": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 2,
       "legend": {
@@ -279,7 +367,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 9
       },
       "id": 4,
       "legend": {

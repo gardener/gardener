@@ -336,10 +336,11 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(ALERTS{alertstate=\"pending\"})",
+          "expr": "count(ALERTS{alertstate=\"pending\"}) by (cluster)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -970,7 +971,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": [
             "$__all"
