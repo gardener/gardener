@@ -145,6 +145,8 @@ func (in *ControllerManagerConfiguration) DeepCopyInto(out *ControllerManagerCon
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	out.ClientConnection = in.ClientConnection
+	out.SeedClientConnection = in.SeedClientConnection
+	out.ShootClientConnection = in.ShootClientConnection
 	in.Controllers.DeepCopyInto(&out.Controllers)
 	in.LeaderElection.DeepCopyInto(&out.LeaderElection)
 	in.Discovery.DeepCopyInto(&out.Discovery)

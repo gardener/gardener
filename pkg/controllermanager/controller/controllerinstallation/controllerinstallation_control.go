@@ -196,11 +196,10 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
-		kubernetes.WithClientConnectionOptions(c.config.ClientConnection),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.SeedScheme,
-			}),
+		kubernetes.WithClientConnectionOptions(c.config.SeedClientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
 	)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -346,11 +345,10 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
-		kubernetes.WithClientConnectionOptions(c.config.ClientConnection),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.SeedScheme,
-			}),
+		kubernetes.WithClientConnectionOptions(c.config.SeedClientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
 	)
 	if err != nil {
 		if apierrors.IsNotFound(err) {

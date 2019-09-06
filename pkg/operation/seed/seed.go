@@ -228,15 +228,13 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
-
 	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret,
-		kubernetes.WithClientConnectionOptions(config.ClientConnection),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.SeedScheme,
-			}),
+		kubernetes.WithClientConnectionOptions(config.SeedClientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
 	)
 	if err != nil {
 		return err

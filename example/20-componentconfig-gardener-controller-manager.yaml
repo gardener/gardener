@@ -6,6 +6,16 @@ clientConnection:
   contentType: application/json
   qps: 100
   burst: 130
+seedClientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 25
+  burst: 50
+shootClientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 25
+  burst: 50
 controllers:
   plant:
     syncPeriod: 10s
