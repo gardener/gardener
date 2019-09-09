@@ -61,9 +61,12 @@ func main() {
 	if err != nil {
 		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
 	}
-	gardenerTestOperations, err := framework.NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, testLogger, shoot)
+	gardenerTestOperations, err := framework.NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, testLogger)
 	if err != nil {
 		testLogger.Fatalf("Cannot create gardener test  %s: %s", shootName, err.Error())
+	}
+	if err := gardenerTestOperations.AddShoot(ctx, shoot); err != nil {
+		testLogger.Warnf("Cannot add shoot: %s", err.Error())
 	}
 
 	// Dump gardener state if delete shoot is in exit handler
