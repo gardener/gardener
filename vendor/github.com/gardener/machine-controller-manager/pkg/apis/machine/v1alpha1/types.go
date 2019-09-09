@@ -69,6 +69,20 @@ type MachineSpec struct {
 	// ProviderID represents the provider's unique ID given to a machine
 	// +optional
 	ProviderID string `json:"providerID,omitempty"`
+
+	// NodeTemplateSpec describes the data a node should have when created from a template
+	// +optional
+	NodeTemplateSpec NodeTemplateSpec `json:"nodeTemplate,omitempty"`
+}
+
+// NodeTemplateSpec describes the data a node should have when created from a template
+type NodeTemplateSpec struct {
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// NodeSpec describes the attributes that a node is created with.
+	// +optional
+	Spec corev1.NodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // MachineTemplateSpec describes the data a machine should have when created from a template
@@ -1159,7 +1173,7 @@ const (
 	AlicloudAccessKeySecret string = "alicloudAccessKeySecret"
 
 	// PacketAPIKey is a constant for a key name that is part of the Packet cloud credentials
-	PacketAPIKey string = "packetAPIKey"
+	PacketAPIKey string = "apiToken"
 )
 
 /********************** AlicloudMachineClass APIs ***************/
@@ -1258,15 +1272,9 @@ type PacketMachineClassSpec struct {
 	BillingCycle string             `json:"billingCycle"`
 	OS           string             `json:"OS"`
 	ProjectID    string             `json:"projectID"`
-	Tags         map[string]string  `json:"tags,omitempty"`
-	SSHKeys      []PacketSSHKeySpec `json:"sshKeys,omitempty"`
+	Tags         []string  `json:"tags,omitempty"`
+	SSHKeys      []string `json:"sshKeys,omitempty"`
 	UserData     string             `json:"userdata,omitempty"`
 
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
-}
-
-// PacketSSHKeySpec describes ssh keys for packet
-type PacketSSHKeySpec struct {
-	ID          string `json:"id"`
-	Fingerprint string `json:"fingerprint"`
 }

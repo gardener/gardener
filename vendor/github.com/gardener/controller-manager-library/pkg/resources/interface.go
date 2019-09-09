@@ -148,6 +148,11 @@ type ObjectName interface {
 	ForGroupKind(gk schema.GroupKind) ObjectKey
 }
 
+type ObjectDataName interface {
+	GetName() string
+	GetNamespace() string
+}
+
 type ObjectData interface {
 	metav1.Object
 	runtime.Object
@@ -179,6 +184,7 @@ type Interface interface {
 	CreateOrUpdate(obj ObjectData) (Object, error)
 	Update(ObjectData) (Object, error)
 	Delete(ObjectData) error
+	DeleteByName(ObjectDataName) error
 
 	Namespace(name string) Namespaced
 
@@ -213,4 +219,6 @@ type Resources interface {
 
 	CreateObject(ObjectData) (Object, error)
 	CreateOrUpdateObject(obj ObjectData) (Object, error)
+
+	DeleteObject(obj ObjectData) error
 }

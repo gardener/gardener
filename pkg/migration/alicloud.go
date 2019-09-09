@@ -68,7 +68,7 @@ func GardenV1beta1ShootToAlicloudV1alpha1ControlPlaneConfig(shoot *gardenv1beta1
 	var cloudControllerManager *alicloudv1alpha1.CloudControllerManagerConfig
 	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
 		cloudControllerManager = &alicloudv1alpha1.CloudControllerManagerConfig{
-			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+			FeatureGates: shoot.Spec.Kubernetes.CloudControllerManager.FeatureGates,
 		}
 	}
 

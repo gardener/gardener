@@ -18,14 +18,15 @@ package resources
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/gardener/controller-manager-library/pkg/logger"
 	"github.com/gardener/controller-manager-library/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"
-	"strings"
-	"sync"
 )
 
 type Info struct {
@@ -133,6 +134,10 @@ func (this *ResourceInfos) updateRestMapper() error {
 func (this *ResourceInfos) update() error {
 	cfg := this.cluster.Config()
 	dc, err := discovery.NewDiscoveryClientForConfig(&cfg)
+	if err != nil {
+		logger.Warnf("failed to get discovery client for cluster %s: %s", this.cluster.GetName(), err)
+		return err
+	}
 
 	//list, err := discovery.ServerResources(dc)
 	list, err := dc.ServerResources()

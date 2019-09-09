@@ -15,7 +15,6 @@
 package aws
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,11 +25,11 @@ type ControlPlaneConfig struct {
 	metav1.TypeMeta
 
 	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
-	// +optional
 	CloudControllerManager *CloudControllerManagerConfig
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
 type CloudControllerManagerConfig struct {
-	gardenv1beta1.KubernetesConfig
+	// FeatureGates contains information about enabled feature gates.
+	FeatureGates map[string]bool
 }

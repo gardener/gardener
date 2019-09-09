@@ -18,9 +18,13 @@ package resources
 
 import (
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"reflect"
 )
 
 type AbstractResource struct {
@@ -82,7 +86,11 @@ func (this *ResourceHelper) ObjectAsResource(obj ObjectData) Object {
 }
 
 func (this *ResourceHelper) CreateData() ObjectData {
-	return reflect.New(this.I_objectType()).Interface().(ObjectData)
+	data := reflect.New(this.I_objectType()).Interface().(ObjectData)
+	if u, ok := data.(*unstructured.Unstructured); ok {
+		u.SetGroupVersionKind(this.GroupVersionKind())
+	}
+	return data
 }
 
 func (this *ResourceHelper) CreateListData() runtime.Object {

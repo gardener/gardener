@@ -46,6 +46,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileConfig)(nil), (*alicloud.CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileConfig_To_alicloud_CloudProfileConfig(a.(*CloudProfileConfig), b.(*alicloud.CloudProfileConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*alicloud.CloudProfileConfig)(nil), (*CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_alicloud_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(a.(*alicloud.CloudProfileConfig), b.(*CloudProfileConfig), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ControlPlaneConfig)(nil), (*alicloud.ControlPlaneConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ControlPlaneConfig_To_alicloud_ControlPlaneConfig(a.(*ControlPlaneConfig), b.(*alicloud.ControlPlaneConfig), scope)
 	}); err != nil {
@@ -73,6 +83,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*alicloud.InfrastructureStatus)(nil), (*InfrastructureStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_alicloud_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(a.(*alicloud.InfrastructureStatus), b.(*InfrastructureStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*alicloud.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImage_To_alicloud_MachineImage(a.(*MachineImage), b.(*alicloud.MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*alicloud.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_alicloud_MachineImage_To_v1alpha1_MachineImage(a.(*alicloud.MachineImage), b.(*MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImageVersion)(nil), (*alicloud.MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImageVersion_To_alicloud_MachineImageVersion(a.(*MachineImageVersion), b.(*alicloud.MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*alicloud.MachineImageVersion)(nil), (*MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_alicloud_MachineImageVersion_To_v1alpha1_MachineImageVersion(a.(*alicloud.MachineImageVersion), b.(*MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImages)(nil), (*alicloud.MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImages_To_alicloud_MachineImages(a.(*MachineImages), b.(*alicloud.MachineImages), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*alicloud.MachineImages)(nil), (*MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_alicloud_MachineImages_To_v1alpha1_MachineImages(a.(*alicloud.MachineImages), b.(*MachineImages), scope)
 	}); err != nil {
 		return err
 	}
@@ -126,6 +166,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*WorkerStatus)(nil), (*alicloud.WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WorkerStatus_To_alicloud_WorkerStatus(a.(*WorkerStatus), b.(*alicloud.WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*alicloud.WorkerStatus)(nil), (*WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_alicloud_WorkerStatus_To_v1alpha1_WorkerStatus(a.(*alicloud.WorkerStatus), b.(*WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Zone)(nil), (*alicloud.Zone)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Zone_To_alicloud_Zone(a.(*Zone), b.(*alicloud.Zone), scope)
 	}); err != nil {
@@ -140,7 +190,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_CloudControllerManagerConfig_To_alicloud_CloudControllerManagerConfig(in *CloudControllerManagerConfig, out *alicloud.CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -150,13 +200,33 @@ func Convert_v1alpha1_CloudControllerManagerConfig_To_alicloud_CloudControllerMa
 }
 
 func autoConvert_alicloud_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *alicloud.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
 // Convert_alicloud_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig is an autogenerated conversion function.
 func Convert_alicloud_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *alicloud.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
 	return autoConvert_alicloud_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_CloudProfileConfig_To_alicloud_CloudProfileConfig(in *CloudProfileConfig, out *alicloud.CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]alicloud.MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_CloudProfileConfig_To_alicloud_CloudProfileConfig is an autogenerated conversion function.
+func Convert_v1alpha1_CloudProfileConfig_To_alicloud_CloudProfileConfig(in *CloudProfileConfig, out *alicloud.CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CloudProfileConfig_To_alicloud_CloudProfileConfig(in, out, s)
+}
+
+func autoConvert_alicloud_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *alicloud.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_alicloud_CloudProfileConfig_To_v1alpha1_CloudProfileConfig is an autogenerated conversion function.
+func Convert_alicloud_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *alicloud.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_alicloud_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_ControlPlaneConfig_To_alicloud_ControlPlaneConfig(in *ControlPlaneConfig, out *alicloud.ControlPlaneConfig, s conversion.Scope) error {
@@ -229,6 +299,74 @@ func autoConvert_alicloud_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(
 // Convert_alicloud_InfrastructureStatus_To_v1alpha1_InfrastructureStatus is an autogenerated conversion function.
 func Convert_alicloud_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in *alicloud.InfrastructureStatus, out *InfrastructureStatus, s conversion.Scope) error {
 	return autoConvert_alicloud_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImage_To_alicloud_MachineImage(in *MachineImage, out *alicloud.MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_v1alpha1_MachineImage_To_alicloud_MachineImage is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImage_To_alicloud_MachineImage(in *MachineImage, out *alicloud.MachineImage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImage_To_alicloud_MachineImage(in, out, s)
+}
+
+func autoConvert_alicloud_MachineImage_To_v1alpha1_MachineImage(in *alicloud.MachineImage, out *MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_alicloud_MachineImage_To_v1alpha1_MachineImage is an autogenerated conversion function.
+func Convert_alicloud_MachineImage_To_v1alpha1_MachineImage(in *alicloud.MachineImage, out *MachineImage, s conversion.Scope) error {
+	return autoConvert_alicloud_MachineImage_To_v1alpha1_MachineImage(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImageVersion_To_alicloud_MachineImageVersion(in *MachineImageVersion, out *alicloud.MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_v1alpha1_MachineImageVersion_To_alicloud_MachineImageVersion is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImageVersion_To_alicloud_MachineImageVersion(in *MachineImageVersion, out *alicloud.MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImageVersion_To_alicloud_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_alicloud_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *alicloud.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_alicloud_MachineImageVersion_To_v1alpha1_MachineImageVersion is an autogenerated conversion function.
+func Convert_alicloud_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *alicloud.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_alicloud_MachineImageVersion_To_v1alpha1_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImages_To_alicloud_MachineImages(in *MachineImages, out *alicloud.MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]alicloud.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineImages_To_alicloud_MachineImages is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImages_To_alicloud_MachineImages(in *MachineImages, out *alicloud.MachineImages, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImages_To_alicloud_MachineImages(in, out, s)
+}
+
+func autoConvert_alicloud_MachineImages_To_v1alpha1_MachineImages(in *alicloud.MachineImages, out *MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_alicloud_MachineImages_To_v1alpha1_MachineImages is an autogenerated conversion function.
+func Convert_alicloud_MachineImages_To_v1alpha1_MachineImages(in *alicloud.MachineImages, out *MachineImages, s conversion.Scope) error {
+	return autoConvert_alicloud_MachineImages_To_v1alpha1_MachineImages(in, out, s)
 }
 
 func autoConvert_v1alpha1_Networks_To_alicloud_Networks(in *Networks, out *alicloud.Networks, s conversion.Scope) error {
@@ -347,6 +485,26 @@ func autoConvert_alicloud_VSwitch_To_v1alpha1_VSwitch(in *alicloud.VSwitch, out 
 // Convert_alicloud_VSwitch_To_v1alpha1_VSwitch is an autogenerated conversion function.
 func Convert_alicloud_VSwitch_To_v1alpha1_VSwitch(in *alicloud.VSwitch, out *VSwitch, s conversion.Scope) error {
 	return autoConvert_alicloud_VSwitch_To_v1alpha1_VSwitch(in, out, s)
+}
+
+func autoConvert_v1alpha1_WorkerStatus_To_alicloud_WorkerStatus(in *WorkerStatus, out *alicloud.WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]alicloud.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_WorkerStatus_To_alicloud_WorkerStatus is an autogenerated conversion function.
+func Convert_v1alpha1_WorkerStatus_To_alicloud_WorkerStatus(in *WorkerStatus, out *alicloud.WorkerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WorkerStatus_To_alicloud_WorkerStatus(in, out, s)
+}
+
+func autoConvert_alicloud_WorkerStatus_To_v1alpha1_WorkerStatus(in *alicloud.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_alicloud_WorkerStatus_To_v1alpha1_WorkerStatus is an autogenerated conversion function.
+func Convert_alicloud_WorkerStatus_To_v1alpha1_WorkerStatus(in *alicloud.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	return autoConvert_alicloud_WorkerStatus_To_v1alpha1_WorkerStatus(in, out, s)
 }
 
 func autoConvert_v1alpha1_Zone_To_alicloud_Zone(in *Zone, out *alicloud.Zone, s conversion.Scope) error {

@@ -47,6 +47,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileConfig)(nil), (*aws.CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileConfig_To_aws_CloudProfileConfig(a.(*CloudProfileConfig), b.(*aws.CloudProfileConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.CloudProfileConfig)(nil), (*CloudProfileConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(a.(*aws.CloudProfileConfig), b.(*CloudProfileConfig), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ControlPlaneConfig)(nil), (*aws.ControlPlaneConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ControlPlaneConfig_To_aws_ControlPlaneConfig(a.(*ControlPlaneConfig), b.(*aws.ControlPlaneConfig), scope)
 	}); err != nil {
@@ -107,6 +117,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*aws.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImage_To_aws_MachineImage(a.(*MachineImage), b.(*aws.MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_MachineImage_To_v1alpha1_MachineImage(a.(*aws.MachineImage), b.(*MachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImageVersion)(nil), (*aws.MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImageVersion_To_aws_MachineImageVersion(a.(*MachineImageVersion), b.(*aws.MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.MachineImageVersion)(nil), (*MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_MachineImageVersion_To_v1alpha1_MachineImageVersion(a.(*aws.MachineImageVersion), b.(*MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*MachineImages)(nil), (*aws.MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineImages_To_aws_MachineImages(a.(*MachineImages), b.(*aws.MachineImages), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.MachineImages)(nil), (*MachineImages)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_MachineImages_To_v1alpha1_MachineImages(a.(*aws.MachineImages), b.(*MachineImages), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Networks)(nil), (*aws.Networks)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Networks_To_aws_Networks(a.(*Networks), b.(*aws.Networks), scope)
 	}); err != nil {
@@ -114,6 +154,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*aws.Networks)(nil), (*Networks)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_aws_Networks_To_v1alpha1_Networks(a.(*aws.Networks), b.(*Networks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RegionAMIMapping)(nil), (*aws.RegionAMIMapping)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RegionAMIMapping_To_aws_RegionAMIMapping(a.(*RegionAMIMapping), b.(*aws.RegionAMIMapping), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.RegionAMIMapping)(nil), (*RegionAMIMapping)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_RegionAMIMapping_To_v1alpha1_RegionAMIMapping(a.(*aws.RegionAMIMapping), b.(*RegionAMIMapping), scope)
 	}); err != nil {
 		return err
 	}
@@ -167,6 +217,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*WorkerStatus)(nil), (*aws.WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_WorkerStatus_To_aws_WorkerStatus(a.(*WorkerStatus), b.(*aws.WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*aws.WorkerStatus)(nil), (*WorkerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_aws_WorkerStatus_To_v1alpha1_WorkerStatus(a.(*aws.WorkerStatus), b.(*WorkerStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Zone)(nil), (*aws.Zone)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Zone_To_aws_Zone(a.(*Zone), b.(*aws.Zone), scope)
 	}); err != nil {
@@ -181,7 +241,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_CloudControllerManagerConfig_To_aws_CloudControllerManagerConfig(in *CloudControllerManagerConfig, out *aws.CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -191,13 +251,33 @@ func Convert_v1alpha1_CloudControllerManagerConfig_To_aws_CloudControllerManager
 }
 
 func autoConvert_aws_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *aws.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
-	out.KubernetesConfig = in.KubernetesConfig
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
 // Convert_aws_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig is an autogenerated conversion function.
 func Convert_aws_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in *aws.CloudControllerManagerConfig, out *CloudControllerManagerConfig, s conversion.Scope) error {
 	return autoConvert_aws_CloudControllerManagerConfig_To_v1alpha1_CloudControllerManagerConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_CloudProfileConfig_To_aws_CloudProfileConfig(in *CloudProfileConfig, out *aws.CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]aws.MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_CloudProfileConfig_To_aws_CloudProfileConfig is an autogenerated conversion function.
+func Convert_v1alpha1_CloudProfileConfig_To_aws_CloudProfileConfig(in *CloudProfileConfig, out *aws.CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CloudProfileConfig_To_aws_CloudProfileConfig(in, out, s)
+}
+
+func autoConvert_aws_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *aws.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImages)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_aws_CloudProfileConfig_To_v1alpha1_CloudProfileConfig is an autogenerated conversion function.
+func Convert_aws_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in *aws.CloudProfileConfig, out *CloudProfileConfig, s conversion.Scope) error {
+	return autoConvert_aws_CloudProfileConfig_To_v1alpha1_CloudProfileConfig(in, out, s)
 }
 
 func autoConvert_v1alpha1_ControlPlaneConfig_To_aws_ControlPlaneConfig(in *ControlPlaneConfig, out *aws.ControlPlaneConfig, s conversion.Scope) error {
@@ -344,6 +424,74 @@ func Convert_aws_InstanceProfile_To_v1alpha1_InstanceProfile(in *aws.InstancePro
 	return autoConvert_aws_InstanceProfile_To_v1alpha1_InstanceProfile(in, out, s)
 }
 
+func autoConvert_v1alpha1_MachineImage_To_aws_MachineImage(in *MachineImage, out *aws.MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.AMI = in.AMI
+	return nil
+}
+
+// Convert_v1alpha1_MachineImage_To_aws_MachineImage is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImage_To_aws_MachineImage(in *MachineImage, out *aws.MachineImage, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImage_To_aws_MachineImage(in, out, s)
+}
+
+func autoConvert_aws_MachineImage_To_v1alpha1_MachineImage(in *aws.MachineImage, out *MachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.AMI = in.AMI
+	return nil
+}
+
+// Convert_aws_MachineImage_To_v1alpha1_MachineImage is an autogenerated conversion function.
+func Convert_aws_MachineImage_To_v1alpha1_MachineImage(in *aws.MachineImage, out *MachineImage, s conversion.Scope) error {
+	return autoConvert_aws_MachineImage_To_v1alpha1_MachineImage(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImageVersion_To_aws_MachineImageVersion(in *MachineImageVersion, out *aws.MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Regions = *(*[]aws.RegionAMIMapping)(unsafe.Pointer(&in.Regions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineImageVersion_To_aws_MachineImageVersion is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImageVersion_To_aws_MachineImageVersion(in *MachineImageVersion, out *aws.MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImageVersion_To_aws_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_aws_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *aws.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.Regions = *(*[]RegionAMIMapping)(unsafe.Pointer(&in.Regions))
+	return nil
+}
+
+// Convert_aws_MachineImageVersion_To_v1alpha1_MachineImageVersion is an autogenerated conversion function.
+func Convert_aws_MachineImageVersion_To_v1alpha1_MachineImageVersion(in *aws.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_aws_MachineImageVersion_To_v1alpha1_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_v1alpha1_MachineImages_To_aws_MachineImages(in *MachineImages, out *aws.MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]aws.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineImages_To_aws_MachineImages is an autogenerated conversion function.
+func Convert_v1alpha1_MachineImages_To_aws_MachineImages(in *MachineImages, out *aws.MachineImages, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineImages_To_aws_MachineImages(in, out, s)
+}
+
+func autoConvert_aws_MachineImages_To_v1alpha1_MachineImages(in *aws.MachineImages, out *MachineImages, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	return nil
+}
+
+// Convert_aws_MachineImages_To_v1alpha1_MachineImages is an autogenerated conversion function.
+func Convert_aws_MachineImages_To_v1alpha1_MachineImages(in *aws.MachineImages, out *MachineImages, s conversion.Scope) error {
+	return autoConvert_aws_MachineImages_To_v1alpha1_MachineImages(in, out, s)
+}
+
 func autoConvert_v1alpha1_Networks_To_aws_Networks(in *Networks, out *aws.Networks, s conversion.Scope) error {
 	if err := Convert_v1alpha1_VPC_To_aws_VPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
@@ -368,6 +516,28 @@ func autoConvert_aws_Networks_To_v1alpha1_Networks(in *aws.Networks, out *Networ
 // Convert_aws_Networks_To_v1alpha1_Networks is an autogenerated conversion function.
 func Convert_aws_Networks_To_v1alpha1_Networks(in *aws.Networks, out *Networks, s conversion.Scope) error {
 	return autoConvert_aws_Networks_To_v1alpha1_Networks(in, out, s)
+}
+
+func autoConvert_v1alpha1_RegionAMIMapping_To_aws_RegionAMIMapping(in *RegionAMIMapping, out *aws.RegionAMIMapping, s conversion.Scope) error {
+	out.Name = in.Name
+	out.AMI = in.AMI
+	return nil
+}
+
+// Convert_v1alpha1_RegionAMIMapping_To_aws_RegionAMIMapping is an autogenerated conversion function.
+func Convert_v1alpha1_RegionAMIMapping_To_aws_RegionAMIMapping(in *RegionAMIMapping, out *aws.RegionAMIMapping, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RegionAMIMapping_To_aws_RegionAMIMapping(in, out, s)
+}
+
+func autoConvert_aws_RegionAMIMapping_To_v1alpha1_RegionAMIMapping(in *aws.RegionAMIMapping, out *RegionAMIMapping, s conversion.Scope) error {
+	out.Name = in.Name
+	out.AMI = in.AMI
+	return nil
+}
+
+// Convert_aws_RegionAMIMapping_To_v1alpha1_RegionAMIMapping is an autogenerated conversion function.
+func Convert_aws_RegionAMIMapping_To_v1alpha1_RegionAMIMapping(in *aws.RegionAMIMapping, out *RegionAMIMapping, s conversion.Scope) error {
+	return autoConvert_aws_RegionAMIMapping_To_v1alpha1_RegionAMIMapping(in, out, s)
 }
 
 func autoConvert_v1alpha1_Role_To_aws_Role(in *Role, out *aws.Role, s conversion.Scope) error {
@@ -482,6 +652,26 @@ func autoConvert_aws_VPCStatus_To_v1alpha1_VPCStatus(in *aws.VPCStatus, out *VPC
 // Convert_aws_VPCStatus_To_v1alpha1_VPCStatus is an autogenerated conversion function.
 func Convert_aws_VPCStatus_To_v1alpha1_VPCStatus(in *aws.VPCStatus, out *VPCStatus, s conversion.Scope) error {
 	return autoConvert_aws_VPCStatus_To_v1alpha1_VPCStatus(in, out, s)
+}
+
+func autoConvert_v1alpha1_WorkerStatus_To_aws_WorkerStatus(in *WorkerStatus, out *aws.WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]aws.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_v1alpha1_WorkerStatus_To_aws_WorkerStatus is an autogenerated conversion function.
+func Convert_v1alpha1_WorkerStatus_To_aws_WorkerStatus(in *WorkerStatus, out *aws.WorkerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_WorkerStatus_To_aws_WorkerStatus(in, out, s)
+}
+
+func autoConvert_aws_WorkerStatus_To_v1alpha1_WorkerStatus(in *aws.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	return nil
+}
+
+// Convert_aws_WorkerStatus_To_v1alpha1_WorkerStatus is an autogenerated conversion function.
+func Convert_aws_WorkerStatus_To_v1alpha1_WorkerStatus(in *aws.WorkerStatus, out *WorkerStatus, s conversion.Scope) error {
+	return autoConvert_aws_WorkerStatus_To_v1alpha1_WorkerStatus(in, out, s)
 }
 
 func autoConvert_v1alpha1_Zone_To_aws_Zone(in *Zone, out *aws.Zone, s conversion.Scope) error {

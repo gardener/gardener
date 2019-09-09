@@ -67,7 +67,7 @@ func GardenV1beta1ShootToGCPV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoo
 	var cloudControllerManager *gcpv1alpha1.CloudControllerManagerConfig
 	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
 		cloudControllerManager = &gcpv1alpha1.CloudControllerManagerConfig{
-			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+			FeatureGates: shoot.Spec.Kubernetes.CloudControllerManager.FeatureGates,
 		}
 	}
 

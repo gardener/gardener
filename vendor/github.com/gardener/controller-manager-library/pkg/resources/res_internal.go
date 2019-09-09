@@ -17,9 +17,10 @@
 package resources
 
 import (
-	"github.com/gardener/controller-manager-library/pkg/informerfactories"
 	"reflect"
 	"sync"
+
+	"github.com/gardener/controller-manager-library/pkg/informerfactories"
 
 	"github.com/gardener/controller-manager-library/pkg/logger"
 
@@ -36,7 +37,7 @@ type Internal interface {
 	I_get(data ObjectData) error
 	I_update(data ObjectData) (ObjectData, error)
 	I_updateStatus(data ObjectData) (ObjectData, error)
-	I_delete(data ObjectData) error
+	I_delete(data ObjectDataName) error
 
 	I_getInformer() (GenericInformer, error)
 	I_list(namespace string) ([]Object, error)
@@ -97,7 +98,7 @@ func (this *_i_resource) I_get(data ObjectData) error {
 		Into(data)
 }
 
-func (this *_i_resource) I_delete(data ObjectData) error {
+func (this *_i_resource) I_delete(data ObjectDataName) error {
 	return this.objectRequest(this.client.Delete(), data).
 		Body(&metav1.DeleteOptions{}).
 		Do().

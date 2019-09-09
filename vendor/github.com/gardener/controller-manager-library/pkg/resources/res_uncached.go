@@ -18,10 +18,11 @@ package resources
 
 import (
 	"fmt"
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 )
 
 func (this *AbstractResource) Create(obj ObjectData) (Object, error) {
@@ -85,6 +86,10 @@ func (this *AbstractResource) Delete(obj ObjectData) error {
 		return err
 	}
 	return nil
+}
+
+func (this *AbstractResource) DeleteByName(obj ObjectDataName) error {
+	return this.self.I_delete(obj)
 }
 
 func (this *AbstractResource) handleList(result runtime.Object) (ret []Object, err error) {

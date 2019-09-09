@@ -71,6 +71,18 @@ type MachineSpec struct {
 	// ProviderID represents the provider's unique ID given to a machine
 	// +optional
 	ProviderID string
+
+	// +optional
+	NodeTemplateSpec NodeTemplateSpec
+}
+
+// NodeTemplateSpec describes the data a node should have when created from a template
+type NodeTemplateSpec struct {
+	// +optional
+	metav1.ObjectMeta
+
+	// +optional
+	Spec corev1.NodeSpec
 }
 
 // MachineTemplateSpec describes the data a machine should have when created from a template
@@ -1214,17 +1226,11 @@ type PacketMachineClassSpec struct {
 	OS           string   // required
 	ProjectID    string   // required
 	BillingCycle string
-	Tags         map[string]string
-	SSHKeys      []PacketSSHKeySpec
+	Tags         []string
+	SSHKeys      []string
 	UserData     string
 
 	SecretRef *corev1.SecretReference
 
 	// TODO add more here
-}
-
-// PacketSSHKeySpec represents a single ssh key
-type PacketSSHKeySpec struct {
-	ID          string
-	Fingerprint string
 }

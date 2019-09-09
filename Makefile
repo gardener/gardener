@@ -79,6 +79,7 @@ build:
 .PHONY: build-local
 build-local:
 	@GOBIN=${WORKDIR}/bin go install \
+		-mod=vendor \
 		-ldflags "$(LD_FLAGS)" \
 		./cmd/...
 

@@ -116,13 +116,13 @@ func (this *_resource) namespacedRequest(req *restclient.Request, namespace stri
 	return req.Resource(this.Name())
 }
 
-func (this *_resource) resourceRequest(req *restclient.Request, obj ObjectData, sub ...string) *restclient.Request {
+func (this *_resource) resourceRequest(req *restclient.Request, obj ObjectDataName, sub ...string) *restclient.Request {
 	if this.Namespaced() && obj != nil {
 		req = req.Namespace(obj.GetNamespace())
 	}
 	return req.Resource(this.Name()).SubResource(sub...)
 }
 
-func (this *_resource) objectRequest(req *restclient.Request, obj ObjectData, sub ...string) *restclient.Request {
+func (this *_resource) objectRequest(req *restclient.Request, obj ObjectDataName, sub ...string) *restclient.Request {
 	return this.resourceRequest(req, obj, sub...).Name(obj.GetName())
 }

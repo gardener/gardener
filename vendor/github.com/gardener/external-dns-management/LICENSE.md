@@ -251,6 +251,10 @@ Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 Copyright 2014-2015 Stripe, Inc.  
 Apache 2 license (https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)  
 
+Some code fragments have been extracted from kubernetes-incubator/external-dns
+Copyright 2017 The Kubernetes Authors.
+Apache 2 license (https://github.com/kubernetes-incubator/external-dns/blob/master/LICENSE) 
+
 ------
 
 ## MIT License
