@@ -50,6 +50,7 @@ spec:
         - --skip-nodes-with-local-storage=false
         - --expander=least-waste
         - --expendable-pods-priority-cutoff=-10
+        - --balance-similar-node-groups=true
         {{- range $key, $flag := .Values.flags }}
         - --{{ $flag.name }}={{ $flag.value }}
         {{- end }}
