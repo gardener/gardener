@@ -6,6 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
 {{ (.Files.Glob "rules/**").AsConfig | indent 2 }}
+# provider-specific rules
+{{- if .Values.extensions.rules }}
+{{toString .Values.extensions.rules | indent 2}}
+{{- end}}
 # optional rules
 {{- $files := .Files }}
 {{- range $k, $v := .Values.rules.optional }}

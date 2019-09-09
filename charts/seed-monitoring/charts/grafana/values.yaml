@@ -12,3 +12,5 @@ ports:
   grafana: 3000
 
 role: operators
+extensions:
+  dashboards: ""

@@ -27,6 +27,10 @@ apiserverServiceIP: 100.10.10.10
 port: 9090
 vpnEndpointIP: 192.168.123.1
 
+extensions:
+  rules: ""
+  scrapeConfigs: ""
+
 allowedMetrics:
   alertManager:
   - alertmanager_config_hash
