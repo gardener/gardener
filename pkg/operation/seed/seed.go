@@ -164,12 +164,16 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 			CertType:  utilsecrets.ServerCert,
 			SigningCA: certificateAuthorities[caSeed],
 		},
-		&utilsecrets.BasicAuthSecretConfig{
-			Name:   "seed-monitoring-ingress-credentials",
-			Format: utilsecrets.BasicAuthFormatNormal,
+		&utilsecrets.CertificateSecretConfig{
+			Name: "aggregate-prometheus-tls",
 
-			Username:       "admin",
-			PasswordLength: 32,
+			CommonName:   "prometheus",
+			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
+			DNSNames:     []string{seed.GetIngressFQDN("p-seed", "", "garden")},
+			IPAddresses:  nil,
+
+			CertType:  utilsecrets.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
 		},
 	}
 
@@ -449,11 +453,12 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		vpaGK              = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
-		issuerGK           = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
-		grafanaHost        = seed.GetIngressFQDN("g-seed", "", "garden")
-		grafanaCredentials = existingSecretsMap["seed-monitoring-ingress-credentials"]
-		grafanaBasicAuth   = utils.CreateSHA1Secret(grafanaCredentials.Data[utilsecrets.DataKeyUserName], grafanaCredentials.Data[utilsecrets.DataKeyPassword])
+		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
+		grafanaHost           = seed.GetIngressFQDN("g-seed", "", "garden")
+		prometheusHost        = seed.GetIngressFQDN("p-seed", "", "garden")
+		monitoringCredentials = existingSecretsMap["seed-monitoring-ingress-credentials"]
+		monitoringBasicAuth   = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
 	)
 
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
@@ -483,6 +488,10 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		"aggregatePrometheus": map[string]interface{}{
 			"storage": seed.GetValidVolumeSize("20Gi"),
 			"seed":    seed.Info.Name,
+			"host":    prometheusHost,
+		},
+		"grafana": map[string]interface{}{
+			"host": grafanaHost,
 		},
 		"elastic-kibana-curator": map[string]interface{}{
 			"enabled": loggingEnabled,
@@ -538,8 +547,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			"resourceClass": v1alpha1.SeedResourceManagerClass,
 		},
 		"ingress": map[string]interface{}{
-			"basicAuthSecret": grafanaBasicAuth,
-			"host":            grafanaHost,
+			"basicAuthSecret": monitoringBasicAuth,
 		},
 	}, applierOptions)
 }

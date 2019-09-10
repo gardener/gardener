@@ -8,6 +8,10 @@ aggregatePrometheus:
   port: 9090
   storage: 20Gi
   seed: seed
+  host: p.seed-1.example.com
+
+grafana:
+  host: p.seed-1.example.com
 
 allowedMetrics:
   alertmanager: []
@@ -65,7 +69,6 @@ allowedMetrics:
 
 
 ingress:
-  host: p.seed-1.example.com
   # admin : admin base64 encoded
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
