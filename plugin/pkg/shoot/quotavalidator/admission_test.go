@@ -47,8 +47,11 @@ var _ = Describe("quotavalidator", func() {
 			machineTypeName       string = "n1-standard-2"
 			volumeTypeName        string = "pd-standard"
 
-			cloudProfileGCEBase = garden.GCPProfile{
-				Constraints: garden.GCPConstraints{
+			cloudProfileBase = garden.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "profile",
+				},
+				Spec: garden.CloudProfileSpec{
 					MachineTypes: []garden.MachineType{
 						{
 							Name:   machineTypeName,
@@ -63,21 +66,6 @@ var _ = Describe("quotavalidator", func() {
 							Class: "standard",
 						},
 					},
-					Kubernetes: garden.KubernetesConstraints{
-						OfferedVersions: []garden.KubernetesVersion{
-							{Version: "1.0.1"},
-							{Version: "1.1.1"},
-						},
-					},
-				},
-			}
-
-			cloudProfileBase = garden.CloudProfile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "profile",
-				},
-				Spec: garden.CloudProfileSpec{
-					GCP: &cloudProfileGCEBase,
 				},
 			}
 
@@ -333,54 +321,6 @@ var _ = Describe("quotavalidator", func() {
 			})
 		})
 
-		Context("tests for OpenStack Shoots, which have special logic for collecting volume and machine types", func() {
-			var (
-				machineTypeNameOpenStack = "mx-test-1"
-				cloudProfileOpenStack    = garden.OpenStackProfile{
-					Constraints: garden.OpenStackConstraints{
-						MachineTypes: []garden.OpenStackMachineType{
-							{
-								MachineType: garden.MachineType{
-									Name:   machineTypeNameOpenStack,
-									CPU:    resource.MustParse("2"),
-									GPU:    resource.MustParse("0"),
-									Memory: resource.MustParse("5Gi"),
-								},
-								VolumeType: "standard",
-								VolumeSize: resource.MustParse("30Gi"),
-							},
-						},
-					},
-				}
-				shootSpecCloudOpenStack = garden.OpenStackCloud{
-					Workers: []garden.OpenStackWorker{
-						{
-							Worker: garden.Worker{
-								Name:          "test-worker-1",
-								MachineType:   machineTypeNameOpenStack,
-								AutoScalerMax: 1,
-								AutoScalerMin: 1,
-							},
-						},
-					},
-				}
-			)
-
-			BeforeEach(func() {
-				cloudProfile.Spec.OpenStack = &cloudProfileOpenStack
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				shoot.Spec.Cloud.GCP = nil
-				shoot.Spec.Cloud.OpenStack = &shootSpecCloudOpenStack
-			})
-
-			It("should pass because quota is sufficient", func() {
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Validate(attrs, nil)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
 		Context("tests for extending the lifetime of a Shoot", func() {
 			BeforeEach(func() {
 				annotations := map[string]string{
@@ -416,80 +356,6 @@ var _ = Describe("quotavalidator", func() {
 
 				err := admissionHandler.Validate(attrs, nil)
 				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("tests for Alicloud Shoots, which have special logic for collecting volume and machine types", func() {
-			var (
-				cloudProfileAlicloudBase = garden.AlicloudProfile{
-					Constraints: garden.AlicloudConstraints{
-						MachineTypes: []garden.AlicloudMachineType{
-							{
-								MachineType: garden.MachineType{
-									Name:   machineTypeName,
-									CPU:    resource.MustParse("2"),
-									GPU:    resource.MustParse("0"),
-									Memory: resource.MustParse("5Gi"),
-								},
-							},
-						},
-						VolumeTypes: []garden.AlicloudVolumeType{
-							{
-								VolumeType: garden.VolumeType{
-									Name:  volumeTypeName,
-									Class: "standard",
-								},
-							},
-						},
-						Kubernetes: garden.KubernetesConstraints{
-							OfferedVersions: []garden.KubernetesVersion{
-								{Version: "1.0.1"},
-								{Version: "1.1.1"},
-							},
-						},
-					},
-				}
-
-				shootSpecCloudAlicloud = garden.Alicloud{
-					Workers: []garden.AlicloudWorker{
-						{
-							Worker: garden.Worker{
-								Name:          "test-worker-1",
-								MachineType:   machineTypeName,
-								AutoScalerMax: 1,
-								AutoScalerMin: 1,
-							},
-							VolumeType: volumeTypeName,
-							VolumeSize: "30Gi",
-						},
-					},
-				}
-			)
-
-			BeforeEach(func() {
-				cloudProfile.Spec.Alicloud = &cloudProfileAlicloudBase
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				shoot.Spec.Cloud.GCP = nil
-				shoot.Spec.Cloud.Alicloud = &shootSpecCloudAlicloud
-			})
-
-			It("should pass because quota is sufficient", func() {
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Validate(attrs, nil)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should pass because can update non worker property although quota is exceeded", func() {
-				oldShoot = *shoot.DeepCopy()
-				quotaProject.Spec.Metrics[garden.QuotaMetricCPU] = resource.MustParse("1")
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
-
-				shoot.Spec.Kubernetes.Version = "1.1.1"
-				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
-
-				err := admissionHandler.Validate(attrs, nil)
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

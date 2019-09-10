@@ -20,7 +20,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 
 	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,10 +44,16 @@ func GardenV1beta1ShootToAWSV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 	for i, zone := range shoot.Spec.Cloud.AWS.Zones {
 		zones = append(zones, awsv1alpha1.Zone{
 			Name:     zone,
-			Internal: shoot.Spec.Cloud.AWS.Networks.Internal[i],
-			Public:   shoot.Spec.Cloud.AWS.Networks.Public[i],
-			Workers:  shoot.Spec.Cloud.AWS.Networks.Workers[i],
+			Internal: string(shoot.Spec.Cloud.AWS.Networks.Internal[i]),
+			Public:   string(shoot.Spec.Cloud.AWS.Networks.Public[i]),
+			Workers:  string(shoot.Spec.Cloud.AWS.Networks.Workers[i]),
 		})
+	}
+
+	var vpcCIDR *string
+	if c := shoot.Spec.Cloud.AWS.Networks.VPC.CIDR; c != nil {
+		cidr := string(*c)
+		vpcCIDR = &cidr
 	}
 
 	return &awsv1alpha1.InfrastructureConfig{
@@ -59,7 +64,7 @@ func GardenV1beta1ShootToAWSV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		Networks: awsv1alpha1.Networks{
 			VPC: awsv1alpha1.VPC{
 				ID:   shoot.Spec.Cloud.AWS.Networks.VPC.ID,
-				CIDR: shoot.Spec.Cloud.AWS.Networks.VPC.CIDR,
+				CIDR: vpcCIDR,
 			},
 			Zones: zones,
 		},
@@ -77,7 +82,7 @@ func GardenV1beta1ShootToAWSV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoo
 	var cloudControllerManager *awsv1alpha1.CloudControllerManagerConfig
 	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
 		cloudControllerManager = &awsv1alpha1.CloudControllerManagerConfig{
-			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+			FeatureGates: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig.FeatureGates,
 		}
 	}
 

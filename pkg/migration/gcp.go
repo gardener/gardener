@@ -20,7 +20,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 
 	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,6 +42,12 @@ func GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		}
 	}
 
+	var internalCIDR *string
+	if c := shoot.Spec.Cloud.GCP.Networks.Internal; c != nil {
+		cidr := string(*c)
+		internalCIDR = &cidr
+	}
+
 	return &gcpv1alpha1.InfrastructureConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
@@ -50,8 +55,8 @@ func GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		},
 		Networks: gcpv1alpha1.NetworkConfig{
 			VPC:      vpc,
-			Worker:   shoot.Spec.Cloud.GCP.Networks.Workers[0],
-			Internal: shoot.Spec.Cloud.GCP.Networks.Internal,
+			Worker:   string(shoot.Spec.Cloud.GCP.Networks.Workers[0]),
+			Internal: internalCIDR,
 		},
 	}, nil
 }
@@ -67,8 +72,7 @@ func GardenV1beta1ShootToGCPV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoo
 	var cloudControllerManager *gcpv1alpha1.CloudControllerManagerConfig
 	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
 		cloudControllerManager = &gcpv1alpha1.CloudControllerManagerConfig{
-			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
-		}
+			FeatureGates: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig.FeatureGates}
 	}
 
 	return &gcpv1alpha1.ControlPlaneConfig{

@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,7 +35,7 @@ type Networks struct {
 	// +optional
 	Router *Router `json:"router,omitempty"`
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-	Worker gardencorev1alpha1.CIDR `json:"worker"`
+	Worker string `json:"worker"`
 }
 
 // Router indicates whether to use an existing router or create a new one.

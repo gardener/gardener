@@ -378,8 +378,8 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 		countLB      int64 = 1
 		resources          = make(corev1.ResourceList)
 		workers            = getShootWorkerResources(shoot, cloudProvider, *cloudProfile)
-		machineTypes       = getMachineTypes(cloudProvider, *cloudProfile)
-		volumeTypes        = getVolumeTypes(cloudProvider, *cloudProfile)
+		machineTypes       = cloudProfile.Spec.MachineTypes
+		volumeTypes        = cloudProfile.Spec.VolumeTypes
 	)
 
 	for _, worker := range workers {
@@ -492,70 +492,6 @@ func getShootWorkerResources(shoot garden.Shoot, cloudProvider garden.CloudProvi
 		}
 	}
 	return workers
-}
-
-func getMachineTypes(provider garden.CloudProvider, cloudProfile garden.CloudProfile) []garden.MachineType {
-	var machineTypes []garden.MachineType
-	switch provider {
-	case garden.CloudProviderAWS:
-		machineTypes = cloudProfile.Spec.AWS.Constraints.MachineTypes
-	case garden.CloudProviderAzure:
-		machineTypes = cloudProfile.Spec.Azure.Constraints.MachineTypes
-	case garden.CloudProviderGCP:
-		machineTypes = cloudProfile.Spec.GCP.Constraints.MachineTypes
-	case garden.CloudProviderPacket:
-		machineTypes = cloudProfile.Spec.Packet.Constraints.MachineTypes
-	case garden.CloudProviderOpenStack:
-		machineTypes = make([]garden.MachineType, 0)
-		for _, element := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
-			machineTypes = append(machineTypes, element.MachineType)
-		}
-	case garden.CloudProviderAlicloud:
-		machineTypes = make([]garden.MachineType, 0)
-		for _, element := range cloudProfile.Spec.Alicloud.Constraints.MachineTypes {
-			machineTypes = append(machineTypes, element.MachineType)
-		}
-	}
-	return machineTypes
-}
-
-func getVolumeTypes(provider garden.CloudProvider, cloudProfile garden.CloudProfile) []garden.VolumeType {
-	var volumeTypes []garden.VolumeType
-	switch provider {
-	case garden.CloudProviderAWS:
-		volumeTypes = cloudProfile.Spec.AWS.Constraints.VolumeTypes
-	case garden.CloudProviderAzure:
-		volumeTypes = cloudProfile.Spec.Azure.Constraints.VolumeTypes
-	case garden.CloudProviderGCP:
-		volumeTypes = cloudProfile.Spec.GCP.Constraints.VolumeTypes
-	case garden.CloudProviderPacket:
-		volumeTypes = cloudProfile.Spec.Packet.Constraints.VolumeTypes
-	case garden.CloudProviderOpenStack:
-		volumeTypes = make([]garden.VolumeType, 0)
-		contains := func(types []garden.VolumeType, volumeType string) bool {
-			for _, element := range types {
-				if element.Name == volumeType {
-					return true
-				}
-			}
-			return false
-		}
-
-		for _, machineType := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
-			if !contains(volumeTypes, machineType.MachineType.Name) {
-				volumeTypes = append(volumeTypes, garden.VolumeType{
-					Name:  machineType.MachineType.Name,
-					Class: machineType.VolumeType,
-				})
-			}
-		}
-	case garden.CloudProviderAlicloud:
-		volumeTypes = make([]garden.VolumeType, 0)
-		for _, element := range cloudProfile.Spec.Alicloud.Constraints.VolumeTypes {
-			volumeTypes = append(volumeTypes, element.VolumeType)
-		}
-	}
-	return volumeTypes
 }
 
 func lifetimeVerificationNeeded(new, old garden.Shoot) bool {

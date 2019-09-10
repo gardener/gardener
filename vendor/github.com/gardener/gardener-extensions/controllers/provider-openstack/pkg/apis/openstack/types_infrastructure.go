@@ -15,7 +15,6 @@
 package openstack
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,7 +34,7 @@ type Networks struct {
 	// Router indicates whether to use an existing router or create a new one.
 	Router *Router
 	// Worker is a CIDRs of a worker subnet (private) to create (used for the VMs).
-	Worker gardencorev1alpha1.CIDR
+	Worker string
 }
 
 // Router indicates whether to use an existing router or create a new one.

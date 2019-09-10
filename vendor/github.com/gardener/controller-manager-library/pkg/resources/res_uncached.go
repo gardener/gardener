@@ -18,10 +18,11 @@ package resources
 
 import (
 	"fmt"
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 )
 
 func (this *AbstractResource) Create(obj ObjectData) (Object, error) {
@@ -73,6 +74,34 @@ func (this *AbstractResource) Update(obj ObjectData) (Object, error) {
 	return this.helper.ObjectAsResource(result), nil
 }
 
+func (this *AbstractResource) Modify(obj ObjectData, modifier Modifier) (ObjectData, bool, error) {
+	if o, ok := obj.(Object); ok {
+		obj = o.Data()
+	}
+	if err := this.helper.CheckOType(obj); err != nil {
+		return nil, false, err
+	}
+	return this.self.I_modify(obj, false, false, false, modifier)
+}
+
+func (this *AbstractResource) ModifyByName(obj ObjectDataName, modifier Modifier) (Object, bool, error) {
+	return this.self.I_modifyByName(obj, true, false, modifier)
+}
+
+func (this *AbstractResource) ModifyStatus(obj ObjectData, modifier Modifier) (ObjectData, bool, error) {
+	if o, ok := obj.(Object); ok {
+		obj = o.Data()
+	}
+	if err := this.helper.CheckOType(obj); err != nil {
+		return nil, false, err
+	}
+	return this.self.I_modify(obj, false, false, false, modifier)
+}
+
+func (this *AbstractResource) ModifyStatusByName(obj ObjectDataName, modifier Modifier) (Object, bool, error) {
+	return this.self.I_modifyByName(obj, true, false, modifier)
+}
+
 func (this *AbstractResource) Delete(obj ObjectData) error {
 	if o, ok := obj.(Object); ok {
 		obj = o.Data()
@@ -85,6 +114,10 @@ func (this *AbstractResource) Delete(obj ObjectData) error {
 		return err
 	}
 	return nil
+}
+
+func (this *AbstractResource) DeleteByName(obj ObjectDataName) error {
+	return this.self.I_delete(obj)
 }
 
 func (this *AbstractResource) handleList(result runtime.Object) (ret []Object, err error) {

@@ -169,50 +169,57 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *garden.CloudProfile) fie
 func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	cloud, err := helper.DetermineCloudProviderInProfile(*spec)
-	if err != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/packet"), "cloud profile must only contain exactly one field of aws/azure/gcp/alicloud/openstack/packet"))
-		return allErrs
+	if len(spec.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must provide a provider type"))
 	}
 
-	switch cloud {
-	case garden.CloudProviderAWS:
+	allErrs = append(allErrs, validateKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
+	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
+	allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
+	if spec.SeedSelector != nil {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.SeedSelector, fldPath.Child("seedSelector"))...)
+	}
+
+	switch {
+	case spec.AWS != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.AWS.Constraints.Kubernetes, fldPath.Child("aws", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.AWS.Constraints.MachineImages, fldPath.Child("aws", "constraints", "machineImages"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.AWS.Constraints.MachineTypes, fldPath.Child("aws", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.AWS.Constraints.VolumeTypes, fldPath.Child("aws", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.AWS.Constraints.MachineTypes, fldPath.Child("aws", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypes(spec.AWS.Constraints.VolumeTypes, fldPath.Child("aws", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.AWS.Constraints.Zones, fldPath.Child("aws", "constraints", "zones"))...)
 
-	case garden.CloudProviderAzure:
+	case spec.Azure != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Azure.Constraints.Kubernetes, fldPath.Child("azure", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.Azure.Constraints.MachineImages, fldPath.Child("azure", "constraints", "machineImages"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Azure.Constraints.VolumeTypes, fldPath.Child("azure", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypes(spec.Azure.Constraints.VolumeTypes, fldPath.Child("azure", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountFaultDomains, fldPath.Child("azure", "countFaultDomains"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountUpdateDomains, fldPath.Child("azure", "countUpdateDomains"))...)
 
-	case garden.CloudProviderGCP:
+	case spec.GCP != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.GCP.Constraints.Kubernetes, fldPath.Child("gcp", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.GCP.Constraints.MachineImages, fldPath.Child("gcp", "constraints", "machineImages"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.GCP.Constraints.VolumeTypes, fldPath.Child("gcp", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypes(spec.GCP.Constraints.VolumeTypes, fldPath.Child("gcp", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.GCP.Constraints.Zones, fldPath.Child("gcp", "constraints", "zones"))...)
 
-	case garden.CloudProviderAlicloud:
+	case spec.Alicloud != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Alicloud.Constraints.Kubernetes, fldPath.Child("alicloud", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.Alicloud.Constraints.MachineImages, fldPath.Child("alicloud", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateAlicloudMachineTypeConstraints(spec.Alicloud.Constraints.MachineTypes, spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateAlicloudVolumeTypeConstraints(spec.Alicloud.Constraints.VolumeTypes, spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "zones"))...)
 
-	case garden.CloudProviderPacket:
+	case spec.Packet != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Packet.Constraints.Kubernetes, fldPath.Child("packet", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.Packet.Constraints.MachineImages, fldPath.Child("packet", "constraints", "machineImages"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Packet.Constraints.MachineTypes, fldPath.Child("packet", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Packet.Constraints.VolumeTypes, fldPath.Child("packet", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.Packet.Constraints.MachineTypes, fldPath.Child("packet", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypes(spec.Packet.Constraints.VolumeTypes, fldPath.Child("packet", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.Packet.Constraints.Zones, fldPath.Child("packet", "constraints", "zones"))...)
 
-	case garden.CloudProviderOpenStack:
+	case spec.OpenStack != nil:
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.OpenStack.Constraints.Kubernetes, fldPath.Child("openstack", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateMachineImages(spec.OpenStack.Constraints.MachineImages, fldPath.Child("openstack", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateOpenStackMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
@@ -243,7 +250,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		}
 
 		if len(spec.OpenStack.KeyStoneURL) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
+			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keystoneURL"), "must provide the URL to KeyStone"))
 		}
 
 		if spec.OpenStack.DHCPDomain != nil && len(*spec.OpenStack.DHCPDomain) == 0 {
@@ -295,7 +302,34 @@ func validateKubernetesConstraints(kubernetes garden.KubernetesConstraints, fldP
 	return allErrs
 }
 
-func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *field.Path) field.ErrorList {
+func validateKubernetesSettings(kubernetes garden.KubernetesSettings, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(kubernetes.Versions) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
+	}
+
+	latestKubernetesVersion, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, latestKubernetesVersion, "failed to determine latest kubernetes version from cloud profile"))
+	}
+
+	if latestKubernetesVersion.ExpirationDate != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
+	}
+
+	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
+	for i, version := range kubernetes.Versions {
+		idxPath := fldPath.Child("versions").Index(i)
+		if !r.MatchString(version.Version) {
+			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypes(machineTypes []garden.MachineType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineTypes) == 0 {
@@ -353,7 +387,7 @@ func validateAlicloudMachineTypeConstraints(machineTypes []garden.AlicloudMachin
 		}
 	}
 
-	allErrs = append(allErrs, validateMachineTypeConstraints(types, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypes(types, fldPath)...)
 
 	return allErrs
 }
@@ -366,6 +400,62 @@ func validateMachineImages(machineImages []garden.MachineImage, fldPath *field.P
 	}
 
 	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, "failed to determine latest machine images from cloud profile"))
+	}
+
+	for imageName, latestImage := range latestMachineImages {
+		if latestImage.ExpirationDate != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationDate"), latestImage.ExpirationDate, fmt.Sprintf("expiration date of latest image ('%s','%s') must not be set", imageName, latestImage.Version)))
+		}
+	}
+
+	duplicateNameVersion := sets.String{}
+	duplicateName := sets.String{}
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		if duplicateName.Has(image.Name) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, image.Name))
+		}
+		duplicateName.Insert(image.Name)
+
+		if len(image.Name) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+		}
+
+		if len(image.Versions) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
+		}
+
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			key := fmt.Sprintf("%s-%s", image.Name, machineVersion.Version)
+			if duplicateNameVersion.Has(key) {
+				allErrs = append(allErrs, field.Duplicate(versionsPath, key))
+			}
+			duplicateNameVersion.Insert(key)
+			if len(machineVersion.Version) == 0 {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("version"), machineVersion.Version))
+			}
+
+			_, err := semver.NewVersion(machineVersion.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use SemanticVersioning. In case there is no semVer version for this image use the extensibility provider (define mapping in the ControllerRegistration) to map to the actual non-semVer version"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateCloudProfileMachineImages(machineImages []garden.CloudProfileMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(machineImages) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
+	}
+
+	latestMachineImages, err := helper.DetermineLatestCloudProfileMachineImageVersions(machineImages)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, "failed to determine latest machine images from cloud profile"))
 	}
@@ -431,17 +521,13 @@ func validateOpenStackMachineTypeConstraints(machineTypes []garden.OpenStackMach
 		allErrs = append(allErrs, validateResourceQuantityValue("volumeSize", machineType.VolumeSize, volumeSizePath)...)
 	}
 
-	allErrs = append(allErrs, validateMachineTypeConstraints(types, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypes(types, fldPath)...)
 
 	return allErrs
 }
 
-func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *field.Path) field.ErrorList {
+func validateVolumeTypes(volumeTypes []garden.VolumeType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	if len(volumeTypes) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one volume type"))
-	}
 
 	names := make(map[string]struct{}, len(volumeTypes))
 
@@ -492,7 +578,35 @@ func validateAlicloudVolumeTypeConstraints(volumeTypes []garden.AlicloudVolumeTy
 		}
 	}
 
-	allErrs = append(allErrs, validateVolumeTypeConstraints(types, fldPath)...)
+	allErrs = append(allErrs, validateVolumeTypes(types, fldPath)...)
+
+	return allErrs
+}
+
+func validateRegions(regions []garden.Region, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// TODO: enable this once we switched fully to corev1alpha1.CloudProfile.
+	// if len(regions) == 0 {
+	// 	allErrs = append(allErrs, field.Required(fldPath, "must provide at least one region"))
+	// }
+
+	for i, region := range regions {
+		idxPath := fldPath.Index(i)
+		namePath := idxPath.Child("name")
+		zonesPath := idxPath.Child("zones")
+
+		if len(region.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a region name"))
+		}
+
+		for j, zone := range region.Zones {
+			namePath := zonesPath.Index(j).Child("name")
+			if len(zone.Name) == 0 {
+				allErrs = append(allErrs, field.Required(namePath, "zone name cannot be empty"))
+			}
+		}
+	}
 
 	return allErrs
 }

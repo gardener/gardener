@@ -49,3 +49,19 @@ func SetDefaults_Project(obj *Project) {
 		}
 	}
 }
+
+// SetDefaults_MachineType sets default values for MachineType objects.
+func SetDefaults_MachineType(obj *MachineType) {
+	if obj.Usable == nil {
+		trueVar := true
+		obj.Usable = &trueVar
+	}
+}
+
+// SetDefaults_VolumeType sets default values for VolumeType objects.
+func SetDefaults_VolumeType(obj *VolumeType) {
+	if obj.Usable == nil {
+		trueVar := true
+		obj.Usable = &trueVar
+	}
+}

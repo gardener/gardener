@@ -18,14 +18,16 @@ package resources
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver"
+	"strings"
+	"sync"
+
 	"github.com/gardener/controller-manager-library/pkg/logger"
 	"github.com/gardener/controller-manager-library/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"
-	"strings"
-	"sync"
 )
 
 type Info struct {
@@ -92,6 +94,7 @@ type ResourceInfos struct {
 	preferredVersions map[string]string
 	cluster           Cluster
 	mapper            meta.RESTMapper
+	version           *semver.Version
 }
 
 func NewResourceInfos(c Cluster) (*ResourceInfos, error) {
@@ -133,7 +136,15 @@ func (this *ResourceInfos) updateRestMapper() error {
 func (this *ResourceInfos) update() error {
 	cfg := this.cluster.Config()
 	dc, err := discovery.NewDiscoveryClientForConfig(&cfg)
+	if err != nil {
+		logger.Warnf("failed to get discovery client for cluster %s: %s", this.cluster.GetName(), err)
+		return err
+	}
 
+	v, err := dc.ServerVersion()
+	if err == nil {
+		this.version, err = semver.NewVersion(v.GitVersion)
+	}
 	//list, err := discovery.ServerResources(dc)
 	list, err := dc.ServerResources()
 	if err != nil {
@@ -260,4 +271,8 @@ func (this *ResourceInfos) get(gvk schema.GroupVersionKind) *Info {
 		return nil
 	}
 	return g[gvk.Kind]
+}
+
+func (this *ResourceInfos) GetServerVersion() *semver.Version {
+	return this.version
 }

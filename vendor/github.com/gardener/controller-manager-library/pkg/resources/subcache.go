@@ -17,34 +17,40 @@
 package resources
 
 import (
+	"fmt"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type Owners func(sub Object) ClusterObjectKeySet
+type OwnerDetector func(sub Object) ClusterObjectKeySet
 
 type SubObjectCache struct {
-	lock    sync.Mutex
-	byOwner map[ClusterObjectKey]ClusterObjectKeySet
-	nested  map[ClusterObjectKey]*entry
-	filters []OwnerFilter
-	owners  Owners
+	lock         sync.Mutex
+	byOwner      map[ClusterObjectKey]ClusterObjectKeySet
+	subFilters   []ObjectFilter
+	subObjects   map[ClusterObjectKey]*entry
+	ownerFilters []KeyFilter
+	owners       OwnerDetector
 }
 
-func NewSubObjectCache(o Owners) *SubObjectCache {
-	return &SubObjectCache{byOwner: map[ClusterObjectKey]ClusterObjectKeySet{}, nested: map[ClusterObjectKey]*entry{}, owners: o}
+func NewSubObjectCache(o OwnerDetector) *SubObjectCache {
+	return &SubObjectCache{
+		byOwner:    map[ClusterObjectKey]ClusterObjectKeySet{},
+		subObjects: map[ClusterObjectKey]*entry{},
+		owners:     o,
+	}
 }
 
-func (this *SubObjectCache) filterObject(obj Object) bool {
-	return this.filterKey(obj.ClusterKey())
+func (this *SubObjectCache) filterOwner(obj Object) bool {
+	return this.filterOwnerKey(obj.ClusterKey())
 }
 
-func (this *SubObjectCache) filterKey(key ClusterObjectKey) bool {
-	if this.filters == nil {
+func (this *SubObjectCache) filterOwnerKey(key ClusterObjectKey) bool {
+	if this.ownerFilters == nil {
 		return true
 	}
-	for _, f := range this.filters {
+	for _, f := range this.ownerFilters {
 		if f(key) {
 			return true
 		}
@@ -52,8 +58,25 @@ func (this *SubObjectCache) filterKey(key ClusterObjectKey) bool {
 	return false
 }
 
-func (this *SubObjectCache) AddOwnerFilter(filters ...OwnerFilter) *SubObjectCache {
-	this.filters = append(this.filters, filters...)
+func (this *SubObjectCache) filterSubObject(obj Object) bool {
+	if this.subFilters == nil {
+		return true
+	}
+	for _, f := range this.subFilters {
+		if f(obj) {
+			return true
+		}
+	}
+	return false
+}
+
+func (this *SubObjectCache) AddOwnerFilter(filters ...KeyFilter) *SubObjectCache {
+	this.ownerFilters = append(this.ownerFilters, filters...)
+	return this
+}
+
+func (this *SubObjectCache) AddSubObjectFilter(filters ...ObjectFilter) *SubObjectCache {
+	this.subFilters = append(this.subFilters, filters...)
 	return this
 }
 
@@ -62,15 +85,17 @@ func (this *SubObjectCache) Size() int {
 }
 
 func (this *SubObjectCache) SubObjectCount() int {
-	return len(this.nested)
+	return len(this.subObjects)
 }
 
 func (this *SubObjectCache) Setup(subObjects []Object) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	for _, s := range subObjects {
-		for o := range this.owners(s) {
-			this.add(o, s)
+		if this.filterSubObject(s) {
+			for o := range this.owners(s) {
+				this.add(o, s)
+			}
 		}
 	}
 }
@@ -78,7 +103,7 @@ func (this *SubObjectCache) Setup(subObjects []Object) {
 func (this *SubObjectCache) GetSubObject(key ClusterObjectKey) Object {
 	this.lock.Lock()
 	defer this.lock.Unlock()
-	o := this.nested[key]
+	o := this.subObjects[key]
 	if o == nil {
 		return nil
 	}
@@ -112,7 +137,7 @@ func (this *SubObjectCache) DeleteSubObject(key ClusterObjectKey) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 
-	entry := this.nested[key]
+	entry := this.subObjects[key]
 	if entry != nil {
 		for o := range this.owners(entry.object) {
 			this.removeByKey(o, key)
@@ -134,12 +159,18 @@ func (this *SubObjectCache) DeleteOwner(key ClusterObjectKey) {
 }
 
 func (this *SubObjectCache) RenewSubObject(obj Object) bool {
+	if !this.filterSubObject(obj) {
+		return false
+	}
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	return this.renewSubObject(obj)
 }
 
 func (this *SubObjectCache) UpdateSubObject(obj Object) error {
+	if !this.filterSubObject(obj) {
+		return nil
+	}
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	err := obj.Update()
@@ -151,7 +182,7 @@ func (this *SubObjectCache) UpdateSubObject(obj Object) error {
 
 func (this *SubObjectCache) renewSubObject(obj Object) bool {
 	key := obj.ClusterKey()
-	entry := this.nested[key]
+	entry := this.subObjects[key]
 	newowners := this.owners(obj)
 	if len(newowners) == 0 && entry == nil {
 		return false
@@ -173,22 +204,33 @@ func (this *SubObjectCache) renewSubObject(obj Object) bool {
 	return true
 }
 
+// Deprecated: Please use GetByOwner
 func (this *SubObjectCache) Get(obj Object) []Object {
-	return this.GetByKey(obj.ClusterKey())
+	return this.GetByOwner(obj)
+}
+func (this *SubObjectCache) GetByOwner(obj Object) []Object {
+	return this.GetByOwnerKey(obj.ClusterKey())
 }
 
+// Deprecated: Please use GetByOwnerKey
 func (this *SubObjectCache) GetByKey(key ClusterObjectKey) []Object {
+	return this.GetByOwnerKey(key)
+}
+func (this *SubObjectCache) GetByOwnerKey(key ClusterObjectKey) []Object {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	keys := this.byOwner[key]
 	result := []Object{}
 	for k := range keys {
-		result = append(result, this.nested[k].object)
+		result = append(result, this.subObjects[k].object)
 	}
 	return result
 }
 
 func (this *SubObjectCache) CreateSubObject(sub Object) error {
+	if !this.filterSubObject(sub) {
+		return fmt.Errorf("sub object %s is rejected from sub object cache", sub.ClusterKey())
+	}
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	err := sub.Create()
@@ -199,7 +241,7 @@ func (this *SubObjectCache) CreateSubObject(sub Object) error {
 }
 
 func (this *SubObjectCache) add(owner ClusterObjectKey, sub Object) {
-	if !this.filterKey(owner) {
+	if !this.filterOwnerKey(owner) {
 		return
 	}
 	key := sub.ClusterKey()
@@ -208,12 +250,12 @@ func (this *SubObjectCache) add(owner ClusterObjectKey, sub Object) {
 		set = ClusterObjectKeySet{}
 		this.byOwner[owner] = set
 	}
-	e := this.nested[key]
+	e := this.subObjects[key]
 	if !set.Contains(key) {
 		set.Add(key)
 		if e == nil {
 			e = &entry{}
-			this.nested[key] = e
+			this.subObjects[key] = e
 		}
 		e.count++
 	}
@@ -234,11 +276,11 @@ func (this *SubObjectCache) removeByKey(owner ClusterObjectKey, sub ClusterObjec
 		if len(set) == 0 {
 			delete(this.byOwner, owner)
 		}
-		e := this.nested[sub]
+		e := this.subObjects[sub]
 		if e != nil {
 			e.count--
 			if e.count <= 0 {
-				delete(this.nested, sub)
+				delete(this.subObjects, sub)
 			}
 		}
 		return e

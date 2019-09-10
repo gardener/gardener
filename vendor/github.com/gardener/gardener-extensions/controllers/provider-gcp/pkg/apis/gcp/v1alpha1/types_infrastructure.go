@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,9 +35,9 @@ type NetworkConfig struct {
 	VPC *VPC `json:"vpc,omitempty"`
 	// Internal is a private subnet (used for internal load balancers).
 	// +optional
-	Internal *gardencorev1alpha1.CIDR `json:"internal,omitempty"`
+	Internal *string `json:"internal,omitempty"`
 	// Workers is the worker subnet range to create (used for the VMs).
-	Worker gardencorev1alpha1.CIDR `json:"worker"`
+	Worker string `json:"worker"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

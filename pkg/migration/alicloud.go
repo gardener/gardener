@@ -38,8 +38,14 @@ func GardenV1beta1ShootToAlicloudV1alpha1InfrastructureConfig(shoot *gardenv1bet
 	for i, zone := range shoot.Spec.Cloud.Alicloud.Zones {
 		zones = append(zones, alicloudv1alpha1.Zone{
 			Name:   zone,
-			Worker: shoot.Spec.Cloud.Alicloud.Networks.Workers[i],
+			Worker: string(shoot.Spec.Cloud.Alicloud.Networks.Workers[i]),
 		})
+	}
+
+	var vpcCIDR *string
+	if c := shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR; c != nil {
+		cidr := string(*c)
+		vpcCIDR = &cidr
 	}
 
 	return &alicloudv1alpha1.InfrastructureConfig{
@@ -50,7 +56,7 @@ func GardenV1beta1ShootToAlicloudV1alpha1InfrastructureConfig(shoot *gardenv1bet
 		Networks: alicloudv1alpha1.Networks{
 			VPC: alicloudv1alpha1.VPC{
 				ID:   shoot.Spec.Cloud.Alicloud.Networks.VPC.ID,
-				CIDR: shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR,
+				CIDR: vpcCIDR,
 			},
 			Zones: zones,
 		},
@@ -68,7 +74,7 @@ func GardenV1beta1ShootToAlicloudV1alpha1ControlPlaneConfig(shoot *gardenv1beta1
 	var cloudControllerManager *alicloudv1alpha1.CloudControllerManagerConfig
 	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
 		cloudControllerManager = &alicloudv1alpha1.CloudControllerManagerConfig{
-			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+			FeatureGates: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig.FeatureGates,
 		}
 	}
 

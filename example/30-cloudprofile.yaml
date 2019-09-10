@@ -1,0 +1,61 @@
+apiVersion: core.gardener.cloud/v1alpha1
+kind: CloudProfile
+metadata:
+  name: cloudprofile1
+spec:
+  type: <some-provider-name> # {aws,azure,gcp,...}
+  providerConfig:
+    <some-provider-specific-cloudprofile-config>
+    # Please checkout the documentation and example manifests of your provider to find out which provider config
+    # is needed here.
+# Optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
+# An empty list means that all seeds of the same provider type are supported.
+# This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
+# seedSelector:
+#   matchLabels:
+#     foo: bar
+  kubernetes:
+    versions:
+    - version: 1.12.1
+    - version: 1.11.0
+    - version: 1.10.6
+    - version: 1.10.5
+      expirationDate: 2020-04-05T01:02:03Z # optional
+  machineImages:
+  - name: coreos
+    versions:
+    - version: 2023.5.0
+    - version: 1967.5.0
+      expirationDate: 2020-04-05T08:00:00Z
+  - name: ubuntu
+    versions:
+    - version: 18.04.201906170
+  machineTypes:
+  - name: m5.large
+    cpu: "2"
+    gpu: "0"
+    memory: 8Gi
+  # storage: 20Gi # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
+    usable: true
+  volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
+  - name: gp2
+    class: standard
+    usable: true
+  - name: io1
+    class: premium
+    usable: true
+  regions:
+  - name: europe-central-1
+    zones: # optional (not needed in every environment)
+    - name: europe-central-1a
+    - name: europe-central-1b
+    - name: europe-central-1c
+    # unavailableMachineTypes: # optional, list of machine types defined above that are not available in this zone
+    # - m5.large
+    # unavailableVolumeTypes: # optional, list of volume types defined above that are not available in this zone
+    # - io1
+# CA bundle that will be installed onto every shoot machine that is using this provider profile.
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----

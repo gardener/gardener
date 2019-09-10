@@ -24,7 +24,7 @@ import (
 
 func (this *_resource) getCached(namespace, name string) (Object, error) {
 	var obj ObjectData
-	informer, err := this.self.I_getInformer()
+	informer, err := this.self.I_lookupInformer(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (this *_resource) GetCached(obj interface{}) (Object, error) {
 }
 
 func (this *_resource) ListCached(selector labels.Selector) (ret []Object, err error) {
-	informer, err := this.self.I_getInformer()
+	informer, err := this.self.I_getInformer("", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (this *_resource) ListCached(selector labels.Selector) (ret []Object, err e
 
 func (this *namespacedResource) getLister() (NamespacedLister, error) {
 	if this.lister == nil {
-		informer, err := this.resource.self.I_getInformer()
+		informer, err := this.resource.self.I_lookupInformer(this.namespace)
 		if err != nil {
 			return nil, err
 		}

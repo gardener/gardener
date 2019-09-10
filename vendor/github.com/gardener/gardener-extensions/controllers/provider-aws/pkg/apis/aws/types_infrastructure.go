@@ -15,8 +15,6 @@
 package aws
 
 import (
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,11 +55,11 @@ type Zone struct {
 	// Name is the name for this zone.
 	Name string
 	// Internal is the private subnet range to create (used for internal load balancers).
-	Internal gardencore.CIDR
+	Internal string
 	// Public is the public subnet range to create (used for bastion and load balancers).
-	Public gardencore.CIDR
+	Public string
 	// Workers isis the workers subnet range to create  (used for the VMs).
-	Workers gardencore.CIDR
+	Workers string
 }
 
 // EC2 contains information about the AWS EC2 resources.
@@ -82,8 +80,8 @@ type IAM struct {
 type VPC struct {
 	// ID is the VPC id.
 	ID *string
-	// CIDR is the VPC CIDR
-	CIDR *gardencore.CIDR
+	// CIDR is the VPC CIDR.
+	CIDR *string
 }
 
 // VPCStatus contains information about a generated VPC or resources inside an existing VPC.

@@ -15,8 +15,6 @@
 package azure
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,7 +40,7 @@ type NetworkConfig struct {
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet VNet
 	// Workers is the worker subnet range to create (used for the VMs).
-	Workers gardencorev1alpha1.CIDR
+	Workers string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -119,7 +117,7 @@ type VNet struct {
 	// Name is the VNet name.
 	Name *string
 	// CIDR is the VNet CIDR
-	CIDR *gardencorev1alpha1.CIDR
+	CIDR *string
 }
 
 // VNetStatus contains the VNet name.

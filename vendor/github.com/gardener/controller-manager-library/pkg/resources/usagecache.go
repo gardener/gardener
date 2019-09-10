@@ -28,7 +28,7 @@ type UsageCache struct {
 	lock    sync.Mutex
 	byOwner map[ClusterObjectKey]ClusterObjectKeySet
 	byUsed  map[ClusterObjectKey]ClusterObjectKeySet
-	filters []OwnerFilter
+	filters []KeyFilter
 	used    UsedExtractor
 }
 
@@ -48,7 +48,7 @@ func (this *UsageCache) filterKey(key ClusterObjectKey) bool {
 	return false
 }
 
-func (this *UsageCache) AddOwnerFilter(filters ...OwnerFilter) *UsageCache {
+func (this *UsageCache) AddOwnerFilter(filters ...KeyFilter) *UsageCache {
 	this.filters = append(this.filters, filters...)
 	return this
 }

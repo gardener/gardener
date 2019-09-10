@@ -70,6 +70,65 @@ type CloudProfileSpec struct {
 	Packet *PacketProfile
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	CABundle *string
+	//
+	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+	Kubernetes KubernetesSettings
+	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+	MachineImages []CloudProfileMachineImage
+	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+	MachineTypes []MachineType
+	// ProviderConfig contains provider-specific configuration for the profile.
+	ProviderConfig *ProviderConfig
+	// Regions contains constraints regarding allowed values for regions and zones.
+	Regions []Region
+	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
+	// An empty list means that all seeds of the same provider type are supported.
+	// This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
+	SeedSelector *metav1.LabelSelector
+	// Type is the name of the provider.
+	Type string
+	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+	VolumeTypes []VolumeType
+}
+
+// KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+type KubernetesSettings struct {
+	// Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.
+	Versions []ExpirableVersion
+}
+
+// CloudProfileMachineImage defines the name and multiple versions of the machine image in any environment.
+type CloudProfileMachineImage struct {
+	// Name is the name of the image.
+	Name string
+	// Versions contains versions and expiration dates of the machine image
+	Versions []ExpirableVersion
+}
+
+// ExpirableVersion contains a version and an expiration date.
+type ExpirableVersion struct {
+	// Version is the version identifier.
+	Version string
+	// ExpirationDate defines the time at which this version expires.
+	ExpirationDate *metav1.Time
+}
+
+// Region contains certain properties of a region.
+type Region struct {
+	// Name is a region name.
+	Name string
+	// Zones is a list of availability zones in this region.
+	Zones []AvailabilityZone
+}
+
+// AvailabilityZone is an availability zone.
+type AvailabilityZone struct {
+	// Name is an an availability zone name.
+	Name string
+	// UnavailableMachineTypes is a list of machine type names that are not availability in this zone.
+	UnavailableMachineTypes []string
+	// UnavailableVolumeTypes is a list of volume type names that are not availability in this zone.
+	UnavailableVolumeTypes []string
 }
 
 // AWSProfile defines certain constraints and definitions for the AWS cloud.
@@ -301,8 +360,18 @@ type MachineType struct {
 	CPU resource.Quantity
 	// GPU is the number of GPUs for this machine type.
 	GPU resource.Quantity
+	// Storage is the amount of storage associated with the root volume of this machine type.
+	Storage *MachineTypeStorage
 	// Memory is the amount of memory for this machine type.
 	Memory resource.Quantity
+}
+
+// MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
+type MachineTypeStorage struct {
+	// Size is the storage size.
+	Size resource.Quantity
+	// Type is the type of the storage.
+	Type string
 }
 
 // OpenStackMachineType contains certain properties of a machine type in OpenStack
@@ -504,6 +573,16 @@ const (
 	MigrationSeedVolumeMinimumSize = "migration.seed.gardener.cloud/volumeMinimumSize"
 	MigrationSeedVolumeProviders   = "migration.seed.gardener.cloud/volumeProviders"
 	MigrationSeedTaints            = "migration.seed.gardener.cloud/taints"
+
+	MigrationCloudProfileType           = "migration.cloudprofile.gardener.cloud/type"
+	MigrationCloudProfileProviderConfig = "migration.cloudprofile.gardener.cloud/providerConfig"
+	MigrationCloudProfileSeedSelector   = "migration.cloudprofile.gardener.cloud/seedSelector"
+	MigrationCloudProfileDNSProviders   = "migration.cloudprofile.gardener.cloud/dnsProviders"
+	MigrationCloudProfileRegions        = "migration.cloudprofile.gardener.cloud/regions"
+	MigrationCloudProfileVolumeTypes    = "migration.cloudprofile.gardener.cloud/volumeTypes"
+	MigrationCloudProfileKubernetes     = "migration.cloudprofile.gardener.cloud/kubernetes"
+	MigrationCloudProfileMachineImages  = "migration.cloudprofile.gardener.cloud/machineImages"
+	MigrationCloudProfileMachineTypes   = "migration.cloudprofile.gardener.cloud/machineTypes"
 )
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
@@ -577,7 +656,6 @@ type SeedTaint struct {
 	// Key is the taint key to be applied to a seed.
 	Key string
 	// Value is the taint value corresponding to the taint key.
-	// +optional
 	Value *string
 }
 

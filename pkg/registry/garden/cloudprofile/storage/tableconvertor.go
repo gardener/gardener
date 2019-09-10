@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metatable "k8s.io/apimachinery/pkg/api/meta/table"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +36,7 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Cloud Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cloudProvider"]},
+			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -70,11 +69,7 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, cloudProfile.Name)
-		if cloudProvider, err := helper.DetermineCloudProviderInProfile(cloudProfile.Spec); err == nil {
-			cells = append(cells, cloudProvider)
-		} else {
-			cells = append(cells, "<unknown>")
-		}
+		cells = append(cells, cloudProfile.Spec.Type)
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(cloudProfile.CreationTimestamp))
 
 		return cells, nil
