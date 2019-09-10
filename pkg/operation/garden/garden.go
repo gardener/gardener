@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -178,6 +180,16 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
 			numberOfOpenVPNDiffieHellmanSecrets++
 		}
+
+		// Retrieving basic auth secret for aggregate monitoring with a label
+		// indicating the Garden role global-monitoring.
+		if secret.Labels[common.GardenRole] == common.GardenRoleGlobalMonitoring {
+			monitoringSecret := secret
+			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
+			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
+		} else {
+			logger.Logger.Info("No monitoring basic auth secret found.")
+		}
 	}
 
 	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
@@ -251,5 +263,45 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, gardenNamespace stri
 	if !gardenVersionOK {
 		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minGardenVersion)
 	}
+	if secrets[common.GardenRoleGlobalMonitoring] == nil {
+		var secret *corev1.Secret
+		if secret, err = generateMonitoringSecret(k8sGardenClient, gardenNamespace); err != nil {
+			return err
+		}
+		secrets[common.GardenRoleGlobalMonitoring] = secret
+	}
+
 	return nil
+}
+
+func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamespace string) (*corev1.Secret, error) {
+	basicAuthSecret := &secretutils.BasicAuthSecretConfig{
+		Name:   "seed-monitoring-ingress-credentials",
+		Format: secretutils.BasicAuthFormatNormal,
+
+		Username:       "admin",
+		PasswordLength: 32,
+	}
+	basicAuth, err := basicAuthSecret.Generate()
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      basicAuthSecret.Name,
+			Namespace: gardenNamespace,
+		},
+	}
+	if err := kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
+		secret.Labels = map[string]string{
+			common.GardenRole: common.GardenRoleGlobalMonitoring,
+		}
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = basicAuth.SecretData()
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
