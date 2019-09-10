@@ -631,24 +631,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(kube_statefulset_status_replicas{statefulset=\"$statefulset_name\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_status_replicas_ready{statefulset=\"$statefulset_name\"}) without (instance, pod)",
           "intervalFactor": 2,
-          "legendFormat": "current replicas",
+          "legendFormat": "ready",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "min(kube_statefulset_status_replicas_available{statefulset=\"$statefulset_name\"}) without (instance, pod)",
+          "expr": "min(kube_statefulset_status_replicas_current{statefulset=\"$statefulset_name\"}) without (instance, pod)",
           "intervalFactor": 2,
-          "legendFormat": "available",
+          "legendFormat": "current",
           "refId": "B",
-          "step": 40
-        },
-        {
-          "expr": "max(kube_statefulset_status_replicas_unavailable{statefulset=\"$statefulset_name\"}) without (instance, pod)",
-          "intervalFactor": 2,
-          "legendFormat": "unavailable",
-          "refId": "C",
           "step": 40
         },
         {

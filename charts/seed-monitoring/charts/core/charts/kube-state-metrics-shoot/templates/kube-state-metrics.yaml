@@ -67,6 +67,7 @@ spec:
         command:
         - /kube-state-metrics
         - --port=8080
+        - --telemetry-port=8081
         - --kubeconfig=/etc/kube-state-metrics/config/kubeconfig
         - --namespace=kube-system
         - --collectors=daemonsets,deployments,nodes,pods,statefulsets

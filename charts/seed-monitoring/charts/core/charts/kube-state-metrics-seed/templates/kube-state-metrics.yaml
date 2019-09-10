@@ -96,6 +96,7 @@ spec:
         command:
         - /kube-state-metrics
         - --port=8080
+        - --telemetry-port=8081
         - --namespace={{ .Release.Namespace }}
         - --collectors=deployments,pods,statefulsets
         ports:
