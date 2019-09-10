@@ -166,6 +166,9 @@ const (
 	// GardenRoleMonitoring is the value of the GardenRole key indicating type 'monitoring'.
 	GardenRoleMonitoring = "monitoring"
 
+	// GardenRoleGlobalMonitoring is the vlaue of the GardenRole key indicating type 'global-monitoring'
+	GardenRoleGlobalMonitoring = "global-monitoring"
+
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
 

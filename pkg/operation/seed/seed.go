@@ -262,6 +262,26 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		return err
 	}
 
+	if monitoringSecrets := common.GetSecretKeysWithPrefix(common.GardenRoleGlobalMonitoring, secrets); len(monitoringSecrets) > 0 {
+		for _, key := range monitoringSecrets {
+			secret := secrets[key]
+			secretObj := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secret.Name,
+					Namespace: "garden",
+				},
+			}
+
+			if err := kutils.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
+				secretObj.Type = corev1.SecretTypeOpaque
+				secretObj.Data = secret.Data
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
 	images, err := imagevector.FindImages(imageVector,
 		[]string{
 			common.AlertManagerImageName,
