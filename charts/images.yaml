@@ -43,7 +43,7 @@ images:
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.7.2
+  tag: v2.12.0
 - name: configmap-reloader
   sourceRepository: github.com/jimmidyson/configmap-reload
   repository: quay.io/coreos/configmap-reload
