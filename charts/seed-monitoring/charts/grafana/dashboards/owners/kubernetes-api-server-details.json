@@ -17,6 +17,7 @@
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -46,6 +47,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -111,6 +115,7 @@
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -140,6 +145,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -206,6 +214,7 @@
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -235,6 +244,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -301,6 +313,7 @@
       "datasource": "prometheus",
       "description": "Shows the average rate of requests to the API server.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -321,6 +334,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pluginVersion": "6.1.4",
       "pointradius": 2,
@@ -382,114 +398,19 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Shows the request rate per resource for the API server.",
-      "editable": false,
-      "error": false,
-      "fill": 0,
-      "grid": {
-        "threshold1Color": "rgba(216, 200, 27, 0.27)",
-        "threshold2Color": "rgba(234, 112, 112, 0.22)"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 48,
-      "isNew": false,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "hideEmpty": false,
-        "hideZero": false,
-        "max": false,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(apiserver_request_total[$rate])) by(resource)",
-          "format": "time_series",
-          "instant": false,
-          "intervalFactor": 2,
-          "legendFormat": "{{resource}}",
-          "refId": "A",
-          "step": 30
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "API Server Request Rates Per Resource",
-      "tooltip": {
-        "msResolution": false,
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": null,
-          "format": "short",
-          "label": "seconds",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "prometheus",
       "description": "Shows the request rate per scope for the API server.",
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 24,
+        "x": 0,
         "y": 16
       },
       "id": 47,
@@ -511,6 +432,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -574,10 +498,111 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "Shows the request rate per resource for the API server.",
+      "editable": false,
+      "error": false,
+      "fill": 0,
+      "fillGradient": 0,
+      "grid": {
+        "threshold1Color": "rgba(216, 200, 27, 0.27)",
+        "threshold2Color": "rgba(234, 112, 112, 0.22)"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 48,
+      "isNew": false,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(apiserver_request_total[$rate])) by(resource)",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{resource}}",
+          "refId": "A",
+          "step": 30
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "API Server Request Rates Per Resource",
+      "tooltip": {
+        "msResolution": false,
+        "shared": false,
+        "sort": 1,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "short",
+          "label": "requests/s",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
       "description": "Shows the request rate per verb and resource for the API server.",
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -586,27 +611,30 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 32
       },
       "id": 45,
       "isNew": false,
       "legend": {
-        "alignAsTable": false,
+        "alignAsTable": true,
         "avg": false,
-        "current": false,
+        "current": true,
         "hideEmpty": false,
         "hideZero": false,
-        "max": false,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -633,8 +661,8 @@
       "title": "API Server Request Rates Per Verb And Resource",
       "tooltip": {
         "msResolution": false,
-        "shared": true,
-        "sort": 0,
+        "shared": false,
+        "sort": 1,
         "value_type": "individual"
       },
       "type": "graph",
@@ -666,7 +694,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
     "seed",
