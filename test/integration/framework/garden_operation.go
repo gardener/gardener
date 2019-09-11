@@ -138,6 +138,12 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *v1beta1.Sho
 		return errors.Wrap(err, "could not construct Seed client")
 	}
 
+	o.SeedClient = seedClient
+	o.Shoot = shoot
+	o.Seed = seed
+	o.SeedCloudProfile = seedCloudProfile
+	o.Project = project
+
 	shootScheme := runtime.NewScheme()
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
@@ -156,13 +162,7 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *v1beta1.Sho
 		return errors.Wrap(err, "could not construct Shoot client")
 	}
 
-	o.SeedClient = seedClient
 	o.ShootClient = shootClient
-
-	o.Shoot = shoot
-	o.Seed = seed
-	o.SeedCloudProfile = seedCloudProfile
-	o.Project = project
 
 	return nil
 }
@@ -433,12 +433,12 @@ func (o *GardenerTestOperation) DumpState(ctx context.Context) {
 		if err := o.dumpNodes(ctx, ctxIdentifier, o.ShootClient); err != nil {
 			o.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", o.Shoot.Name, err.Error())
 		}
+	}
 
-		// dump controlplane in the shootnamespace
-		if o.Seed != nil && o.SeedClient != nil {
-			if err := o.dumpControlplaneInSeed(ctx, o.SeedClient, o.Seed, o.ShootSeedNamespace()); err != nil {
-				o.Logger.Errorf("unable to dump controlplane of %s in seed %s: %v", o.Shoot.Name, o.Seed.Name, err)
-			}
+	// dump controlplane in the shootnamespace
+	if o.Seed != nil && o.SeedClient != nil {
+		if err := o.dumpControlplaneInSeed(ctx, o.SeedClient, o.Seed, o.ShootSeedNamespace()); err != nil {
+			o.Logger.Errorf("unable to dump controlplane of %s in seed %s: %v", o.Shoot.Name, o.Seed.Name, err)
 		}
 	}
 
