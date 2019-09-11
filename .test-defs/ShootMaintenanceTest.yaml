@@ -7,12 +7,7 @@ spec:
 
   activeDeadlineSeconds: 600
   behavior:
-    - serial
-
-  config:
-    - name: GO111MODULE
-      value: "on"
-      type: env
+  - serial
 
   command: [bash, -c]
   args:
@@ -25,4 +20,4 @@ spec:
       -shootpath=$SHOOT_ARTIFACT_PATH
       -cloudprovider=$CLOUDPROVIDER
       -test-machinery-run=true
-  image: golang:1.12.9
+  image: golang:1.13.0

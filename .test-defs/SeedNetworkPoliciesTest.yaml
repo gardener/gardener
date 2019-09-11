@@ -9,11 +9,6 @@ spec:
   labels: ["beta"]
   behavior: ["serial"]
 
-  config:
-  - name: GO111MODULE
-    value: "on"
-    type: env
-
   command: [bash, -c]
   args:
   - >-
@@ -26,4 +21,4 @@ spec:
     --shootNamespace=$PROJECT_NAMESPACE
     --cleanup=true
 
-  image: golang:1.12.7
+  image: golang:1.13.0

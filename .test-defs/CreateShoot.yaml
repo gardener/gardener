@@ -4,16 +4,10 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the creation of a shoot.
-
   activeDeadlineSeconds: 3600
-
-  config:
-  - name: GO111MODULE
-    value: "on"
-    type: env
 
   command: [bash, -c]
   args:
   - go run -mod=vendor ./.test-defs/cmd/create-shoot
 
-  image: golang:1.12.7
+  image: golang:1.13.0

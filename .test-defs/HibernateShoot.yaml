@@ -4,13 +4,8 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the hibernation of a shoot.
-
   activeDeadlineSeconds: 1800
 
-  config:
-  - name: GO111MODULE
-    value: "on"
-    type: env
 
   command: [bash, -c]
   args:
@@ -20,4 +15,4 @@ spec:
     --project-namespace=$PROJECT_NAMESPACE
     --kubeconfig="$TM_KUBECONFIG_PATH/gardener.config"
 
-  image: golang:1.12.7
+  image: golang:1.13.0

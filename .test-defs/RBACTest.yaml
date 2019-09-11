@@ -8,11 +8,6 @@ spec:
   activeDeadlineSeconds: 1800
   labels: ["release"]
 
-  config:
-  - name: GO111MODULE
-    value: "on"
-    type: env
-
   command: [bash, -c]
   args:
   - >-
@@ -20,4 +15,4 @@ spec:
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
     -project-namespace=$PROJECT_NAMESPACE
-  image: golang:1.12.7
+  image: golang:1.13.0
