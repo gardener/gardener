@@ -162,8 +162,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
-				"basicAuthSecret": basicAuth,
-				"host":            b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name),
+				"basicAuthSecret": basicAuthUsers,
+				"host":            b.Seed.GetIngressFQDN("a-users", b.Shoot.Info.Name, b.Garden.Project.Name),
 			},
 			"replicas":     b.Shoot.GetReplicas(1),
 			"storage":      b.Seed.GetValidVolumeSize("1Gi"),

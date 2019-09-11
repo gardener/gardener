@@ -1,0 +1,25 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Alertmanager to be reached from the ingress.
+  name: allow-alertmanager
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      component: alertmanager
+      garden.sapcloud.io/role: monitoring
+      role: monitoring
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+      namespaceSelector:
+        matchLabels:
+          role: kube-system
+  policyTypes:
+  - Ingress
