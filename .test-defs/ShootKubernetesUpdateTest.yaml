@@ -1,18 +1,17 @@
 kind: TestDefinition
 metadata:
-  name: rbac-test
+  name: shoot-kubernetes-update-test
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: Tests if rbac is enabled for the gardener and if a service acount has acccess to the garden ns
-
+  description: Tests the kubernetes update of a shoot.
   activeDeadlineSeconds: 1800
-  labels: ["release"]
 
   command: [bash, -c]
   args:
   - >-
-    go test -mod=vendor ./test/integration/gardener/rbac
+    go test -mod=vendor ./test/integration/shoots/update
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
-    -project-namespace=$PROJECT_NAMESPACE
+    -shootName=$SHOOT_NAME
+    -shootNamespace=$PROJECT_NAMESPACE
   image: golang:1.13.0

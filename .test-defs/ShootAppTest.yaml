@@ -8,11 +8,6 @@ spec:
   activeDeadlineSeconds: 1800
   labels: ["default", "release"]
 
-  config:
-  - name: GO111MODULE
-    value: "on"
-    type: env
-
   command: [bash, -c]
   args:
   - >-
@@ -21,4 +16,4 @@ spec:
     -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
     -shootName=$SHOOT_NAME
     -shootNamespace=$PROJECT_NAMESPACE
-  image: golang:1.12.7
+  image: golang:1.13.0
