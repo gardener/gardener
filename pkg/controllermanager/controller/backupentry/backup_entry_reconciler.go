@@ -22,6 +22,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -119,7 +120,7 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 	}
 
 	if updateErr := controllerutils.RemoveGardenerOperationAnnotation(r.ctx, retry.DefaultBackoff, r.client, backupEntry); updateErr != nil {
-		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", gardencorev1alpha1.GardenerOperation, updateErr)
+		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1alpha1constants.GardenerOperation, updateErr)
 		return reconcile.Result{}, updateErr
 	}
 

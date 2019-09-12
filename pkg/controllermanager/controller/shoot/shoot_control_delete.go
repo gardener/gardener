@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -119,7 +120,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// to delete anymore.
 	kubeAPIServerDeploymentFound := true
 	deploymentKubeAPIServer := &appsv1.Deployment{}
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-apiserver deployment in the shoot namespace in the seed cluster (%s)", err.Error()))
 		}
@@ -134,7 +135,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	// cleaned up.
 	kubeControllerManagerDeploymentFound := true
 	deploymentKubeControllerManager := &appsv1.Deployment{}
-	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster (%s)", err))
 		}

@@ -28,6 +28,7 @@ import (
 
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -59,7 +60,7 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 
 		fns = append(fns, func(ctx context.Context) error {
 			return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
-				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig

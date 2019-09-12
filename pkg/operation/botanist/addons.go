@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
@@ -238,7 +238,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		}
 		metricsServerConfig = map[string]interface{}{
 			"tls": map[string]interface{}{
-				"caBundle": b.Secrets[gardencorev1alpha1.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
+				"caBundle": b.Secrets[v1alpha1constants.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
 			},
 			"secret": map[string]interface{}{
 				"data": b.Secrets["metrics-server"].Data,
@@ -329,7 +329,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, error) {
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
 		"labels": map[string]string{
-			gardencorev1alpha1.GardenerPurpose: metav1.NamespaceSystem,
+			v1alpha1constants.GardenerPurpose: metav1.NamespaceSystem,
 		},
 	})
 }

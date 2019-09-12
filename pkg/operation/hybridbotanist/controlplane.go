@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/etcd-backup-restore/pkg/miscellaneous"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -194,16 +195,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"probeCredentials":          b.APIServerHealthCheckToken,
 		"securePort":                443,
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                     b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
-			"checksum/secret-ca-front-proxy":         b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],
-			"checksum/secret-kube-apiserver":         b.CheckSums[gardencorev1alpha1.DeploymentNameKubeAPIServer],
+			"checksum/secret-ca":                     b.CheckSums[v1alpha1constants.SecretNameCACluster],
+			"checksum/secret-ca-front-proxy":         b.CheckSums[v1alpha1constants.SecretNameCAFrontProxy],
+			"checksum/secret-kube-apiserver":         b.CheckSums[v1alpha1constants.DeploymentNameKubeAPIServer],
 			"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
 			"checksum/secret-vpn-seed":               b.CheckSums["vpn-seed"],
 			"checksum/secret-vpn-seed-tlsauth":       b.CheckSums["vpn-seed-tlsauth"],
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
-			"checksum/secret-etcd-ca":                b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
+			"checksum/secret-etcd-ca":                b.CheckSums[v1alpha1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
 		},
 	}
@@ -241,7 +242,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	} else {
 		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		replicas := deployment.Spec.Replicas
@@ -345,7 +346,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer, values, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, values, nil)
 }
 
 func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) {
@@ -400,8 +401,8 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                             b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
-			"checksum/secret-kube-controller-manager":        b.CheckSums[gardencorev1alpha1.DeploymentNameKubeControllerManager],
+			"checksum/secret-ca":                             b.CheckSums[v1alpha1constants.SecretNameCACluster],
+			"checksum/secret-kube-controller-manager":        b.CheckSums[v1alpha1constants.DeploymentNameKubeControllerManager],
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
@@ -409,7 +410,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 	}
 
 	if b.Shoot.HibernationEnabled {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager)
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager)
 		if err != nil {
 			return err
 		}
@@ -434,7 +435,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager, values, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager, values, nil)
 }
 
 // DeployKubeScheduler deploys kube-scheduler deployment.
@@ -443,7 +444,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-kube-scheduler":        b.CheckSums[gardencorev1alpha1.DeploymentNameKubeScheduler],
+			"checksum/secret-kube-scheduler":        b.CheckSums[v1alpha1constants.DeploymentNameKubeScheduler],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
 		},
 	}
@@ -467,7 +468,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeScheduler, values, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeScheduler, values, nil)
 }
 
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
@@ -497,7 +498,7 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 
 	etcdConfig := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
+			"checksum/secret-etcd-ca":         b.CheckSums[v1alpha1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},

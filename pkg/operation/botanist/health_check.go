@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -207,7 +208,7 @@ func computeRequiredControlPlaneDeployments(
 		}
 
 		if !rollingUpdateOngoing {
-			requiredControlPlaneDeployments.Insert(gardencorev1alpha1.DeploymentNameClusterAutoscaler)
+			requiredControlPlaneDeployments.Insert(v1alpha1constants.DeploymentNameClusterAutoscaler)
 		}
 	}
 
@@ -217,7 +218,7 @@ func computeRequiredControlPlaneDeployments(
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
 // which should exist next to the control plane.
 func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
-	var requiredMonitoringStatefulSets = sets.NewString(gardencorev1alpha1.StatefulSetNamePrometheus)
+	var requiredMonitoringStatefulSets = sets.NewString(v1alpha1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
 		requiredMonitoringStatefulSets.Insert(common.AlertManagerStatefulSetName)
 	}

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -167,8 +168,8 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 
 		seed.Annotations = annotations
 		seed.Labels = map[string]string{
-			common.GardenRole:             common.GardenRoleSeed,
-			gardencorev1alpha1.GardenRole: common.GardenRoleSeed,
+			common.GardenRole:            common.GardenRoleSeed,
+			v1alpha1constants.GardenRole: common.GardenRoleSeed,
 		}
 
 		seed.Spec = gardenv1beta1.SeedSpec{

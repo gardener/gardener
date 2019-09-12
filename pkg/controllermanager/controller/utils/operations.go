@@ -17,7 +17,7 @@ package utils
 import (
 	"context"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -27,7 +27,7 @@ import (
 // RemoveGardenerOperationAnnotation removes a  gardener operation annotation and retries the operation with the given <backoff>.
 func RemoveGardenerOperationAnnotation(ctx context.Context, backoff wait.Backoff, cli client.Client, obj kutil.Object) error {
 	return kutil.TryUpdate(ctx, backoff, cli, obj, func() error {
-		delete(obj.GetAnnotations(), gardencorev1alpha1.GardenerOperation)
+		delete(obj.GetAnnotations(), v1alpha1constants.GardenerOperation)
 		return nil
 	})
 }

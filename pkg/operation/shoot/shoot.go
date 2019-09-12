@@ -22,6 +22,7 @@ import (
 
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -319,7 +320,7 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 // internal or the external cluster domain should be used.
 func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) string {
 	if runsInSeed {
-		return gardencorev1alpha1.DeploymentNameKubeAPIServer
+		return v1alpha1constants.DeploymentNameKubeAPIServer
 	}
 
 	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged {

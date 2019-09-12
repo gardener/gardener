@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist"
@@ -213,13 +214,13 @@ var _ = Describe("health check", func() {
 		shootNamespace = metav1.NamespaceSystem
 
 		// control plane deployments
-		gardenerResourceManagerDeployment  = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameGardenerResourceManager, common.GardenRoleControlPlane, true)
-		kubeAPIServerDeployment            = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer, common.GardenRoleControlPlane, true)
-		kubeControllerManagerDeployment    = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager, common.GardenRoleControlPlane, true)
-		kubeSchedulerDeployment            = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeScheduler, common.GardenRoleControlPlane, true)
+		gardenerResourceManagerDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGardenerResourceManager, common.GardenRoleControlPlane, true)
+		kubeAPIServerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, common.GardenRoleControlPlane, true)
+		kubeControllerManagerDeployment    = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager, common.GardenRoleControlPlane, true)
+		kubeSchedulerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeScheduler, common.GardenRoleControlPlane, true)
 		machineControllerManagerDeployment = newDeployment(seedNamespace, common.MachineControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
-		dependencyWatchdogDeployment       = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameDependencyWatchdog, common.GardenRoleControlPlane, true)
-		clusterAutoscalerDeployment        = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
+		dependencyWatchdogDeployment       = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameDependencyWatchdog, common.GardenRoleControlPlane, true)
+		clusterAutoscalerDeployment        = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
 
 		requiredControlPlaneDeployments = []*appsv1.Deployment{
 			gardenerResourceManagerDeployment,
@@ -232,8 +233,8 @@ var _ = Describe("health check", func() {
 		}
 
 		// control plane stateful sets
-		etcdMainStatefulSet   = newStatefulSet(seedNamespace, gardencorev1alpha1.StatefulSetNameETCDMain, common.GardenRoleControlPlane, true)
-		etcdEventsStatefulSet = newStatefulSet(seedNamespace, gardencorev1alpha1.StatefulSetNameETCDEvents, common.GardenRoleControlPlane, true)
+		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDMain, common.GardenRoleControlPlane, true)
+		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDEvents, common.GardenRoleControlPlane, true)
 
 		requiredControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			etcdMainStatefulSet,
@@ -270,10 +271,10 @@ var _ = Describe("health check", func() {
 			nodeExporterDaemonSet,
 		}
 
-		grafanaDeployment               = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameGrafanaOperators, common.GardenRoleMonitoring, true)
-		grafanaDeploymentUsers          = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameGrafanaUsers, common.GardenRoleMonitoring, true)
-		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeStateMetricsSeed, common.GardenRoleMonitoring, true)
-		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKubeStateMetricsShoot, common.GardenRoleMonitoring, true)
+		grafanaDeployment               = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaOperators, common.GardenRoleMonitoring, true)
+		grafanaDeploymentUsers          = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaUsers, common.GardenRoleMonitoring, true)
+		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsSeed, common.GardenRoleMonitoring, true)
+		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsShoot, common.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
 			grafanaDeployment,
@@ -283,20 +284,20 @@ var _ = Describe("health check", func() {
 		}
 
 		alertManagerStatefulSet = newStatefulSet(seedNamespace, common.AlertManagerStatefulSetName, common.GardenRoleMonitoring, true)
-		prometheusStatefulSet   = newStatefulSet(seedNamespace, gardencorev1alpha1.StatefulSetNamePrometheus, common.GardenRoleMonitoring, true)
+		prometheusStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNamePrometheus, common.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			alertManagerStatefulSet,
 			prometheusStatefulSet,
 		}
 
-		kibanaDeployment = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameKibana, common.GardenRoleLogging, true)
+		kibanaDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKibana, common.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
 			kibanaDeployment,
 		}
 
-		elasticSearchStatefulSet = newStatefulSet(seedNamespace, gardencorev1alpha1.StatefulSetNameElasticSearch, common.GardenRoleLogging, true)
+		elasticSearchStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameElasticSearch, common.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			elasticSearchStatefulSet,

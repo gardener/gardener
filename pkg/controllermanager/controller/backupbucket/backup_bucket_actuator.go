@@ -21,6 +21,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -161,7 +162,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
-		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 
 		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

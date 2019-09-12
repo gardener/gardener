@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	"github.com/gardener/gardener/pkg/api"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
@@ -87,8 +87,8 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 		return true
 	}
 
-	oldPurpose = oldBackupInfrastructure.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
-	newPurpose = newBackupInfrastructure.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
+	oldPurpose = oldBackupInfrastructure.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
+	newPurpose = newBackupInfrastructure.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
 	if oldPurpose != newPurpose {
 		return true
 	}
