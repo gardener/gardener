@@ -276,7 +276,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, gardenNamespace stri
 
 func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamespace string) (*corev1.Secret, error) {
 	basicAuthSecret := &secretutils.BasicAuthSecretConfig{
-		Name:   "seed-monitoring-ingress-credentials",
+		Name:   "monitoring-ingress-credentials",
 		Format: secretutils.BasicAuthFormatNormal,
 
 		Username:       "admin",
