@@ -34,38 +34,39 @@
       "id": 63,
       "links": [],
       "options": {
-        "maxValue": "110",
-        "minValue": 0,
+        "fieldOptions": {
+          "calcs": [
+            "last"
+          ],
+          "defaults": {
+            "decimals": null,
+            "mappings": [],
+            "max": "110",
+            "min": 0,
+            "thresholds": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 110
+              }
+            ],
+            "unit": "none"
+          },
+          "override": {},
+          "values": false
+        },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "thresholds": [
-          {
-            "color": "green",
-            "index": 0,
-            "value": null
-          },
-          {
-            "color": "#EAB839",
-            "index": 1,
-            "value": 100
-          },
-          {
-            "color": "red",
-            "index": 2,
-            "value": 110
-          }
-        ],
-        "valueMappings": [],
-        "valueOptions": {
-          "decimals": null,
-          "prefix": "",
-          "stat": "last",
-          "suffix": "",
-          "unit": "none"
-        }
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "6.1.4",
+      "pluginVersion": "6.3.2",
       "targets": [
         {
           "expr": "sum(kube_pod_info{type=\"shoot\", node=~\"$Node\"})",
@@ -90,57 +91,58 @@
       "id": 65,
       "links": [],
       "options": {
-        "maxValue": 100,
-        "minValue": 0,
+        "fieldOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "defaults": {
+            "decimals": null,
+            "mappings": [
+              {
+                "from": "",
+                "id": 1,
+                "operator": "",
+                "text": "",
+                "to": "",
+                "type": 1,
+                "value": ""
+              },
+              {
+                "from": "",
+                "id": 2,
+                "operator": "",
+                "text": "",
+                "to": "",
+                "type": 1,
+                "value": ""
+              }
+            ],
+            "max": 100,
+            "min": 0,
+            "thresholds": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 95
+              },
+              {
+                "color": "red",
+                "value": 99
+              }
+            ],
+            "unit": "none"
+          },
+          "override": {},
+          "values": false
+        },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "thresholds": [
-          {
-            "color": "green",
-            "index": 0,
-            "value": null
-          },
-          {
-            "color": "#EAB839",
-            "index": 1,
-            "value": 95
-          },
-          {
-            "color": "red",
-            "index": 2,
-            "value": 99
-          }
-        ],
-        "valueMappings": [
-          {
-            "from": "",
-            "id": 1,
-            "operator": "",
-            "text": "",
-            "to": "",
-            "type": 1,
-            "value": ""
-          },
-          {
-            "from": "",
-            "id": 2,
-            "operator": "",
-            "text": "",
-            "to": "",
-            "type": 1,
-            "value": ""
-          }
-        ],
-        "valueOptions": {
-          "decimals": null,
-          "prefix": "",
-          "stat": "mean",
-          "suffix": "%",
-          "unit": "none"
-        }
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "6.1.4",
+      "pluginVersion": "6.3.2",
       "targets": [
         {
           "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$rate])) / sum(kube_node_status_allocatable_cpu_cores{node=~\"$Node\"}) * 100",
@@ -166,57 +168,58 @@
       "id": 66,
       "links": [],
       "options": {
-        "maxValue": 100,
-        "minValue": 0,
+        "fieldOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "defaults": {
+            "decimals": null,
+            "mappings": [
+              {
+                "from": "",
+                "id": 1,
+                "operator": "",
+                "text": "",
+                "to": "",
+                "type": 1,
+                "value": ""
+              },
+              {
+                "from": "",
+                "id": 2,
+                "operator": "",
+                "text": "",
+                "to": "",
+                "type": 1,
+                "value": ""
+              }
+            ],
+            "max": 100,
+            "min": 0,
+            "thresholds": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 95
+              },
+              {
+                "color": "red",
+                "value": 99
+              }
+            ],
+            "unit": "none"
+          },
+          "override": {},
+          "values": false
+        },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "thresholds": [
-          {
-            "color": "green",
-            "index": 0,
-            "value": null
-          },
-          {
-            "color": "#EAB839",
-            "index": 1,
-            "value": 95
-          },
-          {
-            "color": "red",
-            "index": 2,
-            "value": 99
-          }
-        ],
-        "valueMappings": [
-          {
-            "from": "",
-            "id": 1,
-            "operator": "",
-            "text": "",
-            "to": "",
-            "type": 1,
-            "value": ""
-          },
-          {
-            "from": "",
-            "id": 2,
-            "operator": "",
-            "text": "",
-            "to": "",
-            "type": 1,
-            "value": ""
-          }
-        ],
-        "valueOptions": {
-          "decimals": null,
-          "prefix": "",
-          "stat": "mean",
-          "suffix": "%",
-          "unit": "none"
-        }
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "6.1.4",
+      "pluginVersion": "6.3.2",
       "targets": [
         {
           "expr": "sum(node_memory_Active_bytes{node=~\"$Node\"}) / sum(kube_node_status_allocatable_memory_bytes{node=~\"$Node\"}) * 100",
@@ -240,6 +243,7 @@
       "datasource": "prometheus",
       "description": "Shows how many pods can be allocated onto this node and how many are currently on this node.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 24,
@@ -260,6 +264,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -333,6 +340,7 @@
       "decimals": 2,
       "description": "Shows a node's CPU usage over time.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -354,6 +362,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -407,7 +418,7 @@
         {
           "format": "short",
           "label": "Cores",
-          "logBase": 2,
+          "logBase": 1,
           "max": null,
           "min": null,
           "show": true
@@ -434,6 +445,7 @@
       "decimals": 2,
       "description": "Shows a node's memory usage over time.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -455,6 +467,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -538,6 +553,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 8,
@@ -565,6 +581,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -644,6 +663,7 @@
       "dashes": false,
       "description": "Shows the size of the node's filesystem, how much space is free and how much space is available to non-root users.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -664,6 +684,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -757,6 +780,7 @@
           "editable": true,
           "error": false,
           "fill": 0,
+          "fillGradient": 0,
           "grid": {},
           "gridPos": {
             "h": 7,
@@ -783,6 +807,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "connected",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -864,6 +891,7 @@
           "editable": true,
           "error": false,
           "fill": 0,
+          "fillGradient": 0,
           "grid": {},
           "gridPos": {
             "h": 7,
@@ -890,6 +918,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "connected",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -941,7 +972,7 @@
             {
               "format": "bytes",
               "label": "Cores",
-              "logBase": 1,
+              "logBase": 2,
               "max": null,
               "min": null,
               "show": true
@@ -966,7 +997,7 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
     "workload",
@@ -976,10 +1007,7 @@
     "list": [
       {
         "allValue": ".*",
-        "current": {
-          "text": "ip-10-250-18-72.eu-west-1.compute.internal",
-          "value": "ip-10-250-18-72.eu-west-1.compute.internal"
-        },
+        "current": {},
         "datasource": "prometheus",
         "definition": "",
         "hide": 0,
@@ -1066,4 +1094,4 @@
   "title": "Node Details",
   "uid": "node-details",
   "version": 1
-} 
+}
