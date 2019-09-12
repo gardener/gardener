@@ -209,10 +209,10 @@ const (
 	GardenIgnoreAlerts = "shoot.garden.sapcloud.io/ignore-alerts"
 
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
-	GrafanaOperatorsPrefix = "g-operators"
+	GrafanaOperatorsPrefix = "go"
 
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
-	GrafanaUsersPrefix = "g-users"
+	GrafanaUsersPrefix = "gu"
 
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
