@@ -4171,14 +4171,14 @@ func schema_pkg_apis_garden_v1beta1_AuditPolicy(ref common.ReferenceCallback) co
 					"configMapRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ConfigMapRef is a reference to a ConfigMap object in the same namespace, which contains the audit policy for the kube-apiserver.",
-							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.LocalObjectReference"},
+			"k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 

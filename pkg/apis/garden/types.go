@@ -1421,7 +1421,7 @@ type AuditConfig struct {
 type AuditPolicy struct {
 	// ConfigMapRef is a reference to a ConfigMap object in the same namespace,
 	// which contains the audit policy for the kube-apiserver.
-	ConfigMapRef *corev1.LocalObjectReference
+	ConfigMapRef *corev1.ObjectReference
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.

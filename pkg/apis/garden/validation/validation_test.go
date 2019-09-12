@@ -3866,7 +3866,7 @@ var _ = Describe("validation", func() {
 							},
 							AuditConfig: &garden.AuditConfig{
 								AuditPolicy: &garden.AuditPolicy{
-									ConfigMapRef: &corev1.LocalObjectReference{
+									ConfigMapRef: &corev1.ObjectReference{
 										Name: "audit-policy-config",
 									},
 								},

@@ -1927,7 +1927,7 @@ func Convert_garden_AuditConfig_To_v1beta1_AuditConfig(in *garden.AuditConfig, o
 }
 
 func autoConvert_v1beta1_AuditPolicy_To_garden_AuditPolicy(in *AuditPolicy, out *garden.AuditPolicy, s conversion.Scope) error {
-	out.ConfigMapRef = (*v1.LocalObjectReference)(unsafe.Pointer(in.ConfigMapRef))
+	out.ConfigMapRef = (*v1.ObjectReference)(unsafe.Pointer(in.ConfigMapRef))
 	return nil
 }
 
@@ -1937,7 +1937,7 @@ func Convert_v1beta1_AuditPolicy_To_garden_AuditPolicy(in *AuditPolicy, out *gar
 }
 
 func autoConvert_garden_AuditPolicy_To_v1beta1_AuditPolicy(in *garden.AuditPolicy, out *AuditPolicy, s conversion.Scope) error {
-	out.ConfigMapRef = (*v1.LocalObjectReference)(unsafe.Pointer(in.ConfigMapRef))
+	out.ConfigMapRef = (*v1.ObjectReference)(unsafe.Pointer(in.ConfigMapRef))
 	return nil
 }
 

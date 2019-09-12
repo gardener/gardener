@@ -548,7 +548,7 @@ func (in *AuditPolicy) DeepCopyInto(out *AuditPolicy) {
 	*out = *in
 	if in.ConfigMapRef != nil {
 		in, out := &in.ConfigMapRef, &out.ConfigMapRef
-		*out = new(v1.LocalObjectReference)
+		*out = new(v1.ObjectReference)
 		**out = **in
 	}
 	return

@@ -162,7 +162,7 @@ var _ = Describe("resourcereferencemanager", func() {
 						KubeAPIServer: &garden.KubeAPIServerConfig{
 							AuditConfig: &garden.AuditConfig{
 								AuditPolicy: &garden.AuditPolicy{
-									ConfigMapRef: &corev1.LocalObjectReference{
+									ConfigMapRef: &corev1.ObjectReference{
 										Name: configMapName,
 									},
 								},

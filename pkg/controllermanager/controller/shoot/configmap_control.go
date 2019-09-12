@@ -18,11 +18,10 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -44,7 +43,7 @@ func (c *Controller) configMapUpdate(oldObj, newObj interface{}) {
 	)
 
 	if apiequality.Semantic.Equalities.DeepEqual(oldConfigMap.Data, newConfigMap.Data) {
-		logger.Logger.Debugf("[ConfigMap controller] No update of the `.data` field of cm %v/%v. Do not requeue the ConfigMap", oldConfigMap.Namespace, oldConfigMap.Name)
+		logger.Logger.Debugf("[SHOOT CONFIGMAP controller] No update of the `.data` field of cm %v/%v. Do not requeue the ConfigMap", oldConfigMap.Namespace, oldConfigMap.Name)
 		return
 	}
 	c.configMapAdd(newObj)
@@ -55,35 +54,48 @@ func (c *Controller) reconcileConfigMapKey(key string) error {
 	if err != nil {
 		return err
 	}
-	return c.reconcileShootsReferringConfigMap(name, namespace)
+
+	configMap, err := c.configMapLister.ConfigMaps(namespace).Get(name)
+	if apierrors.IsNotFound(err) {
+		logger.Logger.Debugf("[SHOOT CONFIGMAP] %s - skipping because ConfigMap has been deleted", key)
+		return nil
+	}
+	if err != nil {
+		logger.Logger.Errorf("[SHOOT CONFIGMAP] %s - unable to retrieve object from store: %v", key, err)
+		return err
+	}
+
+	return c.reconcileShootsReferringConfigMap(configMap)
 }
 
-func (c *Controller) reconcileShootsReferringConfigMap(configMapName string, configMapNamespace string) error {
-	shoots, err := c.shootLister.Shoots(configMapNamespace).List(labels.Everything())
+func (c *Controller) reconcileShootsReferringConfigMap(configMap *corev1.ConfigMap) error {
+	shoots, err := c.shootLister.Shoots(configMap.Namespace).List(labels.Everything())
 	if err != nil {
 		return err
 	}
+
 	for _, shoot := range shoots {
 		if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
-			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name == configMapName {
+			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name == configMap.Name {
 
-			if shootKey, err := cache.MetaNamespaceKeyFunc(shoot); err == nil {
-				logger.Logger.Infof("[ConfigMap controller] schedule for reconciliation shoot %v ", shootKey)
-				// If reconciliation is enabled only during maintenance time window then adding the shoot key to the
-				// shoot queue does not trigger a reconciliation (unless the shoot is in its maintenance time window at the
-				// moment). Thus, we have to annotate the shoot in order to trigger a reconciliation operation.
-				_, err := controllerutil.CreateOrUpdate(context.TODO(), c.k8sGardenClient.Client(), shoot, func() error {
-					kutil.SetMetaDataAnnotation(shoot, common.ShootOperation, common.ShootOperationReconcile)
-					return nil
-				})
-				return err
+			shootKey, err := cache.MetaNamespaceKeyFunc(shoot)
+			if err != nil {
+				logger.Logger.Errorf("[SHOOT CONFIGMAP controller] failed to get key for shoot. err=%+v", err)
+				continue
 			}
 
-			logger.Logger.Errorf("[ConfigMap controller] failed to get key for shoot. err=%+v", err)
+			logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
+			if _, err := controllerutil.CreateOrUpdate(context.TODO(), c.k8sGardenClient.Client(), shoot, func() error {
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = configMap.ResourceVersion
+				return nil
+			}); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
