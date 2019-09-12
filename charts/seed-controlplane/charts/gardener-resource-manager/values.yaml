@@ -10,7 +10,13 @@ resources:
     memory: 512Mi
 
 replicas: 1
-syncPeriod: 1m0s
-concurrentSyncs: 20
+
+controllers:
+  managedResource:
+    syncPeriod: 1m0s
+    concurrentSyncs: 20
+  managedResourceHealth:
+    syncPeriod: 1m0s
+    concurrentSyncs: 10
 
 podAnnotations: {}
