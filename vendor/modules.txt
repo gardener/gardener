@@ -66,7 +66,7 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.0
 github.com/beorn7/perks/quantile
-# github.com/coreos/etcd v3.3.13+incompatible => github.com/coreos/etcd v3.3.13+incompatible
+# github.com/coreos/etcd v3.3.13+incompatible
 github.com/coreos/etcd/auth/authpb
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes
@@ -243,7 +243,7 @@ github.com/modern-go/reflect2
 github.com/munnerz/goautoneg
 # github.com/nwaples/rardecode v1.0.0
 github.com/nwaples/rardecode
-# github.com/onsi/ginkgo v1.8.0 => github.com/onsi/ginkgo v1.8.0
+# github.com/onsi/ginkgo v1.8.0
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/extensions/table
@@ -270,7 +270,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.5.0 => github.com/onsi/gomega v1.5.0
+# github.com/onsi/gomega v1.5.0
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gstruct
@@ -364,7 +364,7 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 => golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
+# golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html

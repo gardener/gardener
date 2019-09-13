@@ -1,10 +1,10 @@
 #############      builder       #############
-FROM golang:1.12.8 AS builder
+FROM golang:1.13.0 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go install \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
   -mod=vendor \
   -ldflags "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat VERSION) \
             -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty) \
