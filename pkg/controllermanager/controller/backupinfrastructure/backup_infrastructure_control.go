@@ -25,6 +25,7 @@ import (
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -417,7 +418,7 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 
 func computeGracePeriod(config *config.ControllerManagerConfiguration, backupInfrastructure *gardenv1beta1.BackupInfrastructure) time.Duration {
 	var (
-		shootPurpose                      = backupInfrastructure.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
+		shootPurpose                      = backupInfrastructure.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
 		deletionGracePeriodHoursByPurpose = config.Controllers.BackupInfrastructure.DeletionGracePeriodHoursByPurpose
 	)
 

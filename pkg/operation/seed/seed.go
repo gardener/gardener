@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -358,14 +358,14 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
 			client.InNamespace(common.GardenNamespace),
-			client.MatchingLabels(map[string]string{v1alpha1.LabelExtensionConfiguration: v1alpha1.LabelLogging})); err != nil {
+			client.MatchingLabels(map[string]string{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelLogging})); err != nil {
 			return err
 		}
 
 		// Read all filters and parsers coming from the extension provider configurations
 		for _, cm := range existingConfigMaps.Items {
-			filters.WriteString(fmt.Sprintln(cm.Data[v1alpha1.FluentBitConfigMapKubernetesFilter]))
-			parsers.WriteString(fmt.Sprintln(cm.Data[v1alpha1.FluentBitConfigMapParser]))
+			filters.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.FluentBitConfigMapKubernetesFilter]))
+			parsers.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.FluentBitConfigMapParser]))
 		}
 	} else {
 		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
@@ -544,7 +544,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			"privateNetworks": privateNetworks,
 		},
 		"gardenerResourceManager": map[string]interface{}{
-			"resourceClass": v1alpha1.SeedResourceManagerClass,
+			"resourceClass": v1alpha1constants.SeedResourceManagerClass,
 		},
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,

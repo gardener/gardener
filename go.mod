@@ -29,7 +29,6 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/common v0.6.0

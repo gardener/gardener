@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -352,10 +352,10 @@ func (t *Terraformer) addNetworkPolicyLabels(labels map[string]string) map[strin
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[gardencorev1alpha1.LabelNetworkPolicyToDNS] = gardencorev1alpha1.LabelNetworkPolicyAllowed
-	labels[gardencorev1alpha1.LabelNetworkPolicyToPrivateNetworks] = gardencorev1alpha1.LabelNetworkPolicyAllowed
-	labels[gardencorev1alpha1.LabelNetworkPolicyToPublicNetworks] = gardencorev1alpha1.LabelNetworkPolicyAllowed
-	labels[gardencorev1alpha1.LabelNetworkPolicyToSeedAPIServer] = gardencorev1alpha1.LabelNetworkPolicyAllowed
+	labels[v1alpha1constants.LabelNetworkPolicyToDNS] = v1alpha1constants.LabelNetworkPolicyAllowed
+	labels[v1alpha1constants.LabelNetworkPolicyToPrivateNetworks] = v1alpha1constants.LabelNetworkPolicyAllowed
+	labels[v1alpha1constants.LabelNetworkPolicyToPublicNetworks] = v1alpha1constants.LabelNetworkPolicyAllowed
+	labels[v1alpha1constants.LabelNetworkPolicyToSeedAPIServer] = v1alpha1constants.LabelNetworkPolicyAllowed
 
 	return labels
 }

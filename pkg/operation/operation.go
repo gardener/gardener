@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -221,7 +221,7 @@ func (o *Operation) InitializeShootClients() error {
 }
 
 func (o *Operation) controlPlaneHibernated() (bool, error) {
-	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer)
+	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer)
 	if err != nil {
 		return false, err
 	}

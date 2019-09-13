@@ -20,6 +20,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -328,7 +329,7 @@ var _ = Describe("health", func() {
 				&extensionsv1alpha1.Infrastructure{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							gardencorev1alpha1.GardenerOperation: gardencorev1alpha1.GardenerOperationReconcile,
+							v1alpha1constants.GardenerOperation: v1alpha1constants.GardenerOperationReconcile,
 						},
 					},
 					Status: extensionsv1alpha1.InfrastructureStatus{

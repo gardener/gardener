@@ -23,6 +23,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -59,17 +60,17 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
-			common.GardenRole:                          common.GardenRoleShoot,
-			gardencorev1alpha1.GardenRole:              common.GardenRoleShoot,
-			common.ShootHibernated:                     strconv.FormatBool(b.Shoot.HibernationEnabled),
-			gardencorev1alpha1.LabelSeedProvider:       string(b.Seed.CloudProvider),
-			gardencorev1alpha1.LabelShootProvider:      string(b.Shoot.CloudProvider),
-			gardencorev1alpha1.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
-			gardencorev1alpha1.LabelBackupProvider:     string(b.Seed.CloudProvider),
+			common.GardenRole:                         common.GardenRoleShoot,
+			v1alpha1constants.GardenRole:              common.GardenRoleShoot,
+			common.ShootHibernated:                    strconv.FormatBool(b.Shoot.HibernationEnabled),
+			v1alpha1constants.LabelSeedProvider:       string(b.Seed.CloudProvider),
+			v1alpha1constants.LabelShootProvider:      string(b.Shoot.CloudProvider),
+			v1alpha1constants.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
+			v1alpha1constants.LabelBackupProvider:     string(b.Seed.CloudProvider),
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
-			namespace.Labels[gardencorev1alpha1.LabelBackupProvider] = string(b.Seed.Info.Spec.Backup.Provider)
+			namespace.Labels[v1alpha1constants.LabelBackupProvider] = string(b.Seed.Info.Spec.Backup.Provider)
 		}
 
 		return nil
@@ -141,7 +142,7 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardencorev1alpha1.DeploymentNameKubeAPIServer,
+			Name:      v1alpha1constants.DeploymentNameKubeAPIServer,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
@@ -178,7 +179,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
+			"checksum/secret-cluster-autoscaler": b.CheckSums[v1alpha1constants.DeploymentNameClusterAutoscaler],
 		},
 		"namespace": map[string]interface{}{
 			"uid": b.SeedNamespaceObject.UID,
@@ -213,14 +214,14 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameClusterAutoscaler, nil, values)
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gardencorev1alpha1.DeploymentNameClusterAutoscaler,
+			Name:      v1alpha1constants.DeploymentNameClusterAutoscaler,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
@@ -233,11 +234,11 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 		"replicas": b.Shoot.GetReplicas(1),
 	}
 
-	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, gardencorev1alpha1.DeploymentNameDependencyWatchdog)
+	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, v1alpha1constants.DeploymentNameDependencyWatchdog)
 	if err != nil {
 		return nil
 	}
-	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameDependencyWatchdog), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameDependencyWatchdog, nil, dependencyWatchdog)
+	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameDependencyWatchdog), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameDependencyWatchdog, nil, dependencyWatchdog)
 }
 
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
@@ -248,7 +249,7 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
-	for _, statefulset := range []string{gardencorev1alpha1.StatefulSetNameETCDEvents, gardencorev1alpha1.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1alpha1constants.StatefulSetNameETCDEvents, v1alpha1constants.StatefulSetNameETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 1); err != nil {
 			return err
 		}
@@ -257,7 +258,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), 1); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
 	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
@@ -265,8 +266,8 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	for _, deployment := range []string{
-		gardencorev1alpha1.DeploymentNameKubeControllerManager,
-		gardencorev1alpha1.DeploymentNameGardenerResourceManager,
+		v1alpha1constants.DeploymentNameKubeControllerManager,
+		v1alpha1constants.DeploymentNameGardenerResourceManager,
 	} {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
@@ -292,9 +293,9 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	deployments := []string{
-		gardencorev1alpha1.DeploymentNameGardenerResourceManager,
-		gardencorev1alpha1.DeploymentNameKubeControllerManager,
-		gardencorev1alpha1.DeploymentNameKubeAPIServer,
+		v1alpha1constants.DeploymentNameGardenerResourceManager,
+		v1alpha1constants.DeploymentNameKubeControllerManager,
+		v1alpha1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, c, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
@@ -302,11 +303,11 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := c.Delete(ctx, &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: gardencorev1alpha1.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+	if err := c.Delete(ctx, &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1alpha1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	for _, statefulset := range []string{gardencorev1alpha1.StatefulSetNameETCDEvents, gardencorev1alpha1.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1alpha1constants.StatefulSetNameETCDEvents, v1alpha1constants.StatefulSetNameETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, c, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -340,14 +341,14 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: string(b.Shoot.CloudProvider),
 			},
 			Region: b.Shoot.Info.Spec.Cloud.Region,
 			SecretRef: corev1.SecretReference{
-				Name:      gardencorev1alpha1.SecretNameCloudProvider,
+				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
 			},
 			ProviderConfig: &runtime.RawExtension{
@@ -379,7 +380,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	*purpose = extensionsv1alpha1.Exposure
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: string(b.Seed.CloudProvider),
@@ -387,7 +388,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 			Purpose: purpose,
 			Region:  b.Seed.Info.Spec.Cloud.Region,
 			SecretRef: corev1.SecretReference{
-				Name:      gardencorev1alpha1.SecretNameCloudProvider,
+				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
 			},
 		}
@@ -537,7 +538,7 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
 
 	return kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardenv1beta1.GardenerName)
 		backupEntry.SetFinalizers(finalizers.UnsortedList())

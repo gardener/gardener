@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -41,7 +42,7 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) err
 	defer cancel()
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer)
+		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer)
 		if err != nil {
 			b.Logger.Info("Waiting until the kube-apiserver service is ready...")
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
@@ -93,7 +94,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 
 		deploy := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deploy); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deploy); err != nil {
 			return retry.SevereError(err)
 		}
 		if deploy.Generation != deploy.Status.ObservedGeneration {
@@ -182,14 +183,14 @@ func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace stri
 // been deleted.
 func (b *Botanist) WaitUntilClusterAutoscalerDeleted(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler), &appsv1.Deployment{}); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameClusterAutoscaler), &appsv1.Deployment{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
 			return retry.SevereError(err)
 		}
-		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", gardencorev1alpha1.DeploymentNameClusterAutoscaler)
-		return retry.MinorError(fmt.Errorf("deployment %q is still present", gardencorev1alpha1.DeploymentNameClusterAutoscaler))
+		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", v1alpha1constants.DeploymentNameClusterAutoscaler)
+		return retry.MinorError(fmt.Errorf("deployment %q is still present", v1alpha1constants.DeploymentNameClusterAutoscaler))
 	})
 }
 
@@ -213,9 +214,9 @@ func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {
 	)
 
 	// Check whether the kube-controller-manager deployment exists
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err == nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err == nil {
 		controllers = append(controllers, controllerInfo{
-			name: gardencorev1alpha1.DeploymentNameKubeControllerManager,
+			name: v1alpha1constants.DeploymentNameKubeControllerManager,
 			labels: map[string]string{
 				"app":  "kubernetes",
 				"role": "controller-manager",

@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -69,7 +69,7 @@ func mustIncreaseGeneration(oldBackupBucket, newBackupBucket *core.BackupBucket)
 		return true
 	}
 
-	if kutil.HasMetaDataAnnotation(&newBackupBucket.ObjectMeta, corev1alpha1.GardenerOperation, corev1alpha1.GardenerOperationReconcile) {
+	if kutil.HasMetaDataAnnotation(&newBackupBucket.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile) {
 		return true
 	}
 

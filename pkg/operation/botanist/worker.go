@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -92,7 +93,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -100,10 +101,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			},
 			Region: b.Shoot.Info.Spec.Cloud.Region,
 			SecretRef: corev1.SecretReference{
-				Name:      gardencorev1alpha1.SecretNameCloudProvider,
+				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: worker.Namespace,
 			},
-			SSHPublicKey: b.Secrets[gardencorev1alpha1.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
+			SSHPublicKey: b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: b.Shoot.InfrastructureStatus,
 			},

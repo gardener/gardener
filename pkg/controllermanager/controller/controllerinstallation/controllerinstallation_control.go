@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -223,8 +224,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
 	if err := kutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, gardencorev1alpha1.GardenRole, gardencorev1alpha1.GardenRoleExtension)
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, gardencorev1alpha1.LabelControllerRegistrationName, controllerRegistration.Name)
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1alpha1constants.GardenRole, v1alpha1constants.GardenRoleExtension)
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1alpha1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil
 	}); err != nil {
 		return err
