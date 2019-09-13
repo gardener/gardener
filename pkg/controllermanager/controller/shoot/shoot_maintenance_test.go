@@ -291,7 +291,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) -> update to latest kubernetes patch version with same minor", func() {
 			cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = kubernetesConstraints.OfferedVersions[:2]
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = falseVar
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 
 			shoot.Spec.Kubernetes = gardenv1beta1.Kubernetes{Version: "1.0.0"}
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
@@ -299,6 +299,17 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(err).To(BeNil())
 			Expect(version).NotTo(BeNil())
 			Expect(*version).To(Equal("1.0.2"))
+		})
+
+		It("should determine that the shootKubernetes version must NOT be maintained - cloud profile has no matching kubernetes version defined & autoUpdate == false", func() {
+			cloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = kubernetesConstraints.OfferedVersions[:2]
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+
+			shoot.Spec.Kubernetes = gardenv1beta1.Kubernetes{Version: "1.0.0"}
+			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+
+			Expect(err).To(BeNil())
+			Expect(version).To(BeNil())
 		})
 
 	})
