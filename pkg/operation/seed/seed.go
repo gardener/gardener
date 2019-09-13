@@ -271,7 +271,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			secret := secrets[key]
 			secretObj := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      secret.Name,
+					Name:      fmt.Sprintf("%s-%s", "seed", secret.Name),
 					Namespace: "garden",
 				},
 			}
