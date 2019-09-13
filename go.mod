@@ -1,6 +1,6 @@
 module github.com/gardener/gardener
 
-go 1.12
+go 1.13
 
 require (
 	cloud.google.com/go v0.43.0
@@ -38,6 +38,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
+	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 	google.golang.org/api v0.7.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
@@ -59,15 +60,11 @@ require (
 )
 
 replace (
-	github.com/coreos/etcd => github.com/coreos/etcd v3.3.13+incompatible
 	github.com/gardener/external-dns-management => github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03 // 0.1.0
 	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20190906160200-5c329d46ae81
 	github.com/gardener/gardener-resource-manager => github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
 	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a // 0.14.0
-	github.com/onsi/ginkgo => github.com/onsi/ginkgo v1.8.0
-	github.com/onsi/gomega => github.com/onsi/gomega v1.5.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-	golang.org/x/net => golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc // needed due to CVE CVE-2019-9512 and CVE-2019-9514 https://github.com/golang/go/issues/33606
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab //kubernetes-1.14.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed // kubernetes-1.14.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1 // kubernetes-1.14.0
