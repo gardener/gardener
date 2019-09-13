@@ -243,7 +243,11 @@ func shouldKubernetesVersionBeUpdated(shoot *gardenv1beta1.Shoot, profile *garde
 		return false, err
 	}
 
-	return !versionExistsInCloudProfile || shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion || ExpirationDateExpired(offeredVersion.ExpirationDate), nil
+	if !versionExistsInCloudProfile && !shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
+		return false, nil
+	}
+
+	return shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion || ExpirationDateExpired(offeredVersion.ExpirationDate), nil
 }
 
 func mustMaintainNow(shoot *gardenv1beta1.Shoot) bool {
