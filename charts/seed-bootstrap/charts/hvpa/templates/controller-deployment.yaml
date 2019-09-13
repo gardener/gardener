@@ -4,7 +4,7 @@ metadata:
   name: hvpa-controller
   namespace: garden
   labels:
-{{ toYaml .Values.hvpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -13,18 +13,18 @@ metadata:
   namespace: garden
   labels:
     app: hvpa-controller
-{{ toYaml .Values.hvpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: hvpa-controller
-{{ toYaml .Values.hvpa.labels | indent 6 }}
+{{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
       labels:
         app: hvpa-controller
-{{ toYaml .Values.hvpa.labels | indent 8 }}
+{{ toYaml .Values.labels | indent 8 }}
     spec:
       serviceAccountName: hvpa-controller
       containers:

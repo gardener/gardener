@@ -4,42 +4,16 @@ kind: ClusterRole
 metadata:
   name: system:hvpa-controller
   labels:
-{{ toYaml .Values.hvpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
-  - autoscaling
+  - ""
   resources:
-  - horizontalpodautoscalers
+  - events
   verbs:
   - get
   - list
   - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - autoscaling.k8s.io
-  resources:
-  - verticalpodautoscalers
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
-  - get
-  - list
-  - watch
-  - update
-  - patch
 - apiGroups:
   - ""
   resources:
@@ -48,86 +22,83 @@ rules:
   verbs:
   - get
   - list
-  - watch
-  - update
   - patch
+  - update
+  - watch
 - apiGroups:
   - apps
   resources:
   - daemonsets
+  - deployments
   - replicasets
   - statefulsets
-  - deployments
   verbs:
   - get
   - list
-  - watch
-  - update
   - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - autoscaling.k8s.io
   resources:
   - hvpas
   verbs:
+  - create
+  - delete
   - get
   - list
-  - watch
-  - create
-  - update
   - patch
-  - delete
+  - update
+  - watch
 - apiGroups:
   - autoscaling.k8s.io
   resources:
   - hvpas/status
   verbs:
   - get
-  - update
   - patch
+  - update
 - apiGroups:
-  - admissionregistration.k8s.io
+  - autoscaling.k8s.io
   resources:
-  - mutatingwebhookconfigurations
-  - validatingwebhookconfigurations
+  - verticalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
   verbs:
   - get
   - list
-  - watch
-  - create
-  - update
   - patch
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-  - create
   - update
-  - patch
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - get
-  - list
   - watch
-  - create
-  - update
-  - patch
-  - delete
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: hvpa-controller-rolebinding
   labels:
-{{ toYaml .Values.hvpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

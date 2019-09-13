@@ -15,31 +15,34 @@ servicePorts:
   backuprestore: 8080
 
 metrics: basic
-vpa:
-  enabled: true
 
-hvpa:
-  enabled: true
+scaleUpStabilization:
+  duration: "5m"
+  minCpuChange:
+    value: "1"
+    percentage: 80
+  minMemChange:
+    value: 2G
+    percentage: 80
 
-scaleUpStabilizationWindow: "5m"
-scaleDownStabilizationWindow: "15m"
+scaleDownStabilization:
+  duration: "15m"
+  minCpuChange:
+    value: "1"
+    percentage: 80
+  minMemChange:
+    value: 2G
+    percentage: 80
+
 targetAverageUtilization: 80
 
-etcd:
+etcdResources:
   requests:
-    cpu: 500m
-    memory: 1000Mi
+    cpu: 300m
+    memory: 1000M
   limits:
-    cpu: 2500m
-    memory: 20Gi
-
-backupRestore:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 1
-    memory: 10Gi
+    cpu: "4"
+    memory: 30G
 
 # Temporary parameter for backward compatibility
 #failBelowRevision: 0

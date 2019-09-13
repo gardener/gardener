@@ -68,9 +68,9 @@ spec:
         - containerPort: {{ .Values.servicePorts.client }}
           name: clientport
           protocol: TCP
-        {{- if .Values.etcd }}
+        {{- if .Values.etcdResources }}
         resources:
-{{ toYaml .Values.etcd | indent 10 }}
+{{ toYaml .Values.etcdResources | indent 10 }}
         {{- end }}
         volumeMounts:
 {{- if eq .Values.role "main" }}

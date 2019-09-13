@@ -28,8 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	hvpa "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +40,6 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -76,34 +73,23 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	case nodeCount <= 2:
 		cpuRequest = "800m"
 		memoryRequest = "800Mi"
-
-		cpuLimit = "1000m"
-		memoryLimit = "1200Mi"
 	case nodeCount <= 10:
 		cpuRequest = "1000m"
 		memoryRequest = "1100Mi"
-
-		cpuLimit = "1200m"
-		memoryLimit = "1900Mi"
 	case nodeCount <= 50:
 		cpuRequest = "1200m"
 		memoryRequest = "1600Mi"
-
-		cpuLimit = "1500m"
-		memoryLimit = "3900Mi"
 	case nodeCount <= 100:
 		cpuRequest = "2500m"
 		memoryRequest = "5200Mi"
-
-		cpuLimit = "3000m"
-		memoryLimit = "5900Mi"
 	default:
 		cpuRequest = "3000m"
 		memoryRequest = "5200Mi"
-
-		cpuLimit = "4000m"
-		memoryLimit = "7800Mi"
 	}
+
+	// Since we are deploying HVPA for apiserver, we can keep the limits high
+	cpuLimit = "8"
+	memoryLimit = "16000M"
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
@@ -178,8 +164,6 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	vpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
-
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":   2379,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -193,7 +177,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"maxReplicas":               3,
+		"minReplicas":               1,
+		"maxReplicas":               4,
 		"enableBasicAuthentication": gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 		"probeCredentials":          b.APIServerHealthCheckToken,
 		"securePort":                443,
@@ -263,16 +248,10 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		if vpaEnabled == false || foundDeployment == false {
-			// If VPA is not enabled OR deployment is not already created,
+		if foundDeployment == false {
+			// If deployment is not already created,
 			// initialize the values
 			cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
-			if vpaEnabled {
-				// Overwrite limit values if vpa is enabled
-				// as request values might exceed them
-				cpuLimit = "8"
-				memoryLimit = "16G"
-			}
 			defaultValues["apiServerResources"] = map[string]interface{}{
 				"limits": map[string]interface{}{
 					"cpu":    cpuLimit,
@@ -284,9 +263,10 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 				},
 			}
 		} else {
-			// Deployment is already created AND is controlled by VPA
+			// Deployment is already created
 			// Keep the "resources" as it is.
-			for _, v := range deployment.Spec.Template.Spec.Containers {
+			for k := range deployment.Spec.Template.Spec.Containers {
+				v := &deployment.Spec.Template.Spec.Containers[k]
 				if v.Name == "kube-apiserver" {
 					defaultValues["apiServerResources"] = v.Resources.DeepCopy()
 				} else if v.Name == "vpn-seed" {
@@ -298,16 +278,20 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	}
 
+	minReplicas, ok := defaultValues["minReplicas"].(int)
+	if !ok {
+		return fmt.Errorf("Error converting minReplicas '%v' to int", defaultValues["minReplicas"])
+	}
 	maxReplicas, ok := defaultValues["maxReplicas"].(int)
 	if !ok {
 		return fmt.Errorf("Error converting maxReplicas '%v' to int", defaultValues["maxReplicas"])
 	}
 	// APIserver will be horizontally scaled until last but one replicas,
 	// after which there will be vertical scaling
-	if maxReplicas > 1 {
+	if maxReplicas > minReplicas {
 		defaultValues["lastReplicaCountForHpa"] = maxReplicas - 1
 	} else {
-		defaultValues["lastReplicaCountForHpa"] = 1
+		defaultValues["lastReplicaCountForHpa"] = minReplicas
 	}
 
 	var (
@@ -560,13 +544,15 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			}
 		}
 
-		if b.Shoot.HibernationEnabled {
-			// capture the old statefulset state
-			statefulset := &appsv1.StatefulSet{}
-			if err := client.IgnoreNotFound(b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset)); err != nil {
-				return err
-			}
+		foundEtcd := true
+		statefulset := &appsv1.StatefulSet{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		} else if apierrors.IsNotFound(err) {
+			foundEtcd = false
+		}
 
+		if b.Shoot.HibernationEnabled {
 			// NOTE: This is for backword compatibility.
 			// Scale up and scale down the etcd, so that it will store atleast one latest backup on new shared bucket.
 			// And we can get rid of old bucket i.e. BackupInfra resources.
@@ -592,6 +578,18 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 				etcd["replicas"] = 0
 			} else {
 				etcd["replicas"] = *statefulset.Spec.Replicas
+			}
+		}
+
+		if foundEtcd {
+			// etcd is already created. As it is controlled by VPA
+			// Keep the "resources" as it is.
+			for k := range statefulset.Spec.Template.Spec.Containers {
+				v := &statefulset.Spec.Template.Spec.Containers[k]
+				if v.Name == "etcd" {
+					etcd["etcdResources"] = v.Resources.DeepCopy()
+					break
+				}
 			}
 		}
 

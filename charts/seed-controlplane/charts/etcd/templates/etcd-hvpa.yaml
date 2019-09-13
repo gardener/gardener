@@ -1,56 +1,73 @@
-{{ if .Values.hvpa.enabled }}
 {{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
 {{- if ne (.Values.replicas | toString) "0" }}
-{{- if eq .Values.role "main" }}
 apiVersion: autoscaling.k8s.io/v1alpha1
 kind: Hvpa
 metadata:
   #annotations:
     #"hpa-controller": "hvpa"
     #"enable-vertical-scale-down": "true"
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
 spec:
-  scaleUpStabilizationWindow: {{ .Values.scaleUpStabilizationWindow }}
-  scaleDownStabilizationWindow: {{ .Values.scaleDownStabilizationWindow }}
-  minCpuChange:
-    value: 100m
-    percentage: 80
-  minMemChange:
-    value: 200M
-    percentage: 80
-  hpaTemplate:
-    maxReplicas: {{ .Values.replicas }}
-    minReplicas: {{ .Values.replicas }}
-    metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        targetAverageUtilization: {{ .Values.targetAverageUtilization }}
-    - type: Resource
-      resource:
-        name: memory
-        targetAverageUtilization: {{ .Values.targetAverageUtilization }}
-  vpaTemplate:
-    resourcePolicy:
-      containerPolicies:
-      - containerName: etcd
-        minAllowed:
-          memory: 1000Mi
-          cpu: 500m
-        maxAllowed:
-          memory: 20Gi
-          cpu: 2500m
+  replicas: 1
+{{- if .Values.scaleUpStabilization }}
+  scaleUpStabilization:
+{{ toYaml .Values.scaleUpStabilization | indent 4 }}
+{{- end }}
+{{- if .Values.scaleDownStabilization }}
+  scaleDownStabilization:
+{{ toYaml .Values.scaleDownStabilization | indent 4 }}
+{{- end }}
+  hpa:
+    selector:
+      matchLabels:
+        role: etcd-hpa-{{ .Values.role }}
+    template:
+      metadata:
+        labels:
+          role: etcd-hpa-{{ .Values.role }}
+      spec:
+        maxReplicas: {{ .Values.replicas }}
+        minReplicas: {{ .Values.replicas }}
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+    updatePolicy:
+      updateMode: "Auto"
+  vpa:
+    selector:
+      matchLabels:
+        role: etcd-vpa-{{ .Values.role }}
+    template:
+      metadata:
+        labels:
+          role: etcd-vpa-{{ .Values.role }}
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: etcd
+              maxAllowed:
+                memory: 30G
+                cpu: "4"
+              minAllowed:
+                memory: 1000M
+                cpu: 300m
+            - containerName: backup-restore
+              mode: "Off"
+    updatePolicy:
+      updateMode: "ScaleUp"
   weightBasedScalingIntervals:
-    - vpaWeight: 1
+    - vpaWeight: 100
       startReplicaCount: {{ .Values.replicas }}
       lastReplicaCount: {{ .Values.replicas }}
   targetRef:
     apiVersion:  {{ include "statefulsetversion" . }}
     kind: StatefulSet
     name: etcd-{{ .Values.role }}
-{{ end }}
-{{ end }}
 {{ end }}

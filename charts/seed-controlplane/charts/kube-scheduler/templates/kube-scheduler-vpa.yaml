@@ -8,11 +8,5 @@ spec:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
     name: kube-scheduler
-  resourcePolicy:
-    containerPolicies:
-    - containerName: kube-scheduler
-      maxAllowed:
-        memory: {{ .Values.resources.limits.memory }}
-        cpu: {{ .Values.resources.limits.cpu }}
   updatePolicy:
     updateMode: "Auto"
