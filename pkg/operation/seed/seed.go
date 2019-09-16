@@ -458,9 +458,12 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		grafanaHost           = seed.GetIngressFQDN("g-seed", "", "garden")
 		prometheusHost        = seed.GetIngressFQDN("p-seed", "", "garden")
 		monitoringCredentials = existingSecretsMap["seed-monitoring-ingress-credentials"]
-		monitoringBasicAuth   = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
+		monitoringBasicAuth   string
 	)
 
+	if monitoringCredentials != nil {
+		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
+	}
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
