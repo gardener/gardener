@@ -28,7 +28,13 @@ type ClusterOpenIDConnectPreset struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Spec is the specification of this OpenIDConnect preset.
+	Spec ClusterOpenIDConnectPresetSpec `json:"spec"`
+}
 
+// ClusterOpenIDConnectPresetSpec contains the OpenIDConnect specification and
+// project selector matching Shoots in Projects.
+type ClusterOpenIDConnectPresetSpec struct {
 	OpenIDConnectPresetSpec `json:",inline"`
 
 	// Project decides whether to apply the configuration if the

@@ -32,16 +32,16 @@ var (
 	forbiddenKeys = sets.NewString("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
 )
 
-func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec) field.ErrorList {
+func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ShootSelector, field.NewPath("shootSelector"))...)
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ShootSelector, fldPath.Child("shootSelector"))...)
 	if spec.Weight <= 0 || spec.Weight > 100 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("weight"), spec.Weight, "must be in the range 1-100"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("weight"), spec.Weight, "must be in the range 1-100"))
 	}
-	allErrs = append(allErrs, validateServer(&spec.Server, field.NewPath("server"))...)
+	allErrs = append(allErrs, validateServer(&spec.Server, fldPath.Child("server"))...)
 	if spec.Client != nil {
-		allErrs = append(allErrs, validateClient(spec.Client, field.NewPath("client"))...)
+		allErrs = append(allErrs, validateClient(spec.Client, fldPath.Child("client"))...)
 	}
 
 	return allErrs

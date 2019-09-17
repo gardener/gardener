@@ -53,11 +53,13 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test",
 			},
-			OpenIDConnectPresetSpec: settings.OpenIDConnectPresetSpec{
-				Weight: 1,
-				Server: settings.KubeAPIServerOpenIDConnect{
-					IssuerURL: "https://foo.bar",
-					ClientID:  "client-baz",
+			Spec: settings.ClusterOpenIDConnectPresetSpec{
+				OpenIDConnectPresetSpec: settings.OpenIDConnectPresetSpec{
+					Weight: 1,
+					Server: settings.KubeAPIServerOpenIDConnect{
+						IssuerURL: "https://foo.bar",
+						ClientID:  "client-baz",
+					},
 				},
 			},
 		}
@@ -75,7 +77,7 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 
 			provider.new.ObjectMeta.Name = ""
 			provider.new.ObjectMeta.Namespace = ""
-			provider.new.OpenIDConnectPresetSpec = settings.OpenIDConnectPresetSpec{}
+			provider.new.Spec = settings.ClusterOpenIDConnectPresetSpec{}
 
 			errorList := provider.providerFunc()
 
@@ -84,13 +86,13 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 				"Field": Equal("metadata.name"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("weight"),
+				"Field": Equal("spec.weight"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.issuerURL"),
+				"Field": Equal("spec.server.issuerURL"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.clientID"),
+				"Field": Equal("spec.server.clientID"),
 			})),
 			))
 		})
@@ -99,7 +101,7 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 
 		Context("projectSelector", func() {
 			It("invalid selector", func() {
-				provider.new.ProjectSelector = &metav1.LabelSelector{
+				provider.new.Spec.ProjectSelector = &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						metav1.LabelSelectorRequirement{
 							Key:      "foo",
@@ -112,7 +114,7 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("projectSelector.matchExpressions[0].values"),
+					"Field":  Equal("spec.projectSelector.matchExpressions[0].values"),
 					"Detail": Equal("may not be specified when `operator` is 'Exists' or 'DoesNotExist'"),
 				})),
 				))

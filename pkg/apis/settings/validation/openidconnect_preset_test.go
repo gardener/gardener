@@ -54,7 +54,7 @@ var _ = Describe("OpenIDConnectPreset", func() {
 				Name:      "test",
 				Namespace: "test-namespace",
 			},
-			OpenIDConnectPresetSpec: settings.OpenIDConnectPresetSpec{
+			Spec: settings.OpenIDConnectPresetSpec{
 				Weight: 1,
 				Server: settings.KubeAPIServerOpenIDConnect{
 					IssuerURL: "https://foo.bar",
@@ -76,7 +76,7 @@ var _ = Describe("OpenIDConnectPreset", func() {
 
 			provider.new.ObjectMeta.Name = ""
 			provider.new.ObjectMeta.Namespace = ""
-			provider.new.OpenIDConnectPresetSpec = settings.OpenIDConnectPresetSpec{}
+			provider.new.Spec = settings.OpenIDConnectPresetSpec{}
 
 			errorList := provider.providerFunc()
 
@@ -88,13 +88,13 @@ var _ = Describe("OpenIDConnectPreset", func() {
 				"Field": Equal("metadata.namespace"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("weight"),
+				"Field": Equal("spec.weight"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.issuerURL"),
+				"Field": Equal("spec.server.issuerURL"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.clientID"),
+				"Field": Equal("spec.server.clientID"),
 			})),
 			))
 		})

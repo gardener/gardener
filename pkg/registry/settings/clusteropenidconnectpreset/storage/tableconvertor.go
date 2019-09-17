@@ -72,15 +72,15 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 
 		cells = append(cells, obj.Name)
 
-		if issuer := obj.Server.IssuerURL; len(issuer) > 0 {
+		if issuer := obj.Spec.Server.IssuerURL; len(issuer) > 0 {
 			cells = append(cells, issuer)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
 
 		cells = append(cells,
-			metav1.FormatLabelSelector(obj.ProjectSelector),
-			metav1.FormatLabelSelector(obj.ShootSelector),
+			metav1.FormatLabelSelector(obj.Spec.ProjectSelector),
+			metav1.FormatLabelSelector(obj.Spec.ShootSelector),
 			metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
 
 		return cells, nil

@@ -36,7 +36,7 @@ var _ = Describe("Defaults", func() {
 		It("correct defaults are set", func() {
 			given := &v1alpha1.OpenIDConnectPreset{}
 			expected := &v1alpha1.OpenIDConnectPreset{
-				OpenIDConnectPresetSpec: defaultSpec(),
+				Spec: defaultSpec(),
 			}
 
 			v1alpha1.SetDefaults_OpenIDConnectPreset(given)
@@ -51,8 +51,10 @@ var _ = Describe("Defaults", func() {
 		It("correct defaults are set", func() {
 			given := &v1alpha1.ClusterOpenIDConnectPreset{}
 			expected := &v1alpha1.ClusterOpenIDConnectPreset{
-				OpenIDConnectPresetSpec: defaultSpec(),
-				ProjectSelector:         &metav1.LabelSelector{},
+				Spec: v1alpha1.ClusterOpenIDConnectPresetSpec{
+					OpenIDConnectPresetSpec: defaultSpec(),
+					ProjectSelector:         &metav1.LabelSelector{},
+				},
 			}
 
 			v1alpha1.SetDefaults_ClusterOpenIDConnectPreset(given)

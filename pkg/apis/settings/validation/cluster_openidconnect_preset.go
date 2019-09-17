@@ -26,9 +26,7 @@ func ValidateClusterOpenIDConnectPreset(oidc *settings.ClusterOpenIDConnectPrese
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&oidc.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(oidc.ProjectSelector, field.NewPath("projectSelector"))...)
-	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&oidc.OpenIDConnectPresetSpec)...)
-
+	allErrs = append(allErrs, validateClusterOpenIDConnectPresetSpec(&oidc.Spec, field.NewPath("spec"))...)
 	return allErrs
 }
 
@@ -37,8 +35,14 @@ func ValidateClusterOpenIDConnectPresetUpdate(new, old *settings.ClusterOpenIDCo
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(new.ProjectSelector, field.NewPath("projectSelector"))...)
-	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&new.OpenIDConnectPresetSpec)...)
+	allErrs = append(allErrs, validateClusterOpenIDConnectPresetSpec(&new.Spec, field.NewPath("spec"))...)
 
+	return allErrs
+}
+
+func validateClusterOpenIDConnectPresetSpec(spec *settings.ClusterOpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ProjectSelector, fldPath.Child("projectSelector"))...)
+	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&spec.OpenIDConnectPresetSpec, fldPath)...)
 	return allErrs
 }

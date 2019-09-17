@@ -143,9 +143,10 @@ func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *garden.Sh
 	var matchedPreset *settingsv1alpha1.OpenIDConnectPreset
 
 	for _, oidc := range oidcs {
-		selector, err := metav1.LabelSelectorAsSelector(oidc.ShootSelector)
+		spec := oidc.Spec
+		selector, err := metav1.LabelSelectorAsSelector(spec.ShootSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *oidc.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *spec.ShootSelector, err)
 		}
 
 		// check if the Shoot labels match the selector
@@ -155,8 +156,8 @@ func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *garden.Sh
 
 		if matchedPreset == nil {
 			matchedPreset = oidc
-		} else if oidc.Weight >= matchedPreset.Weight {
-			if oidc.Weight > matchedPreset.Weight {
+		} else if spec.Weight >= matchedPreset.Spec.Weight {
+			if spec.Weight > matchedPreset.Spec.Weight {
 				matchedPreset = oidc
 			} else if strings.Compare(oidc.ObjectMeta.Name, matchedPreset.ObjectMeta.Name) > 0 {
 				matchedPreset = oidc
@@ -168,5 +169,5 @@ func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *garden.Sh
 	if matchedPreset == nil {
 		return nil, nil
 	}
-	return &matchedPreset.OpenIDConnectPresetSpec, nil
+	return &matchedPreset.Spec, nil
 }

@@ -75,30 +75,32 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 					Name:      presetName,
 					Namespace: namespace,
 				},
-				OpenIDConnectPresetSpec: settingsv1alpha1.OpenIDConnectPresetSpec{
-					// select everything
-					ShootSelector: &metav1.LabelSelector{},
-					Weight:        0,
-					Server: settingsv1alpha1.KubeAPIServerOpenIDConnect{
-						CABundle:     pointer.StringPtr("cert"),
-						ClientID:     "client-id",
-						IssuerURL:    "https://foo.bar",
-						GroupsClaim:  pointer.StringPtr("groupz"),
-						GroupsPrefix: pointer.StringPtr("group-prefix"),
-						RequiredClaims: map[string]string{
-							"claim-1": "value-1",
-							"claim-2": "value-2",
+				Spec: settingsv1alpha1.ClusterOpenIDConnectPresetSpec{
+					ProjectSelector: &metav1.LabelSelector{},
+					OpenIDConnectPresetSpec: settingsv1alpha1.OpenIDConnectPresetSpec{
+						// select everything
+						ShootSelector: &metav1.LabelSelector{},
+						Weight:        0,
+						Server: settingsv1alpha1.KubeAPIServerOpenIDConnect{
+							CABundle:     pointer.StringPtr("cert"),
+							ClientID:     "client-id",
+							IssuerURL:    "https://foo.bar",
+							GroupsClaim:  pointer.StringPtr("groupz"),
+							GroupsPrefix: pointer.StringPtr("group-prefix"),
+							RequiredClaims: map[string]string{
+								"claim-1": "value-1",
+								"claim-2": "value-2",
+							},
+							SigningAlgs:    []string{"alg-1", "alg-2"},
+							UsernameClaim:  pointer.StringPtr("user"),
+							UsernamePrefix: pointer.StringPtr("user-prefix"),
 						},
-						SigningAlgs:    []string{"alg-1", "alg-2"},
-						UsernameClaim:  pointer.StringPtr("user"),
-						UsernamePrefix: pointer.StringPtr("user-prefix"),
-					},
-					Client: &settingsv1alpha1.OpenIDConnectClientAuthentication{
-						Secret:      pointer.StringPtr("secret"),
-						ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
+						Client: &settingsv1alpha1.OpenIDConnectClientAuthentication{
+							Secret:      pointer.StringPtr("secret"),
+							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
+						},
 					},
 				},
-				ProjectSelector: &metav1.LabelSelector{},
 			}
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
@@ -145,13 +147,13 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			})
 
 			It("preset shoot label selector doesn't match", func() {
-				preset.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(project)
 			})
 
 			It("preset preset label selector doesn't match", func() {
-				preset.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(project)
 			})
@@ -256,11 +258,11 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("presets which match even with lower weight", func() {
 				preset2 := preset.DeepCopy()
 
-				preset.OpenIDConnectPresetSpec.Weight = 100
-				preset.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.OpenIDConnectPresetSpec.Weight = 100
+				preset.Spec.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 
 				preset2.ObjectMeta.Name = "preset-2"
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
@@ -270,8 +272,8 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("preset with higher weight", func() {
 				preset2 := preset.DeepCopy()
 				preset2.ObjectMeta.Name = "preset-2"
-				preset2.OpenIDConnectPresetSpec.Weight = 100
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
+				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
@@ -282,7 +284,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset.ObjectMeta.Name = "01preset"
 				preset2 := preset.DeepCopy()
 				preset2.ObjectMeta.Name = "02preset"
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
@@ -291,9 +293,9 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			It("presets which don't match the project selector", func() {
 				preset2 := preset.DeepCopy()
-				preset2.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
-				preset2.OpenIDConnectPresetSpec.Weight = 100
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
+				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)
 			})

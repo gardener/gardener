@@ -87,7 +87,7 @@ func validationAssertions(p provider) {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("shootSelector.matchExpressions[0].values"),
+				"Field":  Equal("spec.shootSelector.matchExpressions[0].values"),
 				"Detail": Equal("may not be specified when `operator` is 'Exists' or 'DoesNotExist'"),
 			})),
 			))
@@ -102,7 +102,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(errorType),
-					"Field":    Equal("server.issuerURL"),
+					"Field":    Equal("spec.server.issuerURL"),
 					"BadValue": Equal(value),
 					"Detail":   Equal(detail),
 				})),
@@ -128,7 +128,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.caBundle"),
+					"Field":    Equal("spec.server.caBundle"),
 					"BadValue": Equal(brokenCert),
 					"Detail":   Equal("must be a valid PEM-encoded certificate"),
 				})),
@@ -152,7 +152,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.groupsClaim"),
+					"Field":    Equal("spec.server.groupsClaim"),
 					"BadValue": Equal(empty),
 					"Detail":   Equal("must not be empty"),
 				})),
@@ -176,7 +176,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.groupsPrefix"),
+					"Field":    Equal("spec.server.groupsPrefix"),
 					"BadValue": Equal(empty),
 					"Detail":   Equal("must not be empty"),
 				})),
@@ -208,12 +208,12 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.signingAlgs[0]"),
+					"Field":    Equal("spec.server.signingAlgs[0]"),
 					"BadValue": Equal("foo"),
 					"Detail":   Equal("must be one of: [ES256 ES384 ES512 PS256 PS384 PS512 RS256 RS384 RS512]"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.signingAlgs[1]"),
+					"Field":    Equal("spec.server.signingAlgs[1]"),
 					"BadValue": Equal("bar"),
 					"Detail":   Equal("must be one of: [ES256 ES384 ES512 PS256 PS384 PS512 RS256 RS384 RS512]"),
 				})),
@@ -226,7 +226,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeDuplicate),
-					"Field":    Equal("server.signingAlgs[2]"),
+					"Field":    Equal("spec.server.signingAlgs[2]"),
 					"BadValue": Equal("ES256"),
 				})),
 				))
@@ -238,7 +238,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("server.signingAlgs"),
+					"Field":  Equal("spec.server.signingAlgs"),
 					"Detail": Equal("must not be empty"),
 				})),
 				))
@@ -261,7 +261,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.usernameClaim"),
+					"Field":    Equal("spec.server.usernameClaim"),
 					"BadValue": Equal(empty),
 					"Detail":   Equal("must not be empty"),
 				})),
@@ -285,7 +285,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("server.usernamePrefix"),
+					"Field":    Equal("spec.server.usernamePrefix"),
 					"BadValue": Equal(empty),
 					"Detail":   Equal("must not be empty"),
 				})),
@@ -316,7 +316,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("client.secret"),
+					"Field":    Equal("spec.client.secret"),
 					"BadValue": Equal(empty),
 					"Detail":   Equal("must not be empty"),
 				})),
@@ -332,7 +332,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal(fmt.Sprintf("client.extraConfig[%s]", key)),
+					"Field":  Equal(fmt.Sprintf("spec.client.extraConfig[%s]", key)),
 					"Detail": Equal("cannot be any of [client-id client-secret id-token idp-certificate-authority idp-certificate-authority-data idp-issuer-url refresh-token]"),
 				}))))
 			},
@@ -352,7 +352,7 @@ func validationAssertions(p provider) {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("client.extraConfig[foo]"),
+					"Field":  Equal("spec.client.extraConfig[foo]"),
 					"Detail": Equal("must not be empty"),
 				})),
 				))

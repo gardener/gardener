@@ -27,8 +27,8 @@ type OpenIDConnectPreset struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	OpenIDConnectPresetSpec `json:",inline"`
+	// Spec is the specification of this OpenIDConnect preset.
+	Spec OpenIDConnectPresetSpec `json:"spec"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

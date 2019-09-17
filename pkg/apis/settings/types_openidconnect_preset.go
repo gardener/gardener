@@ -28,7 +28,7 @@ type OpenIDConnectPreset struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 
-	OpenIDConnectPresetSpec
+	Spec OpenIDConnectPresetSpec
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -46,10 +46,10 @@ var _ Preset = &OpenIDConnectPreset{}
 
 // GetPresetSpec returns a pointer to the OpenIDConnect specification.
 func (o *OpenIDConnectPreset) GetPresetSpec() *OpenIDConnectPresetSpec {
-	return &o.OpenIDConnectPresetSpec
+	return &o.Spec
 }
 
 // SetPresetSpec sets the OpenIDConnect specification.
 func (o *OpenIDConnectPreset) SetPresetSpec(s *OpenIDConnectPresetSpec) {
-	o.OpenIDConnectPresetSpec = *s
+	o.Spec = *s
 }

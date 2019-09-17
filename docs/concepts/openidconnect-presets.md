@@ -18,7 +18,7 @@ Gardener provides an admission controller (OpenIDConnectPreset) which, when enab
 - Check if the shoot label selectors of any OpenIDConnectPreset matches the labels on the Shoot being created.
 - If multiple presets are matched then only one is chosen and results are sorted based on:
 
-  1. `.weight` value.
+  1. `.spec.weight` value.
   1. lexicographically ordering their names ( e.g. `002preset` > `001preset` )
 
 - If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` then no mutation occures.
@@ -33,30 +33,31 @@ kind: OpenIDConnectPreset
 metadata:
   name:  test-1
   namespace: default
-shootSelector:
-  matchLabels:
-    oidc: enabled
-server:
-  clientID: test-1
-  issuerURL: https://foo.bar
-  # caBundle: |
-  #   -----BEGIN CERTIFICATE-----
-  #   Li4u
-  #   -----END CERTIFICATE-----
-  groupsClaim: groups-claim
-  groupsPrefix: groups-prefix
-  usernameClaim: username-claim
-  usernamePrefix: username-prefix
-  signingAlgs:
-  - RS256
-  requiredClaims:
-    key: value
-client:
-  secret: oidc-client-secret
-  extraConfig:
-    extra-scopes: "email,offline_access,profile"
-    foo: bar
-weight: 90
+spec:
+  shootSelector:
+    matchLabels:
+      oidc: enabled
+  server:
+    clientID: test-1
+    issuerURL: https://foo.bar
+    # caBundle: |
+    #   -----BEGIN CERTIFICATE-----
+    #   Li4u
+    #   -----END CERTIFICATE-----
+    groupsClaim: groups-claim
+    groupsPrefix: groups-prefix
+    usernameClaim: username-claim
+    usernamePrefix: username-prefix
+    signingAlgs:
+    - RS256
+    requiredClaims:
+      key: value
+  client:
+    secret: oidc-client-secret
+    extraConfig:
+      extra-scopes: "email,offline_access,profile"
+      foo: bar
+  weight: 90
 ```
 
 Create the OpenIDConnectPreset:
@@ -160,7 +161,7 @@ Gardener provides an admission controller (ClusterOpenIDConnectPreset) which, wh
 - Check if the shoot label selectors of any ClusterOpenIDConnectPreset matches the labels on the `Shoot` being created.
 - If multiple presets are matched then only one is chosen and results are sorted based on:
 
-  1. `.weight` value.
+  1. `.spec.weight` value.
   1. lexicographically ordering their names ( e.g. `002preset` > `001preset` )
 
 - If the `Shoot` already has a `.spec.kubernetes.kubeAPIServer.oidcConfig` then no mutation occures.
@@ -176,31 +177,32 @@ apiVersion: settings.gardener.cloud/v1alpha1
 kind: ClusterOpenIDConnectPreset
 metadata:
   name:  test
-shootSelector:
-  matchLabels:
-    oidc: enabled
-projectSelector: {} # selects all projects.
-server:
-  clientID: cluster-preset
-  issuerURL: https://foo.bar
-  # caBundle: |
-  #   -----BEGIN CERTIFICATE-----
-  #   Li4u
-  #   -----END CERTIFICATE-----
-  groupsClaim: groups-claim
-  groupsPrefix: groups-prefix
-  usernameClaim: username-claim
-  usernamePrefix: username-prefix
-  signingAlgs:
-  - RS256
-  requiredClaims:
-    key: value
-client:
-  secret: oidc-client-secret
-  extraConfig:
-    extra-scopes: "email,offline_access,profile"
-    foo: bar
-weight: 90
+spec:
+  shootSelector:
+    matchLabels:
+      oidc: enabled
+  projectSelector: {} # selects all projects.
+  server:
+    clientID: cluster-preset
+    issuerURL: https://foo.bar
+    # caBundle: |
+    #   -----BEGIN CERTIFICATE-----
+    #   Li4u
+    #   -----END CERTIFICATE-----
+    groupsClaim: groups-claim
+    groupsPrefix: groups-prefix
+    usernameClaim: username-claim
+    usernamePrefix: username-prefix
+    signingAlgs:
+    - RS256
+    requiredClaims:
+      key: value
+  client:
+    secret: oidc-client-secret
+    extraConfig:
+      extra-scopes: "email,offline_access,profile"
+      foo: bar
+  weight: 90
 ```
 
 Create the ClusterOpenIDConnectPreset:

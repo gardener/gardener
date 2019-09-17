@@ -225,6 +225,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone":                                 schema_pkg_apis_garden_v1beta1_Zone(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset":        schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetList":    schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref),
+		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec":    schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect":        schema_pkg_apis_settings_v1alpha1_KubeAPIServerOpenIDConnect(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication": schema_pkg_apis_settings_v1alpha1_OpenIDConnectClientAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPreset":               schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref),
@@ -6285,49 +6286,6 @@ func schema_pkg_apis_garden_v1beta1_KubeletConfigEviction(ref common.ReferenceCa
 							Format:      "",
 						},
 					},
-					"clientAuthentication": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenIDConnectClientAuthentication"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenIDConnectClientAuthentication"},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_OpenIDConnectClientAuthentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "OpenIDConnectClientAuthentication contains configuration for OIDC clients.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"secret": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The client Secret for the OpenID Connect client.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"extraConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Extra configuration added to kubeconfig's auth-provider. Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 		},
@@ -7050,6 +7008,49 @@ func schema_pkg_apis_garden_v1beta1_OIDCConfig(ref common.ReferenceCallback) com
 							Description: "If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"clientAuthentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenIDConnectClientAuthentication"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenIDConnectClientAuthentication"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_OpenIDConnectClientAuthentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OpenIDConnectClientAuthentication contains configuration for OIDC clients.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"secret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The client Secret for the OpenID Connect client.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"extraConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extra configuration added to kubeconfig's auth-provider. Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -9260,43 +9261,18 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref common.Ref
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"server": {
+					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwritting any existing OpenID Connect configuration already set on the Shoot object.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
-						},
-					},
-					"client": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the confiration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
-						},
-					},
-					"shootSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ShootSelector decides whether to apply the configuration if the Shoot has matching labels. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
-						},
-					},
-					"weight": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Weight associated with matching the corresponding preset, in the range 1-100. Required.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"projectSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Project decides whether to apply the configuration if the Shoot is in a specific Project mathching the label selector. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Description: "Spec is the specification of this OpenIDConnect preset.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec"),
 						},
 					},
 				},
-				Required: []string{"server", "weight"},
+				Required: []string{"spec"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -9346,6 +9322,53 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref common
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ClusterOpenIDConnectPresetSpec contains the OpenIDConnect specification and project selector matching Shoots in Projects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"server": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwritting any existing OpenID Connect configuration already set on the Shoot object.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
+						},
+					},
+					"client": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Client contains the confiration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
+						},
+					},
+					"shootSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootSelector decides whether to apply the configuration if the Shoot has matching labels. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"weight": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Weight associated with matching the corresponding preset, in the range 1-100. Required.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"projectSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Project decides whether to apply the configuration if the Shoot is in a specific Project mathching the label selector. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+				},
+				Required: []string{"server", "weight"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -9503,37 +9526,18 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref common.ReferenceC
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"server": {
+					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Server contains the kube-apiserver's OpenID Connect configuration. This configuration is not overwritting any existing OpenID Connect configuration already set on the Shoot object.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect"),
-						},
-					},
-					"client": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the confiration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
-						},
-					},
-					"shootSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ShootSelector decides whether to apply the configuration if the Shoot has matching labels. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
-						},
-					},
-					"weight": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Weight associated with matching the corresponding preset, in the range 1-100. Required.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+							Description: "Spec is the specification of this OpenIDConnect preset.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec"),
 						},
 					},
 				},
-				Required: []string{"server", "weight"},
+				Required: []string{"spec"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

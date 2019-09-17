@@ -25,7 +25,7 @@ func ValidateOpenIDConnectPreset(oidc *settings.OpenIDConnectPreset) field.Error
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&oidc.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&oidc.OpenIDConnectPresetSpec)...)
+	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&oidc.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -35,7 +35,7 @@ func ValidateOpenIDConnectPresetUpdate(new, old *settings.OpenIDConnectPreset) f
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&new.OpenIDConnectPresetSpec)...)
+	allErrs = append(allErrs, validateOpenIDConnectPresetSpec(&new.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }

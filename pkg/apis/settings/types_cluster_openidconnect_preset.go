@@ -28,7 +28,13 @@ type ClusterOpenIDConnectPreset struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
+	// Spec is the specification of this OpenIDConnect preset.
+	Spec ClusterOpenIDConnectPresetSpec
+}
 
+// ClusterOpenIDConnectPresetSpec contains the OpenIDConnect specification and
+// project selector matching Shoots in Projects.
+type ClusterOpenIDConnectPresetSpec struct {
 	OpenIDConnectPresetSpec
 
 	// Project decides whether to apply the configuration if the
@@ -54,10 +60,10 @@ var _ Preset = &ClusterOpenIDConnectPreset{}
 
 // GetPresetSpec returns a pointer to the OpenIDConnect specification.
 func (o *ClusterOpenIDConnectPreset) GetPresetSpec() *OpenIDConnectPresetSpec {
-	return &o.OpenIDConnectPresetSpec
+	return &o.Spec.OpenIDConnectPresetSpec
 }
 
 // SetPresetSpec sets the OpenIDConnect specification.
 func (o *ClusterOpenIDConnectPreset) SetPresetSpec(s *OpenIDConnectPresetSpec) {
-	o.OpenIDConnectPresetSpec = *s
+	o.Spec.OpenIDConnectPresetSpec = *s
 }

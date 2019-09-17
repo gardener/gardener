@@ -25,22 +25,22 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_OpenIDConnectPreset sets default values for OpenIDConnectPreset objects.
 func SetDefaults_OpenIDConnectPreset(obj *OpenIDConnectPreset) {
-	if obj.ShootSelector == nil {
-		obj.ShootSelector = &metav1.LabelSelector{}
+	if obj.Spec.ShootSelector == nil {
+		obj.Spec.ShootSelector = &metav1.LabelSelector{}
 	}
-	setDefaultServerSpec(&obj.Server)
+	setDefaultServerSpec(&obj.Spec.Server)
 }
 
 // SetDefaults_ClusterOpenIDConnectPreset sets default values for ClusterOpenIDConnectPreset objects.
 func SetDefaults_ClusterOpenIDConnectPreset(obj *ClusterOpenIDConnectPreset) {
-	if obj.ShootSelector == nil {
-		obj.ShootSelector = &metav1.LabelSelector{}
+	if obj.Spec.ShootSelector == nil {
+		obj.Spec.ShootSelector = &metav1.LabelSelector{}
 	}
 
-	if obj.ProjectSelector == nil {
-		obj.ProjectSelector = &metav1.LabelSelector{}
+	if obj.Spec.ProjectSelector == nil {
+		obj.Spec.ProjectSelector = &metav1.LabelSelector{}
 	}
-	setDefaultServerSpec(&obj.Server)
+	setDefaultServerSpec(&obj.Spec.Server)
 }
 
 func setDefaultServerSpec(spec *KubeAPIServerOpenIDConnect) {

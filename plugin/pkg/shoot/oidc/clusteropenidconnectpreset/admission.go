@@ -181,13 +181,14 @@ func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, sh
 	var matchedPreset *settingsv1alpha1.ClusterOpenIDConnectPreset
 
 	for _, oidc := range oidcs {
-		projectSelector, err := metav1.LabelSelectorAsSelector(oidc.ProjectSelector)
+		spec := oidc.Spec
+		projectSelector, err := metav1.LabelSelectorAsSelector(spec.ProjectSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for projectSelector: %v", *oidc.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for projectSelector: %v", *spec.ShootSelector, err)
 		}
-		shootSelector, err := metav1.LabelSelectorAsSelector(oidc.ShootSelector)
+		shootSelector, err := metav1.LabelSelectorAsSelector(spec.ShootSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *oidc.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *spec.ShootSelector, err)
 		}
 
 		// check if the Shoot / project labels match the selector
@@ -197,8 +198,8 @@ func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, sh
 
 		if matchedPreset == nil {
 			matchedPreset = oidc
-		} else if oidc.Weight >= matchedPreset.Weight {
-			if oidc.Weight > matchedPreset.Weight {
+		} else if spec.Weight >= matchedPreset.Spec.Weight {
+			if spec.Weight > matchedPreset.Spec.Weight {
 				matchedPreset = oidc
 			} else if strings.Compare(oidc.ObjectMeta.Name, matchedPreset.ObjectMeta.Name) > 0 {
 				matchedPreset = oidc
@@ -209,5 +210,5 @@ func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, sh
 	if matchedPreset == nil {
 		return nil, nil
 	}
-	return &matchedPreset.OpenIDConnectPresetSpec, nil
+	return &matchedPreset.Spec.OpenIDConnectPresetSpec, nil
 }

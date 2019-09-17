@@ -59,7 +59,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 					Name:      presetName,
 					Namespace: namespace,
 				},
-				OpenIDConnectPresetSpec: settingsv1alpha1.OpenIDConnectPresetSpec{
+				Spec: settingsv1alpha1.OpenIDConnectPresetSpec{
 					// select everything
 					ShootSelector: &metav1.LabelSelector{},
 					Weight:        0,
@@ -127,7 +127,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("preset label selector doesn't match", func() {
-				preset.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 			})
 
 			It("oidc settings already exist", func() {
@@ -228,11 +228,11 @@ var _ = Describe("OpenID Connect Preset", func() {
 			It("presets which match even with lower weight", func() {
 				preset2 := preset.DeepCopy()
 
-				preset.OpenIDConnectPresetSpec.Weight = 100
-				preset.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.Weight = 100
+				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 
 				preset2.ObjectMeta.Name = "preset-2"
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
@@ -242,8 +242,8 @@ var _ = Describe("OpenID Connect Preset", func() {
 			It("preset with higher weight", func() {
 				preset2 := preset.DeepCopy()
 				preset2.ObjectMeta.Name = "preset-2"
-				preset2.OpenIDConnectPresetSpec.Weight = 100
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.Weight = 100
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
@@ -254,7 +254,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 				preset.ObjectMeta.Name = "01preset"
 				preset2 := preset.DeepCopy()
 				preset2.ObjectMeta.Name = "02preset"
-				preset2.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
