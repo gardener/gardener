@@ -449,13 +449,13 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 			}
 
 			relevantExtension = append(relevantExtension, item)
+			del := &extensionsv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      item.GetName(),
+					Namespace: item.GetNamespace(),
+				},
+			}
 			fns = append(fns, func(ctx context.Context) error {
-				del := &extensionsv1alpha1.Extension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      item.GetName(),
-						Namespace: item.GetNamespace(),
-					},
-				}
 				return seedClient.Delete(ctx, del)
 			})
 		}
