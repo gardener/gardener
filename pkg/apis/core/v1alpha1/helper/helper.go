@@ -173,3 +173,13 @@ func NetworksIntersect(cidr1, cidr2 string) bool {
 	_, net2, err2 := net.ParseCIDR(cidr2)
 	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
 }
+
+// TaintsHave returns true if the given key is part of the taints list.
+func TaintsHave(taints []gardencorev1alpha1.SeedTaint, key string) bool {
+	for _, taint := range taints {
+		if taint.Key == key {
+			return true
+		}
+	}
+	return false
+}

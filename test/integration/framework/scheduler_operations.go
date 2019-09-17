@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
-	shootscheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -125,7 +124,8 @@ func (s *SchedulerGardenerTest) ScheduleShoot(ctx context.Context, shoot *garden
 		}
 		return nil
 	}
-	return shootscheduler.UpdateShootToBeScheduledOntoSeed(ctx, shoot, seed, executeSchedulingRequest)
+	shoot.Spec.Cloud.Seed = &seed.Name
+	return executeSchedulingRequest(ctx, shoot)
 }
 
 // ChooseRegionAndZoneWithNoSeed determines all available Zones from the Shoot and the CloudProfile and then delegates the choosing of a region were no seed is deployed

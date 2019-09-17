@@ -15,13 +15,13 @@
 package shoot
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestScheduler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot scheduler Test Suite")
+	RunSpecs(t, "Shoot Scheduler Test Suite")
 }

@@ -21,14 +21,15 @@ import (
 	"os"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/cmd/utils"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	configloader "github.com/gardener/gardener/pkg/scheduler/apis/config/loader"
+	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	"github.com/gardener/gardener/pkg/server"
@@ -37,21 +38,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	diskcache "k8s.io/client-go/discovery/cached/disk"
-	"k8s.io/client-go/informers"
-	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	"github.com/gardener/gardener/cmd/utils"
-	configloader "github.com/gardener/gardener/pkg/scheduler/apis/config/loader"
 )
 
 // Options has all the context and parameters needed to run a GardenerScheduler.
@@ -79,9 +73,8 @@ func (o *Options) validate(args []string) error {
 }
 
 func (o *Options) applyDefaults(in *config.SchedulerConfiguration) (*config.SchedulerConfiguration, error) {
-
 	scheme := configloader.Scheme
-	external, err := scheme.ConvertToVersion(in, schedulerconfigv1alpha1.SchemeGroupVersion)
+	external, err := scheme.ConvertToVersion(in, configv1alpha1.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -140,12 +133,10 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 // Gardener scheduler.
 type GardenerScheduler struct {
 	Config                 *config.SchedulerConfiguration
-	Identity               *gardenv1beta1.Gardener
+	Identity               *gardencorev1alpha1.Gardener
 	GardenerNamespace      string
 	K8sGardenClient        kubernetes.Interface
-	K8sGardenInformers     gardeninformers.SharedInformerFactory
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	KubeInformerFactory    informers.SharedInformerFactory
 	Logger                 *logrus.Logger
 	Recorder               record.EventRecorder
 	LeaderElection         *leaderelection.LeaderElectionConfig
@@ -200,6 +191,7 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
 		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardener-scheduler")
 	)
+
 	if cfg.LeaderElection.LeaderElect {
 		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, cfg.LeaderElection.LockObjectNamespace, cfg.LeaderElection.LockObjectName, k8sGardenClientLeaderElection, recorder)
 		if err != nil {
@@ -212,15 +204,13 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		Logger:                 logger,
 		Recorder:               recorder,
 		K8sGardenClient:        k8sGardenClient,
-		K8sGardenInformers:     gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
-		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
 	}, nil
 }
 
 func (g *GardenerScheduler) cleanup() {
-	if err := os.RemoveAll(schedulerconfigv1alpha1.DefaultDiscoveryDir); err != nil {
+	if err := os.RemoveAll(configv1alpha1.DefaultDiscoveryDir); err != nil {
 		g.Logger.Errorf("Could not cleanup base discovery cache directory: %v", err)
 	}
 }
@@ -266,14 +256,14 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 }
 
 func (g *GardenerScheduler) startScheduler(ctx context.Context) {
-	shootScheduler := shootcontroller.NewGardenerScheduler(g.K8sGardenClient, g.K8sGardenInformers, g.Config, g.Recorder)
+	shootScheduler := shootcontroller.NewGardenerScheduler(g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(shootScheduler) //, backupBucketScheduler)
 
-	go shootScheduler.Run(ctx, g.K8sGardenInformers)
-	// TOEnable later
+	go shootScheduler.Run(ctx, g.K8sGardenCoreInformers)
+	// TODO: Enable later
 	// go backupBucketScheduler.Run(ctx, g.K8sGardenCoreInformers)
 
 	// Shutdown handling

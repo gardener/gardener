@@ -15,13 +15,14 @@
 package utils
 
 import (
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sNetworks gardenv1beta1.K8SNetworks, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkDisjointedness(seedNetworks gardencorev1alpha1.SeedNetworks, shootNodes string, shootPods, shootServices *string, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 
@@ -30,25 +31,25 @@ func ValidateNetworkDisjointedness(seedNetworks gardenv1beta1.SeedNetworks, k8sN
 		pathPods     = fldPath.Child("pods")
 	)
 
-	if nodes := k8sNetworks.Nodes; nodes != nil {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Nodes, *nodes) {
-			allErrs = append(allErrs, field.Invalid(pathNodes, *nodes, "shoot node network intersects with seed node network"))
+	if shootNodes != "" {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Nodes, shootNodes) {
+			allErrs = append(allErrs, field.Invalid(pathNodes, shootNodes, "shoot node network intersects with seed node network"))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathNodes, "nodes is required"))
 	}
 
-	if services := k8sNetworks.Services; services != nil {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Services, *services) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *services, "shoot service network intersects with seed service network"))
+	if shootServices != nil {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Services, *shootServices) {
+			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed service network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Services == nil {
 		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
 	}
 
-	if pods := k8sNetworks.Pods; pods != nil {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Pods, *pods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *pods, "shoot pod network intersects with seed pod network"))
+	if shootPods != nil {
+		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Pods, *shootPods) {
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed pod network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Pods == nil {
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
