@@ -41,8 +41,7 @@ data:
       params:
         'match[]':
         - '{__name__="probe_success", job="blackbox-exporter-k8s-service-check"}'
-        - '{__name__="shoot:kube_apiserver:sum_by_pod"}'
-        - '{__name__="shoot:kube_node_info:count"}'
+        - '{__name__=~"shoot:(.+):(.+)"}'
         - '{__name__="ALERTS"}'
       kubernetes_sd_configs:
       - role: endpoints
@@ -58,10 +57,7 @@ data:
       metrics_path: /federate
       params:
         'match[]':
-        - '{__name__="seed:container_cpu_usage_seconds_total:sum_by_pod"}'
-        - '{__name__="seed:container_memory_working_set_bytes:sum_by_pod"}'
-        - '{__name__="seed:container_network_receive_bytes_total:sum_by_pod"}'
-        - '{__name__="seed:container_network_transmit_bytes_total:sum_by_pod"}'
+        - '{__name__=~"seed:(.+):(.+)"}'
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:
