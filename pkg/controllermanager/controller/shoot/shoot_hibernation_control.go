@@ -133,7 +133,12 @@ func shootHasHibernationSchedules(shoot *gardenv1beta1.Shoot) bool {
 }
 
 func (c *Controller) shootHibernationAdd(obj interface{}) {
-	if shootHasHibernationSchedules(obj.(*gardenv1beta1.Shoot)) {
+	shoot, ok := obj.(*gardenv1beta1.Shoot)
+	if !ok {
+		return
+	}
+
+	if shootHasHibernationSchedules(shoot) {
 		key, err := cache.MetaNamespaceKeyFunc(obj)
 		if err != nil {
 			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
@@ -163,7 +168,12 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *Controller) shootHibernationDelete(obj interface{}) {
-	if shootHasHibernationSchedules(obj.(*gardenv1beta1.Shoot)) {
+	shoot, ok := obj.(*gardenv1beta1.Shoot)
+	if !ok {
+		return
+	}
+
+	if shootHasHibernationSchedules(shoot) {
 		key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 		if err != nil {
 			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
