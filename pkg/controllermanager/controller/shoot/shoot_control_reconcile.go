@@ -157,6 +157,16 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
+		deleteBackupInfrastructure = g.Add(flow.Task{
+			Name:         "Delete backup infrastructure resource",
+			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
+			Dependencies: flow.NewTaskIDs(deployETCD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until the backup infrastructure has been deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureDeleted),
+			Dependencies: flow.NewTaskIDs(deleteBackupInfrastructure),
+		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),

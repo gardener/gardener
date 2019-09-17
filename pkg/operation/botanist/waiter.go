@@ -23,6 +23,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -86,6 +87,24 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 
 		b.Logger.Info("Waiting until the both etcd statefulsets are ready...")
 		return retry.MinorError(fmt.Errorf("not all etcd stateful sets are ready"))
+	})
+}
+
+// WaitUntilEtcdMainReady waits until the etcd-main statefulsets indicate readiness in its status.
+func (b *Botanist) WaitUntilEtcdMainReady(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		b.Logger.Info("Waiting until the etcd-main statefulset is ready...")
+		sts := &appsv1.StatefulSet{}
+		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, "etcd-main"), sts)
+		if err != nil {
+			return retry.SevereError(err)
+		}
+
+		if sts.Generation == sts.Status.ObservedGeneration && sts.DeletionTimestamp == nil && sts.Status.ReadyReplicas == 1 {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("etcd-main stateful set is not ready"))
 	})
 }
 
@@ -332,5 +351,22 @@ func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) e
 		}
 		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
 		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
+	})
+}
+
+// WaitUntilBackupInfrastructureDeleted waits until the backup infrastructure within the garden cluster has
+// been deleted.
+func (b *Botanist) WaitUntilBackupInfrastructureDeleted(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
+		backupInfrastructure := &gardenv1beta1.BackupInfrastructure{}
+		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), backupInfrastructure); err != nil {
+			if apierrors.IsNotFound(err) {
+				b.Logger.Info("Backup infrastructure has been successfully deleted.")
+				return retry.Ok()
+			}
+			return retry.SevereError(err)
+		}
+		b.Logger.Info("Waiting until the backup infrastructure has been deleted in the Garden cluster...")
+		return retry.MinorError(fmt.Errorf("backup infrastructure %q has not yet been deleted", backupInfrastructure.Name))
 	})
 }

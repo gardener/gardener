@@ -486,7 +486,7 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			return err
 		}
 		// if BackupInfra NotFound then its new shoot and we have to do noting w.r.t. backward compatibility.
-	} else {
+	} else if backupInfra.DeletionTimestamp == nil {
 		// Support backward compatibility.
 		b.Logger.Infof("Associated backupInfra resource %s found. Looking for latest snapshot revision on it.", backupInfraName)
 		lastSnapshotRevision, err = getLatestSnapshotRevision(b.SeedCloudBotanist)
@@ -521,11 +521,33 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 		}
 
 		if b.Shoot.HibernationEnabled {
+			// capture the old statefulset state
 			statefulset := &appsv1.StatefulSet{}
 			if err := client.IgnoreNotFound(b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset)); err != nil {
 				return err
 			}
 
+			// NOTE: This is for backword compatibility.
+			// Scale up and scale down the etcd, so that it will store atleast one latest backup on new shared bucket.
+			// And we can get rid of old bucket i.e. BackupInfra resources.
+			// :warning: we are taking liberty here, with this change the hibernated cluster will be having only snapshot on latest bucket, breaking the policy
+			// of keeping last whole months backup exponentially.
+			if lastSnapshotRevision > 0 && role == common.EtcdRoleMain {
+				etcd["replicas"] = 1
+				if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+					return err
+				}
+				if err := b.Botanist.WaitUntilEtcdMainReady(ctx); err != nil {
+					// Ready etcd main sts guarantees that the snapshot is taken on new bucket.
+					return err
+				}
+				if err := b.Botanist.DeleteBackupInfrastructure(); err != nil {
+					return err
+				}
+				delete(etcd, "failBelowRevision")
+			}
+
+			// Restore the replica count from capture statefulset state.
 			if statefulset.Spec.Replicas == nil {
 				etcd["replicas"] = 0
 			} else {
