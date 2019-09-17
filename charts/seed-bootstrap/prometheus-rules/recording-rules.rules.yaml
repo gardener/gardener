@@ -1,6 +1,7 @@
 groups:
 - name: recording-rules.rules
   rules:
+  # Recording rules for pod usage
   - record: seed:container_cpu_usage_seconds_total:sum_by_pod
     expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod_name, namespace)
 
@@ -12,3 +13,29 @@ groups:
 
   - record: seed:container_network_transmit_bytes_total:sum_by_pod
     expr: sum(rate(container_network_transmit_bytes_total[5m])) by (pod_name, namespace)
+
+  # Recording rules for the sum of the entire seed usage
+  - record: seed:container_cpu_usage_seconds_total:sum
+    expr: sum(seed:container_cpu_usage_seconds_total:sum_by_pod)
+
+  - record: seed:container_memory_working_set_bytes:sum
+    expr: sum(seed:container_memory_working_set_bytes:sum_by_pod)
+
+  - record: seed:container_network_receive_bytes_total:sum
+    expr: sum(seed:container_network_receive_bytes_total:sum_by_pod)
+
+  - record: seed:container_network_transmit_bytes_total:sum
+    expr: sum(seed:container_network_transmit_bytes_total:sum_by_pod)
+
+  # Recording rules for the sum of all control plane usage
+  - record: seed:container_cpu_usage_seconds_total:sum_cp
+    expr: sum(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:container_memory_working_set_bytes:sum_cp
+    expr: sum(seed:container_memory_working_set_bytes:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:container_network_receive_bytes_total:sum_cp
+    expr: sum(seed:container_network_receive_bytes_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:container_network_transmit_bytes_total:sum_cp
+    expr: sum(seed:container_network_transmit_bytes_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
