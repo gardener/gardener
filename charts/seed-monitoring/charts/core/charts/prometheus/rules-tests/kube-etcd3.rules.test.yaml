@@ -31,6 +31,9 @@ tests:
     values: '0+0x2912'
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore",role="main",kind="Full"}'
     values: '1+0x2912'
+  # KubeEtcdRestorationFailed
+  - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",succeeded="false"}'
+    values: '0+0x7 1 2 2'
   alert_rule_test:
   - eval_time: 5m
     alertname: KubeEtcdMainDown
@@ -117,3 +120,17 @@ tests:
       exp_annotations:
         description: No full snapshot taken in the past day.
         summary: Etcd full snapshot failure.
+  - eval_time: 5m
+    alertname: KubeEtcdRestorationFailed
+    exp_alerts:
+    - exp_labels:
+        job: kube-etcd3-backup-restore
+        succeeded: false
+        role: main
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd data restoration was triggered, but has failed.
+        summary: Etcd data restoration failure.
