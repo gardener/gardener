@@ -17,7 +17,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -50,6 +49,7 @@ func setDefaultServerSpec(spec *KubeAPIServerOpenIDConnect) {
 	}
 
 	if spec.UsernameClaim == nil {
-		spec.UsernameClaim = pointer.StringPtr(DefaultUsernameClaim)
+		usernameClaim := DefaultUsernameClaim
+		spec.UsernameClaim = &usernameClaim
 	}
 }

@@ -91,26 +91,3 @@ type Preset interface {
 	GetPresetSpec() *OpenIDConnectPresetSpec
 	SetPresetSpec(s *OpenIDConnectPresetSpec)
 }
-
-var _ Preset = &OpenIDConnectPreset{}
-var _ Preset = &ClusterOpenIDConnectPreset{}
-
-// GetPresetSpec returns a pointer to the OpenIDConnect specification.
-func (o *OpenIDConnectPreset) GetPresetSpec() *OpenIDConnectPresetSpec {
-	return &o.OpenIDConnectPresetSpec
-}
-
-// SetPresetSpec sets the OpenIDConnect specification.
-func (o *OpenIDConnectPreset) SetPresetSpec(s *OpenIDConnectPresetSpec) {
-	o.OpenIDConnectPresetSpec = *s
-}
-
-// GetPresetSpec returns a pointer to the OpenIDConnect specification.
-func (o *ClusterOpenIDConnectPreset) GetPresetSpec() *OpenIDConnectPresetSpec {
-	return &o.OpenIDConnectPresetSpec
-}
-
-// SetPresetSpec sets the OpenIDConnect specification.
-func (o *ClusterOpenIDConnectPreset) SetPresetSpec(s *OpenIDConnectPresetSpec) {
-	o.OpenIDConnectPresetSpec = *s
-}

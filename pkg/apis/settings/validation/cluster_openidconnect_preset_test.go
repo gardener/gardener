@@ -96,6 +96,29 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 		})
 
 		validationAssertions(provider)
+
+		Context("projectSelector", func() {
+			It("invalid selector", func() {
+				provider.new.ProjectSelector = &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						metav1.LabelSelectorRequirement{
+							Key:      "foo",
+							Operator: metav1.LabelSelectorOpExists,
+							Values:   []string{"bar"},
+						}},
+				}
+
+				errorList := provider.providerFunc()
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("projectSelector.matchExpressions[0].values"),
+					"Detail": Equal("may not be specified when `operator` is 'Exists' or 'DoesNotExist'"),
+				})),
+				))
+			})
+		})
+
 	})
 
 	Describe("#ValidateClusterOpenIDConnectPresetUpdate", func() {

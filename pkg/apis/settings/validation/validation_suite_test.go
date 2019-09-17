@@ -16,11 +16,11 @@ package validation_test
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/gardener/gardener/pkg/apis/settings"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -70,6 +70,28 @@ func validationAssertions(p provider) {
 	It("should allow valid resource", func() {
 		errorList := p.providerFunc()
 		Expect(errorList).To(BeEmpty())
+	})
+
+	Context("shootSelector", func() {
+		It("invalid selector", func() {
+			p.preset().GetPresetSpec().ShootSelector = &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					metav1.LabelSelectorRequirement{
+						Key:      "foo",
+						Operator: metav1.LabelSelectorOpExists,
+						Values:   []string{"bar"},
+					}},
+			}
+
+			errorList := p.providerFunc()
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("shootSelector.matchExpressions[0].values"),
+				"Detail": Equal("may not be specified when `operator` is 'Exists' or 'DoesNotExist'"),
+			})),
+			))
+		})
 	})
 
 	Context("server", func() {

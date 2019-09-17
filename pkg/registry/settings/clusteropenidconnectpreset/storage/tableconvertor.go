@@ -37,7 +37,7 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Issuer", Type: "string", Description: swaggerMetadataDescriptions["issuer"]},
-			{Name: "Project-Selector", Type: "string", Description: swaggerMetadataDescriptions["shootSelector"]},
+			{Name: "Project-Selector", Type: "string", Description: swaggerMetadataDescriptions["projectSelector"]},
 			{Name: "Shoot-Selector", Type: "string", Description: swaggerMetadataDescriptions["shootSelector"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
@@ -78,8 +78,10 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 			cells = append(cells, "<unknown>")
 		}
 
-		cells = append(cells, metav1.FormatLabelSelector(obj.ProjectSelector), metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
-		cells = append(cells, metav1.FormatLabelSelector(obj.ShootSelector), metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
+		cells = append(cells,
+			metav1.FormatLabelSelector(obj.ProjectSelector),
+			metav1.FormatLabelSelector(obj.ShootSelector),
+			metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
 
 		return cells, nil
 	})

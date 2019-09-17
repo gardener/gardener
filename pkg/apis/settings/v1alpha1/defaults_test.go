@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +26,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "v1alpha1 Suite")
+	RunSpecs(t, "settings v1alpha1 Suite")
 }
 
 var _ = Describe("Defaults", func() {
@@ -66,12 +65,12 @@ var _ = Describe("Defaults", func() {
 })
 
 func defaultSpec() v1alpha1.OpenIDConnectPresetSpec {
-
+	usernameClaim := "sub"
 	return v1alpha1.OpenIDConnectPresetSpec{
 		Server: v1alpha1.KubeAPIServerOpenIDConnect{
 			// string literal are used to be sure that the test fails
 			// if the constant values are changed.
-			UsernameClaim: pointer.StringPtr("sub"),
+			UsernameClaim: &usernameClaim,
 			SigningAlgs:   []string{"RS256"},
 		},
 		ShootSelector: &metav1.LabelSelector{},

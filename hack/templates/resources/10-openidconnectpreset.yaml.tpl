@@ -19,7 +19,7 @@
     return root
 
   annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {})
-%># Plant cluster registration manifest through which an external kubernetes cluster will be mapped
+%># OpenIDConnectPreset is a OpenID Connect configuration that is applied to a Shoot in a namespace.
 ---
 apiVersion: settings.gardener.cloud/v1alpha1
 kind: OpenIDConnectPreset

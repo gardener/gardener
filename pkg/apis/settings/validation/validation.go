@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	"github.com/gardener/gardener/pkg/apis/settings"
 	"github.com/gardener/gardener/pkg/utils"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -34,6 +34,8 @@ var (
 
 func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.ShootSelector, field.NewPath("shootSelector"))...)
 	if spec.Weight <= 0 || spec.Weight > 100 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("weight"), spec.Weight, "must be in the range 1-100"))
 	}

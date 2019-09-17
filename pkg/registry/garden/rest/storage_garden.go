@@ -69,6 +69,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
+
 	shootStorage := shootstore.NewStorage(restOptionsGetter)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status

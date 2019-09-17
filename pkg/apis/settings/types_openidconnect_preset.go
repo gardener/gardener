@@ -41,3 +41,15 @@ type OpenIDConnectPresetList struct {
 	// Items is the list of OpenIDConnectPresets.
 	Items []OpenIDConnectPreset
 }
+
+var _ Preset = &OpenIDConnectPreset{}
+
+// GetPresetSpec returns a pointer to the OpenIDConnect specification.
+func (o *OpenIDConnectPreset) GetPresetSpec() *OpenIDConnectPresetSpec {
+	return &o.OpenIDConnectPresetSpec
+}
+
+// SetPresetSpec sets the OpenIDConnect specification.
+func (o *OpenIDConnectPreset) SetPresetSpec(s *OpenIDConnectPresetSpec) {
+	o.OpenIDConnectPresetSpec = *s
+}
