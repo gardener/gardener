@@ -49,6 +49,7 @@ global:
         ...
         -----END RSA PRIVATE KEY-----
     featureGates: {}
+    vpa: false
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:
@@ -159,6 +160,7 @@ global:
     additionalVolumes: []
     additionalVolumeMounts: []
     env: []
+    vpa: false
   # imageVectorOverwrite: |
   #  Please find documentation in docs/deployment/image_vector.md
     config:
@@ -264,6 +266,7 @@ global:
       limits:
         cpu: 300m
         memory: 256Mi
+    vpa: false
     config:
       clientConnection:
         acceptContentTypes: application/json
