@@ -620,9 +620,14 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 				})
 			}
 		}
+
+		data, err := json.Marshal(cloudProfileConfig)
+		if err != nil {
+			return err
+		}
 		out.Spec.ProviderConfig = &garden.ProviderConfig{
 			RawExtension: runtime.RawExtension{
-				Object: cloudProfileConfig,
+				Raw: data,
 			},
 		}
 
@@ -823,9 +828,14 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 		cloudProfileConfig.DHCPDomain = in.Spec.OpenStack.DHCPDomain
 		cloudProfileConfig.KeyStoneURL = in.Spec.OpenStack.KeyStoneURL
 		cloudProfileConfig.RequestTimeout = in.Spec.OpenStack.RequestTimeout
+
+		data, err := json.Marshal(cloudProfileConfig)
+		if err != nil {
+			return err
+		}
 		out.Spec.ProviderConfig = &garden.ProviderConfig{
 			RawExtension: runtime.RawExtension{
-				Object: cloudProfileConfig,
+				Raw: data,
 			},
 		}
 
@@ -1055,8 +1065,6 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 			return err
 		}
 		out.Spec.ProviderConfig = &providerConfig
-	} else {
-		out.Spec.ProviderConfig = nil
 	}
 
 	return nil
