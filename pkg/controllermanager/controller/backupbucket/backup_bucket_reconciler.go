@@ -83,7 +83,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.BackupBucket) (reconcile.Result, error) {
-	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", fmt.Sprintf("%s", backupBucket.Name))
+	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
 	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupBucket, gardenv1beta1.GardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
@@ -137,7 +137,7 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.Back
 }
 
 func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupBucket) (reconcile.Result, error) {
-	backupBucketLogger := logger.NewFieldLogger(r.logger, "backupbucket", fmt.Sprintf("%s", backupBucket.Name))
+	backupBucketLogger := logger.NewFieldLogger(r.logger, "backupbucket", backupBucket.Name)
 	if !sets.NewString(backupBucket.Finalizers...).Has(gardenv1beta1.GardenerName) {
 		backupBucketLogger.Debug("Do not need to do anything as the BackupBucket does not have my finalizer")
 		return reconcile.Result{}, nil

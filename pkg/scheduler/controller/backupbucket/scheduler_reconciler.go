@@ -93,8 +93,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, r.scheduleBackupBucket(bb)
 }
 
-type executeSchedulingRequest = func(context.Context, *gardencorev1alpha1.BackupBucket) error
-
 func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
 	var (
 		backupBucket    = obj.DeepCopy()

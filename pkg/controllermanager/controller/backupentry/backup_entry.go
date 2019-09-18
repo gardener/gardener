@@ -33,11 +33,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-const (
-	// finalizerName is the backupentry controller finalizer.
-	finalizerName = "core.gardener.cloud/backupentry"
-)
-
 // Controller controls BackupEntries.
 type Controller struct {
 	config     *config.ControllerManagerConfiguration
