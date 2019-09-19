@@ -99,6 +99,9 @@ spec:
         - --kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key
         - --insecure-port=0
         {{- include "kube-apiserver.oidcConfig" . | indent 8 }}
+        {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+        - --livez-grace-period=1m
+        {{- end }}
         - --profiling=false
         - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
         - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key
@@ -127,7 +130,11 @@ spec:
         livenessProbe:
           httpGet:
             scheme: HTTPS
+            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+            path: /livez
+            {{- else }}
             path: /healthz
+            {{- end }}
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
