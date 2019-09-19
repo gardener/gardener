@@ -34,7 +34,7 @@ type OpenIDConnectPresetSpec struct {
 	// configuration already set on the Shoot object.
 	Server KubeAPIServerOpenIDConnect `json:"server"`
 
-	// Client contains the confiration used for client OIDC authentication
+	// Client contains the configuration used for client OIDC authentication
 	// of Shoot clusters.
 	// This configuration is not overwritting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
@@ -76,7 +76,7 @@ type KubeAPIServerOpenIDConnect struct {
 	// Required.
 	IssuerURL string `json:"issuerURL"`
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-	// Only applied when the Kubernetes verion of the Shoot is >= 1.11
+	// Only applied when the Kubernetes version of the Shoot is >= 1.11
 	// +optional
 	RequiredClaims map[string]string `json:"requiredClaims,omitempty"`
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1

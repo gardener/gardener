@@ -9340,7 +9340,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the confiration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -9416,7 +9416,7 @@ func schema_pkg_apis_settings_v1alpha1_KubeAPIServerOpenIDConnect(ref common.Ref
 					},
 					"requiredClaims": {
 						SchemaProps: spec.SchemaProps{
-							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value. Only applied when the Kubernetes verion of the Shoot is >= 1.11",
+							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value. Only applied when the Kubernetes version of the Shoot is >= 1.11",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -9605,7 +9605,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the confiration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwritting any existing OpenID Connect client authentication already set on the Shoot object.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},

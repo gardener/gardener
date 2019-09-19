@@ -27,7 +27,7 @@ type OpenIDConnectPresetSpec struct {
 	// configuration already set on the Shoot object.
 	Server KubeAPIServerOpenIDConnect
 
-	// Client contains the confiration used for client OIDC authentication
+	// Client contains the configuration used for client OIDC authentication
 	// of Shoot clusters.
 	// This configuration is not overwritting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
