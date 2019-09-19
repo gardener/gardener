@@ -31,6 +31,10 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
+	k8sVersionLessThan116, _ := utils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
+	// Error is ignored here because we cannot do anything meaningful with it.
+	// k8sVersionLessThan116 will default to `false`.
+
 	var (
 		cloud            = obj.Spec.Cloud
 		defaultProxyMode = ProxyModeIPTables
@@ -124,20 +128,27 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	trueVar := true
+	falseVar := false
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
 	}
 
-	if obj.Spec.Kubernetes.KubeAPIServer != nil {
-		if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
+	if obj.Spec.Kubernetes.KubeAPIServer == nil {
+		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
+		if k8sVersionLessThan116 {
 			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+		} else {
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &falseVar
 		}
 	}
 
-	if obj.Spec.Kubernetes.KubeProxy != nil {
-		if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
-			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
-		}
+	if obj.Spec.Kubernetes.KubeProxy == nil {
+		obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
+		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 	}
 
 	if obj.Spec.Maintenance == nil {
@@ -173,6 +184,22 @@ func SetDefaults_Shoot(obj *Shoot) {
 				End:   mt.End().Formatted(),
 			}
 		}
+	}
+
+	if obj.Spec.Addons == nil {
+		obj.Spec.Addons = &Addons{}
+	}
+	if obj.Spec.Addons.KubernetesDashboard == nil {
+		obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
+	}
+	if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
+		var defaultAuthMode string
+		if k8sVersionLessThan116 {
+			defaultAuthMode = KubernetesDashboardAuthModeBasic
+		} else {
+			defaultAuthMode = KubernetesDashboardAuthModeToken
+		}
+		obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
 	}
 }
 
@@ -226,14 +253,6 @@ func SetDefaults_Project(obj *Project) {
 		case rbacv1.GroupKind:
 			obj.Spec.Owner.APIGroup = rbacv1.GroupName
 		}
-	}
-}
-
-// SetDefaults_KubernetesDashboard sets default values for KubernetesDashboard objects.
-func SetDefaults_KubernetesDashboard(obj *KubernetesDashboard) {
-	defaultAuthMode := KubernetesDashboardAuthModeBasic
-	if obj.AuthenticationMode == nil {
-		obj.AuthenticationMode = &defaultAuthMode
 	}
 }
 
