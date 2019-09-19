@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/etcd-backup-restore/pkg/miscellaneous"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -113,10 +112,10 @@ func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool
 			"blockedAddresses": b.Seed.Info.Spec.BlockCIDRs,
 			"denyAll":          denyAll,
 		}
-		excludeNets = []gardencorev1alpha1.CIDR{}
+		excludeNets = []string{}
 
 		values            = map[string]interface{}{}
-		shootCIDRNetworks = []gardencorev1alpha1.CIDR{}
+		shootCIDRNetworks = []string{}
 	)
 
 	for _, addr := range b.Seed.Info.Spec.BlockCIDRs {
@@ -145,7 +144,7 @@ func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool
 	}
 
 	seedNetworks := b.Seed.Info.Spec.Networks
-	allCIDRNetworks := append([]gardencorev1alpha1.CIDR{seedNetworks.Nodes, seedNetworks.Pods, seedNetworks.Services}, shootCIDRNetworks...)
+	allCIDRNetworks := append([]string{seedNetworks.Nodes, seedNetworks.Pods, seedNetworks.Services}, shootCIDRNetworks...)
 	allCIDRNetworks = append(allCIDRNetworks, excludeNets...)
 
 	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), allCIDRNetworks...)

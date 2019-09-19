@@ -50,7 +50,7 @@ func GardenV1beta1ShootToOpenStackV1alpha1InfrastructureConfig(shoot *gardenv1be
 		FloatingPoolName: shoot.Spec.Cloud.OpenStack.FloatingPoolName,
 		Networks: openstackv1alpha1.Networks{
 			Router: router,
-			Worker: string(shoot.Spec.Cloud.OpenStack.Networks.Workers[0]),
+			Worker: shoot.Spec.Cloud.OpenStack.Networks.Workers[0],
 		},
 	}, nil
 }

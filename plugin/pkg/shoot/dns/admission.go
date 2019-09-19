@@ -20,6 +20,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -119,7 +120,7 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 	}
 
 	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != garden.Kind("Shoot") {
+	if a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
 	shoot, ok := a.GetObject().(*garden.Shoot)
@@ -128,7 +129,7 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 	}
 
 	// If the Shoot manifest specifies the 'unmanaged' DNS provider, then we do nothing.
-	if provider := shoot.Spec.DNS.Provider; provider != nil && *provider == garden.DNSUnmanaged {
+	if shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && *shoot.Spec.DNS.Providers[0].Type == garden.DNSUnmanaged {
 		return nil
 	}
 
@@ -164,7 +165,14 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		return
 	}
 
-	shootDomain := shoot.Spec.DNS.Domain
+	var shootDomain *string
+	if shoot.Spec.DNS != nil {
+		shootDomain = shoot.Spec.DNS.Domain
+	}
+
+	if shootDomain != nil {
+		return
+	}
 
 	for _, secret := range secrets {
 		_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
@@ -173,15 +181,18 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		}
 
 		if shootDomain != nil && strings.HasSuffix(*shootDomain, domain) {
-			// Shoot already specifies a default domain, set provider to nil
-			shoot.Spec.DNS.Provider = nil
+			// Shoot already specifies a default domain, set providers to nil
+			shoot.Spec.DNS.Providers = nil
 			return
 		}
 
 		// Shoot did not specify a domain, assign default domain and set provider to nil
 		if shootDomain == nil {
+			if shoot.Spec.DNS == nil {
+				shoot.Spec.DNS = &garden.DNS{}
+			}
 			generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
-			shoot.Spec.DNS.Provider = nil
+			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.DNS.Domain = &generatedDomain
 			return
 		}

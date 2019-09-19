@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	multierror "github.com/hashicorp/go-multierror"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -122,7 +121,7 @@ func (d *DeletionConfirmation) Validate(a admission.Attributes, o admission.Obje
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	switch a.GetKind().GroupKind() {
-	case garden.Kind("Shoot"):
+	case garden.Kind("Shoot"), core.Kind("Shoot"):
 		listFunc = func() ([]metav1.Object, error) {
 			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
 			if err != nil {

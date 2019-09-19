@@ -20,6 +20,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
@@ -145,7 +147,7 @@ func (q *QuotaValidator) Validate(a admission.Attributes, o admission.ObjectInte
 	}
 
 	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != garden.Kind("Shoot") {
+	if a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
 	if a.GetSubresource() != "" {
@@ -178,16 +180,12 @@ func (q *QuotaValidator) Validate(a admission.Attributes, o admission.ObjectInte
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
-		cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
-		if err != nil {
-			return apierrors.NewInternalError(err)
-		}
 
-		checkQuota = quotaVerificationNeeded(*shoot, *oldShoot, cloudProvider)
+		checkQuota = quotaVerificationNeeded(*shoot, *oldShoot)
 		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
 	}
 
-	secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+	secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -342,7 +340,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			if s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+			if s.Spec.SecretBindingName == binding.Name {
 				shootsReferQuota = append(shootsReferQuota, *s)
 			}
 		}
@@ -364,20 +362,15 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 }
 
 func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceList, error) {
-	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
+	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
 		return nil, apierrors.NewBadRequest("could not find referenced cloud profile")
-	}
-
-	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
-	if err != nil {
-		return nil, apierrors.NewBadRequest("could not identify the cloud provider kind in the Shoot resource")
 	}
 
 	var (
 		countLB      int64 = 1
 		resources          = make(corev1.ResourceList)
-		workers            = getShootWorkerResources(shoot, cloudProvider, *cloudProfile)
+		workers            = getShootWorkerResources(&shoot, cloudProfile)
 		machineTypes       = cloudProfile.Spec.MachineTypes
 		volumeTypes        = cloudProfile.Spec.VolumeTypes
 	)
@@ -390,36 +383,44 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 
 		// Get the proper machineType
 		for _, element := range machineTypes {
-			if element.Name == worker.MachineType {
+			if element.Name == worker.Machine.Type {
 				machineType = &element
 				break
 			}
 		}
 		if machineType == nil {
-			return nil, fmt.Errorf("MachineType %s not found in CloudProfile %s", worker.MachineType, cloudProfile.Name)
+			return nil, fmt.Errorf("MachineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
 		}
 
 		// Get the proper VolumeType
 		for _, element := range volumeTypes {
-			if element.Name == worker.VolumeType {
+			if worker.Volume != nil && element.Name == worker.Volume.Type {
 				volumeType = &element
 				break
 			}
 		}
 		if volumeType == nil {
-			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile %s", worker.MachineType, cloudProfile.Name)
+			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
 		}
 
 		// For now we always use the max. amount of resources for quota calculation
-		resources[garden.QuotaMetricCPU] = sumQuantity(resources[garden.QuotaMetricCPU], multiplyQuantity(machineType.CPU, worker.AutoScalerMax))
-		resources[garden.QuotaMetricGPU] = sumQuantity(resources[garden.QuotaMetricGPU], multiplyQuantity(machineType.GPU, worker.AutoScalerMax))
-		resources[garden.QuotaMetricMemory] = sumQuantity(resources[garden.QuotaMetricMemory], multiplyQuantity(machineType.Memory, worker.AutoScalerMax))
+		resources[garden.QuotaMetricCPU] = sumQuantity(resources[garden.QuotaMetricCPU], multiplyQuantity(machineType.CPU, worker.Maximum))
+		resources[garden.QuotaMetricGPU] = sumQuantity(resources[garden.QuotaMetricGPU], multiplyQuantity(machineType.GPU, worker.Maximum))
+		resources[garden.QuotaMetricMemory] = sumQuantity(resources[garden.QuotaMetricMemory], multiplyQuantity(machineType.Memory, worker.Maximum))
+
+		size, _ := resource.ParseQuantity("0Gi")
+		if worker.Volume != nil {
+			size, err = resource.ParseQuantity(worker.Volume.Size)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		switch volumeType.Class {
 		case garden.VolumeClassStandard:
-			resources[garden.QuotaMetricStorageStandard] = sumQuantity(resources[garden.QuotaMetricStorageStandard], multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax))
+			resources[garden.QuotaMetricStorageStandard] = sumQuantity(resources[garden.QuotaMetricStorageStandard], multiplyQuantity(size, worker.Maximum))
 		case garden.VolumeClassPremium:
-			resources[garden.QuotaMetricStoragePremium] = sumQuantity(resources[garden.QuotaMetricStoragePremium], multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax))
+			resources[garden.QuotaMetricStoragePremium] = sumQuantity(resources[garden.QuotaMetricStoragePremium], multiplyQuantity(size, worker.Maximum))
 		default:
 			return nil, fmt.Errorf("Unknown volumeType class %s", volumeType.Class)
 		}
@@ -433,64 +434,26 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot garden.Shoot, cloudProvider garden.CloudProvider, cloudProfile garden.CloudProfile) []quotaWorker {
-	var workers []quotaWorker
+func getShootWorkerResources(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) []garden.Worker {
+	workers := make([]garden.Worker, 0, len(shoot.Spec.Provider.Workers))
 
-	switch cloudProvider {
-	case garden.CloudProviderAWS:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.AWS.Workers))
+	for _, worker := range shoot.Spec.Provider.Workers {
+		workerCopy := worker.DeepCopy()
 
-		for idx, awsWorker := range shoot.Spec.Cloud.AWS.Workers {
-			workers[idx].Worker = awsWorker.Worker
-			workers[idx].VolumeType = awsWorker.VolumeType
-			workers[idx].VolumeSize = resource.MustParse(awsWorker.VolumeSize)
-		}
-	case garden.CloudProviderAzure:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Azure.Workers))
-
-		for idx, azureWorker := range shoot.Spec.Cloud.Azure.Workers {
-			workers[idx].Worker = azureWorker.Worker
-			workers[idx].VolumeType = azureWorker.VolumeType
-			workers[idx].VolumeSize = resource.MustParse(azureWorker.VolumeSize)
-		}
-	case garden.CloudProviderGCP:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.GCP.Workers))
-
-		for idx, gcpWorker := range shoot.Spec.Cloud.GCP.Workers {
-			workers[idx].Worker = gcpWorker.Worker
-			workers[idx].VolumeType = gcpWorker.VolumeType
-			workers[idx].VolumeSize = resource.MustParse(gcpWorker.VolumeSize)
-		}
-	case garden.CloudProviderOpenStack:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.OpenStack.Workers))
-
-		for idx, osWorker := range shoot.Spec.Cloud.OpenStack.Workers {
-			workers[idx].Worker = osWorker.Worker
-			for _, machineType := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
-				if osWorker.MachineType == machineType.Name {
-					workers[idx].VolumeType = machineType.MachineType.Name
-					workers[idx].VolumeSize = machineType.VolumeSize
+		if worker.Volume == nil {
+			for _, machineType := range cloudProfile.Spec.MachineTypes {
+				if worker.Machine.Type == machineType.Name && machineType.Storage != nil {
+					workerCopy.Volume = &garden.Volume{
+						Type: machineType.Storage.Type,
+						Size: machineType.Storage.Size.String(),
+					}
 				}
 			}
 		}
-	case garden.CloudProviderAlicloud:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Alicloud.Workers))
 
-		for idx, aliWorker := range shoot.Spec.Cloud.Alicloud.Workers {
-			workers[idx].Worker = aliWorker.Worker
-			workers[idx].VolumeType = aliWorker.VolumeType
-			workers[idx].VolumeSize = resource.MustParse(aliWorker.VolumeSize)
-		}
-
-	case garden.CloudProviderPacket:
-		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Packet.Workers))
-
-		for idx, packetWorker := range shoot.Spec.Cloud.Packet.Workers {
-			workers[idx].Worker = packetWorker.Worker
-			workers[idx].VolumeType = packetWorker.VolumeType
-			workers[idx].VolumeSize = resource.MustParse(packetWorker.VolumeSize)
-		}
+		workers = append(workers, *workerCopy)
 	}
+
 	return workers
 }
 
@@ -505,7 +468,7 @@ func lifetimeVerificationNeeded(new, old garden.Shoot) bool {
 	return false
 }
 
-func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvider) bool {
+func quotaVerificationNeeded(new, old garden.Shoot) bool {
 	// Check for diff on addon nginx-ingress (addon requires to deploy a load balancer)
 	var (
 		oldNginxIngressEnabled bool
@@ -525,106 +488,21 @@ func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvide
 	}
 
 	// Check for diffs on workers
-	switch provider {
-	case garden.CloudProviderAWS:
-		for _, worker := range new.Spec.Cloud.AWS.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.AWS.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
-						return true
-					}
+	for _, worker := range new.Spec.Provider.Workers {
+		oldHasWorker := false
+		for _, oldWorker := range old.Spec.Provider.Workers {
+			if worker.Name == oldWorker.Name {
+				oldHasWorker = true
+				if worker.Machine.Type != oldWorker.Machine.Type || worker.Maximum != oldWorker.Maximum || !apiequality.Semantic.DeepEqual(worker.Volume, oldWorker.Volume) {
+					return true
 				}
-			}
-			if !oldHasWorker {
-				return true
 			}
 		}
-	case garden.CloudProviderAzure:
-		for _, worker := range new.Spec.Cloud.Azure.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.Azure.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
-						return true
-					}
-				}
-			}
-			if !oldHasWorker {
-				return true
-			}
-		}
-	case garden.CloudProviderGCP:
-		for _, worker := range new.Spec.Cloud.GCP.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.GCP.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
-						return true
-					}
-				}
-			}
-			if !oldHasWorker {
-				return true
-			}
-		}
-	case garden.CloudProviderPacket:
-		for _, worker := range new.Spec.Cloud.Packet.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.Packet.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
-						return true
-					}
-				}
-			}
-			if !oldHasWorker {
-				return true
-			}
-		}
-	case garden.CloudProviderOpenStack:
-		for _, worker := range new.Spec.Cloud.OpenStack.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.OpenStack.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) {
-						return true
-					}
-				}
-			}
-			if !oldHasWorker {
-				return true
-			}
-		}
-	case garden.CloudProviderAlicloud:
-		for _, worker := range new.Spec.Cloud.Alicloud.Workers {
-			oldHasWorker := false
-			for _, oldWorker := range old.Spec.Cloud.Alicloud.Workers {
-				if worker.Name == oldWorker.Name {
-					oldHasWorker = true
-					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
-						return true
-					}
-				}
-			}
-			if !oldHasWorker {
-				return true
-			}
+		if !oldHasWorker {
+			return true
 		}
 	}
 
-	return false
-}
-
-func hasWorkerDiff(new, old garden.Worker) bool {
-	if new.MachineType != old.MachineType || new.AutoScalerMax != old.AutoScalerMax {
-		return true
-	}
 	return false
 }
 

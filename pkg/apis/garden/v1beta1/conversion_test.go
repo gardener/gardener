@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 
 	. "github.com/onsi/ginkgo"
@@ -167,9 +166,9 @@ var _ = Describe("Machine Image Conversion", func() {
 			ingressDomain                = "foo.example.com"
 			secretRefName                = "seed-secret"
 			secretRefNamespace           = "garden"
-			nodesCIDR                    = gardencorev1alpha1.CIDR("1.2.3.4/5")
-			podsCIDR                     = gardencorev1alpha1.CIDR("6.7.8.9/10")
-			servicesCIDR                 = gardencorev1alpha1.CIDR("11.12.13.14/15")
+			nodesCIDR                    = "1.2.3.4/5"
+			podsCIDR                     = "6.7.8.9/10"
+			servicesCIDR                 = "11.12.13.14/15"
 			defaultPodCIDR               = DefaultPodNetworkCIDR
 			defaultServiceCIDR           = DefaultServiceNetworkCIDR
 			blockCIDR                    = "16.17.18.19/20"
@@ -218,7 +217,7 @@ var _ = Describe("Machine Image Conversion", func() {
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},
-						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Protected:  &trueVar,
 						Visible:    &falseVar,
 					},
@@ -246,11 +245,11 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    garden.CIDR(nodesCIDR),
-							Pods:     garden.CIDR(podsCIDR),
-							Services: garden.CIDR(servicesCIDR),
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
 						},
-						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{Key: garden.SeedTaintProtected},
 							{Key: garden.SeedTaintInvisible},
@@ -304,11 +303,11 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    garden.CIDR(nodesCIDR),
-							Pods:     garden.CIDR(podsCIDR),
-							Services: garden.CIDR(servicesCIDR),
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
 						},
-						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{Key: garden.SeedTaintProtected},
 							{Key: taintKeyOtherOne},
@@ -364,7 +363,7 @@ var _ = Describe("Machine Image Conversion", func() {
 								Services: &defaultServiceCIDR,
 							},
 						},
-						BlockCIDRs: []gardencorev1alpha1.CIDR{gardencorev1alpha1.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Protected:  &trueVar,
 						Visible:    &trueVar,
 					},

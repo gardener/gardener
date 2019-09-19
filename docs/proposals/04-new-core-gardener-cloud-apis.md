@@ -486,12 +486,12 @@ metadata:
   namespace: garden-core
 spec:
   secretBindingName: secretbinding1
+  cloudProfileName: cloudprofile1
+  region: europe-central-1
 # seedName: seed1
   provider:
     type: <some-provider-name> # {aws,azure,gcp,...}
-    profileName: cloudprofile1
-    region: europe-central-1
-    infrastructure:
+    infrastructureConfig:
       <some-provider-specific-infrastructure-config>
       # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-infrastructure.yaml#L56-L64
       # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L43-L53
@@ -499,79 +499,14 @@ spec:
       # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-infrastructure.yaml#L53-L57
       # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-infrastructure.yaml#L56-L64
       # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-infrastructure.yaml#L48-L49
-    controlplane:
-      providerConfig:
-        <some-provider-specific-controlplane-config>
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-controlplane.yaml#L60-L65
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-controlplane.yaml#L60-L64
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-controlplane.yaml#L61-L66
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-controlplane.yaml#L59-L64
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-controlplane.yaml#L64-L70
-        # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-controlplane.yaml#L60-L61
-    # kubeAPIServer:
-    #   featureGates:
-    #     SomeKubernetesFeature: true
-    #   runtimeConfig:
-    #     scheduling.k8s.io/v1alpha1: true
-    #   oidcConfig:
-    #     caBundle: |
-    #       -----BEGIN CERTIFICATE-----
-    #       Li4u
-    #       -----END CERTIFICATE-----
-    #     clientID: client-id
-    #     groupsClaim: groups-claim
-    #     groupsPrefix: groups-prefix
-    #     issuerURL: https://identity.example.com
-    #     usernameClaim: username-claim
-    #     usernamePrefix: username-prefix
-    #     signingAlgs: RS256,some-other-algorithm
-    #-#-# only usable with Kubernetes >= 1.11
-    #     requiredClaims:
-    #       key: value
-    #   admissionPlugins:
-    #   - name: PodNodeSelector
-    #     config: |
-    #       podNodeSelectorPluginConfig:
-    #         clusterDefaultNodeSelector: <node-selectors-labels>
-    #         namespace1: <node-selectors-labels>
-    #         namespace2: <node-selectors-labels>
-    #   auditConfig:
-    #     auditPolicy:
-    #       configMapRef:
-    #         name: auditpolicy
-    # kubeControllerManager:
-    #   featureGates:
-    #     SomeKubernetesFeature: true
-    #   horizontalPodAutoscaler:
-    #     syncPeriod: 30s
-    #     tolerance: 0.1
-    #-#-# only usable with Kubernetes < 1.12
-    #     downscaleDelay: 15m0s
-    #     upscaleDelay: 1m0s
-    #-#-# only usable with Kubernetes >= 1.12
-    #     downscaleStabilization: 5m0s
-    #     initialReadinessDelay: 30s
-    #     cpuInitializationPeriod: 5m0s
-    # kubeScheduler:
-    #   featureGates:
-    #     SomeKubernetesFeature: true
-    # kubeProxy:
-    #   featureGates:
-    #     SomeKubernetesFeature: true
-    #   mode: IPVS
-    # kubelet:
-    #   cpuCFSQuota: true
-    #   cpuManagerPolicy: none
-    #   podPidsLimit: 10
-    #   featureGates:
-    #     SomeKubernetesFeature: true
-    # clusterAutoscaler:
-    #   scaleDownUtilizationThreshold: 0.5
-    #   scaleDownUnneededTime: 30m
-    #   scaleDownDelayAfterAdd: 60m
-    #   scaleDownDelayAfterFailure: 10m
-    #   scaleDownDelayAfterDelete: 10s
-    #   scanInterval: 10s
+    controlPlaneConfig:
+      <some-provider-specific-controlplane-config>
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-controlplane.yaml#L60-L65
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-controlplane.yaml#L60-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-controlplane.yaml#L61-L66
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-controlplane.yaml#L59-L64
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-controlplane.yaml#L64-L70
+      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-controlplane.yaml#L60-L61
     workers:
     - name: cpu-worker
       minimum: 3
@@ -606,12 +541,76 @@ spec:
     #     podPidsLimit: 10
     #     featureGates:
     #       SomeKubernetesFeature: true
-      zones:
-      - europe-central-1a
-      - europe-central-1b
+    # zones: # optional, only relevant if the provider supports availability zones
+    # - europe-central-1a
+    # - europe-central-1b
   kubernetes:
     version: 1.15.1
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
+  # kubeAPIServer:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #   oidcConfig:
+  #     caBundle: |
+  #       -----BEGIN CERTIFICATE-----
+  #       Li4u
+  #       -----END CERTIFICATE-----
+  #     clientID: client-id
+  #     groupsClaim: groups-claim
+  #     groupsPrefix: groups-prefix
+  #     issuerURL: https://identity.example.com
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #     signingAlgs: RS256,some-other-algorithm
+  #-#-# only usable with Kubernetes >= 1.11
+  #     requiredClaims:
+  #       key: value
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
+  # kubeControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   horizontalPodAutoscaler:
+  #     syncPeriod: 30s
+  #     tolerance: 0.1
+  #-#-# only usable with Kubernetes < 1.12
+  #     downscaleDelay: 15m0s
+  #     upscaleDelay: 1m0s
+  #-#-# only usable with Kubernetes >= 1.12
+  #     downscaleStabilization: 5m0s
+  #     initialReadinessDelay: 30s
+  #     cpuInitializationPeriod: 5m0s
+  # kubeScheduler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeProxy:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   mode: IPVS
+  # kubelet:
+  #   cpuCFSQuota: true
+  #   cpuManagerPolicy: none
+  #   podPidsLimit: 10
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
+  #   scaleDownUnneededTime: 30m
+  #   scaleDownDelayAfterAdd: 60m
+  #   scaleDownDelayAfterFailure: 10m
+  #   scaleDownDelayAfterDelete: 10s
+  #   scanInterval: 10s
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain.
@@ -625,6 +624,11 @@ spec:
         - my-other-custom-domain.com
         exclude:
         - yet-another-custom-domain.com
+      zones:
+        include:
+        - zone-id-1
+        exclude:
+        - zone-id-2
   extensions:
   - type: foobar
   # providerConfig:

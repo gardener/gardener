@@ -205,7 +205,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		}
 		err = r.ensureSeedReferences(seed)
 
-	case garden.Kind("Shoot"):
+	case garden.Kind("Shoot"), core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*garden.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
@@ -356,17 +356,17 @@ func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
 }
 
 func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
-	if _, err := r.cloudProfileLister.Get(shoot.Spec.Cloud.Profile); err != nil {
+	if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
 		return err
 	}
 
-	if shoot.Spec.Cloud.Seed != nil {
-		if _, err := r.seedLister.Get(*shoot.Spec.Cloud.Seed); err != nil {
+	if shoot.Spec.SeedName != nil {
+		if _, err := r.seedLister.Get(*shoot.Spec.SeedName); err != nil {
 			return err
 		}
 	}
 
-	if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
+	if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName); err != nil {
 		return err
 	}
 

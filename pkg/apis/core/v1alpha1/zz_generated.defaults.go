@@ -18,6 +18,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&ProjectList{}, func(obj interface{}) { SetObjectDefaults_ProjectList(obj.(*ProjectList)) })
 	scheme.AddTypeDefaultingFunc(&SecretBinding{}, func(obj interface{}) { SetObjectDefaults_SecretBinding(obj.(*SecretBinding)) })
 	scheme.AddTypeDefaultingFunc(&SecretBindingList{}, func(obj interface{}) { SetObjectDefaults_SecretBindingList(obj.(*SecretBindingList)) })
+	scheme.AddTypeDefaultingFunc(&Shoot{}, func(obj interface{}) { SetObjectDefaults_Shoot(obj.(*Shoot)) })
+	scheme.AddTypeDefaultingFunc(&ShootList{}, func(obj interface{}) { SetObjectDefaults_ShootList(obj.(*ShootList)) })
 	return nil
 }
 
@@ -58,5 +60,28 @@ func SetObjectDefaults_SecretBindingList(in *SecretBindingList) {
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_SecretBinding(a)
+	}
+}
+
+func SetObjectDefaults_Shoot(in *Shoot) {
+	SetDefaults_Shoot(in)
+	if in.Spec.Addons != nil {
+		if in.Spec.Addons.KubernetesDashboard != nil {
+			SetDefaults_KubernetesDashboard(in.Spec.Addons.KubernetesDashboard)
+		}
+	}
+	if in.Spec.Maintenance != nil {
+		SetDefaults_Maintenance(in.Spec.Maintenance)
+	}
+	for i := range in.Spec.Provider.Workers {
+		a := &in.Spec.Provider.Workers[i]
+		SetDefaults_Worker(a)
+	}
+}
+
+func SetObjectDefaults_ShootList(in *ShootList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_Shoot(a)
 	}
 }

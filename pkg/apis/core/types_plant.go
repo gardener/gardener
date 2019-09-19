@@ -84,21 +84,21 @@ type PlantStatus struct {
 // ClusterInfo contains information about the Plant cluster
 type ClusterInfo struct {
 	// Cloud describes the cloud information
-	Cloud Cloud
+	Cloud CloudInfo
 	// Kubernetes describes kubernetes meta information (e.g., version)
-	Kubernetes Kubernetes
+	Kubernetes KubernetesInfo
 }
 
-// Cloud contains information about the cloud
-type Cloud struct {
+// CloudInfo contains information about the cloud
+type CloudInfo struct {
 	// Type is the cloud type
 	Type string
 	// Region is the cloud region
 	Region string
 }
 
-// Kubernetes contains the version and configuration variables for the Plant cluster.
-type Kubernetes struct {
+// KubernetesInfo contains the version and configuration variables for the Plant cluster.
+type KubernetesInfo struct {
 	// Version is the semantic Kubernetes version to use for the Plant cluster.
 	Version string
 }

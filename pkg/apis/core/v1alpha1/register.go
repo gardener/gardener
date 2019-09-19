@@ -67,6 +67,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SecretBindingList{},
 		&Seed{},
 		&SeedList{},
+		&Shoot{},
+		&ShootList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

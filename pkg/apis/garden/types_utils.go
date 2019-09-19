@@ -66,15 +66,12 @@ const (
 	ConditionCheckError = "ConditionCheckError"
 )
 
-// CIDR is a string alias.
-type CIDR string
-
 // K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type K8SNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes *CIDR
+	Nodes *string
 	// Pods is the CIDR of the pod network.
-	Pods *CIDR
+	Pods *string
 	// Services is the CIDR of the service network.
-	Services *CIDR
+	Services *string
 }

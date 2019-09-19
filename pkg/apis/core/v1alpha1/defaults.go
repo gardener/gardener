@@ -15,6 +15,10 @@
 package v1alpha1
 
 import (
+	"math"
+
+	"github.com/gardener/gardener/pkg/utils"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -64,4 +68,95 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 		trueVar := true
 		obj.Usable = &trueVar
 	}
+}
+
+// SetDefaults_Shoot sets default values for Shoot objects.
+func SetDefaults_Shoot(obj *Shoot) {
+	trueVar := true
+
+	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
+		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
+	}
+
+	if obj.Spec.Kubernetes.KubeAPIServer == nil {
+		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+	}
+
+	if obj.Spec.Kubernetes.KubeControllerManager == nil {
+		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(obj.Spec.Kubernetes.Kubelet, obj.Spec.Provider.Workers)
+	}
+
+	if obj.Spec.Kubernetes.KubeProxy == nil {
+		obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
+	}
+	if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
+		defaultProxyMode := ProxyModeIPTables
+		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
+	}
+}
+
+// SetDefaults_KubernetesDashboard sets default values for KubernetesDashboard objects.
+func SetDefaults_KubernetesDashboard(obj *KubernetesDashboard) {
+	if obj.AuthenticationMode == nil {
+		defaultAuthMode := KubernetesDashboardAuthModeBasic
+		obj.AuthenticationMode = &defaultAuthMode
+	}
+}
+
+// SetDefaults_Maintenance sets default values for Maintenance objects.
+func SetDefaults_Maintenance(obj *Maintenance) {
+	if obj == nil {
+		obj = &Maintenance{}
+	}
+
+	if obj.AutoUpdate == nil {
+		obj.AutoUpdate = &MaintenanceAutoUpdate{
+			KubernetesVersion:   true,
+			MachineImageVersion: true,
+		}
+	}
+
+	if obj.TimeWindow == nil {
+		mt := utils.RandomMaintenanceTimeWindow()
+		obj.TimeWindow = &MaintenanceTimeWindow{
+			Begin: mt.Begin().Formatted(),
+			End:   mt.End().Formatted(),
+		}
+	}
+}
+
+// SetDefaults_Worker sets default values for Worker objects.
+func SetDefaults_Worker(obj *Worker) {
+	if obj.MaxSurge == nil {
+		obj.MaxSurge = &DefaultWorkerMaxSurge
+	}
+	if obj.MaxUnavailable == nil {
+		obj.MaxUnavailable = &DefaultWorkerMaxUnavailable
+	}
+}
+
+// Helper functions
+
+func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) *int32 {
+	var maxPods int32 = 110 // default maxPods setting on kubelet
+
+	if kubelet != nil && kubelet.MaxPods != nil {
+		maxPods = *kubelet.MaxPods
+	}
+
+	for _, worker := range workers {
+		if worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPods {
+			maxPods = *worker.Kubernetes.Kubelet.MaxPods
+		}
+	}
+
+	// by having approximately twice as many available IP addresses as possible Pods, Kubernetes is able to mitigate IP address reuse as Pods are added to and removed from a node.
+	nodeCidrRange := int32(32 - int(math.Ceil(math.Log2(float64(maxPods*2)))))
+	return &nodeCidrRange
 }

@@ -546,7 +546,7 @@ spec:
   # kubeAPIServer:
   #   admissionPlugins:
   #   - name: PodNodeSelector
-  #     config: |
+  #     config:
   #       podNodeSelectorPluginConfig:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
@@ -569,7 +569,7 @@ spec:
   #     issuerURL: https://identity.example.com
   #     usernameClaim: username-claim
   #     usernamePrefix: username-prefix
-  #     signingAlgs: RS256,some-other-algorithm
+  #     signingAlgs: [RS256,some-other-algorithm]
   #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
@@ -656,13 +656,6 @@ spec:
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
       machineImageVersion: ${value("maintenance.autoUpdate.machineImageVersion", "true")}
-  # Backup configuration for Shoot clusters is deprecated and no longer supported.
-  # The responsibility for these settings has been shifted to Garden administrators.
-  # This field will be removed in the future and is only kept for API compatibility reasons. It is not
-  # evaluated or respected at all. Please do not use this field anymore.
-  backup:
-    schedule: ${value("backup.schedule", "\"0 */24 * * *\"")}
-    maximum: ${value("backup.maximum", "7")}
   addons:
     # nginx-ingress addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy your own ingress controller

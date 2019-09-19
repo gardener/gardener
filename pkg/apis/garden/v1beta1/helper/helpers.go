@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -615,7 +614,7 @@ type ShootedSeed struct {
 	Visible           *bool
 	MinimumVolumeSize *string
 	APIServer         *ShootedSeedAPIServer
-	BlockCIDRs        []gardencorev1alpha1.CIDR
+	BlockCIDRs        []string
 	ShootDefaults     *gardenv1beta1.ShootNetworks
 	Backup            *gardenv1beta1.BackupProfile
 }
@@ -707,15 +706,15 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	return &shootedSeed, nil
 }
 
-func parseShootedSeedBlockCIDRs(settings map[string]string) ([]gardencorev1alpha1.CIDR, error) {
+func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
 	cidrs, ok := settings["blockCIDRs"]
 	if !ok {
 		return nil, nil
 	}
 
-	var addresses []gardencorev1alpha1.CIDR
+	var addresses []string
 	for _, addr := range strings.Split(cidrs, ";") {
-		addresses = append(addresses, gardencorev1alpha1.CIDR(addr))
+		addresses = append(addresses, addr)
 	}
 
 	return addresses, nil
@@ -734,13 +733,11 @@ func parseShootedSeedShootDefaults(settings map[string]string) (*gardenv1beta1.S
 	shootNetworks := &gardenv1beta1.ShootNetworks{}
 
 	if ok1 {
-		cidr := gardencorev1alpha1.CIDR(podCIDR)
-		shootNetworks.Pods = &cidr
+		shootNetworks.Pods = &podCIDR
 	}
 
 	if ok2 {
-		cidr := gardencorev1alpha1.CIDR(serviceCIDR)
-		shootNetworks.Services = &cidr
+		shootNetworks.Services = &serviceCIDR
 	}
 
 	return shootNetworks, nil
@@ -935,10 +932,10 @@ func ReadShootedSeed(shoot *gardenv1beta1.Shoot) (*ShootedSeed, error) {
 }
 
 // GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
-func GetK8SNetworks(shoot *gardenv1beta1.Shoot) (*gardencorev1alpha1.K8SNetworks, error) {
+func GetK8SNetworks(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.K8SNetworks, error) {
 	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
-		return &gardencorev1alpha1.K8SNetworks{}, err
+		return &gardenv1beta1.K8SNetworks{}, err
 	}
 
 	switch cloudProvider {
@@ -955,7 +952,7 @@ func GetK8SNetworks(shoot *gardenv1beta1.Shoot) (*gardencorev1alpha1.K8SNetworks
 	case gardenv1beta1.CloudProviderPacket:
 		return &shoot.Spec.Cloud.Packet.Networks.K8SNetworks, nil
 	}
-	return &gardencorev1alpha1.K8SNetworks{}, nil
+	return &gardenv1beta1.K8SNetworks{}, nil
 }
 
 // GetZones returns the CloudProvide, the Zones for the CloudProfile and an error

@@ -20,8 +20,14 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 
+	alicloudinstall "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/install"
+	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
+	awsinstall "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/install"
+	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 	azureinstall "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/install"
 	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
+	gcpinstall "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/install"
+	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
 	openstackinstall "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/install"
 	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -267,10 +273,19 @@ func Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out 
 				return err
 			}
 			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
-			if _, _, err := decoder.Decode(in.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-				// If an error occurs then the provider config information contains invalid syntax, and in this
-				// case we don't want to fail here. We rather don't try to migrate.
-				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			switch {
+			case in.Spec.ProviderConfig.Object != nil:
+				var ok bool
+				cloudProfileConfig, ok = in.Spec.ProviderConfig.Object.(*azurev1alpha1.CloudProfileConfig)
+				if !ok {
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
+			case in.Spec.ProviderConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
 			}
 		}
 		for _, c := range cloudProfileConfig.CountFaultDomains {
@@ -423,10 +438,19 @@ func Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out 
 				return err
 			}
 			decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
-			if _, _, err := decoder.Decode(in.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-				// If an error occurs then the provider config information contains invalid syntax, and in this
-				// case we don't want to fail here. We rather don't try to migrate.
-				klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+			switch {
+			case in.Spec.ProviderConfig.Object != nil:
+				var ok bool
+				cloudProfileConfig, ok = in.Spec.ProviderConfig.Object.(*openstackv1alpha1.CloudProfileConfig)
+				if !ok {
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
+			case in.Spec.ProviderConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+				}
 			}
 		}
 		for _, p := range cloudProfileConfig.Constraints.LoadBalancerProviders {
@@ -833,4 +857,811 @@ func floatingPoolsHavePool(pools []garden.OpenStackFloatingPool, poolName string
 		}
 	}
 	return false
+}
+
+func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_Shoot_To_garden_Shoot(in, out, s); err != nil {
+		return err
+	}
+
+	var addonClusterAutoScaler *garden.AddonClusterAutoscaler
+	if data, ok := in.Annotations[garden.MigrationShootAddonsClusterAutoscaler]; ok {
+		addonClusterAutoScaler = &garden.AddonClusterAutoscaler{}
+		if err := json.Unmarshal([]byte(data), addonClusterAutoScaler); err != nil {
+			return err
+		}
+	}
+	out.Spec.Addons.ClusterAutoscaler = addonClusterAutoScaler
+
+	var addonHeapster *garden.Heapster
+	if data, ok := in.Annotations[garden.MigrationShootAddonsHeapster]; ok {
+		addonHeapster = &garden.Heapster{}
+		if err := json.Unmarshal([]byte(data), addonHeapster); err != nil {
+			return err
+		}
+	}
+	out.Spec.Addons.Heapster = addonHeapster
+
+	var addonKubeLego *garden.KubeLego
+	if data, ok := in.Annotations[garden.MigrationShootAddonsKubeLego]; ok {
+		addonKubeLego = &garden.KubeLego{}
+		if err := json.Unmarshal([]byte(data), addonKubeLego); err != nil {
+			return err
+		}
+	}
+	out.Spec.Addons.KubeLego = addonKubeLego
+
+	var addonKube2IAM *garden.Kube2IAM
+	if data, ok := in.Annotations[garden.MigrationShootAddonsKube2IAM]; ok {
+		addonKube2IAM = &garden.Kube2IAM{}
+		if err := json.Unmarshal([]byte(data), addonKube2IAM); err != nil {
+			return err
+		}
+	}
+	out.Spec.Addons.Kube2IAM = addonKube2IAM
+
+	var addonMonocular *garden.Monocular
+	if data, ok := in.Annotations[garden.MigrationShootAddonsMonocular]; ok {
+		addonMonocular = &garden.Monocular{}
+		if err := json.Unmarshal([]byte(data), addonMonocular); err != nil {
+			return err
+		}
+	}
+	out.Spec.Addons.Monocular = addonMonocular
+
+	switch in.Spec.Provider.Type {
+	case "aws":
+		if out.Spec.Cloud.AWS == nil {
+			out.Spec.Cloud.AWS = &garden.AWSCloud{}
+		}
+
+		extensionsScheme := runtime.NewScheme()
+		if err := awsinstall.AddToScheme(extensionsScheme); err != nil {
+			return err
+		}
+		decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+
+		infrastructureConfig := &awsv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: awsv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+		if in.Spec.Provider.InfrastructureConfig != nil {
+			switch {
+			case in.Spec.Provider.InfrastructureConfig.Object != nil:
+				var ok bool
+				infrastructureConfig, ok = in.Spec.Provider.InfrastructureConfig.Object.(*awsv1alpha1.InfrastructureConfig)
+				if !ok {
+					klog.Errorf("Cannot cast infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.InfrastructureConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		out.Spec.Cloud.AWS.Zones = nil
+		out.Spec.Cloud.AWS.Networks.Internal = nil
+		out.Spec.Cloud.AWS.Networks.Public = nil
+		out.Spec.Cloud.AWS.Networks.Workers = nil
+		for _, zone := range infrastructureConfig.Networks.Zones {
+			out.Spec.Cloud.AWS.Zones = append(out.Spec.Cloud.AWS.Zones, zone.Name)
+			out.Spec.Cloud.AWS.Networks.Internal = append(out.Spec.Cloud.AWS.Networks.Internal, zone.Internal)
+			out.Spec.Cloud.AWS.Networks.Public = append(out.Spec.Cloud.AWS.Networks.Public, zone.Public)
+			out.Spec.Cloud.AWS.Networks.Workers = append(out.Spec.Cloud.AWS.Networks.Workers, zone.Workers)
+		}
+		out.Spec.Cloud.AWS.Networks.VPC.CIDR = infrastructureConfig.Networks.VPC.CIDR
+		out.Spec.Cloud.AWS.Networks.VPC.ID = infrastructureConfig.Networks.VPC.ID
+		out.Spec.Cloud.AWS.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.AWS.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.AWS.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.AWS.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.AWS.MachineImage = nil
+		}
+
+		controlPlaneConfig := &awsv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: awsv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+		if in.Spec.Provider.ControlPlaneConfig != nil {
+			switch {
+			case in.Spec.Provider.ControlPlaneConfig.Object != nil:
+				var ok bool
+				controlPlaneConfig, ok = in.Spec.Provider.ControlPlaneConfig.Object.(*awsv1alpha1.ControlPlaneConfig)
+				if !ok {
+					klog.Errorf("Cannot cast controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.ControlPlaneConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.ControlPlaneConfig.Raw, nil, controlPlaneConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if controlPlaneConfig.CloudControllerManager == nil {
+			out.Spec.Kubernetes.CloudControllerManager = nil
+		} else {
+			out.Spec.Kubernetes.CloudControllerManager = &garden.CloudControllerManagerConfig{
+				KubernetesConfig: garden.KubernetesConfig{
+					FeatureGates: controlPlaneConfig.CloudControllerManager.FeatureGates,
+				},
+			}
+		}
+
+		out.Spec.Cloud.AWS.Workers = nil
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.AWS.Workers = append(out.Spec.Cloud.AWS.Workers, o)
+		}
+
+	case "azure":
+		if out.Spec.Cloud.Azure == nil {
+			out.Spec.Cloud.Azure = &garden.AzureCloud{}
+		}
+
+		extensionsScheme := runtime.NewScheme()
+		if err := azureinstall.AddToScheme(extensionsScheme); err != nil {
+			return err
+		}
+		decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+
+		infrastructureConfig := &azurev1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+		if in.Spec.Provider.InfrastructureConfig != nil {
+			switch {
+			case in.Spec.Provider.InfrastructureConfig.Object != nil:
+				var ok bool
+				infrastructureConfig, ok = in.Spec.Provider.InfrastructureConfig.Object.(*azurev1alpha1.InfrastructureConfig)
+				if !ok {
+					klog.Errorf("Cannot cast infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.InfrastructureConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		out.Spec.Cloud.Azure.ResourceGroup = nil
+		if infrastructureConfig.ResourceGroup != nil {
+			out.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{
+				Name: infrastructureConfig.ResourceGroup.Name,
+			}
+		}
+
+		out.Spec.Cloud.Azure.Networks.Workers = infrastructureConfig.Networks.Workers
+		out.Spec.Cloud.Azure.Networks.VNet.CIDR = infrastructureConfig.Networks.VNet.CIDR
+		out.Spec.Cloud.Azure.Networks.VNet.Name = infrastructureConfig.Networks.VNet.Name
+		out.Spec.Cloud.Azure.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.Azure.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.Azure.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Azure.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.Azure.MachineImage = nil
+		}
+
+		controlPlaneConfig := &azurev1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+		if in.Spec.Provider.ControlPlaneConfig != nil {
+			switch {
+			case in.Spec.Provider.ControlPlaneConfig.Object != nil:
+				var ok bool
+				controlPlaneConfig, ok = in.Spec.Provider.ControlPlaneConfig.Object.(*azurev1alpha1.ControlPlaneConfig)
+				if !ok {
+					klog.Errorf("Cannot cast controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.ControlPlaneConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.ControlPlaneConfig.Raw, nil, controlPlaneConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if controlPlaneConfig.CloudControllerManager == nil {
+			out.Spec.Kubernetes.CloudControllerManager = nil
+		} else {
+			out.Spec.Kubernetes.CloudControllerManager = &garden.CloudControllerManagerConfig{
+				KubernetesConfig: garden.KubernetesConfig{
+					FeatureGates: controlPlaneConfig.CloudControllerManager.FeatureGates,
+				},
+			}
+		}
+
+		out.Spec.Cloud.Azure.Workers = nil
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Azure.Workers = append(out.Spec.Cloud.Azure.Workers, o)
+		}
+
+	case "gcp":
+		if out.Spec.Cloud.GCP == nil {
+			out.Spec.Cloud.GCP = &garden.GCPCloud{}
+		}
+
+		extensionsScheme := runtime.NewScheme()
+		if err := gcpinstall.AddToScheme(extensionsScheme); err != nil {
+			return err
+		}
+		decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+
+		infrastructureConfig := &gcpv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+		if in.Spec.Provider.InfrastructureConfig != nil {
+			switch {
+			case in.Spec.Provider.InfrastructureConfig.Object != nil:
+				var ok bool
+				infrastructureConfig, ok = in.Spec.Provider.InfrastructureConfig.Object.(*gcpv1alpha1.InfrastructureConfig)
+				if !ok {
+					klog.Errorf("Cannot cast infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.InfrastructureConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if infrastructureConfig.Networks.VPC != nil {
+			out.Spec.Cloud.GCP.Networks.VPC = &garden.GCPVPC{
+				Name: infrastructureConfig.Networks.VPC.Name,
+			}
+		}
+
+		out.Spec.Cloud.GCP.Networks.Internal = infrastructureConfig.Networks.Internal
+		out.Spec.Cloud.GCP.Networks.Workers = []string{infrastructureConfig.Networks.Worker}
+		out.Spec.Cloud.GCP.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.GCP.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.GCP.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.GCP.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.GCP.MachineImage = nil
+		}
+
+		controlPlaneConfig := &gcpv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+		if in.Spec.Provider.ControlPlaneConfig != nil {
+			switch {
+			case in.Spec.Provider.ControlPlaneConfig.Object != nil:
+				var ok bool
+				controlPlaneConfig, ok = in.Spec.Provider.ControlPlaneConfig.Object.(*gcpv1alpha1.ControlPlaneConfig)
+				if !ok {
+					klog.Errorf("Cannot cast controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.ControlPlaneConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.ControlPlaneConfig.Raw, nil, controlPlaneConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if controlPlaneConfig.CloudControllerManager == nil {
+			out.Spec.Kubernetes.CloudControllerManager = nil
+		} else {
+			out.Spec.Kubernetes.CloudControllerManager = &garden.CloudControllerManagerConfig{
+				KubernetesConfig: garden.KubernetesConfig{
+					FeatureGates: controlPlaneConfig.CloudControllerManager.FeatureGates,
+				},
+			}
+		}
+
+		out.Spec.Cloud.GCP.Workers = nil
+		zones := sets.NewString()
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.GCP.Workers = append(out.Spec.Cloud.GCP.Workers, o)
+			zones.Insert(o.Zones...)
+		}
+		out.Spec.Cloud.GCP.Zones = zones.List()
+
+	case "openstack":
+		if out.Spec.Cloud.OpenStack == nil {
+			out.Spec.Cloud.OpenStack = &garden.OpenStackCloud{}
+		}
+
+		extensionsScheme := runtime.NewScheme()
+		if err := openstackinstall.AddToScheme(extensionsScheme); err != nil {
+			return err
+		}
+		decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+
+		infrastructureConfig := &openstackv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+		if in.Spec.Provider.InfrastructureConfig != nil {
+			switch {
+			case in.Spec.Provider.InfrastructureConfig.Object != nil:
+				var ok bool
+				infrastructureConfig, ok = in.Spec.Provider.InfrastructureConfig.Object.(*openstackv1alpha1.InfrastructureConfig)
+				if !ok {
+					klog.Errorf("Cannot cast infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.InfrastructureConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if infrastructureConfig.Networks.Router != nil {
+			out.Spec.Cloud.OpenStack.Networks.Router = &garden.OpenStackRouter{
+				ID: infrastructureConfig.Networks.Router.ID,
+			}
+		}
+		out.Spec.Cloud.OpenStack.FloatingPoolName = infrastructureConfig.FloatingPoolName
+		out.Spec.Cloud.OpenStack.Networks.Workers = []string{infrastructureConfig.Networks.Worker}
+		out.Spec.Cloud.OpenStack.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.OpenStack.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.OpenStack.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.OpenStack.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.OpenStack.MachineImage = nil
+		}
+
+		controlPlaneConfig := &openstackv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+		if in.Spec.Provider.ControlPlaneConfig != nil {
+			switch {
+			case in.Spec.Provider.ControlPlaneConfig.Object != nil:
+				var ok bool
+				controlPlaneConfig, ok = in.Spec.Provider.ControlPlaneConfig.Object.(*openstackv1alpha1.ControlPlaneConfig)
+				if !ok {
+					klog.Errorf("Cannot cast controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.ControlPlaneConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.ControlPlaneConfig.Raw, nil, controlPlaneConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if controlPlaneConfig.CloudControllerManager == nil {
+			out.Spec.Kubernetes.CloudControllerManager = nil
+		} else {
+			out.Spec.Kubernetes.CloudControllerManager = &garden.CloudControllerManagerConfig{
+				KubernetesConfig: garden.KubernetesConfig{
+					FeatureGates: controlPlaneConfig.CloudControllerManager.FeatureGates,
+				},
+			}
+		}
+
+		var loadBalancerClasses = make([]garden.OpenStackLoadBalancerClass, 0, len(controlPlaneConfig.LoadBalancerClasses))
+		for _, loadBalancerClass := range controlPlaneConfig.LoadBalancerClasses {
+			loadBalancerClasses = append(loadBalancerClasses, garden.OpenStackLoadBalancerClass{
+				Name:              loadBalancerClass.Name,
+				FloatingSubnetID:  loadBalancerClass.FloatingSubnetID,
+				FloatingNetworkID: loadBalancerClass.FloatingNetworkID,
+				SubnetID:          loadBalancerClass.SubnetID,
+			})
+		}
+		out.Spec.Cloud.OpenStack.LoadBalancerClasses = loadBalancerClasses
+		out.Spec.Cloud.OpenStack.LoadBalancerProvider = controlPlaneConfig.LoadBalancerProvider
+
+		out.Spec.Cloud.OpenStack.Workers = nil
+		zones := sets.NewString()
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.OpenStack.Workers = append(out.Spec.Cloud.OpenStack.Workers, o)
+			zones.Insert(o.Zones...)
+		}
+		out.Spec.Cloud.OpenStack.Zones = zones.List()
+
+	case "alicloud":
+		if out.Spec.Cloud.Alicloud == nil {
+			out.Spec.Cloud.Alicloud = &garden.Alicloud{}
+		}
+
+		extensionsScheme := runtime.NewScheme()
+		if err := alicloudinstall.AddToScheme(extensionsScheme); err != nil {
+			return err
+		}
+		decoder := serializer.NewCodecFactory(extensionsScheme).UniversalDecoder()
+
+		infrastructureConfig := &alicloudv1alpha1.InfrastructureConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: alicloudv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "InfrastructureConfig",
+			},
+		}
+		if in.Spec.Provider.InfrastructureConfig != nil {
+			switch {
+			case in.Spec.Provider.InfrastructureConfig.Object != nil:
+				var ok bool
+				infrastructureConfig, ok = in.Spec.Provider.InfrastructureConfig.Object.(*alicloudv1alpha1.InfrastructureConfig)
+				if !ok {
+					klog.Errorf("Cannot cast infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.InfrastructureConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.InfrastructureConfig.Raw, nil, infrastructureConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode infrastructureConfig of core.gardener.cloud.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		out.Spec.Cloud.Alicloud.Zones = nil
+		out.Spec.Cloud.Alicloud.Networks.Workers = nil
+		for _, zone := range infrastructureConfig.Networks.Zones {
+			out.Spec.Cloud.Alicloud.Zones = append(out.Spec.Cloud.Alicloud.Zones, zone.Name)
+			out.Spec.Cloud.Alicloud.Networks.Workers = append(out.Spec.Cloud.Alicloud.Networks.Workers, zone.Worker)
+		}
+		out.Spec.Cloud.Alicloud.Networks.VPC.CIDR = infrastructureConfig.Networks.VPC.CIDR
+		out.Spec.Cloud.Alicloud.Networks.VPC.ID = infrastructureConfig.Networks.VPC.ID
+		out.Spec.Cloud.Alicloud.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.Alicloud.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.Alicloud.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Alicloud.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.Alicloud.MachineImage = nil
+		}
+
+		controlPlaneConfig := &alicloudv1alpha1.ControlPlaneConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: alicloudv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ControlPlaneConfig",
+			},
+		}
+		if in.Spec.Provider.ControlPlaneConfig != nil {
+			switch {
+			case in.Spec.Provider.ControlPlaneConfig.Object != nil:
+				var ok bool
+				controlPlaneConfig, ok = in.Spec.Provider.ControlPlaneConfig.Object.(*alicloudv1alpha1.ControlPlaneConfig)
+				if !ok {
+					klog.Errorf("Cannot cast controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			case in.Spec.Provider.ControlPlaneConfig.Raw != nil:
+				if _, _, err := decoder.Decode(in.Spec.Provider.ControlPlaneConfig.Raw, nil, controlPlaneConfig); err != nil {
+					// If an error occurs then the provider config information contains invalid syntax, and in this
+					// case we don't want to fail here. We rather don't try to migrate.
+					klog.Errorf("Cannot decode controlPlaneConfig of garden.sapcloud.io.Shoot %s", in.Name)
+				}
+			}
+		}
+
+		if controlPlaneConfig.CloudControllerManager == nil {
+			out.Spec.Kubernetes.CloudControllerManager = nil
+		} else {
+			out.Spec.Kubernetes.CloudControllerManager = &garden.CloudControllerManagerConfig{
+				KubernetesConfig: garden.KubernetesConfig{
+					FeatureGates: controlPlaneConfig.CloudControllerManager.FeatureGates,
+				},
+			}
+		}
+
+		out.Spec.Cloud.Alicloud.Workers = nil
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Alicloud.Workers = append(out.Spec.Cloud.Alicloud.Workers, o)
+		}
+
+	case "packet":
+		if out.Spec.Cloud.Packet == nil {
+			out.Spec.Cloud.Packet = &garden.PacketCloud{}
+		}
+
+		out.Spec.Cloud.Packet.Zones = nil
+		out.Spec.Cloud.Packet.Networks.Pods = in.Spec.Networking.Pods
+		out.Spec.Cloud.Packet.Networks.Services = in.Spec.Networking.Services
+		out.Spec.Cloud.Packet.Networks.Nodes = &in.Spec.Networking.Nodes
+
+		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
+			var machineImage garden.ShootMachineImage
+			if err := json.Unmarshal([]byte(data), &machineImage); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Packet.MachineImage = &machineImage
+		} else {
+			out.Spec.Cloud.Packet.MachineImage = nil
+		}
+
+		out.Spec.Cloud.Packet.Workers = nil
+		zones := sets.NewString()
+		for _, worker := range in.Spec.Provider.Workers {
+			var o garden.Worker
+			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
+				return err
+			}
+			out.Spec.Cloud.Packet.Workers = append(out.Spec.Cloud.Packet.Workers, o)
+			zones.Insert(o.Zones...)
+		}
+		out.Spec.Cloud.Packet.Zones = zones.List()
+
+		var cloudControllerManager *garden.CloudControllerManagerConfig
+		if data, ok := in.Annotations[garden.MigrationShootCloudControllerManager]; ok {
+			cloudControllerManager = &garden.CloudControllerManagerConfig{}
+			if err := json.Unmarshal([]byte(data), cloudControllerManager); err != nil {
+				return err
+			}
+		}
+		out.Spec.Kubernetes.CloudControllerManager = cloudControllerManager
+	}
+
+	out.Spec.Cloud.Profile = in.Spec.CloudProfileName
+	out.Spec.Cloud.Region = in.Spec.Region
+	out.Spec.Cloud.SecretBindingRef.Name = in.Spec.SecretBindingName
+	out.Spec.Cloud.Seed = in.Spec.SeedName
+
+	return nil
+}
+
+func Convert_garden_Shoot_To_v1alpha1_Shoot(in *garden.Shoot, out *Shoot, s conversion.Scope) error {
+	if err := autoConvert_garden_Shoot_To_v1alpha1_Shoot(in, out, s); err != nil {
+		return err
+	}
+
+	var addons *Addons
+	if in.Spec.Addons != nil {
+		addons = &Addons{}
+		if err := autoConvert_garden_Addons_To_v1alpha1_Addons(in.Spec.Addons, addons, s); err != nil {
+			return err
+		}
+
+		if in.Spec.Addons.ClusterAutoscaler != nil {
+			data, err := json.Marshal(in.Spec.Addons.ClusterAutoscaler)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootAddonsClusterAutoscaler, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootAddonsClusterAutoscaler)
+		}
+		if in.Spec.Addons.Heapster != nil {
+			data, err := json.Marshal(in.Spec.Addons.Heapster)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootAddonsHeapster, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootAddonsHeapster)
+		}
+		if in.Spec.Addons.Kube2IAM != nil {
+			data, err := json.Marshal(in.Spec.Addons.Kube2IAM)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootAddonsKube2IAM, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootAddonsKube2IAM)
+		}
+		if in.Spec.Addons.KubeLego != nil {
+			data, err := json.Marshal(in.Spec.Addons.KubeLego)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootAddonsKubeLego, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootAddonsKubeLego)
+		}
+		if in.Spec.Addons.Monocular != nil {
+			data, err := json.Marshal(in.Spec.Addons.Monocular)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootAddonsMonocular, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootAddonsMonocular)
+		}
+	}
+
+	out.Spec.CloudProfileName = in.Spec.Cloud.Profile
+	out.Spec.Region = in.Spec.Cloud.Region
+	out.Spec.SecretBindingName = in.Spec.Cloud.SecretBindingRef.Name
+	out.Spec.SeedName = in.Spec.Cloud.Seed
+
+	switch in.Spec.Provider.Type {
+	case "aws":
+		if in.Spec.Cloud.AWS != nil && in.Spec.Cloud.AWS.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.AWS.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+	case "azure":
+		if in.Spec.Cloud.Azure != nil && in.Spec.Cloud.Azure.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.Azure.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+	case "gcp":
+		if in.Spec.Cloud.GCP != nil && in.Spec.Cloud.GCP.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.GCP.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+	case "openstack":
+		if in.Spec.Cloud.OpenStack != nil && in.Spec.Cloud.OpenStack.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.OpenStack.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+	case "alicloud":
+		if in.Spec.Cloud.Alicloud != nil && in.Spec.Cloud.Alicloud.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.Alicloud.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+	case "packet":
+		if in.Spec.Cloud.Packet != nil && in.Spec.Cloud.Packet.MachineImage != nil {
+			data, err := json.Marshal(in.Spec.Cloud.Packet.MachineImage)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootGlobalMachineImage, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootGlobalMachineImage)
+		}
+
+		if in.Spec.Kubernetes.CloudControllerManager != nil {
+			data, err := json.Marshal(in.Spec.Kubernetes.CloudControllerManager)
+			if err != nil {
+				return err
+			}
+			metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootCloudControllerManager, string(data))
+		} else {
+			delete(out.Annotations, garden.MigrationShootCloudControllerManager)
+		}
+	}
+
+	return nil
+}
+
+func Convert_garden_ShootSpec_To_v1alpha1_ShootSpec(in *garden.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	return autoConvert_garden_ShootSpec_To_v1alpha1_ShootSpec(in, out, s)
+}
+
+func Convert_v1alpha1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootSpec_To_garden_ShootSpec(in, out, s)
+}
+
+func Convert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStatus, out *ShootStatus, s conversion.Scope) error {
+	if err := autoConvert_garden_ShootStatus_To_v1alpha1_ShootStatus(in, out, s); err != nil {
+		return err
+	}
+
+	if in.IsHibernated == nil {
+		out.IsHibernated = false
+	} else {
+		out.IsHibernated = *in.IsHibernated
+	}
+
+	return nil
+}
+
+func Convert_v1alpha1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_ShootStatus_To_garden_ShootStatus(in, out, s); err != nil {
+		return err
+	}
+
+	out.IsHibernated = &in.IsHibernated
+
+	return nil
+}
+
+func Convert_garden_Addons_To_v1alpha1_Addons(in *garden.Addons, out *Addons, s conversion.Scope) error {
+	return autoConvert_garden_Addons_To_v1alpha1_Addons(in, out, s)
+}
+
+func Convert_v1alpha1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Addons_To_garden_Addons(in, out, s)
+}
+
+func Convert_garden_Kubernetes_To_v1alpha1_Kubernetes(in *garden.Kubernetes, out *Kubernetes, s conversion.Scope) error {
+	return autoConvert_garden_Kubernetes_To_v1alpha1_Kubernetes(in, out, s)
+}
+
+func Convert_v1alpha1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *garden.Kubernetes, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Kubernetes_To_garden_Kubernetes(in, out, s)
 }

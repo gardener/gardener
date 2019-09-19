@@ -51,9 +51,9 @@ var _ = Describe("Conversion", func() {
 			ingressDomain                = "foo.example.com"
 			secretRefName                = "seed-secret"
 			secretRefNamespace           = "garden"
-			nodesCIDR                    = CIDR("1.2.3.4/5")
-			podsCIDR                     = CIDR("6.7.8.9/10")
-			servicesCIDR                 = CIDR("11.12.13.14/15")
+			nodesCIDR                    = "1.2.3.4/5"
+			podsCIDR                     = "6.7.8.9/10"
+			servicesCIDR                 = "11.12.13.14/15"
 			blockCIDR                    = "16.17.18.19/20"
 			minimumVolumeSize            = "20Gi"
 			minimumVolumeSizeQuantity, _ = resource.ParseQuantity(minimumVolumeSize)
@@ -87,7 +87,7 @@ var _ = Describe("Conversion", func() {
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},
-						BlockCIDRs: []CIDR{CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Taints: []SeedTaint{
 							{
 								Key: SeedTaintProtected,
@@ -134,11 +134,11 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    garden.CIDR(nodesCIDR),
-							Pods:     garden.CIDR(podsCIDR),
-							Services: garden.CIDR(servicesCIDR),
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
 						},
-						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{
 								Key: SeedTaintProtected,
@@ -190,9 +190,9 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    garden.CIDR(nodesCIDR),
-							Pods:     garden.CIDR(podsCIDR),
-							Services: garden.CIDR(servicesCIDR),
+							Nodes:    nodesCIDR,
+							Pods:     podsCIDR,
+							Services: servicesCIDR,
 						},
 						Taints: []garden.SeedTaint{
 							{
@@ -202,7 +202,7 @@ var _ = Describe("Conversion", func() {
 								Key: SeedTaintInvisible,
 							},
 						},
-						BlockCIDRs: []garden.CIDR{garden.CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Volume: &garden.SeedVolume{
 							MinimumSize: &minimumVolumeSizeQuantity,
 							Providers: []garden.SeedVolumeProvider{
@@ -243,7 +243,7 @@ var _ = Describe("Conversion", func() {
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},
-						BlockCIDRs: []CIDR{CIDR(blockCIDR)},
+						BlockCIDRs: []string{blockCIDR},
 						Taints: []SeedTaint{
 							{
 								Key: SeedTaintProtected,

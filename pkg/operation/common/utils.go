@@ -66,8 +66,8 @@ func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string 
 
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
-func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
-	ip, _, _ := net.ParseCIDR(string(cidr))
+func ComputeClusterIP(cidr string, lastByte byte) string {
+	ip, _, _ := net.ParseCIDR(cidr)
 	ip = ip.To4()
 	ip[3] = lastByte
 	return ip.String()

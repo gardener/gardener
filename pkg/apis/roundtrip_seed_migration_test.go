@@ -48,12 +48,12 @@ var _ = Describe("roundtripper seed migration", func() {
 		ingressDomain                      = "foo.example.com"
 		secretRefName                      = "seed-secret"
 		secretRefNamespace                 = "garden"
-		nodesCIDR                          = gardencorev1alpha1.CIDR("1.2.3.4/5")
-		podsCIDR                           = gardencorev1alpha1.CIDR("6.7.8.9/10")
-		servicesCIDR                       = gardencorev1alpha1.CIDR("11.12.13.14/15")
-		blockCIDR                          = gardencorev1alpha1.CIDR("16.17.18.19/20")
-		shootDefaultPodCIDR                = gardencorev1alpha1.CIDR("100.96.0.0/11")
-		shootDefaultServiceCIDR            = gardencorev1alpha1.CIDR("100.64.0.0/13")
+		nodesCIDR                          = "1.2.3.4/5"
+		podsCIDR                           = "6.7.8.9/10"
+		servicesCIDR                       = "11.12.13.14/15"
+		blockCIDR                          = "16.17.18.19/20"
+		shootDefaultPodCIDR                = "100.96.0.0/11"
+		shootDefaultServiceCIDR            = "100.64.0.0/13"
 		minimumVolumeSize                  = "20Gi"
 		minimumVolumeSizeQuantity, _       = resource.ParseQuantity(minimumVolumeSize)
 		volumeProviderPurpose1             = "etcd-main"
@@ -96,7 +96,7 @@ var _ = Describe("roundtripper seed migration", func() {
 							Services: &shootDefaultServiceCIDR,
 						},
 					},
-					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
+					BlockCIDRs: []string{blockCIDR},
 					Taints: []gardencorev1alpha1.SeedTaint{
 						{
 							Key: gardencorev1alpha1.SeedTaintProtected,
@@ -153,7 +153,7 @@ var _ = Describe("roundtripper seed migration", func() {
 							Services: &shootDefaultServiceCIDR,
 						},
 					},
-					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
+					BlockCIDRs: []string{blockCIDR},
 					Protected:  &trueVar,
 					Visible:    &falseVar,
 				},
@@ -214,7 +214,7 @@ var _ = Describe("roundtripper seed migration", func() {
 							Services: &shootDefaultServiceCIDR,
 						},
 					},
-					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
+					BlockCIDRs: []string{blockCIDR},
 					Protected:  &trueVar,
 					Visible:    &falseVar,
 				},
@@ -249,7 +249,7 @@ var _ = Describe("roundtripper seed migration", func() {
 							Services: &shootDefaultServiceCIDR,
 						},
 					},
-					BlockCIDRs: []gardencorev1alpha1.CIDR{blockCIDR},
+					BlockCIDRs: []string{blockCIDR},
 					Taints: []gardencorev1alpha1.SeedTaint{
 						{
 							Key: gardencorev1alpha1.SeedTaintProtected,

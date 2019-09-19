@@ -80,15 +80,15 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, shoot.Name)
-		cells = append(cells, shoot.Spec.Cloud.Profile)
+		cells = append(cells, shoot.Spec.CloudProfileName)
 		cells = append(cells, shoot.Spec.Kubernetes.Version)
-		if seed := shoot.Spec.Cloud.Seed; seed != nil {
+		if seed := shoot.Spec.SeedName; seed != nil {
 			cells = append(cells, *seed)
 		} else {
 			cells = append(cells, "<none>")
 		}
-		if domain := shoot.Spec.DNS.Domain; domain != nil {
-			cells = append(cells, domain)
+		if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil {
+			cells = append(cells, *shoot.Spec.DNS.Domain)
 		} else {
 			cells = append(cells, "<none>")
 		}

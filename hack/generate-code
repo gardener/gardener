@@ -57,7 +57,7 @@ trap "cleanup" EXIT SIGINT
 # core.gardener.cloud API clients
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
-  deepcopy,defaulter \
+  deepcopy,defaulter,client,lister,informer,openapi \
   github.com/gardener/gardener/pkg/client/core \
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \

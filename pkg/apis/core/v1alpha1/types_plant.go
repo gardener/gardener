@@ -88,21 +88,21 @@ type Endpoint struct {
 // ClusterInfo contains information about the Plant cluster
 type ClusterInfo struct {
 	// Cloud describes the cloud information
-	Cloud Cloud `json:"cloud"`
+	Cloud CloudInfo `json:"cloud"`
 	// Kubernetes describes kubernetes meta information (e.g., version)
-	Kubernetes Kubernetes `json:"kubernetes"`
+	Kubernetes KubernetesInfo `json:"kubernetes"`
 }
 
-// Cloud contains information about the cloud
-type Cloud struct {
+// CloudInfo contains information about the cloud
+type CloudInfo struct {
 	// Type is the cloud type
 	Type string `json:"type"`
 	// Region is the cloud region
 	Region string `json:"region"`
 }
 
-// Kubernetes contains the version and configuration variables for the Plant cluster.
-type Kubernetes struct {
+// KubernetesInfo contains the version and configuration variables for the Plant cluster.
+type KubernetesInfo struct {
 	// Version is the semantic Kubernetes version to use for the Plant cluster.
 	Version string `json:"version"`
 }

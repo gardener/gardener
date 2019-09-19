@@ -58,9 +58,9 @@ var _ = Describe("Scheduler_Control", func() {
 				Visible:   &trueVar,
 				Protected: &falseVar,
 				Networks: gardenv1beta1.SeedNetworks{
-					Nodes:    gardencorev1alpha1.CIDR("10.10.0.0/16"),
-					Pods:     gardencorev1alpha1.CIDR("10.20.0.0/16"),
-					Services: gardencorev1alpha1.CIDR("10.30.0.0/16"),
+					Nodes:    "10.10.0.0/16",
+					Pods:     "10.20.0.0/16",
+					Services: "10.30.0.0/16",
 				},
 			},
 			Status: gardenv1beta1.SeedStatus{
@@ -83,10 +83,10 @@ var _ = Describe("Scheduler_Control", func() {
 					Region:  region,
 					AWS: &gardenv1beta1.AWSCloud{
 						Networks: gardenv1beta1.AWSNetworks{
-							K8SNetworks: gardencorev1alpha1.K8SNetworks{
-								Nodes:    makeCIDRPtr("10.40.0.0/16"),
-								Pods:     makeCIDRPtr("10.50.0.0/16"),
-								Services: makeCIDRPtr("10.60.0.0/16"),
+							K8SNetworks: gardenv1beta1.K8SNetworks{
+								Nodes:    makeStrPtr("10.40.0.0/16"),
+								Pods:     makeStrPtr("10.50.0.0/16"),
+								Services: makeStrPtr("10.60.0.0/16"),
 							},
 						},
 					},
@@ -295,7 +295,7 @@ var _ = Describe("Scheduler_Control", func() {
 		// FAIL
 
 		It("should fail because it cannot find a seed cluster due to network disjointedness", func() {
-			shoot.Spec.Cloud.AWS.Networks.K8SNetworks = gardencorev1alpha1.K8SNetworks{
+			shoot.Spec.Cloud.AWS.Networks.K8SNetworks = gardenv1beta1.K8SNetworks{
 				Pods:     &seed.Spec.Networks.Pods,
 				Services: &seed.Spec.Networks.Services,
 				Nodes:    &seed.Spec.Networks.Nodes,
@@ -384,7 +384,7 @@ var _ = Describe("Scheduler_Control", func() {
 	})
 })
 
-func makeCIDRPtr(cidr string) *gardencorev1alpha1.CIDR {
-	c := gardencorev1alpha1.CIDR(cidr)
+func makeStrPtr(v string) *string {
+	c := string(v)
 	return &c
 }

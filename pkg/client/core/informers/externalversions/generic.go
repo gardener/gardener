@@ -41,14 +41,24 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().BackupBuckets().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("backupentries"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().BackupEntries().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("cloudprofiles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().CloudProfiles().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("controllerinstallations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().ControllerInstallations().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("controllerregistrations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().ControllerRegistrations().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("plants"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Plants().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("projects"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Projects().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("quotas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Quotas().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("secretbindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().SecretBindings().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("seeds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Seeds().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("shoots"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Shoots().Informer()}, nil
 
 	}
 

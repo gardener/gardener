@@ -123,11 +123,7 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 	}
 
 	// Delete all old operating system configs (i.e. those which were previously computed but now are unused).
-	if err := b.CleanupOperatingSystemConfigs(ctx, usedOscNames); err != nil {
-		return err
-	}
-
-	return nil
+	return b.CleanupOperatingSystemConfigs(ctx, usedOscNames)
 }
 
 func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
@@ -177,6 +173,14 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenv1
 		"reloadConfigFilePath": common.CloudConfigFilePath,
 		"secretName":           secretName,
 		"customization":        customization,
+	}
+
+	if data := worker.CABundle; data != nil {
+		if existingCABundle, ok := originalConfig["caBundle"]; ok {
+			originalConfig["caBundle"] = fmt.Sprintf("%s\n%s", existingCABundle, *data)
+		} else {
+			originalConfig["caBundle"] = *data
+		}
 	}
 
 	var (

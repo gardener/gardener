@@ -72,7 +72,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 }
 
 // RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *string, blockCIDRs []gardencorev1alpha1.CIDR, shootDefaults *gardenv1beta1.ShootNetworks, backup *gardenv1beta1.BackupProfile) error {
+func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *string, blockCIDRs []string, shootDefaults *gardenv1beta1.ShootNetworks, backup *gardenv1beta1.BackupProfile) error {
 	if b.Shoot.Info.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}

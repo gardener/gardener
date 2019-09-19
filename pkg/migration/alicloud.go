@@ -44,7 +44,7 @@ func GardenV1beta1ShootToAlicloudV1alpha1InfrastructureConfig(shoot *gardenv1bet
 
 	var vpcCIDR *string
 	if c := shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR; c != nil {
-		cidr := string(*c)
+		cidr := *c
 		vpcCIDR = &cidr
 	}
 

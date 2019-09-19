@@ -17,7 +17,6 @@ package cidr_test
 import (
 	"net"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -30,10 +29,8 @@ import (
 var _ = Describe("cidr", func() {
 
 	var (
-		invalidCIDR       = "invalid_cidr"
-		validCIDR         = "10.0.0.0/8"
-		validGardenCIDR   = garden.CIDR(validCIDR)
-		invalidGardenCIDR = garden.CIDR(invalidCIDR)
+		invalidGardenCIDR = "invalid_cidr"
+		validGardenCIDR   = "10.0.0.0/8"
 		path              = field.NewPath("foo")
 	)
 
@@ -58,7 +55,7 @@ var _ = Describe("cidr", func() {
 		It("should return a correct IPNet", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
 
-			_, expected, _ := net.ParseCIDR(validCIDR)
+			_, expected, _ := net.ParseCIDR(validGardenCIDR)
 
 			actual := cdr.GetIPNet()
 
@@ -107,7 +104,7 @@ var _ = Describe("cidr", func() {
 	Context("ValidateNotSubset", func() {
 		It("should not be a subset", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(garden.CIDR("2.2.2.2/32"), path)
+			other := NewCIDR(string("2.2.2.2/32"), path)
 
 			Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
 		})
@@ -120,14 +117,14 @@ var _ = Describe("cidr", func() {
 
 		It("should ignore when parse error", func() {
 			cdr := NewCIDR(invalidGardenCIDR, path)
-			other := NewCIDR(garden.CIDR("2.2.2.2/32"), path)
+			other := NewCIDR(string("2.2.2.2/32"), path)
 
 			Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
 		})
 
 		It("should return a nil FieldPath", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
-			badCIDR := garden.CIDR("10.0.0.1/32")
+			badCIDR := string("10.0.0.1/32")
 			badPath := field.NewPath("bad")
 			other := NewCIDR(badCIDR, badPath)
 
@@ -162,7 +159,7 @@ var _ = Describe("cidr", func() {
 	Context("ValidateSubset", func() {
 		It("should be a subset", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(garden.CIDR("10.0.0.1/32"), field.NewPath("other"))
+			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
 
 			Expect(cdr.ValidateSubset(other)).To(BeEmpty())
 		})
@@ -175,14 +172,14 @@ var _ = Describe("cidr", func() {
 
 		It("should ignore parse errors", func() {
 			cdr := NewCIDR(invalidGardenCIDR, path)
-			other := NewCIDR(garden.CIDR("10.0.0.1/32"), field.NewPath("other"))
+			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
 
 			Expect(cdr.ValidateSubset(other)).To(BeEmpty())
 		})
 
 		It("should not be a subset", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(garden.CIDR("10.0.0.1/32"), field.NewPath("bad"))
+			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("bad"))
 
 			Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),

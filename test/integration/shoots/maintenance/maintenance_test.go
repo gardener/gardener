@@ -68,8 +68,8 @@ func validateFlags() {
 			Fail("shoot yaml path is set but invalid")
 		}
 	} else {
-		// path := fmt.Sprintf("example/90-shoot-%s.yaml", *testMachineryCloudProvider)
-		path := fmt.Sprintf("/Users/d060239/go/src/github.com/gardener/gardener/example/90-shoot-%s.yaml", *testMachineryCloudProvider)
+		// path := fmt.Sprintf("example/90-deprecated-shoot-%s.yaml", *testMachineryCloudProvider)
+		path := fmt.Sprintf("/Users/d060239/go/src/github.com/gardener/gardener/example/90-deprecated-shoot-%s.yaml", *testMachineryCloudProvider)
 		shootTestYamlPath = &path
 
 		if !StringSet(*shootMachineImageName) {

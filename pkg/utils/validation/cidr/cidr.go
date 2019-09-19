@@ -18,14 +18,13 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // CIDR contains CIDR and Path information
 type CIDR interface {
 	// GetCIDR returns the provided CIDR
-	GetCIDR() garden.CIDR
+	GetCIDR() string
 	// GetFieldPath returns the fieldpath
 	GetFieldPath() *field.Path
 	// GetIPNet optionally returns the IPNet of the CIDR
@@ -41,14 +40,14 @@ type CIDR interface {
 }
 
 type cidrPath struct {
-	cidr       garden.CIDR
+	cidr       string
 	fieldPath  *field.Path
 	net        *net.IPNet
 	ParseError error
 }
 
 // NewCIDR creates a new instance of cidrPath
-func NewCIDR(c garden.CIDR, f *field.Path) CIDR {
+func NewCIDR(c string, f *field.Path) CIDR {
 	_, ipNet, err := net.ParseCIDR(string(c))
 	return &cidrPath{c, f, ipNet, err}
 }
@@ -107,6 +106,6 @@ func (c *cidrPath) GetFieldPath() *field.Path {
 	return c.fieldPath
 }
 
-func (c *cidrPath) GetCIDR() garden.CIDR {
+func (c *cidrPath) GetCIDR() string {
 	return c.cidr
 }

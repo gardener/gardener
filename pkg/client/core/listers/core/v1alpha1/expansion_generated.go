@@ -14,6 +14,10 @@ type BackupEntryListerExpansion interface{}
 // BackupEntryNamespaceLister.
 type BackupEntryNamespaceListerExpansion interface{}
 
+// CloudProfileListerExpansion allows custom methods to be added to
+// CloudProfileLister.
+type CloudProfileListerExpansion interface{}
+
 // ControllerInstallationListerExpansion allows custom methods to be added to
 // ControllerInstallationLister.
 type ControllerInstallationListerExpansion interface{}
@@ -30,6 +34,34 @@ type PlantListerExpansion interface{}
 // PlantNamespaceLister.
 type PlantNamespaceListerExpansion interface{}
 
+// ProjectListerExpansion allows custom methods to be added to
+// ProjectLister.
+type ProjectListerExpansion interface{}
+
+// QuotaListerExpansion allows custom methods to be added to
+// QuotaLister.
+type QuotaListerExpansion interface{}
+
+// QuotaNamespaceListerExpansion allows custom methods to be added to
+// QuotaNamespaceLister.
+type QuotaNamespaceListerExpansion interface{}
+
+// SecretBindingListerExpansion allows custom methods to be added to
+// SecretBindingLister.
+type SecretBindingListerExpansion interface{}
+
+// SecretBindingNamespaceListerExpansion allows custom methods to be added to
+// SecretBindingNamespaceLister.
+type SecretBindingNamespaceListerExpansion interface{}
+
 // SeedListerExpansion allows custom methods to be added to
 // SeedLister.
 type SeedListerExpansion interface{}
+
+// ShootListerExpansion allows custom methods to be added to
+// ShootLister.
+type ShootListerExpansion interface{}
+
+// ShootNamespaceListerExpansion allows custom methods to be added to
+// ShootNamespaceLister.
+type ShootNamespaceListerExpansion interface{}

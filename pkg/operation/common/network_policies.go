@@ -16,8 +16,6 @@ package common
 
 import (
 	"net"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 // Private8BitBlock returns a private network (RFC1918) 10.0.0.0/8 IPv4 block
@@ -64,7 +62,7 @@ func AllPrivateNetworkBlocks() []net.IPNet {
 //		{"network": "192.168.0.0/16", "except": ["192.168.1.0/24"]},
 //		{"network": "100.64.0.0/10", "except": ["100.64.1.0/24"]},
 // ]
-func ToExceptNetworks(networks []net.IPNet, except ...gardencorev1alpha1.CIDR) ([]interface{}, error) {
+func ToExceptNetworks(networks []net.IPNet, except ...string) ([]interface{}, error) {
 	result := []interface{}{}
 
 	for _, n := range networks {
@@ -92,7 +90,7 @@ func ToExceptNetworks(networks []net.IPNet, except ...gardencorev1alpha1.CIDR) (
 //		{"network": "10.0.0.0/8", "except": ["10.10.0.0/24"]},
 //		{"network": "172.16.0.0/12", "except": ["172.16.1.0/24"]},
 // ]
-func ExceptNetworks(networks []gardencorev1alpha1.CIDR, except ...gardencorev1alpha1.CIDR) ([]interface{}, error) {
+func ExceptNetworks(networks []string, except ...string) ([]interface{}, error) {
 	ipNets := []net.IPNet{}
 	for _, n := range networks {
 		_, net, err := net.ParseCIDR(string(n))
@@ -104,8 +102,8 @@ func ExceptNetworks(networks []gardencorev1alpha1.CIDR, except ...gardencorev1al
 	return ToExceptNetworks(ipNets, except...)
 }
 
-func excludeBlock(parentBlock *net.IPNet, cidrs ...gardencorev1alpha1.CIDR) ([]gardencorev1alpha1.CIDR, error) {
-	matchedCIDRs := []gardencorev1alpha1.CIDR{}
+func excludeBlock(parentBlock *net.IPNet, cidrs ...string) ([]string, error) {
+	matchedCIDRs := []string{}
 
 	for _, cidr := range cidrs {
 		ip, _, err := net.ParseCIDR(string(cidr))

@@ -100,8 +100,13 @@ func ValidateResourceQuantityOrPercent(valuePtr *string, fldPath *field.Path, ke
 	return allErrs
 }
 
-func ValidatePositiveIntOrPercent(intOrPercent intstr.IntOrString, fldPath *field.Path) field.ErrorList {
+func ValidatePositiveIntOrPercent(intOrPercent *intstr.IntOrString, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if intOrPercent == nil {
+		return allErrs
+	}
+
 	if intOrPercent.Type == intstr.String {
 		if validation.IsValidPercent(intOrPercent.StrVal) != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, intOrPercent, "must be an integer or percentage (e.g '5%')"))
@@ -109,16 +114,23 @@ func ValidatePositiveIntOrPercent(intOrPercent intstr.IntOrString, fldPath *fiel
 	} else if intOrPercent.Type == intstr.Int {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(intOrPercent.IntValue()), fldPath)...)
 	}
+
 	return allErrs
 }
 
-func IsNotMoreThan100Percent(intOrStringValue intstr.IntOrString, fldPath *field.Path) field.ErrorList {
+func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	value, isPercent := getPercentValue(intOrStringValue)
+
+	if intOrStringValue == nil {
+		return allErrs
+	}
+
+	value, isPercent := getPercentValue(*intOrStringValue)
 	if !isPercent || value <= 100 {
 		return nil
 	}
 	allErrs = append(allErrs, field.Invalid(fldPath, intOrStringValue, "must not be greater than 100%"))
+
 	return allErrs
 }
 
@@ -910,7 +922,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
+func validateCIDR(cidr string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
@@ -1139,6 +1151,20 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
+	allErrs = append(allErrs, validateProvider(spec.Provider, fldPath.Child("provider"))...)
+
+	if len(spec.CloudProfileName) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("cloudProfileName"), "must specify a cloud profile"))
+	}
+	if len(spec.Region) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
+	}
+	if len(spec.SecretBindingName) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must specify a name"))
+	}
+	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
+	}
 
 	return allErrs
 }
@@ -1317,18 +1343,16 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 
 		for i, worker := range aws.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
-			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 20, idxPath.Child("volume"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
-			workers = append(workers, worker.Worker)
+			workers = append(workers, worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
@@ -1385,7 +1409,7 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		if azure.Networks.VNet.CIDR != nil {
 			allErrs = append(allErrs, validateCIDRIsCanonical(azurePath.Child("networks", "vnet", "cidr"), *azure.Networks.VNet.CIDR)...)
 		}
-		allErrs = append(allErrs, validateCIDRsAreCanonical(azurePath, nil, &nodes, &pods, &services, nil, nil, []garden.CIDR{azure.Networks.Workers})...)
+		allErrs = append(allErrs, validateCIDRsAreCanonical(azurePath, nil, &nodes, &pods, &services, nil, nil, []string{azure.Networks.Workers})...)
 
 		workersPath := azurePath.Child("workers")
 		if len(azure.Workers) == 0 {
@@ -1396,18 +1420,16 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		var workers []garden.Worker
 		for i, worker := range azure.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
-			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 35, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 35, idxPath.Child("volume"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
-			workers = append(workers, worker.Worker)
+			workers = append(workers, worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
@@ -1453,9 +1475,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		}
 
 		// make sure all CIDRs are canonical
-		internalNetworks := []garden.CIDR{}
+		internalNetworks := []string{}
 		if gcp.Networks.Internal != nil {
-			internalNetworks = []garden.CIDR{*gcp.Networks.Internal}
+			internalNetworks = []string{*gcp.Networks.Internal}
 		}
 
 		allErrs = append(allErrs, validateCIDRsAreCanonical(gcpPath, nil, &nodes, &pods, &services, internalNetworks, nil, gcp.Networks.Workers)...)
@@ -1469,18 +1491,16 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		var workers []garden.Worker
 		for i, worker := range gcp.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
-			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 20, idxPath.Child("volume"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
-			workers = append(workers, worker.Worker)
+			workers = append(workers, worker)
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
@@ -1538,14 +1558,14 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		var workers []garden.Worker
 		for i, worker := range openStack.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
-			workers = append(workers, worker.Worker)
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			workers = append(workers, worker)
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
 		}
 		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
@@ -1599,15 +1619,13 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		}
 		for i, worker := range alicloud.Workers {
 			idxPath := alicloudPath.Child("workers").Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
-			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 30, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 30, idxPath.Child("volume"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
 			workerNames[worker.Name] = true
 		}
@@ -1635,15 +1653,13 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		}
 		for i, worker := range packet.Workers {
 			idxPath := packetPath.Child("workers").Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
-			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
-			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 20, idxPath.Child("volume"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
-			if worker.Kubelet != nil && worker.Kubelet.MaxPods != nil && *worker.Kubelet.MaxPods > maxPod {
-				maxPod = *worker.Kubelet.MaxPods
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
 			}
 			workerNames[worker.Name] = true
 		}
@@ -1709,11 +1725,17 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.SecretBindingRef, oldSpec.Cloud.SecretBindingRef, fldPath.Child("cloud", "secretBindingRef"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Profile, oldSpec.Cloud.Profile, fldPath.Child("cloud", "profile"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfileName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Region, oldSpec.Cloud.Region, fldPath.Child("cloud", "region"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 	// allow initial seed assignment
 	if oldSpec.Cloud.Seed != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Seed, oldSpec.Cloud.Seed, fldPath.Child("cloud", "seed"))...)
+	}
+	if oldSpec.SeedName != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedName, oldSpec.SeedName, fldPath.Child("seedName"))...)
 	}
 
 	awsPath := fldPath.Child("cloud", "aws")
@@ -1787,6 +1809,17 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider.Type, oldSpec.Provider.Type, fldPath.Child("provider", "type"))...)
+
+	if oldSpec.Networking.Pods != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Pods, oldSpec.Networking.Pods, fldPath.Child("networking", "pods"))...)
+	}
+	if oldSpec.Networking.Services != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Services, oldSpec.Networking.Services, fldPath.Child("networking", "services"))...)
+	}
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
+
 	return allErrs
 }
 
@@ -1835,14 +1868,33 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 	return allErrs
 }
 
-func validateDNSUpdate(new, old garden.DNS, fldPath *field.Path) field.ErrorList {
+func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if new.Provider != old.Provider {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Provider, old.Provider, fldPath.Child("provider"))...)
-	}
-	if new.Domain != old.Domain {
+	if new != nil && old != nil && new.Domain != old.Domain {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+	}
+
+	providersNew := 0
+	if new != nil {
+		providersNew = len(new.Providers)
+	}
+
+	providersOld := 0
+	if old != nil {
+		providersOld = len(old.Providers)
+	}
+	if providersNew != providersOld {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
+		return allErrs
+	}
+
+	if new != nil {
+		for i, provider := range new.Providers {
+			if provider.Type != old.Providers[i].Type {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
+			}
+		}
 	}
 
 	return allErrs
@@ -1883,25 +1935,32 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	return allErrs
 }
 
-func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
+func validateDNS(dns *garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if dns == nil {
+		return allErrs
+	}
 
 	if dns.Domain != nil {
 		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
 	}
 
-	if provider := dns.Provider; provider != nil {
-		if *provider == garden.DNSUnmanaged && dns.SecretName != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("secretName"), dns.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is %q", garden.DNSUnmanaged)))
+	for i, provider := range dns.Providers {
+		idxPath := fldPath.Child("providers").Index(i)
+		if providerType := provider.Type; providerType != nil {
+			if *providerType == garden.DNSUnmanaged && provider.SecretName != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("secretName"), provider.SecretName, fmt.Sprintf("secretName must not be set when type is %q", garden.DNSUnmanaged)))
+			}
+
+			if *providerType != garden.DNSUnmanaged && dns.Domain == nil {
+				allErrs = append(allErrs, field.Required(idxPath.Child("domain"), fmt.Sprintf("domain must be set when type is not set to %q", garden.DNSUnmanaged)))
+			}
 		}
 
-		if *provider != garden.DNSUnmanaged && dns.Domain == nil {
-			allErrs = append(allErrs, field.Required(fldPath.Child("domain"), fmt.Sprintf("`.spec.dns.domain` must be set when `.spec.dns.provider` is not set to %q", garden.DNSUnmanaged)))
+		if provider.SecretName != nil && provider.Type == nil {
+			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "type must be set when secretName is set"))
 		}
-	}
-
-	if dns.SecretName != nil && dns.Provider == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("provider"), "`.spec.dns.provider` must be set when `.spec.dns.secretName` is set"))
 	}
 
 	return allErrs
@@ -1941,7 +2000,7 @@ func validateCIDROverlap(leftPaths, rightPaths []cidrvalidation.CIDR, overlap bo
 	return allErrs
 }
 
-func validateCIDRsAreCanonical(fldPath *field.Path, vpc *garden.CIDR, nodes *cidrvalidation.CIDR, pods *cidrvalidation.CIDR, services *cidrvalidation.CIDR, internal []garden.CIDR, public []garden.CIDR, workers []garden.CIDR) field.ErrorList {
+func validateCIDRsAreCanonical(fldPath *field.Path, vpc *string, nodes *cidrvalidation.CIDR, pods *cidrvalidation.CIDR, services *cidrvalidation.CIDR, internal []string, public []string, workers []string) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if vpc != nil {
 		allErrs = append(allErrs, validateCIDRIsCanonical(fldPath.Child("networks", "vpc", "cidr"), *vpc)...)
@@ -1971,7 +2030,7 @@ func validateCIDRsAreCanonical(fldPath *field.Path, vpc *garden.CIDR, nodes *cid
 	return allErrs
 }
 
-func validateCIDRIsCanonical(fldPath *field.Path, cidrToValidate garden.CIDR) field.ErrorList {
+func validateCIDRIsCanonical(fldPath *field.Path, cidrToValidate string) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(cidrToValidate) == 0 {
 		return allErrs
@@ -2085,12 +2144,8 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 	return allErrs
 }
 
-func validateNetworking(networking *garden.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworking(networking garden.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	if networking == nil {
-		return append(allErrs, field.Required(fldPath, "networking section must be provided"))
-	}
 
 	if len(networking.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
@@ -2222,6 +2277,21 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 	return allErrs
 }
 
+func validateProvider(provider garden.Provider, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(provider.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
+	}
+
+	for i, worker := range provider.Workers {
+		idxPath := fldPath.Index(i)
+		allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+	}
+
+	return allErrs
+}
+
 // ValidateWorker validates the worker object.
 func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -2231,27 +2301,27 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	if len(worker.Name) > maxWorkerNameLength {
 		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), worker.Name, maxWorkerNameLength))
 	}
-	if len(worker.MachineType) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "must specify a machine type"))
+	if len(worker.Machine.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("machine", "type"), "must specify a machine type"))
 	}
-	if worker.AutoScalerMin < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoScalerMin"), worker.AutoScalerMin, "minimum value must not be negative"))
+	if worker.Minimum < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("minimum"), worker.Minimum, "minimum value must not be negative"))
 	}
-	if worker.AutoScalerMax < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoScalerMax"), worker.AutoScalerMax, "maximum value must not be negative"))
+	if worker.Maximum < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), worker.Maximum, "maximum value must not be negative"))
 	}
-	if worker.AutoScalerMax < worker.AutoScalerMin {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMax"), "maximum value must not be less or equal than minimum value"))
+	if worker.Maximum < worker.Minimum {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("maximum"), "maximum value must not be less or equal than minimum value"))
 	}
-	if worker.AutoScalerMax != 0 && worker.AutoScalerMin == 0 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin"), "minimum value must be >= 1 if maximum value > 0 (cluster-autoscaler cannot handle min=0)"))
+	if worker.Maximum != 0 && worker.Minimum == 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("minimum"), "minimum value must be >= 1 if maximum value > 0 (cluster-autoscaler cannot handle min=0)"))
 	}
 
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxSurge, fldPath.Child("maxSurge"))...)
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
-	if getIntOrPercentValue(worker.MaxUnavailable) == 0 && getIntOrPercentValue(worker.MaxSurge) == 0 {
+	if (worker.MaxUnavailable == nil && worker.MaxSurge == nil) || (getIntOrPercentValue(*worker.MaxUnavailable) == 0 && getIntOrPercentValue(*worker.MaxSurge) == 0) {
 		// Both MaxSurge and MaxUnavailable cannot be zero.
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
 	}
@@ -2261,8 +2331,21 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	if len(worker.Taints) > 0 {
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
-	if worker.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubelet, fldPath.Child("kubelet"))...)
+	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
+		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, fldPath.Child("kubernetes", "kubelet"))...)
+	}
+
+	if worker.CABundle != nil {
+		if _, err := utils.DecodeCertificate([]byte(*worker.CABundle)); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(worker.CABundle), "caBundle is not a valid PEM-encoded certificate"))
+		}
+	}
+
+	if worker.Volume != nil {
+		volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
+		if !volumeSizeRegex.MatchString(worker.Volume.Size) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.Size, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
+		}
 	}
 
 	return allErrs
@@ -2399,7 +2482,7 @@ func ValidateWorkers(workers []garden.Worker, fldPath *field.Path) field.ErrorLi
 
 	atLeastOneActivePool := false
 	for _, worker := range workers {
-		if worker.AutoScalerMin != 0 && worker.AutoScalerMax != 0 {
+		if worker.Minimum != 0 && worker.Maximum != 0 {
 			atLeastOneActivePool = true
 			break
 		}
@@ -2486,37 +2569,20 @@ func ValidateHibernationSchedule(seenSpecs sets.String, schedule *garden.Hiberna
 	return allErrs
 }
 
-func validateWorkerVolumeSize(volumeSize string, fldPath *field.Path) field.ErrorList {
+func validateWorkerMinimumVolumeSize(volume *garden.Volume, minmumVolumeSize int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
-	if !volumeSizeRegex.MatchString(volumeSize) {
-		allErrs = append(allErrs, field.Invalid(fldPath, volumeSize, fmt.Sprintf("domain must match the regex %s", volumeSizeRegex)))
+	if volume == nil {
+		allErrs = append(allErrs, field.Required(fldPath, "volume size must be provided to validate minimum"))
+		return allErrs
 	}
-
-	return allErrs
-}
-
-func validateWorkerMinimumVolumeSize(volumeSize string, minmumVolumeSize int, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
 
 	volumeSizeRegex, _ := regexp.Compile(`^(\d+)Gi$`)
-	match := volumeSizeRegex.FindStringSubmatch(volumeSize)
-	if len(match) == 2 {
+	if match := volumeSizeRegex.FindStringSubmatch(volume.Size); len(match) == 2 {
 		volSize, err := strconv.Atoi(match[1])
 		if err != nil || volSize < minmumVolumeSize {
-			allErrs = append(allErrs, field.Invalid(fldPath, volumeSize, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("size"), volume.Size, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
 		}
-	}
-
-	return allErrs
-}
-
-func validateWorkerVolumeType(volumeType string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(volumeType) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must specify a volume type"))
 	}
 
 	return allErrs

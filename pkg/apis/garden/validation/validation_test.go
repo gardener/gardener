@@ -34,6 +34,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -2804,8 +2805,8 @@ var _ = Describe("validation", func() {
 
 		BeforeEach(func() {
 			region := "some-region"
-			pods := garden.CIDR("10.240.0.0/16")
-			services := garden.CIDR("10.241.0.0/16")
+			pods := "10.240.0.0/16"
+			services := "10.241.0.0/16"
 			seed = &garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed-1",
@@ -2831,9 +2832,9 @@ var _ = Describe("validation", func() {
 						{Key: garden.SeedTaintProtected},
 					},
 					Networks: garden.SeedNetworks{
-						Nodes:    garden.CIDR("10.250.0.0/16"),
-						Pods:     garden.CIDR("100.96.0.0/11"),
-						Services: garden.CIDR("100.64.0.0/13"),
+						Nodes:    "10.250.0.0/16",
+						Pods:     "100.96.0.0/11",
+						Services: "100.64.0.0/13",
 						ShootDefaults: &garden.ShootNetworks{
 							Pods:     &pods,
 							Services: &services,
@@ -2878,14 +2879,14 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
-			invalidCIDR := garden.CIDR("invalid-cidr")
+			invalidCIDR := "invalid-cidr"
 			seed.Spec.Cloud = garden.SeedCloud{}
 			seed.Spec.Provider = garden.SeedProvider{}
 			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
 			seed.Spec.SecretRef = corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
 				Nodes:    invalidCIDR,
-				Pods:     garden.CIDR("300.300.300.300/300"),
+				Pods:     "300.300.300.300/300",
 				Services: invalidCIDR,
 				ShootDefaults: &garden.ShootNetworks{
 					Pods:     &invalidCIDR,
@@ -3016,16 +3017,16 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid Seed with overlapping networks", func() {
-			shootDefaultPodCIDR := garden.CIDR("10.0.1.128/28")     // 10.0.1.128 -> 10.0.1.143
-			shootDefaultServiceCIDR := garden.CIDR("10.0.1.144/30") // 10.0.1.144 -> 10.0.1.147
+			shootDefaultPodCIDR := "10.0.1.128/28"     // 10.0.1.128 -> 10.0.1.13
+			shootDefaultServiceCIDR := "10.0.1.144/30" // 10.0.1.144 -> 10.0.1.17
 			// Pods CIDR overlaps with Nodes network
 			// Services CIDR overlaps with Nodes and Pods
 			// Shoot default pod CIDR overlaps with services
 			// Shoot default pod CIDR overlaps with shoot default pod CIDR
 			seed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    garden.CIDR("10.0.0.0/8"),   // 10.0.0.0 -> 10.255.255.255
-				Pods:     garden.CIDR("10.0.1.0/24"),  // 10.0.1.0 -> 10.0.1.255
-				Services: garden.CIDR("10.0.1.64/26"), // 10.0.1.64 -> 10.0.1.127
+				Nodes:    "10.0.0.0/8",   // 10.0.0.0 -> 10.255.255.25
+				Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.25
+				Services: "10.0.1.64/26", // 10.0.1.64 -> 10.0.1.17
 				ShootDefaults: &garden.ShootNetworks{
 					Pods:     &shootDefaultPodCIDR,
 					Services: &shootDefaultServiceCIDR,
@@ -3068,9 +3069,9 @@ var _ = Describe("validation", func() {
 		It("should fail updating immutable fields", func() {
 			newSeed := prepareSeedForUpdate(seed)
 			newSeed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    garden.CIDR("10.1.0.0/16"),
-				Pods:     garden.CIDR("10.2.0.0/16"),
-				Services: garden.CIDR("10.3.1.64/26"),
+				Nodes:    "10.1.0.0/16",
+				Pods:     "10.2.0.0/16",
+				Services: "10.3.1.64/26",
 			}
 			otherRegion := "other-region"
 			newSeed.Spec.Backup.Provider = "other-provider"
@@ -3270,10 +3271,12 @@ var _ = Describe("validation", func() {
 		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
 			func(maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
 				worker := garden.Worker{
-					Name:           "worker-name",
-					MachineType:    "large",
-					MaxUnavailable: maxUnavailable,
-					MaxSurge:       maxSurge,
+					Name: "worker-name",
+					Machine: garden.Machine{
+						Type: "large",
+					},
+					MaxSurge:       &maxSurge,
+					MaxUnavailable: &maxUnavailable,
 				}
 				errList := ValidateWorker(worker, nil)
 
@@ -3298,11 +3301,15 @@ var _ = Describe("validation", func() {
 
 		DescribeTable("reject when labels are invalid",
 			func(labels map[string]string, expectType field.ErrorType) {
+				maxSurge := intstr.FromInt(1)
+				maxUnavailable := intstr.FromInt(0)
 				worker := garden.Worker{
-					Name:           "worker-name",
-					MachineType:    "large",
-					MaxSurge:       intstr.FromInt(1),
-					MaxUnavailable: intstr.FromInt(0),
+					Name: "worker-name",
+					Machine: garden.Machine{
+						Type: "large",
+					},
+					MaxSurge:       &maxSurge,
+					MaxUnavailable: &maxUnavailable,
 					Labels:         labels,
 				}
 				errList := ValidateWorker(worker, nil)
@@ -3325,11 +3332,15 @@ var _ = Describe("validation", func() {
 
 		DescribeTable("reject when annotations are invalid",
 			func(annotations map[string]string, expectType field.ErrorType) {
+				maxSurge := intstr.FromInt(1)
+				maxUnavailable := intstr.FromInt(0)
 				worker := garden.Worker{
-					Name:           "worker-name",
-					MachineType:    "large",
-					MaxSurge:       intstr.FromInt(1),
-					MaxUnavailable: intstr.FromInt(0),
+					Name: "worker-name",
+					Machine: garden.Machine{
+						Type: "large",
+					},
+					MaxSurge:       &maxSurge,
+					MaxUnavailable: &maxUnavailable,
 					Annotations:    annotations,
 				}
 				errList := ValidateWorker(worker, nil)
@@ -3351,11 +3362,15 @@ var _ = Describe("validation", func() {
 
 		DescribeTable("reject when taints are invalid",
 			func(taints []corev1.Taint, expectType field.ErrorType) {
+				maxSurge := intstr.FromInt(1)
+				maxUnavailable := intstr.FromInt(0)
 				worker := garden.Worker{
-					Name:           "worker-name",
-					MachineType:    "large",
-					MaxSurge:       intstr.FromInt(1),
-					MaxUnavailable: intstr.FromInt(0),
+					Name: "worker-name",
+					Machine: garden.Machine{
+						Type: "large",
+					},
+					MaxSurge:       &maxSurge,
+					MaxUnavailable: &maxUnavailable,
 					Taints:         taints,
 				}
 				errList := ValidateWorker(worker, nil)
@@ -3390,12 +3405,12 @@ var _ = Describe("validation", func() {
 			func(min1, max1, min2, max2 int, matcher gomegatypes.GomegaMatcher) {
 				workers := []garden.Worker{
 					{
-						AutoScalerMin: min1,
-						AutoScalerMax: max1,
+						Minimum: min1,
+						Maximum: max1,
 					},
 					{
-						AutoScalerMin: min2,
-						AutoScalerMax: max2,
+						Minimum: min2,
+						Maximum: max2,
 					},
 				}
 
@@ -3710,14 +3725,14 @@ var _ = Describe("validation", func() {
 		var (
 			shoot *garden.Shoot
 
-			domain      = "my-cluster.example.com"
-			dnsProvider = "some-provider"
+			domain          = "my-cluster.example.com"
+			dnsProviderType = "some-provider"
 
-			nodeCIDR    = garden.CIDR("10.250.0.0/16")
-			podCIDR     = garden.CIDR("100.96.0.0/11")
-			serviceCIDR = garden.CIDR("100.64.0.0/13")
-			invalidCIDR = garden.CIDR("invalid-cidr")
-			vpcCIDR     = garden.CIDR("10.0.0.0/8")
+			nodeCIDR    = "10.250.0.0/16"
+			podCIDR     = "100.96.0.0/11"
+			serviceCIDR = "100.64.0.0/13"
+			invalidCIDR = "invalid-cidr"
+			vpcCIDR     = "10.0.0.0/8"
 			addon       = garden.Addon{
 				Enabled: true,
 			}
@@ -3731,53 +3746,91 @@ var _ = Describe("validation", func() {
 				Pods:     &invalidCIDR,
 				Services: &invalidCIDR,
 			}
-			worker = garden.Worker{
-				Name:           "worker-name",
-				MachineType:    "large",
-				AutoScalerMin:  1,
-				AutoScalerMax:  1,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+			maxSurge       = intstr.FromInt(1)
+			maxUnavailable = intstr.FromInt(0)
+			worker         = garden.Worker{
+				Name: "worker-name",
+				Machine: garden.Machine{
+					Type: "large",
+				},
+				Minimum:        1,
+				Maximum:        1,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "40Gi",
+					Type: "default",
+				},
 			}
 			invalidWorker = garden.Worker{
-				Name:           "",
-				MachineType:    "",
-				AutoScalerMin:  -1,
-				AutoScalerMax:  -2,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+				Name: "",
+				Machine: garden.Machine{
+					Type: "",
+				},
+				Minimum:        -1,
+				Maximum:        -2,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "",
+					Type: "",
+				},
 			}
 			invalidWorkerName = garden.Worker{
-				Name:           "not_compliant",
-				MachineType:    "large",
-				AutoScalerMin:  1,
-				AutoScalerMax:  1,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+				Name: "not_compliant",
+				Machine: garden.Machine{
+					Type: "large",
+				},
+				Minimum:        1,
+				Maximum:        1,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "40Gi",
+					Type: "default",
+				},
 			}
 			invalidWorkerTooLongName = garden.Worker{
-				Name:           "worker-name-is-too-long",
-				MachineType:    "large",
-				AutoScalerMin:  1,
-				AutoScalerMax:  1,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+				Name: "worker-name-is-too-long",
+				Machine: garden.Machine{
+					Type: "large",
+				},
+				Minimum:        1,
+				Maximum:        1,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "40Gi",
+					Type: "default",
+				},
 			}
 			workerAutoScalingInvalid = garden.Worker{
-				Name:           "cpu-worker",
-				MachineType:    "large",
-				AutoScalerMin:  0,
-				AutoScalerMax:  2,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+				Name: "cpu-worker",
+				Machine: garden.Machine{
+					Type: "large",
+				},
+				Minimum:        0,
+				Maximum:        2,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "40Gi",
+					Type: "default",
+				},
 			}
 			workerAutoScalingMinMaxZero = garden.Worker{
-				Name:           "cpu-worker",
-				MachineType:    "large",
-				AutoScalerMin:  0,
-				AutoScalerMax:  0,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
+				Name: "cpu-worker",
+				Machine: garden.Machine{
+					Type: "large",
+				},
+				Minimum:        0,
+				Maximum:        0,
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume: &garden.Volume{
+					Size: "40Gi",
+					Type: "default",
+				},
 			}
 		)
 
@@ -3822,26 +3875,27 @@ var _ = Describe("validation", func() {
 						AWS: &garden.AWSCloud{
 							Networks: garden.AWSNetworks{
 								K8SNetworks: k8sNetworks,
-								Internal:    []garden.CIDR{"10.250.1.0/24"},
-								Public:      []garden.CIDR{"10.250.2.0/24"},
-								Workers:     []garden.CIDR{"10.250.3.0/24"},
+								Internal:    []string{"10.250.1.0/24"},
+								Public:      []string{"10.250.2.0/24"},
+								Workers:     []string{"10.250.3.0/24"},
 								VPC: garden.AWSVPC{
 									CIDR: &nodeCIDR,
 								},
 							},
-							Workers: []garden.AWSWorker{
-								{
-									Worker:     worker,
-									VolumeSize: "20Gi",
-									VolumeType: "default",
-								},
-							},
-							Zones: []string{"eu-west-1a"},
+							Workers: []garden.Worker{worker},
+							Zones:   []string{"eu-west-1a"},
 						},
 					},
-					DNS: garden.DNS{
-						Provider: &dnsProvider,
-						Domain:   &domain,
+					CloudProfileName:  "aws-profile",
+					Region:            "eu-west-1",
+					SecretBindingName: "my-secret",
+					DNS: &garden.DNS{
+						Providers: []garden.DNSProvider{
+							{
+								Type: &dnsProviderType,
+							},
+						},
+						Domain: &domain,
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.11.2",
@@ -3858,10 +3912,14 @@ var _ = Describe("validation", func() {
 							AdmissionPlugins: []garden.AdmissionPlugin{
 								{
 									Name: "PodNodeSelector",
-									Config: makeStringPointer(`podNodeSelectorPluginConfig:
+									Config: &garden.ProviderConfig{
+										RawExtension: runtime.RawExtension{
+											Raw: []byte(`podNodeSelectorPluginConfig:
   clusterDefaultNodeSelector: <node-selectors-labels>
   namespace1: <node-selectors-labels>
-  namespace2: <node-selectors-labels>`),
+	namespace2: <node-selectors-labels>`),
+										},
+									},
 								},
 							},
 							AuditConfig: &garden.AuditConfig{
@@ -3883,8 +3941,12 @@ var _ = Describe("validation", func() {
 							},
 						},
 					},
-					Networking: &garden.Networking{
+					Networking: garden.Networking{
 						Type: "some-network-plugin",
+					},
+					Provider: garden.Provider{
+						Type:    "aws",
+						Workers: []garden.Worker{worker},
 					},
 					Maintenance: &garden.Maintenance{
 						AutoUpdate: &garden.MaintenanceAutoUpdate{
@@ -4003,7 +4065,13 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid unsupported cloud specification (provider independent)", func() {
+		It("should forbid unsupported specification (provider independent)", func() {
+			shoot.Spec.CloudProfileName = ""
+			shoot.Spec.Region = ""
+			shoot.Spec.SecretBindingName = ""
+			shoot.Spec.SeedName = makeStringPointer("")
+			shoot.Spec.Provider.Type = ""
+
 			shoot.Spec.Cloud.Profile = ""
 			shoot.Spec.Cloud.Region = ""
 			shoot.Spec.Cloud.SecretBindingRef = corev1.LocalObjectReference{
@@ -4013,27 +4081,53 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(HaveLen(4))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.cloud.profile"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.cloud.region"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.cloud.secretBindingRef.name"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.cloud.seed"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloudProfileName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.secretBindingName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.seedName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.provider.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.profile"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.secretBindingRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.cloud.seed"),
+				})),
+			))
 		})
 
 		It("should forbid updating some cloud keys", func() {
 			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.CloudProfileName = "another-profile"
+			shoot.Spec.Region = "another-region"
+			shoot.Spec.SecretBindingName = "another-reference"
+			shoot.Spec.Provider.Type = "another-provider"
+
 			newShoot.Spec.Cloud.Profile = "another-profile"
 			newShoot.Spec.Cloud.Region = "another-region"
 			newShoot.Spec.Cloud.SecretBindingRef = corev1.LocalObjectReference{
@@ -4045,6 +4139,22 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.cloudProfileName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.secretBindingName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.provider.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.cloud.profile"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -4054,8 +4164,8 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.cloud.secretBindingRef"),
-				}))),
-			)
+				})),
+			))
 		})
 
 		It("should forbid updating the seed, if it has been set previously", func() {
@@ -4117,21 +4227,15 @@ var _ = Describe("validation", func() {
 				awsCloud = &garden.AWSCloud{
 					Networks: garden.AWSNetworks{
 						K8SNetworks: k8sNetworks,
-						Internal:    []garden.CIDR{"10.250.1.0/24"},
-						Public:      []garden.CIDR{"10.250.2.0/24"},
-						Workers:     []garden.CIDR{"10.250.3.0/24"},
+						Internal:    []string{"10.250.1.0/24"},
+						Public:      []string{"10.250.2.0/24"},
+						Workers:     []string{"10.250.3.0/24"},
 						VPC: garden.AWSVPC{
 							CIDR: &vpcCIDR,
 						},
 					},
-					Workers: []garden.AWSWorker{
-						{
-							Worker:     worker,
-							VolumeSize: "20Gi",
-							VolumeType: "default",
-						},
-					},
-					Zones: []string{"eu-west-1a"},
+					Workers: []garden.Worker{worker},
+					Zones:   []string{"eu-west-1a"},
 				}
 				shoot.Spec.Cloud.AWS = awsCloud
 			})
@@ -4157,7 +4261,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid internal CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4169,7 +4273,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid public CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Public = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4181,7 +4285,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4193,7 +4297,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid internal CIDR which is not in VPC CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4205,7 +4309,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid public CIDR which is not in VPC CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.AWS.Networks.Public = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4217,7 +4321,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in VPC and Nodes CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{garden.CIDR("1.1.1.1/32")}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4233,7 +4337,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4246,7 +4350,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4259,10 +4363,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid VPC CIDRs to overlap with other VPC CIDRs", func() {
-					overlappingCIDR := garden.CIDR("10.250.0.1/32")
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{overlappingCIDR}
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{overlappingCIDR}
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					overlappingCIDR := "10.250.0.1/32"
+					shoot.Spec.Cloud.AWS.Networks.Public = []string{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []string{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []string{overlappingCIDR}
 					shoot.Spec.Cloud.AWS.Networks.Nodes = &overlappingCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4317,14 +4421,14 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				vpcCIDR := garden.CIDR("10.0.0.3/8")
-				nodeCIDR := garden.CIDR("10.250.0.3/16")
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				vpcCIDR := "10.0.0.3/8"
+				nodeCIDR := "10.250.0.3/16"
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
 
-				shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"10.250.2.7/24"}
-				shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"10.250.1.6/24"}
-				shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.AWS.Networks.Public = []string{"10.250.2.7/24"}
+				shoot.Spec.Cloud.AWS.Networks.Internal = []string{"10.250.1.6/24"}
+				shoot.Spec.Cloud.AWS.Networks.Workers = []string{"10.250.3.8/24"}
 				shoot.Spec.Cloud.AWS.Networks.Nodes = &nodeCIDR
 				shoot.Spec.Cloud.AWS.Networks.Services = &serviceCIDR
 				shoot.Spec.Cloud.AWS.Networks.Pods = &podCIDR
@@ -4365,7 +4469,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{}
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4377,18 +4481,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{worker, worker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4400,83 +4493,54 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     invalidWorker,
-						VolumeSize: "hugo",
-						VolumeType: "",
-					},
-				}
+				w := invalidWorker.DeepCopy()
+				w.Volume.Size = "hugo"
+				w.Volume.Type = ""
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(7))
+				Expect(errorList).To(HaveLen(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     workerAutoScalingInvalid,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{workerAutoScalingInvalid, worker}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     workerAutoScalingMinMaxZero,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{worker, workerAutoScalingMinMaxZero}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4484,25 +4548,21 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "10Gi",
-						VolumeType: "gp2",
-					},
-				}
+				w := worker.DeepCopy()
+				w.Volume.Size = "19Gi"
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.AWS.Workers[0].Worker = invalidWorkerTooLongName
+				shoot.Spec.Cloud.AWS.Workers[0] = invalidWorkerTooLongName
 
 				errorList := ValidateShoot(shoot)
 
@@ -4514,13 +4574,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     invalidWorkerName,
-						VolumeSize: "20Gi",
-						VolumeType: "gp2",
-					},
-				}
+				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{invalidWorkerName}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4545,7 +4599,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.AWS.Networks.Workers[0] = garden.CIDR("10.250.0.0/24")
+				newShoot.Spec.Cloud.AWS.Networks.Workers[0] = "10.250.0.0/24"
 				newShoot.Spec.Cloud.AWS.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -4595,8 +4649,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -4605,15 +4661,12 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
-
-							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, garden.AWSWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							})
+							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -4628,25 +4681,21 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, garden.AWSWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							}, garden.AWSWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     secondTestWorker,
-							})
+							shoot.Spec.Cloud.AWS.Workers = append(shoot.Spec.Cloud.AWS.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -4687,18 +4736,12 @@ var _ = Describe("validation", func() {
 				azureCloud = &garden.AzureCloud{
 					Networks: garden.AzureNetworks{
 						K8SNetworks: k8sNetworks,
-						Workers:     garden.CIDR("10.250.3.0/24"),
+						Workers:     "10.250.3.0/24",
 						VNet: garden.AzureVNet{
 							CIDR: &vpcCIDR,
 						},
 					},
-					Workers: []garden.AzureWorker{
-						{
-							Worker:     worker,
-							VolumeSize: "35Gi",
-							VolumeType: "default",
-						},
-					},
+					Workers: []garden.Worker{worker},
 				}
 				shoot.Spec.Cloud.AWS = nil
 				shoot.Spec.Cloud.Azure = azureCloud
@@ -4763,7 +4806,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers which are not in VNet anmd Nodes CIDR", func() {
-					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					notOverlappingCIDR := "1.1.1.1/32"
 					// shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
 					shoot.Spec.Cloud.Azure.Networks.Workers = notOverlappingCIDR
 
@@ -4781,7 +4824,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VNet CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4794,7 +4837,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VNet CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4828,11 +4871,11 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				vpcCIDR := garden.CIDR("10.0.0.3/8")
-				nodeCIDR := garden.CIDR("10.250.0.3/16")
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
-				workers := garden.CIDR("10.250.3.8/24")
+				vpcCIDR := "10.0.0.3/8"
+				nodeCIDR := "10.250.0.3/16"
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
+				workers := "10.250.3.8/24"
 
 				shoot.Spec.Cloud.Azure.Networks.Workers = workers
 				shoot.Spec.Cloud.Azure.Networks.Nodes = &nodeCIDR
@@ -4867,7 +4910,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4879,18 +4922,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "35Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "35Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{worker, worker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4902,83 +4934,51 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     invalidWorker,
-						VolumeSize: "hugo",
-						VolumeType: "",
-					},
-				}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{invalidWorker}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(7))
+				Expect(errorList).To(HaveLen(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     workerAutoScalingInvalid,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{workerAutoScalingInvalid, worker}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     workerAutoScalingMinMaxZero,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{worker, workerAutoScalingMinMaxZero}
 
 				errorList := ValidateShoot(shoot)
 
@@ -4986,43 +4986,21 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "30Gi",
-						VolumeType: "gp2",
-					},
-				}
+				w := worker.DeepCopy()
+				w.Volume.Size = "30Gi"
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-			})
-
-			It("should forbid worker volume sizes smaller than 35Gi", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "34Gi",
-						VolumeType: "ok",
-					},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.Azure.Workers[0].Worker = invalidWorkerTooLongName
+				shoot.Spec.Cloud.Azure.Workers[0] = invalidWorkerTooLongName
 
 				errorList := ValidateShoot(shoot)
 
@@ -5034,13 +5012,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     invalidWorkerName,
-						VolumeSize: "35Gi",
-						VolumeType: "ok",
-					},
-				}
+				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{invalidWorkerName}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5053,7 +5025,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating resource group and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("10.250.0.0/19")
+				cidr := "10.250.0.0/19"
 				newShoot.Spec.Cloud.Azure.Networks.Nodes = &cidr
 				newShoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{
 					Name: "another-group",
@@ -5110,8 +5082,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -5120,15 +5094,13 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, garden.AzureWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							})
+							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -5143,25 +5115,21 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, garden.AzureWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							}, garden.AzureWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     secondTestWorker,
-							})
+							shoot.Spec.Cloud.Azure.Workers = append(shoot.Spec.Cloud.Azure.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -5196,7 +5164,7 @@ var _ = Describe("validation", func() {
 			var (
 				fldPath  = "gcp"
 				gcpCloud *garden.GCPCloud
-				internal = garden.CIDR("10.10.0.0/24")
+				internal = "10.10.0.0/24"
 			)
 
 			BeforeEach(func() {
@@ -5204,19 +5172,13 @@ var _ = Describe("validation", func() {
 					Networks: garden.GCPNetworks{
 						K8SNetworks: k8sNetworks,
 						Internal:    &internal,
-						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Workers:     []string{"10.250.0.0/16"},
 						VPC: &garden.GCPVPC{
 							Name: "hugo",
 						},
 					},
-					Workers: []garden.GCPWorker{
-						{
-							Worker:     worker,
-							VolumeSize: "20Gi",
-							VolumeType: "default",
-						},
-					},
-					Zones: []string{"europe-west1-b"},
+					Workers: []garden.Worker{worker},
+					Zones:   []string{"europe-west1-b"},
 				}
 				shoot.Spec.Cloud.AWS = nil
 				shoot.Spec.Cloud.GCP = gcpCloud
@@ -5229,7 +5191,7 @@ var _ = Describe("validation", func() {
 
 			Context("CIDR", func() {
 				It("should forbid more than one CIDR", func() {
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"10.250.0.1/32", "10.250.0.2/32"}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []string{"10.250.0.1/32", "10.250.0.2/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5241,7 +5203,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5253,7 +5215,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid internal CIDR", func() {
-					invalidCIDR = garden.CIDR("invalid-cidr")
+					invalidCIDR = "invalid-cidr"
 					shoot.Spec.Cloud.GCP.Networks.Internal = &invalidCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -5266,7 +5228,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5278,9 +5240,9 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Internal CIDR to overlap with Node - and Worker CIDR", func() {
-					overlappingCIDR := garden.CIDR("10.250.1.0/30")
+					overlappingCIDR := "10.250.1.0/30"
 					shoot.Spec.Cloud.GCP.Networks.Internal = &overlappingCIDR
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []string{overlappingCIDR}
 					shoot.Spec.Cloud.GCP.Networks.Nodes = &overlappingCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -5318,12 +5280,12 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				nodeCIDR := garden.CIDR("10.250.0.3/16")
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
-				internal := garden.CIDR("10.10.0.4/24")
+				nodeCIDR := "10.250.0.3/16"
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
+				internal := "10.10.0.4/24"
 				shoot.Spec.Cloud.GCP.Networks.Internal = &internal
-				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.GCP.Networks.Workers = []string{"10.250.3.8/24"}
 				shoot.Spec.Cloud.GCP.Networks.Nodes = &nodeCIDR
 				shoot.Spec.Cloud.GCP.Networks.Services = &serviceCIDR
 				shoot.Spec.Cloud.GCP.Networks.Pods = &podCIDR
@@ -5355,7 +5317,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5367,18 +5329,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{worker, worker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5390,83 +5341,51 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     invalidWorker,
-						VolumeSize: "hugo",
-						VolumeType: "",
-					},
-				}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{invalidWorker}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(7))
+				Expect(errorList).To(HaveLen(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     workerAutoScalingInvalid,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{workerAutoScalingInvalid, worker}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     workerAutoScalingMinMaxZero,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{worker, workerAutoScalingMinMaxZero}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5474,25 +5393,21 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "19Gi",
-						VolumeType: "default",
-					},
-				}
+				w := worker.DeepCopy()
+				w.Volume.Size = "19Gi"
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.GCP.Workers[0].Worker = invalidWorkerTooLongName
+				shoot.Spec.Cloud.GCP.Workers[0] = invalidWorkerTooLongName
 
 				errorList := ValidateShoot(shoot)
 
@@ -5504,13 +5419,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     invalidWorkerName,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{invalidWorkerName}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5535,7 +5444,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.GCP.Networks.Workers[0] = garden.CIDR("10.250.0.0/24")
+				newShoot.Spec.Cloud.GCP.Networks.Workers[0] = "10.250.0.0/24"
 				newShoot.Spec.Cloud.GCP.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -5585,8 +5494,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -5595,15 +5506,13 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, garden.GCPWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							})
+							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -5618,25 +5527,21 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, garden.GCPWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							}, garden.GCPWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     secondTestWorker,
-							})
+							shoot.Spec.Cloud.GCP.Workers = append(shoot.Spec.Cloud.GCP.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -5680,16 +5585,10 @@ var _ = Describe("validation", func() {
 						VPC: garden.AlicloudVPC{
 							CIDR: &vpcCIDR,
 						},
-						Workers: []garden.CIDR{"10.250.3.0/24"},
+						Workers: []string{"10.250.3.0/24"},
 					},
-					Workers: []garden.AlicloudWorker{
-						{
-							Worker:     worker,
-							VolumeSize: "30Gi",
-							VolumeType: "default",
-						},
-					},
-					Zones: []string{"cn-beijing-f"},
+					Workers: []garden.Worker{worker},
+					Zones:   []string{"cn-beijing-f"},
 				}
 
 				shoot.Spec.Cloud.AWS = nil
@@ -5717,7 +5616,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5729,7 +5628,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5745,9 +5644,9 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Node which are not in VPC CIDR", func() {
-					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					notOverlappingCIDR := "1.1.1.1/32"
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{notOverlappingCIDR}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []string{notOverlappingCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5763,7 +5662,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -5776,7 +5675,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := "10.0.0.1/32"
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -5810,12 +5709,12 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				vpcCIDR := garden.CIDR("10.0.0.3/8")
-				nodeCIDR := garden.CIDR("10.250.0.3/16")
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				vpcCIDR := "10.0.0.3/8"
+				nodeCIDR := "10.250.0.3/16"
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
 
-				shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.Alicloud.Networks.Workers = []string{"10.250.3.8/24"}
 				shoot.Spec.Cloud.Alicloud.Networks.Nodes = &nodeCIDR
 				shoot.Spec.Cloud.Alicloud.Networks.Services = &serviceCIDR
 				shoot.Spec.Cloud.Alicloud.Networks.Pods = &podCIDR
@@ -5848,7 +5747,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5860,18 +5759,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "30Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "30Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{worker, worker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5883,83 +5771,51 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     invalidWorker,
-						VolumeSize: "hugo",
-						VolumeType: "",
-					},
-				}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{invalidWorker}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(7))
+				Expect(errorList).To(HaveLen(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     workerAutoScalingInvalid,
-						VolumeSize: "30Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{workerAutoScalingInvalid, worker}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     workerAutoScalingMinMaxZero,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{worker, workerAutoScalingMinMaxZero}
 
 				errorList := ValidateShoot(shoot)
 
@@ -5967,25 +5823,21 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "10Gi",
-						VolumeType: "gp2",
-					},
-				}
+				w := worker.DeepCopy()
+				w.Volume.Size = "10Gi"
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.Alicloud.Workers[0].Worker = invalidWorkerTooLongName
+				shoot.Spec.Cloud.Alicloud.Workers[0] = invalidWorkerTooLongName
 
 				errorList := ValidateShoot(shoot)
 
@@ -5997,13 +5849,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     invalidWorkerName,
-						VolumeSize: "30Gi",
-						VolumeType: "gp2",
-					},
-				}
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{invalidWorkerName}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6028,7 +5874,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.Alicloud.Networks.Workers[0] = garden.CIDR("10.250.0.0/24")
+				newShoot.Spec.Cloud.Alicloud.Networks.Workers[0] = "10.250.0.0/24"
 				newShoot.Spec.Cloud.Alicloud.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -6078,8 +5924,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -6088,15 +5936,13 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, garden.AlicloudWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							})
+							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6111,25 +5957,21 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, garden.AlicloudWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							}, garden.AlicloudWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     secondTestWorker,
-							})
+							shoot.Spec.Cloud.Alicloud.Workers = append(shoot.Spec.Cloud.Alicloud.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6172,14 +6014,8 @@ var _ = Describe("validation", func() {
 					Networks: garden.PacketNetworks{
 						K8SNetworks: k8sNetworks,
 					},
-					Workers: []garden.PacketWorker{
-						{
-							Worker:     worker,
-							VolumeSize: "20Gi",
-							VolumeType: "default",
-						},
-					},
-					Zones: []string{"EWR1"},
+					Workers: []garden.Worker{worker},
+					Zones:   []string{"EWR1"},
 				}
 
 				shoot.Spec.Cloud.AWS = nil
@@ -6215,8 +6051,8 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
 
 				shoot.Spec.Cloud.Packet.Networks.Services = &serviceCIDR
 				shoot.Spec.Cloud.Packet.Networks.Pods = &podCIDR
@@ -6236,7 +6072,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{}
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6247,18 +6083,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-					{
-						Worker:     worker,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{worker, worker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6269,54 +6094,40 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
-					{
-						Worker:     invalidWorker,
-						VolumeSize: "hugo",
-						VolumeType: "",
-					},
-				}
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{invalidWorker}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(HaveLen(7))
+				Expect(errorList).To(HaveLen(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
-					{
-						Worker:     worker,
-						VolumeSize: "10Gi",
-						VolumeType: "gp2",
-					},
-				}
+				w := worker.DeepCopy()
+				w.Volume.Size = "10Gi"
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volume.size", fldPath)),
 				}))))
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.Packet.Workers[0].Worker = invalidWorkerTooLongName
+				shoot.Spec.Cloud.Packet.Workers[0] = invalidWorkerTooLongName
 
 				errorList := ValidateShoot(shoot)
 
@@ -6327,13 +6138,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
-					{
-						Worker:     invalidWorkerName,
-						VolumeSize: "20Gi",
-						VolumeType: "gp2",
-					},
-				}
+				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{invalidWorkerName}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6356,7 +6161,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("10.250.0.0/24")
+				cidr := "10.250.0.0/24"
 				newShoot.Spec.Cloud.Packet.Networks.Nodes = &cidr
 				newShoot.Spec.Cloud.Packet.Zones = []string{"another-zone"}
 
@@ -6405,8 +6210,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -6415,15 +6222,13 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, garden.PacketWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							})
+							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6438,25 +6243,21 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
 
-							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, garden.PacketWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     testWorker,
-							}, garden.PacketWorker{
-								VolumeSize: "35Gi",
-								VolumeType: "default",
-								Worker:     secondTestWorker,
-							})
+							shoot.Spec.Cloud.Packet.Workers = append(shoot.Spec.Cloud.Packet.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6494,23 +6295,23 @@ var _ = Describe("validation", func() {
 				openStackCloud *garden.OpenStackCloud
 			)
 
+			w := worker.DeepCopy()
+			w.Volume = nil
+			osWorker := *w
+
 			BeforeEach(func() {
 				openStackCloud = &garden.OpenStackCloud{
 					FloatingPoolName:     "my-pool",
 					LoadBalancerProvider: "haproxy",
 					Networks: garden.OpenStackNetworks{
 						K8SNetworks: k8sNetworks,
-						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Workers:     []string{"10.250.0.0/16"},
 						Router: &garden.OpenStackRouter{
 							ID: "router1234",
 						},
 					},
-					Workers: []garden.OpenStackWorker{
-						{
-							Worker: worker,
-						},
-					},
-					Zones: []string{"europe-1a"},
+					Workers: []garden.Worker{osWorker},
+					Zones:   []string{"europe-1a"},
 				}
 				shoot.Spec.Cloud.AWS = nil
 				shoot.Spec.Cloud.OpenStack = openStackCloud
@@ -6548,7 +6349,7 @@ var _ = Describe("validation", func() {
 
 			Context("CIDR", func() {
 				It("should forbid more than one CIDR", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"10.250.0.1/32", "10.250.0.2/32"}
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []string{"10.250.0.1/32", "10.250.0.2/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -6560,7 +6361,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []string{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -6572,7 +6373,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []string{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -6605,11 +6406,11 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid non canonical CIDRs", func() {
-				nodeCIDR := garden.CIDR("10.250.0.3/16")
-				podCIDR := garden.CIDR("100.96.0.4/11")
-				serviceCIDR := garden.CIDR("100.64.0.5/13")
+				nodeCIDR := "10.250.0.3/16"
+				podCIDR := "100.96.0.4/11"
+				serviceCIDR := "100.64.0.5/13"
 
-				shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"10.250.3.8/24"}
+				shoot.Spec.Cloud.OpenStack.Networks.Workers = []string{"10.250.3.8/24"}
 				shoot.Spec.Cloud.OpenStack.Networks.Nodes = &nodeCIDR
 				shoot.Spec.Cloud.OpenStack.Networks.Services = &serviceCIDR
 				shoot.Spec.Cloud.OpenStack.Networks.Pods = &podCIDR
@@ -6637,7 +6438,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid an empty worker list", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{}
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6649,14 +6450,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should enforce unique worker names", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: worker,
-					},
-					{
-						Worker: worker,
-					},
-				}
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{osWorker, osWorker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6668,11 +6462,9 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid worker configuration", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: invalidWorker,
-					},
-				}
+				w := invalidWorker.DeepCopy()
+				w.Volume = nil
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6683,50 +6475,40 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machine.type", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].maximum", fldPath)),
 				}))
 			})
 
 			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: workerAutoScalingInvalid,
-					},
-					{
-						Worker: worker,
-					},
-				}
+				w := workerAutoScalingInvalid.DeepCopy()
+				w.Volume = nil
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{*w, osWorker}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].minimum", fldPath)),
 				}))
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: workerAutoScalingMinMaxZero,
-					},
-					{
-						Worker: worker,
-					},
-				}
+				w := workerAutoScalingMinMaxZero.DeepCopy()
+				w.Volume = nil
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{*w, osWorker}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6734,11 +6516,9 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid too long worker names", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: invalidWorkerTooLongName,
-					},
-				}
+				w := invalidWorkerTooLongName.DeepCopy()
+				w.Volume = nil
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6750,11 +6530,9 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: invalidWorkerName,
-					},
-				}
+				w := invalidWorkerName.DeepCopy()
+				w.Volume = nil
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6779,7 +6557,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.OpenStack.Networks.Workers[0] = garden.CIDR("10.250.0.0/24")
+				newShoot.Spec.Cloud.OpenStack.Networks.Workers[0] = "10.250.0.0/24"
 				newShoot.Spec.Cloud.OpenStack.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -6829,8 +6607,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should not return any errors", func() {
-					worker.Kubelet = &garden.KubeletConfig{
-						MaxPods: &defaultMaxPod,
+					worker.Kubernetes = &garden.WorkerKubernetes{
+						Kubelet: &garden.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
 					}
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(0))
@@ -6839,13 +6619,14 @@ var _ = Describe("validation", func() {
 				Context("Non-default max pod settings", func() {
 					Context("one worker pool", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
+							testWorker.Volume = nil
 
-							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, garden.OpenStackWorker{
-								Worker: testWorker,
-							})
+							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, testWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6860,21 +6641,23 @@ var _ = Describe("validation", func() {
 					})
 					Context("multiple worker pools", func() {
 						It("should deny NodeCIDR with too few ips", func() {
-							testWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							testWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
+							testWorker.Volume = nil
 
 							secondTestWorker := *testWorker.DeepCopy()
 							secondTestWorker.Name = "testworker2"
-							secondTestWorker.Kubelet = &garden.KubeletConfig{
-								MaxPods: &maxPod,
+							secondTestWorker.Kubernetes = &garden.WorkerKubernetes{
+								Kubelet: &garden.KubeletConfig{
+									MaxPods: &maxPod,
+								},
 							}
+							secondTestWorker.Volume = nil
 
-							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, garden.OpenStackWorker{
-								Worker: testWorker,
-							}, garden.OpenStackWorker{
-								Worker: secondTestWorker,
-							})
+							shoot.Spec.Cloud.OpenStack.Workers = append(shoot.Spec.Cloud.OpenStack.Workers, testWorker, secondTestWorker)
 
 							errorList := ValidateShoot(shoot)
 
@@ -6908,7 +6691,7 @@ var _ = Describe("validation", func() {
 		Context("dns section", func() {
 			It("should forbid specifying a provider without a domain", func() {
 				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
-				shoot.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShoot(shoot)
 
@@ -6919,8 +6702,12 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should allow specifying the 'unmanaged' provider without a domain", func() {
-				shoot.Spec.DNS.Domain = makeStringPointer(garden.DNSUnmanaged)
-				shoot.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Domain = nil
+				shoot.Spec.DNS.Providers = []garden.DNSProvider{
+					{
+						Type: makeStringPointer(garden.DNSUnmanaged),
+					},
+				}
 
 				errorList := ValidateShoot(shoot)
 
@@ -6928,7 +6715,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid specifying invalid domain", func() {
-				shoot.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = nil
 				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
 
 				errorList := ValidateShoot(shoot)
@@ -6940,27 +6727,33 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
-				provider := garden.DNSUnmanaged
-				shoot.Spec.DNS.Provider = &provider
-				shoot.Spec.DNS.SecretName = makeStringPointer("")
+				shoot.Spec.DNS.Providers = []garden.DNSProvider{
+					{
+						Type:       makeStringPointer(garden.DNSUnmanaged),
+						SecretName: makeStringPointer(""),
+					},
+				}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.secretName"),
+					"Field": Equal("spec.dns.providers[0].secretName"),
 				}))))
 			})
 
 			It("should require a provider if a secret name is given", func() {
-				shoot.Spec.DNS.Provider = nil
-				shoot.Spec.DNS.SecretName = makeStringPointer("")
+				shoot.Spec.DNS.Providers = []garden.DNSProvider{
+					{
+						SecretName: makeStringPointer(""),
+					},
+				}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.provider"),
+					"Field": Equal("spec.dns.providers[0].type"),
 				}))))
 			})
 
@@ -6978,20 +6771,19 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating the dns provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				provider := "some-other-provider"
-				newShoot.Spec.DNS.Provider = &provider
+				shoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-other-provider")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.provider"),
+					"Field": Equal("spec.dns.providers[0].type"),
 				}))))
 			})
 
 			It("should allow updating the dns secret name", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.SecretName = makeStringPointer("my-dns-secret")
+				newShoot.Spec.DNS.Providers[0].SecretName = makeStringPointer("my-dns-secret")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -7420,17 +7212,6 @@ var _ = Describe("validation", func() {
 		})
 
 		Context("networking section", func() {
-			It("should forbid not specifying the networking section", func() {
-				shoot.Spec.Networking = nil
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.networking"),
-				}))))
-			})
-
 			It("should forbid not specifying a networking type", func() {
 				shoot.Spec.Networking.Type = ""
 

@@ -19,7 +19,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -53,7 +52,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			Context("Shoot Networks", func() {
 				Context("nodes", func() {
 					Context("provided VPC CIDR", func() {
-						const vpcCIDR = v1alpha1.CIDR("1.1.0.0/24")
+						const vpcCIDR = "1.1.0.0/24"
 						BeforeEach(func() {
 							cidr := vpcCIDR
 							aws.Networks.VPC.CIDR = &cidr
@@ -72,10 +71,10 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 						})
 
 						Context("with one worker", func() {
-							const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
+							const workerCIDR = "1.1.0.0/24"
 
 							BeforeEach(func() {
-								aws.Networks.Workers = []v1alpha1.CIDR{workerCIDR}
+								aws.Networks.Workers = []string{workerCIDR}
 							})
 
 							It("should be the same value as aws.networks.workers[0]", func() {
@@ -85,7 +84,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 						Context("with more than one workers", func() {
 							BeforeEach(func() {
-								aws.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
+								aws.Networks.Workers = []string{"1.1.0.0/24", "1.1.2.0/24"}
 							})
 
 							It("should be nil", func() {
@@ -209,7 +208,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 			Context("Shoot Networks", func() {
 				Context("with one worker", func() {
-					const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
+					const workerCIDR = "1.1.0.0/24"
 
 					BeforeEach(func() {
 						azure.Networks.Workers = workerCIDR
@@ -344,10 +343,10 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					})
 
 					Context("with one worker", func() {
-						const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
+						const workerCIDR = "1.1.0.0/24"
 
 						BeforeEach(func() {
-							gcp.Networks.Workers = []v1alpha1.CIDR{workerCIDR}
+							gcp.Networks.Workers = []string{workerCIDR}
 						})
 
 						It("should be the same value as gcp.networks.workers[0]", func() {
@@ -357,7 +356,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 					Context("with more than one workers", func() {
 						BeforeEach(func() {
-							gcp.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
+							gcp.Networks.Workers = []string{"1.1.0.0/24", "1.1.2.0/24"}
 						})
 
 						It("should be nil", func() {
@@ -481,7 +480,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			Context("Shoot Networks", func() {
 				Context("nodes", func() {
 					Context("provided VPC CIDR", func() {
-						const vpcCIDR = v1alpha1.CIDR("1.1.0.0/24")
+						const vpcCIDR = "1.1.0.0/24"
 						BeforeEach(func() {
 							cidr := vpcCIDR
 							alicloud.Networks.VPC.CIDR = &cidr
@@ -500,10 +499,10 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 						})
 
 						Context("with one worker", func() {
-							const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
+							const workerCIDR = "1.1.0.0/24"
 
 							BeforeEach(func() {
-								alicloud.Networks.Workers = []v1alpha1.CIDR{workerCIDR}
+								alicloud.Networks.Workers = []string{workerCIDR}
 							})
 
 							It("should be the same value as alicloud.networks.workers[0]", func() {
@@ -513,7 +512,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 						Context("with more than one workers", func() {
 							BeforeEach(func() {
-								alicloud.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
+								alicloud.Networks.Workers = []string{"1.1.0.0/24", "1.1.2.0/24"}
 							})
 
 							It("should be nil", func() {
@@ -647,10 +646,10 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					})
 
 					Context("with one worker", func() {
-						const workerCIDR = v1alpha1.CIDR("1.1.0.0/24")
+						const workerCIDR = "1.1.0.0/24"
 
 						BeforeEach(func() {
-							openstack.Networks.Workers = []v1alpha1.CIDR{workerCIDR}
+							openstack.Networks.Workers = []string{workerCIDR}
 						})
 
 						It("should be the same value as openstack.networks.workers[0]", func() {
@@ -660,7 +659,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 
 					Context("with more than one workers", func() {
 						BeforeEach(func() {
-							openstack.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
+							openstack.Networks.Workers = []string{"1.1.0.0/24", "1.1.2.0/24"}
 						})
 
 						It("should be nil", func() {
