@@ -382,6 +382,9 @@ type OIDCConfig struct {
 	// If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
+	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+	// +optional
+	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty"`
 	// The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.
 	// +optional
 	ClientID *string `json:"clientID,omitempty"`
@@ -407,6 +410,17 @@ type OIDCConfig struct {
 	// If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.
 	// +optional
 	UsernamePrefix *string `json:"usernamePrefix,omitempty"`
+}
+
+// OpenIDConnectClientAuthentication contains configuration for OIDC clients.
+type OpenIDConnectClientAuthentication struct {
+	// Extra configuration added to kubeconfig's auth-provider.
+	// Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
+	// +optional
+	ExtraConfig map[string]string `json:"extraConfig,omitempty"`
+	// The client Secret for the OpenID Connect client.
+	// +optional
+	Secret *string `json:"secret,omitempty"`
 }
 
 // AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.

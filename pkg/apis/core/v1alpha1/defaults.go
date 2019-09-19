@@ -72,7 +72,12 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
+	k8sVersionLessThan116, _ := utils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
+	// Error is ignored here because we cannot do anything meaningful with it.
+	// k8sVersionLessThan116 will default to `false`.
+
 	trueVar := true
+	falseVar := false
 
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
@@ -82,7 +87,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+		if k8sVersionLessThan116 {
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+		} else {
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &falseVar
+		}
 	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -99,13 +108,21 @@ func SetDefaults_Shoot(obj *Shoot) {
 		defaultProxyMode := ProxyModeIPTables
 		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 	}
-}
 
-// SetDefaults_KubernetesDashboard sets default values for KubernetesDashboard objects.
-func SetDefaults_KubernetesDashboard(obj *KubernetesDashboard) {
-	if obj.AuthenticationMode == nil {
-		defaultAuthMode := KubernetesDashboardAuthModeBasic
-		obj.AuthenticationMode = &defaultAuthMode
+	if obj.Spec.Addons == nil {
+		obj.Spec.Addons = &Addons{}
+	}
+	if obj.Spec.Addons.KubernetesDashboard == nil {
+		obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
+	}
+	if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
+		var defaultAuthMode string
+		if k8sVersionLessThan116 {
+			defaultAuthMode = KubernetesDashboardAuthModeBasic
+		} else {
+			defaultAuthMode = KubernetesDashboardAuthModeToken
+		}
+		obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
 	}
 }
 
