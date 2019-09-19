@@ -15,8 +15,6 @@
 package backupbucket
 
 import (
-	"fmt"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -35,7 +33,7 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	var (
 		newBackupBucket    = newObj.(*gardencorev1alpha1.BackupBucket)
-		backupBucketLogger = logger.NewFieldLogger(logger.Logger, "backupbucket", fmt.Sprintf("%s", newBackupBucket.Name))
+		backupBucketLogger = logger.NewFieldLogger(logger.Logger, "backupbucket", newBackupBucket.Name)
 	)
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have

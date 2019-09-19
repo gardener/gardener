@@ -23,8 +23,6 @@ const (
 	PacketAPIKey = "apiToken"
 	// ProjectID is a constant for the key in a cloud provider secret that holds the Packet Project ID
 	ProjectID = "projectID"
-	// keyPairID is a constant for the name of the output from terraform that represents the ID of the keypair
-	keyPairID = "key_pair_id"
 )
 
 // PacketBotanist is a struct which has methods that perform Packet cloud-specific operations for a Shoot cluster.

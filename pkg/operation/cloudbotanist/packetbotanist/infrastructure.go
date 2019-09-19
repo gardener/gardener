@@ -14,11 +14,6 @@
 
 package packetbotanist
 
-const (
-	projectID = "projectID"
-	sshKey    = "sshKey"
-)
-
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 // As of this writing, Packet does not have an object store of its own. In the future, it may have one, and thus

@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -38,8 +37,6 @@ import (
 type SchedulerController struct {
 	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
-
-	k8sInformers kubeinformers.SharedInformerFactory
 
 	config *config.SchedulerConfiguration
 

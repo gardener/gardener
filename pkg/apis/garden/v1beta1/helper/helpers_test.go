@@ -743,6 +743,7 @@ var _ = Describe("helper", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			latestSemverVersion, err := semver.NewVersion(latestVersion)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(Equal(latestSemverVersion))
 			Expect(image.Version).To(Equal(latestVersion))
 		})
