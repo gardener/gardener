@@ -1471,6 +1471,20 @@ type OIDCConfig struct {
 	// If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.
 	// +optional
 	UsernamePrefix *string `json:"usernamePrefix,omitempty"`
+	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+	// +optional
+	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty"`
+}
+
+// OpenIDConnectClientAuthentication contains configuration for OIDC clients.
+type OpenIDConnectClientAuthentication struct {
+	// The client Secret for the OpenID Connect client.
+	// +optional
+	Secret *string `json:"secret,omitempty"`
+	// Extra configuration added to kubeconfig's auth-provider.
+	// Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token
+	// +optional
+	ExtraConfig map[string]string `json:"extraConfig,omitempty"`
 }
 
 // AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.

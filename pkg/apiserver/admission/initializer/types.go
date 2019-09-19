@@ -19,6 +19,7 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -56,6 +57,12 @@ type WantsKubeInformerFactory interface {
 	admission.InitializationValidator
 }
 
+// WantsSettingsInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
+type WantsSettingsInformerFactory interface {
+	SetSettingsInformerFactory(settingsinformer.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
 // WantsKubeClientset defines a function which sets Kubernetes Clientset for admission plugins that need it.
 type WantsKubeClientset interface {
 	SetKubeClientset(kubernetes.Interface)
@@ -74,6 +81,8 @@ type pluginInitializer struct {
 
 	gardenInformers gardeninformers.SharedInformerFactory
 	gardenClient    gardenclientset.Interface
+
+	settingsInformers settingsinformer.SharedInformerFactory
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface

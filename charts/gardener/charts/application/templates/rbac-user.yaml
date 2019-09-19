@@ -11,6 +11,7 @@ rules:
   - garden.sapcloud.io
   - core.gardener.cloud
   - dashboard.gardener.cloud
+  - settings.gardener.cloud
   resources:
   - '*'
   verbs:
@@ -156,6 +157,19 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - settings.gardener.cloud
+  resources:
+  - openidconnectpresets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 # ClusterRole defines the required permissions for the gardener-scheduler
 # Configmap: GET on gardener-scheduler-configmap to read the scheduler configuration & DELETE, GET, PATCH, UPDATE on gardener-scheduler-leader-election
 # Events: CREATE, PATCH, UPDATE to send scheduling events
@@ -248,6 +262,14 @@ rules:
   - core.gardener.cloud
   resources:
   - plants
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - settings.gardener.cloud
+  resources:
+  - openidconnectpresets
   verbs:
   - get
   - list
