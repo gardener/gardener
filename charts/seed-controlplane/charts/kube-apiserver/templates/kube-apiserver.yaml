@@ -147,7 +147,11 @@ spec:
         readinessProbe:
           httpGet:
             scheme: HTTPS
+            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+            path: /readyz
+            {{- else }}
             path: /healthz
+            {{- end }}
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
