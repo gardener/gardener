@@ -113,6 +113,9 @@ spec:
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
         - --service-cluster-ip-range={{ .Values.shootNetworks.service }}
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
+        {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+        - --shutdown-delay-duration=20s
+        {{- end }}
         - --token-auth-file=/srv/kubernetes/token/static_tokens.csv
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
