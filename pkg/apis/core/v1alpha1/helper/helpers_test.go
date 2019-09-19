@@ -232,5 +232,13 @@ var _ = Describe("helper", func() {
 				false,
 			),
 		)
+
+		DescribeTable("#TaintsHave",
+			func(taints []gardencorev1alpha1.SeedTaint, key string, expectation bool) {
+				Expect(TaintsHave(taints, key)).To(Equal(expectation))
+			},
+			Entry("taint exists", []gardencorev1alpha1.SeedTaint{{Key: "foo"}}, "foo", true),
+			Entry("taint does not exist", []gardencorev1alpha1.SeedTaint{{Key: "foo"}}, "bar", false),
+		)
 	})
 })

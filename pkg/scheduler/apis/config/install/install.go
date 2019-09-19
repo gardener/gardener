@@ -15,19 +15,17 @@
 package install
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
 	schemeBuilder = runtime.NewSchemeBuilder(
 		v1alpha1.AddToScheme,
 		config.AddToScheme,
-		gardenv1beta1.AddToScheme,
 		setVersionPriority,
 	)
 

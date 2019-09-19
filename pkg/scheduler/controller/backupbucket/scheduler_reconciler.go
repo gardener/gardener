@@ -18,22 +18,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/scheduler/controller/common"
-	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenhelper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/scheduler/controller/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -79,6 +76,7 @@ func newReconciler(ctx context.Context, gardenClient client.Client, recorder rec
 		logger:   logger.NewFieldLogger(logger.Logger, "scheduler", "backupbucket"),
 	}
 }
+
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	bb := &gardencorev1alpha1.BackupBucket{}
 	if err := r.client.Get(r.ctx, request.NamespacedName, bb); err != nil {
@@ -103,12 +101,12 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) 
 		// If the BackupBucket manifest already specifies a desired Seed cluster,
 		// we should check its availability. If its not available we will try to reschedule it again.
 		schedulerLogger.Infof("BackupBucket is already scheduled on seed %s", *backupBucket.Spec.Seed)
-		seed := &gardenv1beta1.Seed{}
+		seed := &gardencorev1alpha1.Seed{}
 		if err := r.client.Get(r.ctx, kutil.Key(*backupBucket.Spec.Seed), seed); err != nil {
 			return err
 		}
 
-		if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardenv1beta1.SeedAvailable); cond != nil && cond.Status != gardencorev1alpha1.ConditionUnknown {
+		if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedAvailable); cond != nil && cond.Status != gardencorev1alpha1.ConditionUnknown {
 			schedulerLogger.Infof("Seed %s is available, ignoring further reconciliation.", *backupBucket.Spec.Seed)
 			return nil
 		}
@@ -142,14 +140,13 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) 
 // 4. If failed find seed in step 3, then select a seed with matching cloud provider.
 // 5. If still not found then, select any of remaining seed.
 // 6. Return error if none of the above step found seed.
-func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket) (*gardenv1beta1.Seed, error) {
+func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket) (*gardencorev1alpha1.Seed, error) {
 	var (
-		candidatesWithMathingProvider    = make([]*gardenv1beta1.Seed, 0)
-		candidatesWithoutMathingProvider = make([]*gardenv1beta1.Seed, 0)
-		cloudProfileCache                = make(map[string]gardenv1beta1.CloudProvider) //cloudProfile name verses cloudProvider map
+		candidatesWithMatchingProvider    = make([]*gardencorev1alpha1.Seed, 0)
+		candidatesWithoutMatchingProvider = make([]*gardencorev1alpha1.Seed, 0)
 	)
 
-	seeds := &gardenv1beta1.SeedList{}
+	seeds := &gardencorev1alpha1.SeedList{}
 	if err := r.client.List(r.ctx, seeds); err != nil {
 		return nil, err
 	}
@@ -157,47 +154,34 @@ func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket
 	if len(seeds.Items) == 0 {
 		return nil, fmt.Errorf("no seed found for scheduling")
 	}
+
 	for _, seed := range seeds.Items {
 		if seed.DeletionTimestamp != nil || !verifySeedAvailability(&seed) {
 			continue
 		}
 
 		// Post GEP-4 following logic will be simplified as commented.
-		// provider := seed.Spec.Provider.Type
-		provider, ok := cloudProfileCache[seed.Spec.Cloud.Profile]
-		if !ok {
-			cloudProfile := &gardenv1beta1.CloudProfile{}
-			if err := r.client.Get(r.ctx, kutil.Key(seed.Spec.Cloud.Profile), cloudProfile); err != nil {
-				return nil, err
-			}
-
-			provider, err := gardenhelper.DetermineCloudProviderInProfile(cloudProfile.Spec)
-			if err != nil {
-				return nil, err
-			}
-			cloudProfileCache[cloudProfile.Name] = provider
-		}
-		if backupBucket.Spec.Provider.Type == string(provider) {
-			if seed.Spec.Cloud.Region == backupBucket.Spec.Provider.Region {
+		if seed.Spec.Provider.Type == backupBucket.Spec.Provider.Type {
+			if seed.Spec.Provider.Region == backupBucket.Spec.Provider.Region {
 				return &seed, nil
 			}
-			candidatesWithMathingProvider = append(candidatesWithMathingProvider, &seed)
+			candidatesWithMatchingProvider = append(candidatesWithMatchingProvider, &seed)
 		}
-		candidatesWithoutMathingProvider = append(candidatesWithoutMathingProvider, &seed)
+		candidatesWithoutMatchingProvider = append(candidatesWithoutMatchingProvider, &seed)
 	}
 
-	if len(candidatesWithMathingProvider) != 0 {
-		return candidatesWithMathingProvider[0], nil
+	if len(candidatesWithMatchingProvider) != 0 {
+		return candidatesWithMatchingProvider[0], nil
 	}
 
-	if len(candidatesWithoutMathingProvider) != 0 {
-		return candidatesWithoutMathingProvider[0], nil
+	if len(candidatesWithoutMatchingProvider) != 0 {
+		return candidatesWithoutMatchingProvider[0], nil
 	}
 	return nil, fmt.Errorf("failed to find valid seed for scheduling")
 }
 
-func verifySeedAvailability(seed *gardenv1beta1.Seed) bool {
-	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardenv1beta1.SeedAvailable); cond != nil {
+func verifySeedAvailability(seed *gardencorev1alpha1.Seed) bool {
+	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedAvailable); cond != nil {
 		return cond.Status == gardencorev1alpha1.ConditionTrue
 	}
 	return false
