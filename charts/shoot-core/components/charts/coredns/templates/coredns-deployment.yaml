@@ -74,8 +74,8 @@ spec:
           failureThreshold: 5
         readinessProbe:
           httpGet:
-            path: /health
-            port: 8080
+            path: /ready
+            port: 8181
             scheme: HTTP
       dnsPolicy: Default
       volumes:

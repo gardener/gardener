@@ -77,7 +77,7 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.4.0"
+  tag: "1.6.3"
 
 # Shoot optional addons
 - name: kubernetes-dashboard
