@@ -21,6 +21,7 @@ rules:
   - get
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - projects
   resourceNames:

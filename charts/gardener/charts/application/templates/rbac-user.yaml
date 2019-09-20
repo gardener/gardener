@@ -54,6 +54,7 @@ metadata:
 rules:
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - cloudprofiles
   verbs:
@@ -95,6 +96,7 @@ metadata:
 rules:
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - projects
   verbs:
@@ -131,22 +133,11 @@ rules:
   - watch
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - shoots
   - secretbindings
   - quotas
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - core.gardener.cloud
-  resources:
   - plants
   verbs:
   - create
@@ -209,6 +200,7 @@ rules:
     - update
 - apiGroups:
     - garden.sapcloud.io
+    - core.gardener.cloud
   resources:
     - seeds
   verbs:
@@ -217,6 +209,7 @@ rules:
     - watch
 - apiGroups:
     - garden.sapcloud.io
+    - core.gardener.cloud
   resources:
     - shoots
   verbs:
@@ -250,17 +243,11 @@ rules:
   - watch
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - shoots
   - secretbindings
   - quotas
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - core.gardener.cloud
-  resources:
   - plants
   verbs:
   - get

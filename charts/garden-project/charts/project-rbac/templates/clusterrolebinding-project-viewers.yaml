@@ -4,7 +4,7 @@ kind: ClusterRoleBinding
 metadata:
   name: garden.sapcloud.io:system:project-viewer:{{ .Values.project.name }}
   ownerReferences:
-  - apiVersion: garden.sapcloud.io/v1beta1
+  - apiVersion: /v1beta1
     kind: Project
     blockOwnerDeletion: false
     controller: true
