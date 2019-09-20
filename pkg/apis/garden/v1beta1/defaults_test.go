@@ -890,21 +890,11 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			})
 
 			Context("kubeproxy", func() {
-				// TODO: Fix this in next API version of the Shoot spec.
-				It("should use not set kube-proxy to any value", func() {
-					Expect(shoot.Spec.Kubernetes.KubeProxy).To(BeNil())
+				It("should use iptables as default mode", func() {
+					// Don't change this value to guarantee backwards compatibility.
+					defaultMode := v1beta1.ProxyMode("IPTables")
+					Expect(shoot.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(defaultMode)))
 				})
-				Context("when kubeProxy is not nil", func() {
-					BeforeEach(func() {
-						shoot.Spec.Kubernetes.KubeProxy = &v1beta1.KubeProxyConfig{}
-					})
-					It("should use iptables as default mode", func() {
-						// Don't change this value to guarantee backwards compatibility.
-						defaultMode := v1beta1.ProxyMode("IPTables")
-						Expect(shoot.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(defaultMode)))
-					})
-				})
-
 			})
 		})
 

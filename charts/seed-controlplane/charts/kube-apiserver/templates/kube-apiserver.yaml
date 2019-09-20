@@ -99,6 +99,9 @@ spec:
         - --kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key
         - --insecure-port=0
         {{- include "kube-apiserver.oidcConfig" . | indent 8 }}
+        {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+        - --livez-grace-period=1m
+        {{- end }}
         - --profiling=false
         - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
         - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key
@@ -110,6 +113,9 @@ spec:
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
         - --service-cluster-ip-range={{ .Values.shootNetworks.service }}
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
+        {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+        - --shutdown-delay-duration=20s
+        {{- end }}
         - --token-auth-file=/srv/kubernetes/token/static_tokens.csv
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
@@ -127,7 +133,11 @@ spec:
         livenessProbe:
           httpGet:
             scheme: HTTPS
+            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+            path: /livez
+            {{- else }}
             path: /healthz
+            {{- end }}
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
@@ -140,7 +150,11 @@ spec:
         readinessProbe:
           httpGet:
             scheme: HTTPS
+            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+            path: /readyz
+            {{- else }}
             path: /healthz
+            {{- end }}
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization

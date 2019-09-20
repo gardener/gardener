@@ -702,6 +702,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OpenIDConnectClientAuthentication)(nil), (*garden.OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(a.(*OpenIDConnectClientAuthentication), b.(*garden.OpenIDConnectClientAuthentication), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.OpenIDConnectClientAuthentication)(nil), (*OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(a.(*garden.OpenIDConnectClientAuthentication), b.(*OpenIDConnectClientAuthentication), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Plant)(nil), (*core.Plant)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Plant_To_core_Plant(a.(*Plant), b.(*core.Plant), scope)
 	}); err != nil {
@@ -2248,7 +2258,15 @@ func autoConvert_v1alpha1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(in *
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*garden.AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
-	out.OIDCConfig = (*garden.OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
+	if in.OIDCConfig != nil {
+		in, out := &in.OIDCConfig, &out.OIDCConfig
+		*out = new(garden.OIDCConfig)
+		if err := Convert_v1alpha1_OIDCConfig_To_garden_OIDCConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OIDCConfig = nil
+	}
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
 	out.ServiceAccountConfig = (*garden.ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
 	return nil
@@ -2267,7 +2285,15 @@ func autoConvert_garden_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(in *
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
-	out.OIDCConfig = (*OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
+	if in.OIDCConfig != nil {
+		in, out := &in.OIDCConfig, &out.OIDCConfig
+		*out = new(OIDCConfig)
+		if err := Convert_garden_OIDCConfig_To_v1alpha1_OIDCConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OIDCConfig = nil
+	}
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
 	out.ServiceAccountConfig = (*ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
 	return nil
@@ -2523,7 +2549,15 @@ func autoConvert_v1alpha1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *g
 	} else {
 		out.ClusterAutoscaler = nil
 	}
-	out.KubeAPIServer = (*garden.KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	if in.KubeAPIServer != nil {
+		in, out := &in.KubeAPIServer, &out.KubeAPIServer
+		*out = new(garden.KubeAPIServerConfig)
+		if err := Convert_v1alpha1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeAPIServer = nil
+	}
 	if in.KubeControllerManager != nil {
 		in, out := &in.KubeControllerManager, &out.KubeControllerManager
 		*out = new(garden.KubeControllerManagerConfig)
@@ -2550,7 +2584,15 @@ func autoConvert_v1alpha1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *g
 
 func autoConvert_garden_Kubernetes_To_v1alpha1_Kubernetes(in *garden.Kubernetes, out *Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
-	out.KubeAPIServer = (*KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	if in.KubeAPIServer != nil {
+		in, out := &in.KubeAPIServer, &out.KubeAPIServer
+		*out = new(KubeAPIServerConfig)
+		if err := Convert_garden_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.KubeAPIServer = nil
+	}
 	// WARNING: in.CloudControllerManager requires manual conversion: does not exist in peer-type
 	if in.KubeControllerManager != nil {
 		in, out := &in.KubeControllerManager, &out.KubeControllerManager
@@ -2961,6 +3003,15 @@ func Convert_garden_NginxIngress_To_v1alpha1_NginxIngress(in *garden.NginxIngres
 
 func autoConvert_v1alpha1_OIDCConfig_To_garden_OIDCConfig(in *OIDCConfig, out *garden.OIDCConfig, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	if in.ClientAuthentication != nil {
+		in, out := &in.ClientAuthentication, &out.ClientAuthentication
+		*out = new(garden.OpenIDConnectClientAuthentication)
+		if err := Convert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.ClientAuthentication = nil
+	}
 	out.ClientID = (*string)(unsafe.Pointer(in.ClientID))
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
@@ -2987,12 +3038,43 @@ func autoConvert_garden_OIDCConfig_To_v1alpha1_OIDCConfig(in *garden.OIDCConfig,
 	out.SigningAlgs = *(*[]string)(unsafe.Pointer(&in.SigningAlgs))
 	out.UsernameClaim = (*string)(unsafe.Pointer(in.UsernameClaim))
 	out.UsernamePrefix = (*string)(unsafe.Pointer(in.UsernamePrefix))
+	if in.ClientAuthentication != nil {
+		in, out := &in.ClientAuthentication, &out.ClientAuthentication
+		*out = new(OpenIDConnectClientAuthentication)
+		if err := Convert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.ClientAuthentication = nil
+	}
 	return nil
 }
 
 // Convert_garden_OIDCConfig_To_v1alpha1_OIDCConfig is an autogenerated conversion function.
 func Convert_garden_OIDCConfig_To_v1alpha1_OIDCConfig(in *garden.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
 	return autoConvert_garden_OIDCConfig_To_v1alpha1_OIDCConfig(in, out, s)
+}
+
+func autoConvert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *garden.OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	out.ExtraConfig = *(*map[string]string)(unsafe.Pointer(&in.ExtraConfig))
+	out.Secret = (*string)(unsafe.Pointer(in.Secret))
+	return nil
+}
+
+// Convert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication is an autogenerated conversion function.
+func Convert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *garden.OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	return autoConvert_v1alpha1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in, out, s)
+}
+
+func autoConvert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(in *garden.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	out.Secret = (*string)(unsafe.Pointer(in.Secret))
+	out.ExtraConfig = *(*map[string]string)(unsafe.Pointer(&in.ExtraConfig))
+	return nil
+}
+
+// Convert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication is an autogenerated conversion function.
+func Convert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(in *garden.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	return autoConvert_garden_OpenIDConnectClientAuthentication_To_v1alpha1_OpenIDConnectClientAuthentication(in, out, s)
 }
 
 func autoConvert_v1alpha1_Plant_To_core_Plant(in *Plant, out *core.Plant, s conversion.Scope) error {

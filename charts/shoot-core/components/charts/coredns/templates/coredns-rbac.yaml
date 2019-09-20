@@ -13,6 +13,12 @@ rules:
   verbs:
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding

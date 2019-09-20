@@ -20,6 +20,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -28,6 +29,7 @@ import (
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingslister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -125,7 +127,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(a admission.Attributes, o admission.O
 	// Ignore all kinds other than Shoot
 	// Ignore all subresource calls
 	// Ignore all operations other than CREATE
-	if len(a.GetSubresource()) != 0 || a.GetKind().GroupKind() != garden.Kind("Shoot") || a.GetOperation() != admission.Create {
+	if len(a.GetSubresource()) != 0 || (a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot")) || a.GetOperation() != admission.Create {
 		return nil
 	}
 	shoot, ok := a.GetObject().(*garden.Shoot)

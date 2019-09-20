@@ -101,6 +101,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking":                            schema_pkg_apis_core_v1alpha1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NginxIngress":                          schema_pkg_apis_core_v1alpha1_NginxIngress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig":                            schema_pkg_apis_core_v1alpha1_OIDCConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OpenIDConnectClientAuthentication":     schema_pkg_apis_core_v1alpha1_OpenIDConnectClientAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant":                                 schema_pkg_apis_core_v1alpha1_Plant(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantList":                             schema_pkg_apis_core_v1alpha1_PlantList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec":                             schema_pkg_apis_core_v1alpha1_PlantSpec(ref),
@@ -3181,6 +3182,12 @@ func schema_pkg_apis_core_v1alpha1_OIDCConfig(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"clientAuthentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.OpenIDConnectClientAuthentication"),
+						},
+					},
 					"clientID": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.",
@@ -3248,6 +3255,43 @@ func schema_pkg_apis_core_v1alpha1_OIDCConfig(ref common.ReferenceCallback) comm
 					"usernamePrefix": {
 						SchemaProps: spec.SchemaProps{
 							Description: "If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OpenIDConnectClientAuthentication"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_OpenIDConnectClientAuthentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OpenIDConnectClientAuthentication contains configuration for OIDC clients.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"extraConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extra configuration added to kubeconfig's auth-provider. Must not be any of idp-issuer-url, client-id, client-secret, idp-certificate-authority, idp-certificate-authority-data, id-token or refresh-token",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"secret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The client Secret for the OpenID Connect client.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
