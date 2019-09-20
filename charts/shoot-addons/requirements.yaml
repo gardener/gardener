@@ -1,12 +1,4 @@
 dependencies:
-- name: kube-lego
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kube-lego.enabled
-- name: kube2iam
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kube2iam.enabled
 - name: kubernetes-dashboard
   repository: http://localhost:10191
   version: 0.1.0

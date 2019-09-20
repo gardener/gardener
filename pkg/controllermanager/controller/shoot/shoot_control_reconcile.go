@@ -79,8 +79,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		defaultInterval           = 5 * time.Second
 		managedExternalDNS        = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		creationPhase             = operationType == gardencorev1alpha1.LastOperationTypeCreate
-		requireKube2IAMDeployment = o.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS && (creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource))
 		allowBackup               = (o.Seed.Info.Spec.Backup != nil)
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
@@ -262,13 +260,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
-		// kube2iam is deprecated and is kept here only for backwards compatibility reasons because some end-users may depend
-		// on it. It will be removed very soon in the future.
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DeployKube2IAMResources(o) }).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
-		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
 			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
@@ -323,6 +314,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Waiting until stale extension resources are deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying Kube2IAM resources",
+			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DestroyKube2IAMResources(o) }).DoIf(o.Shoot.Info.Spec.Provider.Type == "aws"),
+			Dependencies: flow.NewTaskIDs(waitUntilVPNConnectionExists),
 		})
 		f = g.Compile()
 	)

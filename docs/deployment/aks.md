@@ -518,9 +518,6 @@ Update the fields in [`example/90-deprecated-shoot-azure.yaml`](../../example/90
   apiserver is available at `api.johndoe-azure.garden-dev.your.domain.here`
 * **spec.dns.hostedZoneID**: This field doesn't exist in the example
   you need to add this field and place the Route53 Hosted Zone ID.
-* **spec.addons.kube-lego.email**: This is the email address used when
-  using kube-lego. See
-  [kube-lego Environment Variables](https://github.com/jetstack/kube-lego#environment-variables)
 
 ```
 HOSTED_ZONE_DOMAIN=$(aws route53 get-hosted-zone --id /hostedzone/${HOSTED_ZONE_ID:?"HOSTED_ZONE_ID is missing"} --query 'HostedZone.Name' --output text)

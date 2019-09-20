@@ -274,19 +274,6 @@ func (s *Shoot) GetMachineImages() []*gardenv1beta1.ShootMachineImage {
 	return helper.GetMachineImagesFromShootForCloudProvider(s.CloudProvider, s.Info)
 }
 
-// ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.
-func (s *Shoot) ClusterAutoscalerEnabled() bool {
-	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.ClusterAutoscaler != nil && s.Info.Spec.Addons.ClusterAutoscaler.Enabled
-}
-
-// Kube2IAMEnabled returns true if the kube2iam addon is enabled in the Shoot manifest.
-func (s *Shoot) Kube2IAMEnabled() bool {
-	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Kube2IAM != nil && s.Info.Spec.Addons.Kube2IAM.Enabled
-}
-
-// KubeLegoEnabled returns true if the kube-lego addon is enabled in the Shoot manifest.
-func (s *Shoot) KubeLegoEnabled() bool {
-	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubeLego != nil && s.Info.Spec.Addons.KubeLego.Enabled
 }
 
 // KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.

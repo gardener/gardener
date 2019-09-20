@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -41,15 +42,15 @@ var _ = Describe("controller", func() {
 			Entry("task to absent annotation", map[string]string{},
 				[]string{common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure}),
 			Entry("tasks to empty list", map[string]string{},
-				[]string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployKube2IAMResource}, []string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployKube2IAMResource}),
+				[]string{common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure}),
 			Entry("task to empty list", map[string]string{common.ShootTaskDeployInfrastructure: ""},
 				[]string{common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure}),
 			Entry("task to empty list twice", map[string]string{},
 				[]string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure}),
 			Entry("tasks to filled list", map[string]string{common.ShootTasks: common.ShootTaskDeployInfrastructure},
-				[]string{common.ShootTaskDeployKube2IAMResource}, []string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployKube2IAMResource}),
+				[]string{"some-task"}, []string{common.ShootTaskDeployInfrastructure, "some-task"}),
 			Entry("tasks already in list", map[string]string{common.ShootTasks: common.ShootTaskDeployInfrastructure},
-				[]string{common.ShootTaskDeployKube2IAMResource, common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployKube2IAMResource}),
+				[]string{"some-task", common.ShootTaskDeployInfrastructure}, []string{common.ShootTaskDeployInfrastructure, "some-task"}),
 		)
 
 		DescribeTable("#HasTask",
@@ -59,8 +60,8 @@ var _ = Describe("controller", func() {
 			},
 			Entry("absent task annotation", map[string]string{}, common.ShootTaskDeployInfrastructure, false),
 			Entry("empty task list", map[string]string{common.ShootTasks: ""}, common.ShootTaskDeployInfrastructure, false),
-			Entry("task not in list", map[string]string{common.ShootTasks: common.ShootTaskDeployKube2IAMResource + "," + "dummyTask"}, common.ShootTaskDeployInfrastructure, false),
-			Entry("task in list", map[string]string{common.ShootTasks: common.ShootTaskDeployKube2IAMResource + "," + common.ShootTaskDeployInfrastructure}, common.ShootTaskDeployKube2IAMResource, true),
+			Entry("task not in list", map[string]string{common.ShootTasks: "some-task" + "," + "dummyTask"}, common.ShootTaskDeployInfrastructure, false),
+			Entry("task in list", map[string]string{common.ShootTasks: "some-task" + "," + common.ShootTaskDeployInfrastructure}, "some-task", true),
 		)
 	})
 })
