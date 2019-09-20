@@ -17,12 +17,13 @@ package kubernetes
 import (
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
 	"github.com/Masterminds/semver"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 )
 
 var (
-	defaultPlugins = []gardenv1beta1.AdmissionPlugin{
+	defaultPlugins = []gardencorev1alpha1.AdmissionPlugin{
 		{Name: "Priority"},
 		{Name: "NamespaceLifecycle"},
 		{Name: "LimitRanger"},
@@ -36,12 +37,12 @@ var (
 		{Name: "MutatingAdmissionWebhook"},
 		{Name: "ValidatingAdmissionWebhook"},
 	}
-	defaultPluginsWithInitializers = append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "Initializers"})
+	defaultPluginsWithInitializers = append(defaultPlugins, gardencorev1alpha1.AdmissionPlugin{Name: "Initializers"})
 
 	lowestSupportedKubernetesVersionMajorMinor = "1.10"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
-	admissionPlugins = map[string][]gardenv1beta1.AdmissionPlugin{
+	admissionPlugins = map[string][]gardencorev1alpha1.AdmissionPlugin{
 		"1.10": defaultPluginsWithInitializers,
 		"1.11": defaultPluginsWithInitializers,
 		"1.12": defaultPluginsWithInitializers,
@@ -53,7 +54,7 @@ var (
 // GetAdmissionPluginsForVersion returns the set of default admission plugins for the given Kubernetes version.
 // If the given Kubernetes version does not explicitly define admission plugins the set of names for the next
 // available version will be returned (e.g., for version X not defined the set of version X-1 will be returned).
-func GetAdmissionPluginsForVersion(v string) []gardenv1beta1.AdmissionPlugin {
+func GetAdmissionPluginsForVersion(v string) []gardencorev1alpha1.AdmissionPlugin {
 	version, err := semver.NewVersion(v)
 	if err != nil {
 		return admissionPlugins[lowestSupportedKubernetesVersionMajorMinor]

@@ -19,7 +19,8 @@ import (
 	"sync"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -28,6 +29,7 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -37,8 +39,9 @@ import (
 
 // Controller controls BackupInfrastructures.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenInformers     gardeninformers.SharedInformerFactory
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config      *config.ControllerManagerConfiguration
 	control     ControlInterface
@@ -58,8 +61,10 @@ type Controller struct {
 // NewBackupInfrastructureController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <backupInfrastructureInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewBackupInfrastructureController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewBackupInfrastructureController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, identity *gardencorev1alpha1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
+		corev1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
+
 		gardenv1beta1Informer        = gardenInformerFactory.Garden().V1beta1()
 		backupInfrastructureInformer = gardenv1beta1Informer.BackupInfrastructures()
 		backupInfrastructureLister   = backupInfrastructureInformer.Lister()
@@ -68,8 +73,9 @@ func NewBackupInfrastructureController(k8sGardenClient kubernetes.Interface, gar
 	backupInfrastructureController := &Controller{
 		k8sGardenClient:            k8sGardenClient,
 		k8sGardenInformers:         gardenInformerFactory,
+		k8sGardenCoreInformers:     gardenCoreInformerFactory,
 		config:                     config,
-		control:                    NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, recorder),
+		control:                    NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, corev1alpha1Informer, secrets, imageVector, identity, config, recorder),
 		recorder:                   recorder,
 		secrets:                    secrets,
 		imageVector:                imageVector,

@@ -16,9 +16,7 @@ package kubernetes
 
 import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -28,21 +26,21 @@ import (
 )
 
 func tryUpdateShoot(
-	g garden.Interface,
+	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
-	transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error),
-	updateFunc func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error),
-	equalFunc func(cur, updated *gardenv1beta1.Shoot) bool,
-) (*gardenv1beta1.Shoot, error) {
+	transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error),
+	updateFunc func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error),
+	equalFunc func(cur, updated *gardencorev1alpha1.Shoot) bool,
+) (*gardencorev1alpha1.Shoot, error) {
 
 	var (
-		result  *gardenv1beta1.Shoot
+		result  *gardencorev1alpha1.Shoot
 		attempt int
 	)
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.GardenV1beta1().Shoots(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1alpha1().Shoots(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -115,10 +113,10 @@ func tryUpdateCoreShoot(
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.
-func TryUpdateShoot(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShoot(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }
@@ -139,10 +137,10 @@ func TryUpdateCoreShoot(g gardencore.Interface, backoff wait.Backoff, meta metav
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.
-func TryUpdateShootHibernation(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShootHibernation(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Spec.Hibernation, updated.Spec.Hibernation)
 	})
 }
@@ -151,10 +149,10 @@ func TryUpdateShootHibernation(g garden.Interface, backoff wait.Backoff, meta me
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding Status), no update is done and the operation returns normally.
-func TryUpdateShootStatus(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShootStatus(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).UpdateStatus(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
 	})
 }
@@ -163,10 +161,10 @@ func TryUpdateShootStatus(g garden.Interface, backoff wait.Backoff, meta metav1.
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding labels), no update is done and the operation returns normally.
-func TryUpdateShootLabels(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShootLabels(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Labels, updated.Labels)
 	})
 }
@@ -175,10 +173,10 @@ func TryUpdateShootLabels(g garden.Interface, backoff wait.Backoff, meta metav1.
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding conditions), no update is done and the operation returns normally.
-func TryUpdateShootConditions(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShootConditions(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).UpdateStatus(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
 	})
 }
@@ -187,10 +185,10 @@ func TryUpdateShootConditions(g garden.Interface, backoff wait.Backoff, meta met
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding conditions), no update is done and the operation returns normally.
-func TryUpdateShootAnnotations(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
-	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+func TryUpdateShootAnnotations(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Annotations, updated.Annotations)
 	})
 }

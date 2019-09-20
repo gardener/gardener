@@ -15,41 +15,42 @@
 package project
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"k8s.io/client-go/util/retry"
 )
 
 // UpdaterInterface is an interface used to update the Project manifest.
 // For any use other than testing, clients should create an instance using NewRealUpdater.
 type UpdaterInterface interface {
-	UpdateProjectStatus(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error)
+	UpdateProjectStatus(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error)
 }
 
 // NewRealUpdater returns a UpdaterInterface that updates the Project manifest, using the supplied client and projectLister.
-func NewRealUpdater(k8sGardenClient kubernetes.Interface, projectLister gardenlisters.ProjectLister) UpdaterInterface {
+func NewRealUpdater(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister) UpdaterInterface {
 	return &realUpdater{k8sGardenClient, projectLister}
 }
 
 type realUpdater struct {
 	k8sGardenClient kubernetes.Interface
-	projectLister   gardenlisters.ProjectLister
+	projectLister   gardencorelisters.ProjectLister
 }
 
 // UpdateProjectStatus updates the Project manifest. Implementations are required to retry on conflicts,
 // but fail on other errors. If the returned error is nil Project's manifest has been successfully set.
-func (u *realUpdater) UpdateProjectStatus(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
+func (u *realUpdater) UpdateProjectStatus(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error) {
 	var (
-		newProject *gardenv1beta1.Project
+		newProject *gardencorev1alpha1.Project
 		status     = project.Status
 		updateErr  error
 	)
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		project.Status = status
-		newProject, updateErr = u.k8sGardenClient.Garden().GardenV1beta1().Projects().UpdateStatus(project)
+		newProject, updateErr = u.k8sGardenClient.GardenCore().CoreV1alpha1().Projects().UpdateStatus(project)
 		if updateErr == nil {
 			return nil
 		}

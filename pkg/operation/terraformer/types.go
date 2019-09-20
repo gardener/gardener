@@ -17,10 +17,9 @@ package terraformer
 import (
 	"time"
 
+	"github.com/sirupsen/logrus"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Terraformer is a struct containing configuration parameters for the Terraform script it acts on.

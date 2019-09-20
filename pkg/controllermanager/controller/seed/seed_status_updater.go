@@ -15,41 +15,42 @@
 package seed
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"k8s.io/client-go/util/retry"
 )
 
 // UpdaterInterface is an interface used to update the Seed manifest.
 // For any use other than testing, clients should create an instance using NewRealUpdater.
 type UpdaterInterface interface {
-	UpdateSeedStatus(seed *gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
+	UpdateSeedStatus(seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error)
 }
 
 // NewRealUpdater returns a UpdaterInterface that updates the Seed manifest, using the supplied client and seedLister.
-func NewRealUpdater(k8sGardenClient kubernetes.Interface, seedLister gardenlisters.SeedLister) UpdaterInterface {
+func NewRealUpdater(k8sGardenClient kubernetes.Interface, seedLister gardencorelisters.SeedLister) UpdaterInterface {
 	return &realUpdater{k8sGardenClient, seedLister}
 }
 
 type realUpdater struct {
 	k8sGardenClient kubernetes.Interface
-	seedLister      gardenlisters.SeedLister
+	seedLister      gardencorelisters.SeedLister
 }
 
 // UpdateSeedStatus updates the Seed manifest. Implementations are required to retry on conflicts,
 // but fail on other errors. If the returned error is nil Seed's manifest has been successfully set.
-func (u *realUpdater) UpdateSeedStatus(seed *gardenv1beta1.Seed) (*gardenv1beta1.Seed, error) {
+func (u *realUpdater) UpdateSeedStatus(seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
 	var (
-		newSeed   *gardenv1beta1.Seed
+		newSeed   *gardencorev1alpha1.Seed
 		status    = seed.Status
 		updateErr error
 	)
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		seed.Status = status
-		newSeed, updateErr = u.k8sGardenClient.Garden().GardenV1beta1().Seeds().UpdateStatus(seed)
+		newSeed, updateErr = u.k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().UpdateStatus(seed)
 		if updateErr == nil {
 			return nil
 		}

@@ -15,6 +15,7 @@
 package helper_test
 
 import (
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -491,7 +492,7 @@ var _ = Describe("helper", func() {
 		Entry("alertmanger wanted", &gardenv1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					common.GardenOperatedBy: "test@gardener.cloud",
+					v1alpha1constants.AnnotationShootOperatedBy: "test@gardener.cloud",
 				},
 			},
 		}, alertingSecrets, true),
@@ -504,7 +505,7 @@ var _ = Describe("helper", func() {
 		Entry("no alertmanager wanted due to invalid mail address", &gardenv1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					common.GardenOperatedBy: "invalid-mail-address",
+					v1alpha1constants.AnnotationShootOperatedBy: "invalid-mail-address",
 				},
 			},
 		}, alertingSecrets, false))
@@ -536,7 +537,7 @@ var _ = Describe("helper", func() {
 		BeforeEach(func() {
 			shoot = &gardenv1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   common.GardenNamespace,
+					Namespace:   v1alpha1constants.GardenNamespace,
 					Annotations: nil,
 				},
 			}

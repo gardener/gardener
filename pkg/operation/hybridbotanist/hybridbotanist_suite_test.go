@@ -14,13 +14,13 @@
 package hybridbotanist_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestHybridBotanist(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hybrid Botanist Controlplane Suite")
+	RunSpecs(t, "HybridBotanist Controlplane Suite")
 }

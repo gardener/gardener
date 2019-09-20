@@ -73,7 +73,7 @@ func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() map[str
 func (b *AlicloudBotanist) generateTerraformBackupConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"alicloud": map[string]interface{}{
-			"region": b.Seed.Info.Spec.Cloud.Region,
+			"region": b.Seed.Info.Spec.Provider.Region,
 		},
 		"bucket": map[string]interface{}{
 			"name": b.Operation.BackupInfrastructure.Name,

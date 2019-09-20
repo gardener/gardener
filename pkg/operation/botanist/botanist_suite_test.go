@@ -20,23 +20,20 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestBotanist(t *testing.T) {
@@ -187,24 +184,14 @@ var _ = Describe("health check", func() {
 		condition = gardencorev1alpha1.Condition{
 			Type: gardencorev1alpha1.ConditionType("test"),
 		}
-		gcpShoot = &gardenv1beta1.Shoot{
-			Spec: gardenv1beta1.ShootSpec{
-				Cloud: gardenv1beta1.Cloud{
-					GCP: &gardenv1beta1.GCPCloud{},
-				},
-			},
-		}
-		gcpShootWithAutoscaler = &gardenv1beta1.Shoot{
-			Spec: gardenv1beta1.ShootSpec{
-				Cloud: gardenv1beta1.Cloud{
-					GCP: &gardenv1beta1.GCPCloud{
-						Workers: []gardenv1beta1.GCPWorker{
-							{Worker: gardenv1beta1.Worker{
-								Name:          "foo",
-								AutoScalerMin: 1,
-								AutoScalerMax: 2,
-							}},
-						},
+		gcpShoot               = &gardencorev1alpha1.Shoot{}
+		gcpShootWithAutoscaler = &gardencorev1alpha1.Shoot{
+			Spec: gardencorev1alpha1.ShootSpec{
+				Provider: gardencorev1alpha1.Workers{
+					{
+						Name:          "foo",
+						AutoScalerMin: 1,
+						AutoScalerMax: 2,
 					},
 				},
 			},
@@ -305,7 +292,7 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, machineDeployments []*machinev1alpha1.MachineDeployment, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardencorev1alpha1.Shoot, cloudProvider gardencorev1alpha1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, machineDeployments []*machinev1alpha1.MachineDeployment, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister        = constDeploymentLister(deployments)
 				statefulSetLister       = constStatefulSetLister(statefulSets)
@@ -319,14 +306,14 @@ var _ = Describe("health check", func() {
 		},
 		Entry("all healthy",
 			gcpShoot,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			requiredControlPlaneDeployments,
 			requiredControlPlaneStatefulSets,
 			nil,
 			BeNil()),
 		Entry("all healthy (AWS)",
 			gcpShoot,
-			gardenv1beta1.CloudProviderAWS,
+			"aws",
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -340,7 +327,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("all healthy (with autoscaler)",
 			gcpShootWithAutoscaler,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -355,7 +342,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("missing required deployment",
 			gcpShoot,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			[]*appsv1.Deployment{
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -368,7 +355,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required deployment unhealthy",
 			gcpShoot,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			[]*appsv1.Deployment{
 				newDeployment(gardenerResourceManagerDeployment.Namespace, gardenerResourceManagerDeployment.Name, roleOf(gardenerResourceManagerDeployment), false),
 				kubeAPIServerDeployment,
@@ -382,7 +369,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("missing required stateful set",
 			gcpShoot,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			requiredControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				etcdEventsStatefulSet,
@@ -391,7 +378,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required stateful set unhealthy",
 			gcpShoot,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			requiredControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),
@@ -401,7 +388,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("rolling update ongoing (with autoscaler)",
 			gcpShootWithAutoscaler,
-			gardenv1beta1.CloudProviderGCP,
+			"gcp",
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -664,12 +651,12 @@ var _ = Describe("health check", func() {
 		},
 		Entry("true condition with threshold",
 			map[gardencorev1alpha1.ConditionType]time.Duration{
-				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+				gardencorev1alpha1.ShootControlPlaneHealthy: time.Minute,
 			},
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1alpha1.Condition{
-				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Type:   gardencorev1alpha1.ShootControlPlaneHealthy,
 				Status: gardencorev1alpha1.ConditionTrue,
 			},
 			MatchFields(IgnoreExtras, Fields{
@@ -680,7 +667,7 @@ var _ = Describe("health check", func() {
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1alpha1.Condition{
-				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Type:   gardencorev1alpha1.ShootControlPlaneHealthy,
 				Status: gardencorev1alpha1.ConditionTrue,
 			},
 			MatchFields(IgnoreExtras, Fields{
@@ -688,12 +675,12 @@ var _ = Describe("health check", func() {
 			})),
 		Entry("progressing condition within threshold",
 			map[gardencorev1alpha1.ConditionType]time.Duration{
-				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+				gardencorev1alpha1.ShootControlPlaneHealthy: time.Minute,
 			},
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1alpha1.Condition{
-				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Type:   gardencorev1alpha1.ShootControlPlaneHealthy,
 				Status: gardencorev1alpha1.ConditionProgressing,
 			},
 			MatchFields(IgnoreExtras, Fields{
@@ -701,12 +688,12 @@ var _ = Describe("health check", func() {
 			})),
 		Entry("progressing condition outside threshold",
 			map[gardencorev1alpha1.ConditionType]time.Duration{
-				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+				gardencorev1alpha1.ShootControlPlaneHealthy: time.Minute,
 			},
 			zeroMetaTime,
 			zeroTime.Add(time.Minute+time.Second),
 			gardencorev1alpha1.Condition{
-				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Type:   gardencorev1alpha1.ShootControlPlaneHealthy,
 				Status: gardencorev1alpha1.ConditionProgressing,
 			},
 			MatchFields(IgnoreExtras, Fields{
@@ -717,7 +704,7 @@ var _ = Describe("health check", func() {
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1alpha1.Condition{
-				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Type:   gardencorev1alpha1.ShootControlPlaneHealthy,
 				Status: gardencorev1alpha1.ConditionFalse,
 			},
 			MatchFields(IgnoreExtras, Fields{

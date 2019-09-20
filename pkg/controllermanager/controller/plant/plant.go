@@ -20,21 +20,19 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
-	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // FinalizerName is the name of the Plant finalizer.

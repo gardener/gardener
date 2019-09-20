@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=mocks.go -package=versioned github.com/gardener/gardener/pkg/client/garden/clientset/versioned Interface
+//go:generate mockgen -destination=mocks.go -package=versioned github.com/gardener/gardener/pkg/client/core/clientset/versioned Interface
 
 package versioned

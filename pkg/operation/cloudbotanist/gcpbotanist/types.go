@@ -22,7 +22,6 @@ import (
 type GCPBotanist struct {
 	*operation.Operation
 	CloudProviderName      string
-	VPCName                string
 	Project                string
 	MinifiedServiceAccount string
 }

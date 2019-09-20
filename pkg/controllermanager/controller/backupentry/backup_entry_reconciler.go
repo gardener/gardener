@@ -24,14 +24,13 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/sirupsen/logrus"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,7 +82,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupEntry, gardenv1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupEntry, gardencorev1alpha1.GardenerName); err != nil {
 		backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -105,7 +104,7 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "%s", reconcileErr.Description)
+		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1alpha1.EventReconcileError, "%s", reconcileErr.Description)
 
 		if updateErr := r.updateBackupEntryStatusError(backupEntry, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
 			backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion error: %+v", updateErr)
@@ -129,7 +128,7 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 
 func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", backupEntry.Name)
-	if !sets.NewString(backupEntry.Finalizers...).Has(gardenv1beta1.GardenerName) {
+	if !sets.NewString(backupEntry.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 		backupEntryLogger.Debug("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
 	}
@@ -154,7 +153,7 @@ func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEnt
 				Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
 				Description: err.Error(),
 			}
-			r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
+			r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, "%s", deleteErr.Description)
 
 			if updateErr := r.updateBackupEntryStatusError(backupEntry, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
 				backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion error: %+v", updateErr)
@@ -177,7 +176,7 @@ func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEnt
 }
 
 func getSeedClient(ctx context.Context, gardenClient client.Client, seedName string) (client.Client, error) {
-	seed := &gardenv1beta1.Seed{}
+	seed := &gardencorev1alpha1.Seed{}
 	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
 		return nil, err
 	}
@@ -187,7 +186,7 @@ func getSeedClient(ctx context.Context, gardenClient client.Client, seedName str
 		return nil, err
 	}
 
-	kclient, err := kubernetes.NewClientFromSecretObject(seedSecret, kubernetes.WithClientOptions(
+	c, err := kubernetes.NewClientFromSecretObject(seedSecret, kubernetes.WithClientOptions(
 		client.Options{
 			Scheme: kubernetes.SeedScheme,
 		}))
@@ -195,7 +194,7 @@ func getSeedClient(ctx context.Context, gardenClient client.Client, seedName str
 		return nil, err
 	}
 
-	return kclient.Client(), err
+	return c.Client(), err
 }
 
 func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1alpha1.BackupEntry, message string, progress int) error {

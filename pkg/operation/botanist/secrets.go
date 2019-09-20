@@ -21,10 +21,10 @@ import (
 	"net"
 	"os/exec"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -337,7 +337,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: v1alpha1constants.SecretNameGardener,
 
-				CommonName:   gardenv1beta1.GardenerName,
+				CommonName:   gardencorev1alpha1.GardenerName,
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
@@ -642,7 +642,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			}
 		}
 
-		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.Garden(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			delete(shoot.Annotations, common.ShootOperation)
 			return shoot, nil
 		}); err != nil {
@@ -658,13 +658,13 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	// then we have to delete it and refresh the kubecfg (which is triggered by deleting the kubecfg secret). The other cases are
 	// the opposite: Basic auth is enabled and basic-auth secret found: no deletion required. If the secret is not found then we
 	// generate a new one and want to refresh the kubecfg.
-	mustDeleteUserCredentialSecrets := !gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	mustDeleteUserCredentialSecrets := !gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
 	basicAuthSecret := &corev1.Secret{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BasicAuthSecretName), basicAuthSecret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
-		mustDeleteUserCredentialSecrets = gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+		mustDeleteUserCredentialSecrets = gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
 	}
 	if mustDeleteUserCredentialSecrets {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.BasicAuthSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
@@ -686,7 +686,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	}
 
 	var basicAuthAPIServer *secrets.BasicAuth
-	if gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+	if gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
 		basicAuthAPIServer, err = b.generateBasicAuthAPIServer(ctx, existingSecretsMap)
 		if err != nil {
 			return err
@@ -984,7 +984,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 
 		if err := kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
 			secretObj.OwnerReferences = []metav1.OwnerReference{
-				*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
+				*metav1.NewControllerRef(b.Shoot.Info, gardencorev1alpha1.SchemeGroupVersion.WithKind("Shoot")),
 			}
 			secretObj.Annotations = projectSecret.annotations
 			secretObj.Type = corev1.SecretTypeOpaque
@@ -1060,7 +1060,7 @@ func dnsNamesForService(name, namespace string) []string {
 		name,
 		fmt.Sprintf("%s.%s", name, namespace),
 		fmt.Sprintf("%s.%s.svc", name, namespace),
-		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardenv1beta1.DefaultDomain),
+		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardencorev1alpha1.DefaultDomain),
 	}
 }
 

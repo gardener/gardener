@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 
@@ -119,7 +118,7 @@ var _ = Describe("Shoot Utils", func() {
 
 		DescribeTable("#StatusLabelTransform",
 			func(status shoot.Status, expectedLabels map[string]string) {
-				original := &gardenv1beta1.Shoot{}
+				original := &gardencorev1alpha1.Shoot{}
 
 				modified, err := shoot.StatusLabelTransform(status)(original.DeepCopy())
 				Expect(err).NotTo(HaveOccurred())

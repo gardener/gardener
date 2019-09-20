@@ -18,12 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/retry"
-
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
-
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,7 +79,7 @@ var (
 	GracePeriodFiveMinutes = utilclient.DeleteWith(utilclient.GracePeriodSeconds(5 * 60))
 
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
-	NotSystemComponent = MustNewRequirement(common.GardenRole, selection.NotEquals, common.GardenRoleSystemComponent)
+	NotSystemComponent = MustNewRequirement(v1alpha1constants.DeprecatedGardenRole, selection.NotEquals, v1alpha1constants.GardenRoleSystemComponent)
 	// NoCleanupPrevention is a requirement that the ShootNoCleanup label of something is not true.
 	NoCleanupPrevention = MustNewRequirement(common.ShootNoCleanup, selection.NotEquals, "true")
 	// NotKubernetesProvider is a requirement that the Provider label of something is not KubernetesProvider.

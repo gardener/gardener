@@ -19,9 +19,10 @@ import (
 	"crypto/x509"
 	"net/http"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -31,9 +32,7 @@ import (
 
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
-
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -41,16 +40,16 @@ import (
 type Operation struct {
 	Config                    *config.ControllerManagerConfiguration
 	Logger                    *logrus.Entry
-	GardenerInfo              *gardenv1beta1.Gardener
+	GardenerInfo              *gardencorev1alpha1.Gardener
 	Secrets                   map[string]*corev1.Secret
 	CheckSums                 map[string]string
 	ImageVector               imagevector.ImageVector
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed
 	Shoot                     *shoot.Shoot
-	ShootedSeed               *helper.ShootedSeed
+	ShootedSeed               *gardencorev1alpha1helper.ShootedSeed
 	K8sGardenClient           kubernetes.Interface
-	K8sGardenInformers        gardeninformers.Interface
+	K8sGardenCoreInformers    gardencoreinformers.Interface
 	K8sSeedClient             kubernetes.Interface
 	K8sShootClient            kubernetes.Interface
 	ChartApplierGarden        kubernetes.ChartApplier

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
@@ -113,7 +113,7 @@ func (b *Botanist) syncEncryptionConfigurationToGarden(ctx context.Context, conf
 	secret := &corev1.Secret{ObjectMeta: kutil.ObjectMetaFromKey(common.GardenEtcdEncryptionSecretKey(b.Shoot.Info.Namespace, b.Shoot.Info.Name))}
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secret, func() error {
 		secret.OwnerReferences = []metav1.OwnerReference{
-			*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
+			*metav1.NewControllerRef(b.Shoot.Info, gardencorev1alpha1.SchemeGroupVersion.WithKind("Shoot")),
 		}
 		return encryptionconfiguration.UpdateSecret(secret, conf)
 	})

@@ -18,13 +18,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
-	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/robfig/cron"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/util/retry"
 )
@@ -90,16 +89,16 @@ func NewHibernationScheduleRegistry() HibernationScheduleRegistry {
 }
 
 type hibernationJob struct {
-	client  garden.Interface
+	client  gardencore.Interface
 	logger  logrus.FieldLogger
-	target  *gardenv1beta1.Shoot
+	target  *gardencorev1alpha1.Shoot
 	enabled bool
 }
 
 // Run implements cron.Job.
 func (h *hibernationJob) Run() {
 	_, err := kubernetes.TryUpdateShootHibernation(h.client, retry.DefaultBackoff, h.target.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
 				return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
 			}
@@ -114,6 +113,6 @@ func (h *hibernationJob) Run() {
 }
 
 // NewHibernationJob creates a new cron.Job that sets the hibernation of the given shoot to enabled when it triggers.
-func NewHibernationJob(client garden.Interface, logger logrus.FieldLogger, target *gardenv1beta1.Shoot, enabled bool) cron.Job {
+func NewHibernationJob(client gardencore.Interface, logger logrus.FieldLogger, target *gardencorev1alpha1.Shoot, enabled bool) cron.Job {
 	return &hibernationJob{client, logger, target, enabled}
 }

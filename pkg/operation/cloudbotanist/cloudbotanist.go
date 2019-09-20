@@ -17,7 +17,6 @@ package cloudbotanist
 import (
 	"errors"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/alicloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
@@ -33,28 +32,29 @@ import (
 // We store the infrastructure credentials on the Botanist object for later usage so that we do not
 // need to read the IaaS Secret again.
 func New(o *operation.Operation, purpose string) (CloudBotanist, error) {
-	var cloudProvider gardenv1beta1.CloudProvider
+	var cloudProvider string
+
 	switch purpose {
 	case common.CloudPurposeShoot:
-		cloudProvider = o.Shoot.CloudProvider
+		cloudProvider = o.Shoot.Info.Spec.Provider.Type
 	case common.CloudPurposeSeed:
-		cloudProvider = o.Seed.CloudProvider
+		cloudProvider = o.Seed.Info.Spec.Provider.Type
 	default:
 		return nil, errors.New("unsupported cloud botanist purpose")
 	}
 
 	switch cloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
+	case "aws":
 		return awsbotanist.New(o, purpose)
-	case gardenv1beta1.CloudProviderAzure:
+	case "azure":
 		return azurebotanist.New(o, purpose)
-	case gardenv1beta1.CloudProviderGCP:
+	case "gcp":
 		return gcpbotanist.New(o, purpose)
-	case gardenv1beta1.CloudProviderAlicloud:
+	case "alicloud":
 		return alicloudbotanist.New(o, purpose)
-	case gardenv1beta1.CloudProviderOpenStack:
+	case "openstack":
 		return openstackbotanist.New(o, purpose)
-	case gardenv1beta1.CloudProviderPacket:
+	case "packet":
 		return packetbotanist.New(o, purpose)
 	default:
 		return nil, errors.New("unsupported cloud provider")

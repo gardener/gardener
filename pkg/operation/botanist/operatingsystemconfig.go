@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -46,7 +46,7 @@ import (
 var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
 
 // first hard, second soft
-func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machineType string) (string, string) {
+func getEvictionMemoryAvailable(machineTypes []gardencorev1alpha1.MachineType, machineType string) (string, string) {
 	memoryThreshold, _ := resource.ParseQuantity("8Gi")
 
 	for _, machtype := range machineTypes {
@@ -63,10 +63,6 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 // ComputeShootOperatingSystemConfig generates the shoot operating system configuration. Both, the downloader
 // and original configuration will be generated and stored in the shoot specific cloud config map for later usage.
 func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error {
-	var (
-		machineTypes = b.Shoot.GetMachineTypesFromCloudProfile()
-	)
-
 	originalConfig, err := b.generateOriginalConfig()
 	if err != nil {
 		return err
@@ -85,19 +81,17 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 		usedOscNames = make(map[string]string)
 	)
 
-	for _, worker := range b.Shoot.GetWorkers() {
+	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
+		if worker.Machine.Image == nil {
+			return fmt.Errorf("worker %q doesn't have a machine image, cannot continue", worker.Name)
+		}
+
 		wg.Add(1)
-
-		go func(worker gardenv1beta1.Worker) {
+		go func(worker gardencorev1alpha1.Worker) {
 			defer wg.Done()
-			machineImage := worker.MachineImage
-			if machineImage == nil {
-				machineImage = b.Shoot.GetDefaultMachineImage()
-			}
 
-			machineImageName := machineImage.Name
-			downloaderConfig := b.generateDownloaderConfig(machineImageName)
-			oscs, err := b.deployOperatingSystemConfigsForWorker(machineTypes, machineImage, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
+			downloaderConfig := b.generateDownloaderConfig(worker.Machine.Image.Name)
+			oscs, err := b.deployOperatingSystemConfigsForWorker(b.Shoot.CloudProfile.Spec.MachineTypes, worker.Machine.Image, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
 			results <- &oscOutput{worker.Name, oscs, err}
 		}(worker)
 	}
@@ -141,7 +135,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 		originalConfig = map[string]interface{}{
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-				"domain":     gardenv1beta1.DefaultDomain,
+				"domain":     gardencorev1alpha1.DefaultDomain,
 				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		}
@@ -154,7 +148,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
+func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1alpha1.MachineType, machineImage *gardencorev1alpha1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1alpha1.Worker) (*shoot.OperatingSystemConfigs, error) {
 	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 
 	downloaderConfig["secretName"] = secretName
@@ -191,13 +185,13 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenv1
 	)
 
 	// use the spec.Kubernetes.Kubelet as default for worker
-	kubeletConfig := worker.Kubelet
-	if kubeletConfig == nil {
-		kubeletConfig = b.Shoot.Info.Spec.Kubernetes.Kubelet
+	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
+	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
+		kubeletConfig = worker.Kubernetes.Kubelet
 	}
 
 	// ensure sane defaults for evictionHard.memoryAvailable and evictionSoft.memoryAvailable
-	evictionHard["memoryAvailable"], evictionSoft["memoryAvailable"] = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
+	evictionHard["memoryAvailable"], evictionSoft["memoryAvailable"] = getEvictionMemoryAvailable(machineTypes, worker.Machine.Type)
 
 	if kubeletConfig != nil {
 		if kubeletConfig.EvictionHard != nil {
@@ -381,12 +375,8 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
-	var (
-		shootWorkers = b.Shoot.GetWorkers()
-		workers      = make([]map[string]interface{}, 0, len(shootWorkers))
-	)
-
-	for _, worker := range shootWorkers {
+	workers := make([]map[string]interface{}, 0, len(b.Shoot.Info.Spec.Provider.Workers))
+	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
 		oscData := b.Shoot.OperatingSystemConfigsMap[worker.Name]
 
 		w := map[string]interface{}{

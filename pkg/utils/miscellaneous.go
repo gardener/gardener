@@ -127,3 +127,10 @@ func TestEmail(email string) bool {
 	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
 	return match
 }
+
+// NetworksIntersect returns true if the given network CIDRs intersect.
+func NetworksIntersect(cidr1, cidr2 string) bool {
+	_, net1, err1 := net.ParseCIDR(cidr1)
+	_, net2, err2 := net.ParseCIDR(cidr2)
+	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
+}

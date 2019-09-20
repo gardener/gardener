@@ -21,8 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -62,7 +61,7 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 	}
 
 	// if shoot has not been scheduled, requeue
-	if shoot.Spec.Cloud.Seed == nil {
+	if shoot.Spec.SeedName == nil {
 		return fmt.Errorf("shoot %s has not yet been scheduled on a Seed", key)
 	}
 
@@ -77,23 +76,23 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 // CareControlInterface implements the control logic for caring for Shoots. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type CareControlInterface interface {
-	Care(shoot *gardenv1beta1.Shoot, key string) error
+	Care(shoot *gardencorev1alpha1.Shoot, key string) error
 }
 
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
 // implements the documented semantics for caring for Shoots. You should use an instance returned from NewDefaultCareControl()
 // for any scenario other than testing.
-func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *config.ControllerManagerConfiguration) CareControlInterface {
-	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config}
+func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1alpha1.Gardener, config *config.ControllerManagerConfiguration) CareControlInterface {
+	return &defaultCareControl{k8sGardenClient, k8sGardenCoreInformers, secrets, imageVector, identity, config}
 }
 
 type defaultCareControl struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.Interface
-	secrets            map[string]*corev1.Secret
-	imageVector        imagevector.ImageVector
-	identity           *gardenv1beta1.Gardener
-	config             *config.ControllerManagerConfiguration
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.Interface
+	secrets                map[string]*corev1.Secret
+	imageVector            imagevector.ImageVector
+	identity               *gardencorev1alpha1.Gardener
+	config                 *config.ControllerManagerConfiguration
 }
 
 func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[gardencorev1alpha1.ConditionType]time.Duration {
@@ -117,7 +116,7 @@ func shootClientInitializer(b *botanistpkg.Botanist) func() error {
 	}
 }
 
-func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) error {
+func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string) error {
 	var (
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
@@ -125,7 +124,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
-	operation, err := operation.New(shoot, c.config, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector, nil)
+	operation, err := operation.New(shoot, c.config, shootLogger, c.k8sGardenClient, c.k8sGardenCoreInformers, c.identity, c.secrets, c.imageVector, nil)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 		return nil // We do not want to run in the exponential backoff for the condition checks.
@@ -133,10 +132,10 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Initialize conditions based on the current status.
 	var (
-		conditionAPIServerAvailable      = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootAPIServerAvailable)
-		conditionControlPlaneHealthy     = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootControlPlaneHealthy)
-		conditionEveryNodeReady          = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootEveryNodeReady)
-		conditionSystemComponentsHealthy = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootSystemComponentsHealthy)
+		conditionAPIServerAvailable      = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootAPIServerAvailable)
+		conditionControlPlaneHealthy     = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootControlPlaneHealthy)
+		conditionEveryNodeReady          = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootEveryNodeReady)
+		conditionSystemComponentsHealthy = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootSystemComponentsHealthy)
 	)
 
 	botanist, err := botanistpkg.New(operation)
@@ -176,7 +175,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Mark Shoot as healthy/unhealthy
 	kutil.TryUpdateShootLabels(
-		c.k8sGardenClient.Garden(),
+		c.k8sGardenClient.GardenCore(),
 		retry.DefaultBackoff, shoot.ObjectMeta,
 		StatusLabelTransform(
 			ComputeStatus(
@@ -192,9 +191,9 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 
-func (c *defaultCareControl) updateShootConditions(shoot *gardenv1beta1.Shoot, conditions ...gardencorev1alpha1.Condition) (*gardenv1beta1.Shoot, error) {
-	newShoot, err := kutil.TryUpdateShootConditions(c.k8sGardenClient.Garden(), retry.DefaultBackoff, shoot.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+func (c *defaultCareControl) updateShootConditions(shoot *gardencorev1alpha1.Shoot, conditions ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			shoot.Status.Conditions = conditions
 			return shoot, nil
 		})
@@ -218,7 +217,7 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 		}
 	}()
 
-	if !botanist.Shoot.HibernationEnabled && (botanist.Shoot.Info.Status.IsHibernated == nil || !*botanist.Shoot.Info.Status.IsHibernated) {
+	if !botanist.Shoot.HibernationEnabled && !botanist.Shoot.Info.Status.IsHibernated {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

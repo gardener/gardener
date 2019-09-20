@@ -21,20 +21,17 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // FinalizerName is the name of the ControllerInstallation finalizer.
@@ -43,7 +40,6 @@ const FinalizerName = "core.gardener.cloud/controllerinstallation"
 // Controller controls ControllerInstallation.
 type Controller struct {
 	k8sGardenClient        kubernetes.Interface
-	k8sGardenInformers     gardeninformers.SharedInformerFactory
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config *config.ControllerManagerConfiguration
@@ -53,7 +49,7 @@ type Controller struct {
 	recorder record.EventRecorder
 
 	seedQueue  workqueue.RateLimitingInterface
-	seedLister gardenlisters.SeedLister
+	seedLister gardencorelisters.SeedLister
 	seedSynced cache.InformerSynced
 
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
@@ -68,12 +64,11 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
+func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
 	var (
-		gardenInformer     = gardenInformerFactory.Garden().V1beta1()
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1alpha1()
 
-		seedInformer = gardenInformer.Seeds()
+		seedInformer = gardenCoreInformer.Seeds()
 		seedLister   = seedInformer.Lister()
 		seedQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
 
@@ -87,9 +82,8 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenInformerFactory g
 
 	controller := &Controller{
 		k8sGardenClient:               k8sGardenClient,
-		k8sGardenInformers:            gardenInformerFactory,
 		k8sGardenCoreInformers:        gardenCoreInformerFactory,
-		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenInformerFactory, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
 		config:                        config,
 		recorder:                      recorder,
 

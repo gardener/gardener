@@ -57,7 +57,7 @@ func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() map[string]s
 func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"aws": map[string]interface{}{
-			"region": b.Seed.Info.Spec.Cloud.Region,
+			"region": b.Seed.Info.Spec.Provider.Region,
 		},
 		"bucket": map[string]interface{}{
 			"name": b.Operation.BackupInfrastructure.Name,

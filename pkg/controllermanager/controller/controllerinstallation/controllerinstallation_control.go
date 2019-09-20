@@ -23,17 +23,14 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -116,17 +113,16 @@ type ControlInterface interface {
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for ControllerInstallations. You should use an instance returned from
 // NewDefaultControllerInstallationControl() for any scenario other than testing.
-func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardenlisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
-	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
+func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
+	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
 }
 
 type defaultControllerInstallationControl struct {
 	k8sGardenClient              kubernetes.Interface
-	k8sGardenInformers           gardeninformers.SharedInformerFactory
 	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
 	recorder                     record.EventRecorder
 	config                       *config.ControllerManagerConfiguration
-	seedLister                   gardenlisters.SeedLister
+	seedLister                   gardencorelisters.SeedLister
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	gardenNamespace              *corev1.Namespace
@@ -145,7 +141,6 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1alpha1
 	if controllerInstallation.DeletionTimestamp != nil {
 		return c.delete(controllerInstallation, logger)
 	}
-
 	return c.reconcile(controllerInstallation, logger)
 }
 
@@ -191,10 +186,6 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	if err != nil {
 		return err
 	}
-	seedCloudProvider, err := seedpkg.DetermineCloudProviderForSeed(ctx, c.k8sGardenClient.Client(), seed)
-	if err != nil {
-		return err
-	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
 		kubernetes.WithClientConnectionOptions(c.config.SeedClientConnection),
@@ -231,6 +222,17 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
+	var (
+		volumeProvider  string
+		volumeProviders []gardencorev1alpha1.SeedVolumeProvider
+	)
+	if seed.Spec.Volume != nil {
+		volumeProviders = seed.Spec.Volume.Providers
+		if len(seed.Spec.Volume.Providers) > 0 {
+			volumeProvider = seed.Spec.Volume.Providers[0].Name
+		}
+	}
+
 	// Mix-in some standard values for seed.
 	seedValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
@@ -238,15 +240,16 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"identity": c.gardenNamespace.UID,
 			},
 			"seed": map[string]interface{}{
-				"identity":       seed.Name,
-				"provider":       seedCloudProvider,
-				"volumeProvider": common.GetPersistentVolumeProvider(seed),
-				"region":         seed.Spec.Cloud.Region,
-				"ingressDomain":  seed.Spec.IngressDomain,
-				"blockCIDRs":     seed.Spec.BlockCIDRs,
-				"protected":      seed.Spec.Protected,
-				"visible":        seed.Spec.Visible,
-				"networks":       seed.Spec.Networks,
+				"identity":        seed.Name,
+				"provider":        seed.Spec.Provider.Type,
+				"volumeProvider":  volumeProvider,
+				"volumeProviders": volumeProviders,
+				"region":          seed.Spec.Provider.Region,
+				"ingressDomain":   seed.Spec.DNS.IngressDomain,
+				"blockCIDRs":      seed.Spec.BlockCIDRs,
+				"protected":       gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintProtected),
+				"visible":         !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintInvisible),
+				"networks":        seed.Spec.Networks,
 			},
 		},
 	}

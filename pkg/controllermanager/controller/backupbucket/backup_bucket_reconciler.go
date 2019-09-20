@@ -21,15 +21,14 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/sirupsen/logrus"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +84,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupBucket, gardenv1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupBucket, gardencorev1alpha1.GardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -101,7 +100,7 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.Back
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, secret, gardenv1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, secret, gardencorev1alpha1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -119,7 +118,7 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.Back
 			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "%s", reconcileErr.Description)
+		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1alpha1.EventReconcileError, "%s", reconcileErr.Description)
 
 		if updateErr := r.updateBackupBucketStatusError(backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
@@ -138,7 +137,7 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1alpha1.Back
 
 func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(r.logger, "backupbucket", backupBucket.Name)
-	if !sets.NewString(backupBucket.Finalizers...).Has(gardenv1beta1.GardenerName) {
+	if !sets.NewString(backupBucket.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 		backupBucketLogger.Debug("Do not need to do anything as the BackupBucket does not have my finalizer")
 		return reconcile.Result{}, nil
 	}
@@ -182,7 +181,7 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupB
 			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
+		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, "%s", deleteErr.Description)
 
 		if updateErr := r.updateBackupBucketStatusError(backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
@@ -203,7 +202,7 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupB
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret, gardenv1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret, gardencorev1alpha1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to remove external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -212,7 +211,7 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupB
 }
 
 func getSeedClient(ctx context.Context, gardenClient client.Client, seedName string) (client.Client, error) {
-	seed := &gardenv1beta1.Seed{}
+	seed := &gardencorev1alpha1.Seed{}
 	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
 		return nil, err
 	}
@@ -222,14 +221,14 @@ func getSeedClient(ctx context.Context, gardenClient client.Client, seedName str
 		return nil, err
 	}
 
-	kclient, err := kubernetes.NewClientFromSecretObject(seedSecret, kubernetes.WithClientOptions(
+	c, err := kubernetes.NewClientFromSecretObject(seedSecret, kubernetes.WithClientOptions(
 		client.Options{
 			Scheme: kubernetes.SeedScheme,
 		}))
 	if err != nil {
 		return nil, err
 	}
-	return kclient.Client(), err
+	return c.Client(), err
 }
 
 func (r *reconciler) updateBackupBucketStatusProcessing(bb *gardencorev1alpha1.BackupBucket, message string, progress int) error {

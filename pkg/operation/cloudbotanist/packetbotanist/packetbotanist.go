@@ -17,31 +17,28 @@ package packetbotanist
 import (
 	"errors"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // New takes an operation object <o> and creates a new PacketBotanist object.
 func New(o *operation.Operation, purpose string) (*PacketBotanist, error) {
-	var (
-		cloudProvider gardenv1beta1.CloudProvider
-	)
+	var cloudProvider string
 
 	switch purpose {
 	case common.CloudPurposeShoot:
-		cloudProvider = o.Shoot.CloudProvider
+		cloudProvider = o.Shoot.Info.Spec.Provider.Type
 	case common.CloudPurposeSeed:
-		cloudProvider = o.Seed.CloudProvider
+		cloudProvider = o.Seed.Info.Spec.Provider.Type
 	}
 
-	if cloudProvider != gardenv1beta1.CloudProviderPacket {
+	if cloudProvider != "packet" {
 		return nil, errors.New("cannot instantiate an Packet botanist if neither Shoot nor Seed cluster specifies Packet")
 	}
 
 	return &PacketBotanist{
 		Operation:         o,
-		CloudProviderName: "packet",
+		CloudProviderName: cloudProvider,
 	}, nil
 }
 

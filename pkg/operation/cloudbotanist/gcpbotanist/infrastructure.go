@@ -51,7 +51,7 @@ func (b *GCPBotanist) generateTerraformBackupVariablesEnvironment() map[string]s
 func (b *GCPBotanist) generateTerraformBackupConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"google": map[string]interface{}{
-			"region":  b.Seed.Info.Spec.Cloud.Region,
+			"region":  b.Seed.Info.Spec.Provider.Region,
 			"project": b.Project,
 		},
 		"bucket": map[string]interface{}{

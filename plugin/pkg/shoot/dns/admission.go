@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -153,11 +154,11 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		return
 	}
 
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleDefaultDomain))
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
 		return
 	}
-	secrets, err := secretLister.Secrets(common.GardenNamespace).List(selector)
+	secrets, err := secretLister.Secrets(v1alpha1constants.GardenNamespace).List(selector)
 	if err != nil {
 		return
 	}

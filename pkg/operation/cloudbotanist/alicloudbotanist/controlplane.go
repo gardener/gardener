@@ -15,9 +15,10 @@
 package alicloudbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.

@@ -26,9 +26,7 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/migration"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -60,13 +58,13 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
-			common.GardenRole:                         common.GardenRoleShoot,
-			v1alpha1constants.GardenRole:              common.GardenRoleShoot,
-			common.ShootHibernated:                    strconv.FormatBool(b.Shoot.HibernationEnabled),
-			v1alpha1constants.LabelSeedProvider:       string(b.Seed.CloudProvider),
-			v1alpha1constants.LabelShootProvider:      string(b.Shoot.CloudProvider),
-			v1alpha1constants.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
-			v1alpha1constants.LabelBackupProvider:     string(b.Seed.CloudProvider),
+			v1alpha1constants.DeprecatedGardenRole:      v1alpha1constants.GardenRoleShoot,
+			v1alpha1constants.GardenRole:                v1alpha1constants.GardenRoleShoot,
+			v1alpha1constants.DeprecatedShootHibernated: strconv.FormatBool(b.Shoot.HibernationEnabled),
+			v1alpha1constants.LabelSeedProvider:         string(b.Seed.Info.Spec.Provider.Type),
+			v1alpha1constants.LabelShootProvider:        string(b.Shoot.Info.Spec.Provider.Type),
+			v1alpha1constants.LabelNetworkingProvider:   string(b.Shoot.Info.Spec.Networking.Type),
+			v1alpha1constants.LabelBackupProvider:       string(b.Seed.Info.Spec.Provider.Type),
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
@@ -84,10 +82,10 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 
 func getShootAnnotations(annotations map[string]string, uid types.UID) map[string]string {
 	shootAnnotations := map[string]string{
-		common.ShootUID: string(uid),
+		v1alpha1constants.DeprecatedShootHibernated: string(uid),
 	}
 	for key, value := range annotations {
-		if strings.HasPrefix(key, common.AnnotateSeedNamespacePrefix) {
+		if strings.HasPrefix(key, v1alpha1constants.AnnotationShootCustom) {
 			shootAnnotations[key] = value
 		}
 	}
@@ -106,7 +104,7 @@ func (b *Botanist) DeployBackupNamespace(ctx context.Context) error {
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Labels = map[string]string{
-			common.GardenRole: common.GardenRoleBackup,
+			v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.DeprecatedGardenRoleBackup,
 		}
 		return nil
 	})
@@ -330,30 +328,27 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
+		providerConfig *runtime.RawExtension
 	)
 
-	// In the future the providerConfig will be blindly copied from the core.gardener.cloud/v1alpha1.Shoot
-	// resource. However, until we have completely moved to this resource, we have to compute the needed
-	// configuration ourselves from garden.sapcloud.io/v1beta1.Shoot.
-	providerConfig, err := migration.ShootToControlPlaneConfig(b.Shoot.Info)
-	if err != nil {
-		return err
+	if cfg := b.Shoot.Info.Spec.Provider.ControlPlaneConfig; cfg != nil {
+		providerConfig = &runtime.RawExtension{
+			Raw: cfg.Raw,
+		}
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.CloudProvider),
+				Type: string(b.Shoot.Info.Spec.Provider.Type),
 			},
-			Region: b.Shoot.Info.Spec.Cloud.Region,
+			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
 			},
-			ProviderConfig: &runtime.RawExtension{
-				Object: providerConfig,
-			},
+			ProviderConfig: providerConfig,
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: b.Shoot.InfrastructureStatus,
 			},
@@ -383,10 +378,10 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Seed.CloudProvider),
+				Type: b.Seed.Info.Spec.Provider.Type,
 			},
+			Region:  b.Seed.Info.Spec.Provider.Region,
 			Purpose: purpose,
-			Region:  b.Seed.Info.Spec.Cloud.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
@@ -447,7 +442,7 @@ func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) 
 	return nil
 }
 
-// WaitUntilControlPlaneExposureDeleted waits until the control plane resource with pusrpose `exposure` has been deleted.
+// WaitUntilControlPlaneExposureDeleted waits until the control plane resource with purpose `exposure` has been deleted.
 func (b *Botanist) WaitUntilControlPlaneExposureDeleted(ctx context.Context) error {
 	return b.waitUntilControlPlaneDeleted(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
 }
@@ -533,14 +528,14 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 		bucketName = backupEntry.Spec.BucketName
 		seedName = backupEntry.Spec.Seed
 	}
-	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1alpha1.SchemeGroupVersion.WithKind("Shoot"))
 	blockOwnerDeletion := false
 	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
 
 	return kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
-		finalizers.Insert(gardenv1beta1.GardenerName)
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
 		backupEntry.SetFinalizers(finalizers.UnsortedList())
 
 		backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}

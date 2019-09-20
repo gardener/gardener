@@ -15,25 +15,26 @@
 package project
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-func setProjectPhase(phase gardenv1beta1.ProjectPhase) func(*gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
-	return func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
+func setProjectPhase(phase gardencorev1alpha1.ProjectPhase) func(*gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error) {
+	return func(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error) {
 		project.Status.Phase = phase
 		return project, nil
 	}
 }
 
-func namespaceLabelsFromProject(project *gardenv1beta1.Project) map[string]string {
+func namespaceLabelsFromProject(project *gardencorev1alpha1.Project) map[string]string {
 	return map[string]string{
-		common.GardenRole:  common.GardenRoleProject,
-		common.ProjectName: project.Name,
+		v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleProject,
+		common.ProjectName:                     project.Name,
 	}
 }
 
-func namespaceAnnotationsFromProject(project *gardenv1beta1.Project) map[string]string {
+func namespaceAnnotationsFromProject(project *gardencorev1alpha1.Project) map[string]string {
 	return map[string]string{
 		common.NamespaceProject: string(project.UID),
 	}

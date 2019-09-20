@@ -17,6 +17,7 @@ package openstackbotanist
 import (
 	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/utils/openstack/clientconfig"
@@ -41,7 +42,7 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error
 		UserName:                b.Seed.Secret.Data[UserName],
 		Password:                b.Seed.Secret.Data[Password],
 		TenantName:              b.Seed.Secret.Data[TenantName],
-		AuthURL:                 []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
+		AuthURL:                 nil, // TODO
 		DomainName:              b.Seed.Secret.Data[DomainName],
 	}
 
@@ -74,13 +75,11 @@ func (b *OpenStackBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte)
 	provider, err := openstack.AuthenticatedClient(*authOpts)
 	if err != nil {
 		return nil, err
-
 	}
 
 	client, err := openstack.NewObjectStorageV1(provider, gophercloud.EndpointOpts{})
 	if err != nil {
 		return nil, err
-
 	}
 
 	return snapstore.NewSwiftSnapstoreFromClient(bucket, "etcd-main/v1", "", 10, client), nil

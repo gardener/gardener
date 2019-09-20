@@ -16,72 +16,29 @@ package alicloudbotanist
 
 import (
 	"errors"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-
-	"github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud"
-	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
-
-// IMPORTANT NOTICE
-// The following part is only temporarily needed until we have completed the Extensibility epic
-// and moved out all provider specifics.
-// IMPORTANT NOTICE
-
-var (
-	scheme  *runtime.Scheme
-	decoder runtime.Decoder
-)
-
-func init() {
-	scheme = runtime.NewScheme()
-
-	// Workaround for incompatible kubernetes dependencies in gardener/gardener and
-	// gardener/gardener-extensions.
-	alicloudSchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(alicloud.SchemeGroupVersion, &alicloud.InfrastructureConfig{}, &alicloud.InfrastructureStatus{})
-		return nil
-	})
-	alicloudv1alpha1SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(alicloudv1alpha1.SchemeGroupVersion, &alicloudv1alpha1.InfrastructureConfig{}, &alicloudv1alpha1.InfrastructureStatus{})
-		return nil
-	})
-	schemeBuilder := runtime.NewSchemeBuilder(
-		alicloudv1alpha1SchemeBuilder.AddToScheme,
-		alicloudSchemeBuilder.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
-
-	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-}
-
-// IMPORTANT NOTICE
-// The above part is only temporarily needed until we have completed the Extensibility epic
-// and moved out all provider specifics.
-// IMPORTANT NOTICE
 
 // New takes an operation object <o> and creates a new AlicloudBotanist object.
 func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
-	var cloudProvider gardenv1beta1.CloudProvider
+	var cloudProvider string
 
 	switch purpose {
 	case common.CloudPurposeShoot:
-		cloudProvider = o.Shoot.CloudProvider
+		cloudProvider = o.Shoot.Info.Spec.Provider.Type
 	case common.CloudPurposeSeed:
-		cloudProvider = o.Seed.CloudProvider
+		cloudProvider = o.Seed.Info.Spec.Provider.Type
 	}
 
-	if cloudProvider != gardenv1beta1.CloudProviderAlicloud {
+	if cloudProvider != "alicloud" {
 		return nil, errors.New("cannot instantiate an Alicloud botanist if neither Shoot nor Seed cluster specifies Alicloud")
 	}
 
 	return &AlicloudBotanist{
 		Operation:         o,
-		CloudProviderName: "alicloud",
+		CloudProviderName: cloudProvider,
 	}, nil
 }
 

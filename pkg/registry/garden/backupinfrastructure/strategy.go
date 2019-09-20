@@ -19,11 +19,12 @@ import (
 	"strconv"
 
 	"github.com/gardener/gardener/pkg/api"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -50,8 +51,8 @@ func (backupInfrastructureStrategy) PrepareForCreate(ctx context.Context, obj ru
 	backupInfrastructure.Status = garden.BackupInfrastructureStatus{}
 
 	finalizers := sets.NewString(backupInfrastructure.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
+	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
 	}
 	backupInfrastructure.Finalizers = finalizers.UnsortedList()
 }

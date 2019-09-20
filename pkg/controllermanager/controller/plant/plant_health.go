@@ -19,18 +19,14 @@ import (
 	"fmt"
 	"sync"
 
-	"k8s.io/client-go/discovery"
-
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 )
 
 // NewHealthChecker creates a new health checker.
@@ -52,28 +48,28 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 	nodeList := &corev1.NodeList{}
 	err := h.plantClient.List(ctx, nodeList)
 	if err != nil {
-		return helper.UpdatedConditionUnknownError(condition, err)
+		return gardencorev1alpha1helper.UpdatedConditionUnknownError(condition, err)
 	}
 
 	if exitCondition, err := h.checkNodes(condition, nodeList); err != nil {
 		return exitCondition
 	}
 
-	updatedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready.")
+	updatedCondition := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready.")
 	return updatedCondition
 }
 
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.
 func (h *HealthChecker) CheckAPIServerAvailability(condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
 	return health.CheckAPIServerAvailability(condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1alpha1.Condition {
-		return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, conditionType, message)
+		return gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, conditionType, message)
 	})
 }
 
 func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, nodeList *corev1.NodeList) (gardencorev1alpha1.Condition, error) {
 	for _, object := range nodeList.Items {
 		if err := health.CheckNode(&object); err != nil {
-			failedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, "NodesUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
+			failedCondition := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, "NodesUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
 			return failedCondition, err
 		}
 	}

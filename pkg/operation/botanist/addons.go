@@ -20,10 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -117,25 +116,6 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// GenerateKubeLegoConfig generates the values which are required to render the chart of
-// kube-lego properly.
-func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
-	var (
-		enabled = b.Shoot.KubeLegoEnabled()
-		values  map[string]interface{}
-	)
-
-	if enabled {
-		values = map[string]interface{}{
-			"config": map[string]interface{}{
-				"LEGO_EMAIL": b.Shoot.Info.Spec.Addons.KubeLego.Mail,
-			},
-		}
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
 // DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 	type managedResourceOptions struct {
@@ -218,7 +198,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				// TODO: resolve conformance test issue before changing:
 				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
 				"domain": map[string]interface{}{
-					"clusterDomain": gardenv1beta1.DefaultDomain,
+					"clusterDomain": gardencorev1alpha1.DefaultDomain,
 				},
 			},
 		}
@@ -247,7 +227,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		vpnShootConfig = map[string]interface{}{
 			"podNetwork":     b.Shoot.GetPodNetwork(),
 			"serviceNetwork": b.Shoot.GetServiceNetwork(),
-			"nodeNetwork":    b.Shoot.GetNodeNetwork(),
+			"nodeNetwork":    b.Shoot.Info.Spec.Networking.Nodes,
 			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
@@ -337,10 +317,6 @@ func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, 
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	kubeLegoConfig, err := b.GenerateKubeLegoConfig()
-	if err != nil {
-		return nil, err
-	}
 	kubernetesDashboardConfig, err := b.GenerateKubernetesDashboardConfig()
 	if err != nil {
 		return nil, err
@@ -350,10 +326,6 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		return nil, err
 	}
 
-	kubeLego, err := b.InjectShootShootImages(kubeLegoConfig, common.KubeLegoImageName)
-	if err != nil {
-		return nil, err
-	}
 	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
 	if err != nil {
 		return nil, err
@@ -363,19 +335,7 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		return nil, err
 	}
 
-	// kube2iam is deprecated and will be removed in the future.
-	kube2IAM := common.GenerateAddonConfig(nil, false)
-	if b.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS {
-		kube2IAMConfig, err := awsbotanist.GenerateKube2IAMConfig(b.Operation)
-		if err != nil {
-			return nil, err
-		}
-		kube2IAM = kube2IAMConfig
-	}
-
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"kube-lego":            kubeLego,
-		"kube2iam":             kube2IAM,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
 	})

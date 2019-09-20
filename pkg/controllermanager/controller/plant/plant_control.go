@@ -19,16 +19,8 @@ import (
 	"fmt"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/labels"
-
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	kubernetesclientset "k8s.io/client-go/kubernetes"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -37,12 +29,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // reconcilePlantForMatchingSecret checks if there is a plant resource that references this secret and then reconciles the plant again
@@ -190,8 +186,8 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	}
 
 	var (
-		conditionAPIServerAvailable = helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantAPIServerAvailable)
-		conditionEveryNodeReady     = helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantEveryNodeReady)
+		conditionAPIServerAvailable = gardencorev1alpha1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantAPIServerAvailable)
+		conditionEveryNodeReady     = gardencorev1alpha1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantEveryNodeReady)
 	)
 
 	kubeconfigSecret, err := c.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
@@ -237,8 +233,8 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 }
 
 func (c *defaultPlantControl) updateStatusToUnknown(ctx context.Context, plant *gardencorev1alpha1.Plant, message string, conditionAPIServerAvailable, conditionEveryNodeReady gardencorev1alpha1.Condition) error {
-	conditionAPIServerAvailable = helper.UpdatedCondition(conditionAPIServerAvailable, gardencorev1alpha1.ConditionFalse, "APIServerDown", message)
-	conditionEveryNodeReady = helper.UpdatedCondition(conditionEveryNodeReady, gardencorev1alpha1.ConditionFalse, "Nodes not reachable", message)
+	conditionAPIServerAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionAPIServerAvailable, gardencorev1alpha1.ConditionFalse, "APIServerDown", message)
+	conditionEveryNodeReady = gardencorev1alpha1helper.UpdatedCondition(conditionEveryNodeReady, gardencorev1alpha1.ConditionFalse, "Nodes not reachable", message)
 	return c.updateStatus(ctx, plant, &StatusCloudInfo{}, conditionAPIServerAvailable, conditionEveryNodeReady)
 }
 

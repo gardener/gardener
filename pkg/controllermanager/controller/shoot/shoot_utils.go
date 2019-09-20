@@ -18,8 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -67,8 +66,8 @@ func (s Status) OrWorse(other Status) Status {
 }
 
 // StatusLabelTransform transforms the shoot labels depending on the given Status.
-func StatusLabelTransform(status Status) func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+func StatusLabelTransform(status Status) func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+	return func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 		// TODO (AC): Deprecate common.ShootUnhealthy once tools adapted
 		healthy := statusToBool(status)
 		if !healthy {
@@ -137,7 +136,7 @@ func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastError *g
 	return status.OrWorse(BoolToStatus(lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded))
 }
 
-func shootIsSeed(shoot *gardenv1beta1.Shoot) bool {
-	shootedSeed, err := helper.ReadShootedSeed(shoot)
+func shootIsSeed(shoot *gardencorev1alpha1.Shoot) bool {
+	shootedSeed, err := gardencorev1alpha1helper.ReadShootedSeed(shoot)
 	return err == nil && shootedSeed != nil
 }

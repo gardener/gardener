@@ -22,11 +22,8 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -98,17 +95,16 @@ type ControlInterface interface {
 // NewDefaultControllerRegistrationControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for ControllerRegistrations. You should use an instance returned from
 // NewDefaultControllerRegistrationControl() for any scenario other than testing.
-func NewDefaultControllerRegistrationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardenlisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
-	return &defaultControllerRegistrationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister}
+func NewDefaultControllerRegistrationControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
+	return &defaultControllerRegistrationControl{k8sGardenClient, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister}
 }
 
 type defaultControllerRegistrationControl struct {
 	k8sGardenClient              kubernetes.Interface
-	k8sGardenInformers           gardeninformers.SharedInformerFactory
 	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
 	recorder                     record.EventRecorder
 	config                       *config.ControllerManagerConfiguration
-	seedLister                   gardenlisters.SeedLister
+	seedLister                   gardencorelisters.SeedLister
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 }
@@ -122,7 +118,6 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1alpha1
 	if controllerRegistration.DeletionTimestamp != nil {
 		return c.delete(controllerRegistration, logger)
 	}
-
 	return c.reconcile(controllerRegistration, logger)
 }
 
@@ -183,7 +178,7 @@ func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration 
 	return result
 }
 
-func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(controllerRegistration *gardencorev1alpha1.ControllerRegistration, seed *gardenv1beta1.Seed, installationsMap map[string]string) error {
+func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(controllerRegistration *gardencorev1alpha1.ControllerRegistration, seed *gardencorev1alpha1.Seed, installationsMap map[string]string) error {
 	if seed.DeletionTimestamp != nil {
 		if installation, ok := installationsMap[seed.Name]; ok {
 			if seed.Spec.Backup != nil {
@@ -200,13 +195,13 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 		return nil
 	}
 
-	seed, err := kutil.TryUpdateSeedWithEqualFunc(c.k8sGardenClient.Garden(), retry.DefaultBackoff, seed.ObjectMeta, func(s *gardenv1beta1.Seed) (*gardenv1beta1.Seed, error) {
+	seed, err := kutil.TryUpdateSeedWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta, func(s *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
 		if finalizers := sets.NewString(s.Finalizers...); !finalizers.Has(FinalizerName) {
 			finalizers.Insert(FinalizerName)
 			s.Finalizers = finalizers.UnsortedList()
 		}
 		return s, nil
-	}, func(cur, updated *gardenv1beta1.Seed) bool {
+	}, func(cur, updated *gardencorev1alpha1.Seed) bool {
 		return sets.NewString(cur.Finalizers...).Has(FinalizerName)
 	})
 	if err != nil {
@@ -303,7 +298,7 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 }
 
 // waitUntilBackupBucketDeleted waits until backup bucket extension resource is deleted in gardener cluster.
-func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardenv1beta1.Seed, logger *logrus.Entry) error {
+func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardencorev1alpha1.Seed, logger *logrus.Entry) error {
 	var lastError *gardencorev1alpha1.LastError
 
 	if err := utilsretry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {

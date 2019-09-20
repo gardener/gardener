@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -34,13 +34,13 @@ import (
 
 // Controller controls Projects.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control  ControlInterface
 	recorder record.EventRecorder
 
-	projectLister gardenlisters.ProjectLister
+	projectLister gardencorelisters.ProjectLister
 	projectQueue  workqueue.RateLimitingInterface
 	projectSynced cache.InformerSynced
 
@@ -55,12 +55,12 @@ type Controller struct {
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <projectInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewProjectController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
-		corev1Informer        = kubeInformerFactory.Core().V1()
+		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
+		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		projectInformer = gardenv1beta1Informer.Projects()
+		projectInformer = gardenCoreV1alpha1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
 		namespaceInformer = corev1Informer.Namespaces()
@@ -70,15 +70,15 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenInformerFa
 	)
 
 	projectController := &Controller{
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: gardenInformerFactory,
-		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, projectUpdater, namespaceLister),
-		recorder:           recorder,
-		projectLister:      projectLister,
-		projectQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		namespaceLister:    namespaceLister,
-		namespaceQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
-		workerCh:           make(chan int),
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenCoreInformers: gardenCoreInformerFactory,
+		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, recorder, projectUpdater, namespaceLister),
+		recorder:               recorder,
+		projectLister:          projectLister,
+		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		namespaceLister:        namespaceLister,
+		namespaceQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
+		workerCh:               make(chan int),
 	}
 
 	projectInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

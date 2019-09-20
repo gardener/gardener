@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -38,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,6 +45,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) backupInfrastructureAdd(obj interface{}) {
@@ -101,7 +101,7 @@ func (c *Controller) reconcileBackupInfrastructureKey(key string) error {
 
 	backupInfrastructureLogger := logger.NewFieldLogger(logger.Logger, "backupinfrastructure", fmt.Sprintf("%s/%s", backupInfrastructure.Namespace, backupInfrastructure.Name))
 
-	if backupInfrastructure.DeletionTimestamp != nil && !sets.NewString(backupInfrastructure.Finalizers...).Has(gardenv1beta1.GardenerName) {
+	if backupInfrastructure.DeletionTimestamp != nil && !sets.NewString(backupInfrastructure.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 		backupInfrastructureLogger.Debug("Do not need to do anything as the BackupInfrastructure does not have my finalizer")
 		c.backupInfrastructureQueue.Forget(key)
 		return nil
@@ -130,18 +130,19 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for BackupInfrastructures. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, recorder}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1alpha1.Gardener, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, secrets, imageVector, identity, config, recorder}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.Interface
-	secrets            map[string]*corev1.Secret
-	imageVector        imagevector.ImageVector
-	identity           *gardenv1beta1.Gardener
-	config             *config.ControllerManagerConfiguration
-	recorder           record.EventRecorder
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenInformers     gardeninformers.Interface
+	k8sGardenCoreInformers gardencoreinformers.Interface
+	secrets                map[string]*corev1.Secret
+	imageVector            imagevector.ImageVector
+	identity               *gardencorev1alpha1.Gardener
+	config                 *config.ControllerManagerConfiguration
+	recorder               record.EventRecorder
 }
 
 func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.BackupInfrastructure, key string) (bool, error) {
@@ -172,7 +173,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	backupInfrastructureJSON, _ := json.Marshal(backupInfrastructure)
 	backupInfrastructureLogger.Debugf(string(backupInfrastructureJSON))
 
-	op, err := operation.NewWithBackupInfrastructure(backupInfrastructure, c.config, backupInfrastructureLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
+	op, err := operation.NewWithBackupInfrastructure(backupInfrastructure, c.config, backupInfrastructureLogger, c.k8sGardenClient, c.k8sGardenCoreInformers, c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		backupInfrastructureLogger.Errorf("Could not initialize a new operation: %s", err.Error())
 		return false, err
@@ -188,7 +189,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 		}
 
 		if deleteErr := c.deleteBackupInfrastructure(op); deleteErr != nil {
-			c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
+			c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, "%s", deleteErr.Description)
 			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateError, operationType, deleteErr.Description+" Operation will be retried.", 1, deleteErr); updateErr != nil {
 				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion error: %+v", updateErr)
 				return false, updateErr
@@ -208,7 +209,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 		return false, updateErr
 	}
 	if reconcileErr := c.reconcileBackupInfrastructure(op); reconcileErr != nil {
-		c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "%s", reconcileErr.Description)
+		c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardencorev1alpha1.EventReconcileError, "%s", reconcileErr.Description)
 		if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateError, operationType, reconcileErr.Description+" Operation will be retried.", 1, reconcileErr); updateErr != nil {
 			backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after reconciliation error: %+v", updateErr)
 			return false, updateErr
@@ -367,7 +368,7 @@ func (c *defaultControl) updateBackupInfrastructureStatus(o *operation.Operation
 
 func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 	backupInfrastructureFinalizers := sets.NewString(op.BackupInfrastructure.Finalizers...)
-	backupInfrastructureFinalizers.Delete(gardenv1beta1.GardenerName)
+	backupInfrastructureFinalizers.Delete(gardencorev1alpha1.GardenerName)
 	op.BackupInfrastructure.Finalizers = backupInfrastructureFinalizers.UnsortedList()
 
 	newBackupInfrastructure, err := c.k8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(op.BackupInfrastructure.Namespace).Update(op.BackupInfrastructure)
@@ -387,10 +388,10 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 		if err != nil {
 			return utilretry.SevereError(err)
 		}
-		if !sets.NewString(backupInfrastructure.Finalizers...).Has(gardenv1beta1.GardenerName) {
+		if !sets.NewString(backupInfrastructure.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 			return utilretry.Ok()
 		}
-		return utilretry.MinorError(fmt.Errorf("backup infrastructure still has finalizer %s", gardenv1beta1.GardenerName))
+		return utilretry.MinorError(fmt.Errorf("backup infrastructure still has finalizer %s", gardencorev1alpha1.GardenerName))
 	})
 }
 

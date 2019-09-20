@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.

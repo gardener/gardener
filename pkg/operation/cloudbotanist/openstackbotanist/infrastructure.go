@@ -56,10 +56,10 @@ func (b *OpenStackBotanist) generateTerraformBackupVariablesEnvironment() map[st
 func (b *OpenStackBotanist) generateTerraformBackupConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
-			"authURL":    b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL,
+			"authURL":    "", // TODO
 			"domainName": string(b.Seed.Secret.Data[DomainName]),
 			"tenantName": string(b.Seed.Secret.Data[TenantName]),
-			"region":     b.Seed.Info.Spec.Cloud.Region,
+			"region":     b.Seed.Info.Spec.Provider.Region,
 		},
 		"container": map[string]interface{}{
 			"name": b.Operation.BackupInfrastructure.Name,

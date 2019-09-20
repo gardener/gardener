@@ -25,9 +25,11 @@ import (
 	"strings"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/cmd/utils"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
+	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions" // TODO: remove after removing BackupInfrastructure resource
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -35,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllermanager/server/handlers/webhooks"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/handlers"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -44,8 +45,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	"github.com/gardener/gardener/cmd/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/discovery"
@@ -89,7 +88,7 @@ func NewOptions() (*Options, error) {
 	if err := controllermanagerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardenv1beta1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gardencorev1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 
@@ -216,7 +215,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener controller manager.
 type Gardener struct {
 	Config                 *config.ControllerManagerConfiguration
-	Identity               *gardenv1beta1.Gardener
+	Identity               *gardencorev1alpha1.Gardener
 	GardenerNamespace      string
 	K8sGardenClient        kubernetes.Interface
 	K8sGardenInformers     gardeninformers.SharedInformerFactory
@@ -351,8 +350,8 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 	// Start HTTP server
 	var (
 		backupInfrastructureInformer = g.K8sGardenInformers.Garden().V1beta1().BackupInfrastructures()
-		projectInformer              = g.K8sGardenInformers.Garden().V1beta1().Projects()
-		shootInformer                = g.K8sGardenInformers.Garden().V1beta1().Shoots()
+		projectInformer              = g.K8sGardenCoreInformers.Core().V1alpha1().Projects()
+		shootInformer                = g.K8sGardenCoreInformers.Core().V1alpha1().Shoots()
 
 		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
 			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), backupInfrastructureInformer.Lister(), shootInformer.Lister()),
@@ -407,11 +406,11 @@ func (g *Gardener) startControllers(ctx context.Context) {
 // we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
+func determineGardenerIdentity() (*gardencorev1alpha1.Gardener, string, error) {
 	var (
 		gardenerID        string
 		gardenerName      string
-		gardenerNamespace = common.GardenNamespace
+		gardenerNamespace = v1alpha1constants.GardenNamespace
 		err               error
 	)
 
@@ -438,7 +437,7 @@ func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
 		gardenerNamespace = string(ns)
 	}
 
-	return &gardenv1beta1.Gardener{
+	return &gardencorev1alpha1.Gardener{
 		ID:      gardenerID,
 		Name:    gardenerName,
 		Version: version.Get().GitVersion,

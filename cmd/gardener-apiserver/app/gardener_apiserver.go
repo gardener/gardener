@@ -23,7 +23,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardensettingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
@@ -35,10 +35,9 @@ import (
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
-
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	clusteropenidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	openidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
@@ -46,7 +45,6 @@ import (
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 
 	"github.com/spf13/cobra"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -111,7 +109,7 @@ func NewOptions(out, errOut io.Writer) *Options {
 			api.Codecs.LegacyCodec(
 				gardencorev1alpha1.SchemeGroupVersion,
 				gardenv1beta1.SchemeGroupVersion,
-				gardensettingsv1alpha1.SchemeGroupVersion,
+				settingsv1alpha1.SchemeGroupVersion,
 			),
 			genericoptions.NewProcessInfo("gardener-apiserver", "garden")),
 		StdOut: out,

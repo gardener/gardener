@@ -20,8 +20,8 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -75,11 +75,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	var (
-		defaultTimeout            = 30 * time.Second
-		defaultInterval           = 5 * time.Second
-		managedExternalDNS        = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		allowBackup               = (o.Seed.Info.Spec.Backup != nil)
+		defaultTimeout     = 30 * time.Second
+		defaultInterval    = 5 * time.Second
+		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
+		allowBackup        = o.Seed.Info.Spec.Backup != nil
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -330,7 +330,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
-	if o.Shoot.Info.Namespace == common.GardenNamespace {
+	if o.Shoot.Info.Namespace == v1alpha1constants.GardenNamespace {
 		if o.ShootedSeed != nil {
 			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs, o.ShootedSeed.ShootDefaults, o.ShootedSeed.Backup); err != nil {
 				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
@@ -353,8 +353,8 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 		observedGeneration = o.Shoot.Info.Generation
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			if len(status.UID) == 0 {
 				shoot.Status.UID = shoot.UID
 			}
@@ -404,8 +404,8 @@ func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, ope
 
 func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	// Remove task list from Shoot annotations since reconciliation was successful.
-	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			controllerutils.RemoveAllTasks(shoot.Annotations)
 			return shoot, nil
 		})
@@ -414,11 +414,11 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 		return err
 	}
 
-	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, newShoot.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, newShoot.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
-			shoot.Status.Seed = o.Seed.Info.Name
-			shoot.Status.IsHibernated = &o.Shoot.HibernationEnabled
+			shoot.Status.Seed = &o.Seed.Info.Name
+			shoot.Status.IsHibernated = o.Shoot.HibernationEnabled
 			shoot.Status.LastError = nil
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           operationType,
@@ -445,8 +445,8 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 		willRetry     = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			if willRetry {
 				description += " Operation will be retried."
 				state = gardencorev1alpha1.LastOperationStateError
@@ -473,7 +473,7 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 		o.Shoot.Info = newShoot
 	}
 
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
+	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}

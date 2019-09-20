@@ -16,7 +16,7 @@ package utils
 
 import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -32,7 +32,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardencorev1alpha1.SeedNetworks,
 	)
 
 	if shootNodes != "" {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Nodes, shootNodes) {
+		if utils.NetworksIntersect(seedNetworks.Nodes, shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathNodes, shootNodes, "shoot node network intersects with seed node network"))
 		}
 	} else {
@@ -40,7 +40,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardencorev1alpha1.SeedNetworks,
 	}
 
 	if shootServices != nil {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Services, *shootServices) {
+		if utils.NetworksIntersect(seedNetworks.Services, *shootServices) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed service network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Services == nil {
@@ -48,7 +48,7 @@ func ValidateNetworkDisjointedness(seedNetworks gardencorev1alpha1.SeedNetworks,
 	}
 
 	if shootPods != nil {
-		if gardencorev1alpha1helper.NetworksIntersect(seedNetworks.Pods, *shootPods) {
+		if utils.NetworksIntersect(seedNetworks.Pods, *shootPods) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed pod network"))
 		}
 	} else if seedNetworks.ShootDefaults == nil || seedNetworks.ShootDefaults.Pods == nil {

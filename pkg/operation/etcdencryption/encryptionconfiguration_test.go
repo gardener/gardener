@@ -21,17 +21,14 @@ import (
 	"io"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
-
 	"github.com/gardener/gardener/pkg/operation/common"
-
 	. "github.com/gardener/gardener/pkg/operation/etcdencryption"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
 var _ = Describe("Encryption Configuration", func() {

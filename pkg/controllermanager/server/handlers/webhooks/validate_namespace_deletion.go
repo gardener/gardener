@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -41,16 +42,16 @@ import (
 type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Interface
 
-	projectLister              gardenlisters.ProjectLister
+	projectLister              gardencorelisters.ProjectLister
 	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
-	shootLister                gardenlisters.ShootLister
+	shootLister                gardencorelisters.ShootLister
 
 	scheme *runtime.Scheme
 	codecs serializer.CodecFactory
 }
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardenlisters.ProjectLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister, shootLister gardenlisters.ShootLister) func(http.ResponseWriter, *http.Request) {
+func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister, shootLister gardencorelisters.ShootLister) func(http.ResponseWriter, *http.Request) {
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	admissionregistrationv1beta1.AddToScheme(scheme)

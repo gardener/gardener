@@ -15,12 +15,13 @@
 package awsbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
@@ -38,7 +39,7 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 
 	secretData := map[string][]byte{
 		common.BackupBucketName: []byte(stateVariables[bucketName]),
-		Region:                  []byte(b.Seed.Info.Spec.Cloud.Region),
+		Region:                  []byte(b.Seed.Info.Spec.Provider.Region),
 		AccessKeyID:             b.Seed.Secret.Data[AccessKeyID],
 		SecretAccessKey:         b.Seed.Secret.Data[SecretAccessKey],
 	}

@@ -21,8 +21,8 @@ import (
 
 	"github.com/gardener/etcd-backup-restore/pkg/miscellaneous"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -63,7 +63,7 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int, hvpaEnabled bool) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string, string, string) {
 	var (
 		cpuRequest    string
 		memoryRequest string
@@ -121,34 +121,25 @@ func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool
 		}
 		excludeNets = []string{}
 
-		values            = map[string]interface{}{}
-		shootCIDRNetworks = []string{}
+		values = map[string]interface{}{}
 	)
 
 	for _, addr := range b.Seed.Info.Spec.BlockCIDRs {
 		excludeNets = append(excludeNets, addr)
 	}
 
-	networks, err := b.Shoot.GetK8SNetworks()
+	shootCIDRNetworks := []string{b.Shoot.Info.Spec.Networking.Nodes}
+	if b.Shoot.Info.Spec.Networking.Pods != nil {
+		shootCIDRNetworks = append(shootCIDRNetworks, *b.Shoot.Info.Spec.Networking.Pods)
+	}
+	if b.Shoot.Info.Spec.Networking.Services != nil {
+		shootCIDRNetworks = append(shootCIDRNetworks, *b.Shoot.Info.Spec.Networking.Services)
+	}
+	shootNetworkValues, err := common.ExceptNetworks(shootCIDRNetworks, excludeNets...)
 	if err != nil {
 		return err
 	}
-	if networks != nil {
-		if networks.Nodes != nil {
-			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Nodes)
-		}
-		if networks.Pods != nil {
-			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Pods)
-		}
-		if networks.Services != nil {
-			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Services)
-		}
-		shootNetworkValues, err := common.ExceptNetworks(shootCIDRNetworks, excludeNets...)
-		if err != nil {
-			return err
-		}
-		values["clusterNetworks"] = shootNetworkValues
-	}
+	values["clusterNetworks"] = shootNetworkValues
 
 	seedNetworks := b.Seed.Info.Spec.Networks
 	allCIDRNetworks := append([]string{seedNetworks.Nodes, seedNetworks.Pods, seedNetworks.Services}, shootCIDRNetworks...)
@@ -191,7 +182,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"shootNetworks": map[string]interface{}{
 			"service": b.Shoot.GetServiceNetwork(),
 			"pod":     b.Shoot.GetPodNetwork(),
-			"node":    b.Shoot.GetNodeNetwork(),
+			"node":    b.Shoot.Info.Spec.Networking.Nodes,
 		},
 		"seedNetworks": map[string]interface{}{
 			"service": b.Seed.Info.Spec.Networks.Services,
@@ -200,7 +191,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		},
 		"minReplicas":               1,
 		"maxReplicas":               4,
-		"enableBasicAuthentication": gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
+		"enableBasicAuthentication": gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 		"probeCredentials":          b.APIServerHealthCheckToken,
 		"securePort":                443,
 		"podAnnotations": map[string]interface{}{
@@ -230,7 +221,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
 	}
 
-	if gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+	if gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
 	}
 

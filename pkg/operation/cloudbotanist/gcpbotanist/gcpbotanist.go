@@ -18,78 +18,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-
-	"github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp"
-	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
-
-// IMPORTANT NOTICE
-// The following part is only temporarily needed until we have completed the Extensibility epic
-// and moved out all provider specifics.
-// IMPORTANT NOTICE
-
-var (
-	scheme  *runtime.Scheme
-	decoder runtime.Decoder
-)
-
-func init() {
-	scheme = runtime.NewScheme()
-
-	// Workaround for incompatible kubernetes dependencies in gardener/gardener and
-	// gardener/gardener-extensions.
-	gcpSchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(gcp.SchemeGroupVersion, &gcp.InfrastructureConfig{}, &gcp.InfrastructureStatus{})
-		return nil
-	})
-	gcpv1alpha1SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(gcpv1alpha1.SchemeGroupVersion, &gcpv1alpha1.InfrastructureConfig{}, &gcpv1alpha1.InfrastructureStatus{})
-		return nil
-	})
-	schemeBuilder := runtime.NewSchemeBuilder(
-		gcpv1alpha1SchemeBuilder.AddToScheme,
-		gcpSchemeBuilder.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
-
-	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-}
-
-// IMPORTANT NOTICE
-// The above part is only temporarily needed until we have completed the Extensibility epic
-// and moved out all provider specifics.
-// IMPORTANT NOTICE
 
 // New takes an operation object <o> and creates a new GCPBotanist object.
 func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
-	var cloudProvider gardenv1beta1.CloudProvider
+	var cloudProvider string
 
 	switch purpose {
 	case common.CloudPurposeShoot:
-		cloudProvider = o.Shoot.CloudProvider
+		cloudProvider = o.Shoot.Info.Spec.Provider.Type
 	case common.CloudPurposeSeed:
-		cloudProvider = o.Seed.CloudProvider
+		cloudProvider = o.Seed.Info.Spec.Provider.Type
 	}
 
-	if cloudProvider != gardenv1beta1.CloudProviderGCP {
+	if cloudProvider != "gcp" {
 		return nil, errors.New("cannot instantiate an GCP botanist if neither Shoot nor Seed cluster specifies GCP")
-	}
-
-	// Read vpc name out of the Shoot manifest
-	vpcName := ""
-	if purpose == common.CloudPurposeShoot {
-		if gcp := o.Shoot.Info.Spec.Cloud.GCP; gcp != nil {
-			if vpc := gcp.Networks.VPC; vpc != nil {
-				vpcName = vpc.Name
-			}
-		}
 	}
 
 	// Read project id out of the service account
@@ -115,7 +61,6 @@ func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 	return &GCPBotanist{
 		Operation:              o,
 		CloudProviderName:      "gce",
-		VPCName:                vpcName,
 		Project:                project,
 		MinifiedServiceAccount: minifiedServiceAccount,
 	}, nil

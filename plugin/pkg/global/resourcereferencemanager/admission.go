@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
@@ -304,8 +304,8 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
 			Verb:            "get",
-			APIGroup:        gardenv1beta1.SchemeGroupVersion.Group,
-			APIVersion:      gardenv1beta1.SchemeGroupVersion.Version,
+			APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+			APIVersion:      gardencorev1alpha1.SchemeGroupVersion.Version,
 			Resource:        "quotas",
 			Subresource:     "",
 			Namespace:       quotaRef.Namespace,

@@ -20,25 +20,24 @@ import (
 	"path/filepath"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-
-	"github.com/sirupsen/logrus"
 )
 
-func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger logrus.FieldLogger) error {
+func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectLogger logrus.FieldLogger) error {
 	var (
 		ctx        = context.TODO()
 		generation = project.Generation
@@ -47,7 +46,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
 	// an unset .spec.namespace field (which would result in trying to create another namespace again).
-	project, err = c.k8sGardenClient.Garden().GardenV1beta1().Projects().Get(project.Name, metav1.GetOptions{})
+	project, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().Projects().Get(project.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -57,7 +56,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 	// If the project has no phase yet then we update it to be 'pending'.
 	if len(project.Status.Phase) == 0 {
-		if _, err := c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectPending)); err != nil {
+		if _, err := c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectPending)); err != nil {
 			return err
 		}
 	}
@@ -66,21 +65,21 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 	// set then we create a new namespace with a random hash value.
 	namespace, err := c.reconcileNamespaceForProject(project)
 	if err != nil {
-		c.recorder.Eventf(project, corev1.EventTypeWarning, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+		c.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, err.Error())
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 		return err
 	}
-	c.reportEvent(project, false, gardenv1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
+	c.reportEvent(project, false, gardencorev1alpha1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		project, err = kutils.TryUpdateProject(c.k8sGardenClient.Garden(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
+		project, err = kutils.TryUpdateProject(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error) {
 			project.Spec.Namespace = &namespace.Name
 			return project, nil
 		})
 		if err != nil {
-			c.reportEvent(project, false, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+			c.reportEvent(project, false, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, err.Error())
+			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
@@ -94,7 +93,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 				return utilretry.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
 			}); err != nil {
-				c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
+				c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
 			}
 
 			return err
@@ -103,14 +102,14 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 	chartRenderer, err := chartrenderer.NewForConfig(c.k8sGardenClient.RESTConfig())
 	if err != nil {
-		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+		c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, err.Error())
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 		return err
 	}
 	applier, err := kubernetes.NewApplierForConfig(c.k8sGardenClient.RESTConfig())
 	if err != nil {
-		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+		c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, err.Error())
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 		return err
 	}
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
@@ -118,40 +117,54 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
 	// We also create a RoleBinding in the namespace that binds all members to the garden.sapcloud.io:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
+	var (
+		admins  []rbacv1.Subject
+		viewers []rbacv1.Subject
+	)
+
+	for _, member := range project.Spec.Members {
+		if member.Role == gardencorev1alpha1.ProjectMemberAdmin {
+			admins = append(admins, member.Subject)
+		}
+		if member.Role == gardencorev1alpha1.ProjectMemberViewer {
+			viewers = append(viewers, member.Subject)
+		}
+	}
+
 	if err := chartApplier.ApplyChart(context.TODO(), filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":    project.Name,
 			"uid":     project.UID,
 			"owner":   project.Spec.Owner,
-			"members": project.Spec.Members,
-			"viewers": project.Spec.Viewers,
+			"members": admins,
+			"viewers": viewers,
 		},
 	}, nil); err != nil {
-		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+		c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 		return err
 	}
 
 	// Update the project status to mark it as 'ready'.
-	if _, err := c.updateProjectStatus(project.ObjectMeta, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
-		project.Status.Phase = gardenv1beta1.ProjectReady
+	if _, err := c.updateProjectStatus(project.ObjectMeta, func(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error) {
+		project.Status.Phase = gardencorev1alpha1.ProjectReady
 		project.Status.ObservedGeneration = generation
 		return project, nil
 	}); err != nil {
-		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
+		c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
 		return err
 	}
 
 	return nil
 }
 
-func (c *defaultControl) reconcileNamespaceForProject(project *gardenv1beta1.Project) (*corev1.Namespace, error) {
+func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1alpha1.Project) (*corev1.Namespace, error) {
 	var (
 		namespaceName = project.Spec.Namespace
 
 		projectLabels      = namespaceLabelsFromProject(project)
 		projectAnnotations = namespaceAnnotationsFromProject(project)
-		ownerReference     = metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project"))
+		ownerReference     = metav1.NewControllerRef(project, gardencorev1alpha1.SchemeGroupVersion.WithKind("Project"))
 	)
 
 	if namespaceName == nil {
