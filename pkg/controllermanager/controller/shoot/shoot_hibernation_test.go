@@ -223,7 +223,7 @@ var _ = Describe("Shoot Hibernation", func() {
 			It("should set the correct hibernation status", func() {
 				var (
 					c           = mockgardencore.NewMockInterface(ctrl)
-					gardenIface = mockgardencorev1alpha1.NewMockGardenV1beta1Interface(ctrl)
+					gardenIface = mockgardencorev1alpha1.NewMockCoreV1alpha1Interface(ctrl)
 					shootIface  = mockgardencorev1alpha1.NewMockShootInterface(ctrl)
 					logger      = utils.NewNopLogger()
 					enabled     = trueVar
@@ -243,11 +243,11 @@ var _ = Describe("Shoot Hibernation", func() {
 				)
 
 				gomock.InOrder(
-					c.EXPECT().GardenV1beta1().Return(gardenIface),
+					c.EXPECT().CoreV1alpha1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
 					shootIface.EXPECT().Get(name, metav1.GetOptions{}).Return(&shoot, nil),
 
-					c.EXPECT().GardenV1beta1().Return(gardenIface),
+					c.EXPECT().CoreV1alpha1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
 					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1alpha1.Shoot{})).Do(func(actual *gardencorev1alpha1.Shoot) {
 						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1alpha1.Hibernation{

@@ -21,6 +21,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	// AccessKeyID is a constant for the key in a cloud provider secret and backup secret that holds the AWS access key id.
+	AccessKeyID = "accessKeyID"
+	// SecretAccessKey is a constant for the key in a cloud provider secret and backup secret that holds the AWS secret access key.
+	SecretAccessKey = "secretAccessKey"
+)
+
 // DISCLAIMER:
 // The whole file is deprecated. We are keeping kube2iam for a short amount of time for backwards compatibility reasons,
 // however, end-users are asked to deploy kube2iam on their own if they want to use it. Also, we haven't updated the version

@@ -61,8 +61,6 @@ type ControllerManagerControllerConfiguration struct {
 	BackupBucket *BackupBucketControllerConfiguration
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	BackupEntry *BackupEntryControllerConfiguration
-	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
-	BackupInfrastructure BackupInfrastructureControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
@@ -249,20 +247,6 @@ type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
-}
-
-// BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure
-// controller.
-type BackupInfrastructureControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	ConcurrentSyncs int
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration
-	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Infrastructure after deletion timestamp is set.
-	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately.
-	DeletionGracePeriodHours *int
-	// DeletionGracePeriodHoursByPurpose holds various shoot purposes mapped to the respective deletion grace periods in hours for the backup infrastructure associated with the shoot
-	DeletionGracePeriodHoursByPurpose map[string]int
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

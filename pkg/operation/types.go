@@ -21,7 +21,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -58,7 +57,6 @@ type Operation struct {
 	APIServerAddress          string
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
-	BackupInfrastructure      *gardenv1beta1.BackupInfrastructure
 	ShootBackup               *config.ShootBackup
 	MonitoringClient          prometheusclient.API
 }

@@ -37,7 +37,7 @@ data:
             STATUS=`cat status`;
             case $STATUS in
             "New")
-                  wget "http://localhost:8080/initialization/start?mode=$1{{- if .Values.failBelowRevision }}&failbelowrevision={{ int $.Values.failBelowRevision }}{{- end }}" -S -O - ;;
+                  wget "http://localhost:8080/initialization/start?mode=$1" -S -O - ;;
             "Progress")
                   sleep 1;
                   continue;;

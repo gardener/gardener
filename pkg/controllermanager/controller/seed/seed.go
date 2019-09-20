@@ -22,7 +22,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -63,7 +62,6 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewSeedController(
 	k8sGardenClient kubernetes.Interface,
-	gardenInformerFactory gardeninformers.SharedInformerFactory,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
@@ -73,22 +71,20 @@ func NewSeedController(
 	recorder record.EventRecorder,
 ) *Controller {
 	var (
-		gardenV1beta1Informer      = gardenInformerFactory.Garden().V1beta1()
 		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
 		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		seedInformer               = gardenCoreV1alpha1Informer.Seeds()
-		seedLister                 = seedInformer.Lister()
-		seedUpdater                = NewRealUpdater(k8sGardenClient, seedLister)
-		secretLister               = corev1Informer.Secrets().Lister()
-		shootLister                = gardenCoreV1alpha1Informer.Shoots().Lister()
-		backupInfrastructureLister = gardenV1beta1Informer.BackupInfrastructures().Lister()
+		seedInformer = gardenCoreV1alpha1Informer.Seeds()
+		seedLister   = seedInformer.Lister()
+		seedUpdater  = NewRealUpdater(k8sGardenClient, seedLister)
+		secretLister = corev1Informer.Secrets().Lister()
+		shootLister  = gardenCoreV1alpha1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister, backupInfrastructureLister),
+		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister),
 		config:                 config,
 		recorder:               recorder,
 		seedLister:             seedLister,

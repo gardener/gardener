@@ -215,7 +215,7 @@ spec:
     nodes: 10.250.0.0/16
     services: 100.64.0.0/13
   # providerConfig:
-  #   apiVersion: calico.extensions.gardener.cloud/v1alpha1
+  #   apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
   #   kind: NetworkConfig
   #   ipam:
   #     type: host-local

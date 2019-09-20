@@ -204,8 +204,6 @@ global:
           syncPeriod: 60m
         shootHibernation:
           concurrentSyncs: 5
-        backupInfrastructure:
-          concurrentSyncs: 20
           syncPeriod: 24h
         backupBucket:
           concurrentSyncs: 20

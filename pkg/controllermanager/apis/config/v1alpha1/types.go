@@ -67,8 +67,6 @@ type ControllerManagerControllerConfiguration struct {
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	// +optional
 	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry"`
-	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
-	BackupInfrastructure BackupInfrastructureControllerConfiguration `json:"backupInfrastructure"`
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
@@ -271,22 +269,6 @@ type BackupEntryControllerConfiguration struct {
 	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
 }
 
-// BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure
-// controller.
-type BackupInfrastructureControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
-	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Infrastructure after deletion timestamp is set.
-	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately.
-	// +optional
-	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
-	// DeletionGracePeriodHoursByPurpose holds various shoot purposes mapped to the respective deletion grace periods in hours for the backup infrastructure associated with the shoot
-	// +optional
-	DeletionGracePeriodHoursByPurpose map[string]int `json:"deletionGracePeriodHoursByPurpose,omitempty"`
-}
-
 // DiscoveryConfiguration defines the configuration of how to discover API groups.
 // It allows to set where to store caching data and to specify the TTL of that data.
 type DiscoveryConfiguration struct {
@@ -358,9 +340,9 @@ const (
 	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
 	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
 
-	// DefaultBackupInfrastructureDeletionGracePeriodHours is a constant for the default number of hours the Backup Infrastructure should be kept after shoot is deleted.
-	// By default we set this to 0 so that then BackupInfrastructureController will trigger deletion immediately.
-	DefaultBackupInfrastructureDeletionGracePeriodHours = 0
+	// DefaultBackupEntryDeletionGracePeriodHours is a constant for the default number of hours the Backup Entry should be kept after shoot is deleted.
+	// By default we set this to 0 so that then BackupEntryController will trigger deletion immediately.
+	DefaultBackupEntryDeletionGracePeriodHours = 0
 
 	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (daily).
 	DefaultETCDBackupSchedule = "0 */24 * * *"

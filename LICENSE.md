@@ -252,11 +252,6 @@ https://github.com/kubernetes-sigs/controller-runtime
 Copyright 2018 The Kubernetes Authors.
 Apache 2 license (https://github.com/kubernetes-sigs/controller-runtime/blob/master/LICENSE).  
 
-AWS SDK Go.  
-https://github.com/aws/aws-sdk-go.  
-Copyright 2017 Amazon.com, Inc. or its affiliates.  
-Apache 2 license (https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)  
-
 Cobra  
 https://github.com/spf13/cobra.  
 Copyright 2015 Steve Francia.  
@@ -301,10 +296,6 @@ go-jmespath
 https://github.com/jmespath/go-jmespath  
 Copyright 2015 James Saryerwinnie  
 Apache License, Version 2 (https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
-
-alibaba-cloud-sdk-go  
-https://github.com/aliyun/alibaba-cloud-sdk-go  
-Apache License 2.0 (https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LICENSE)
 
 ------
 ## MIT License

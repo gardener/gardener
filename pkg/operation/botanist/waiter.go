@@ -23,7 +23,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -177,11 +176,6 @@ func (b *Botanist) WaitUntilVPNConnectionExists(ctx context.Context) error {
 // WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
 func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 	return b.waitUntilNamespaceDeleted(ctx, b.Shoot.SeedNamespace)
-}
-
-// WaitUntilBackupNamespaceDeleted waits until the namespace for the backup of Shoot cluster within the Seed cluster is deleted.
-func (b *Botanist) WaitUntilBackupNamespaceDeleted(ctx context.Context) error {
-	return b.waitUntilNamespaceDeleted(ctx, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name))
 }
 
 // WaitUntilNamespaceDeleted waits until the <namespace> within the Seed cluster is deleted.
@@ -351,22 +345,5 @@ func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) e
 		}
 		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
 		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
-	})
-}
-
-// WaitUntilBackupInfrastructureDeleted waits until the backup infrastructure within the garden cluster has
-// been deleted.
-func (b *Botanist) WaitUntilBackupInfrastructureDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		backupInfrastructure := &gardenv1beta1.BackupInfrastructure{}
-		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), backupInfrastructure); err != nil {
-			if apierrors.IsNotFound(err) {
-				b.Logger.Info("Backup infrastructure has been successfully deleted.")
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-		b.Logger.Info("Waiting until the backup infrastructure has been deleted in the Garden cluster...")
-		return retry.MinorError(fmt.Errorf("backup infrastructure %q has not yet been deleted", backupInfrastructure.Name))
 	})
 }

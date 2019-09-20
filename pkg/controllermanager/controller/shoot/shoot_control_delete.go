@@ -25,10 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
-	"github.com/gardener/gardener/pkg/operation/common"
-	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -98,19 +95,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	shootNamespaceInDeletion, err := kutil.HasDeletionTimestamp(namespace)
 	if err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check the deletion timestamp for the Shoot namespace (%s)", err.Error()))
-	}
-
-	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
-	}
-	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Shoot CloudBotanist (%s)", err.Error()))
-	}
-	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
 	// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
@@ -222,7 +206,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 
@@ -359,16 +343,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
-		deleteBackupInfrastructure = g.Add(flow.Task{
-			Name:         "Delete backup infrastructure resource",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until the backup infrastructure has been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureDeleted),
-			Dependencies: flow.NewTaskIDs(deleteBackupInfrastructure),
-		})
+
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying Shoot control plane exposure",
 			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure),

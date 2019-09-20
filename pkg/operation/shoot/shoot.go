@@ -276,10 +276,14 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		}
 		externalDomain.SecretData = secret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type
-		externalDomain.IncludeDomains = shoot.Spec.DNS.Providers[0].Domains.Include
-		externalDomain.ExcludeDomains = shoot.Spec.DNS.Providers[0].Domains.Exclude
-		externalDomain.IncludeZones = shoot.Spec.DNS.Providers[0].Zones.Include
-		externalDomain.ExcludeZones = shoot.Spec.DNS.Providers[0].Zones.Exclude
+		if domains := shoot.Spec.DNS.Providers[0].Domains; domains != nil {
+			externalDomain.IncludeDomains = domains.Include
+			externalDomain.ExcludeDomains = domains.Exclude
+		}
+		if zones := shoot.Spec.DNS.Providers[0].Zones; zones != nil {
+			externalDomain.IncludeZones = zones.Include
+			externalDomain.ExcludeZones = zones.Exclude
+		}
 
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
@@ -292,10 +296,14 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	case len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].SecretName == nil:
 		externalDomain.SecretData = shootSecret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type
-		externalDomain.IncludeDomains = shoot.Spec.DNS.Providers[0].Domains.Include
-		externalDomain.ExcludeDomains = shoot.Spec.DNS.Providers[0].Domains.Exclude
-		externalDomain.IncludeZones = shoot.Spec.DNS.Providers[0].Zones.Include
-		externalDomain.ExcludeZones = shoot.Spec.DNS.Providers[0].Zones.Exclude
+		if domains := shoot.Spec.DNS.Providers[0].Domains; domains != nil {
+			externalDomain.IncludeDomains = domains.Include
+			externalDomain.ExcludeDomains = domains.Exclude
+		}
+		if zones := shoot.Spec.DNS.Providers[0].Zones; zones != nil {
+			externalDomain.IncludeZones = zones.Include
+			externalDomain.ExcludeZones = zones.Exclude
+		}
 
 	default:
 		return nil, &IncompleteDNSConfigError{}

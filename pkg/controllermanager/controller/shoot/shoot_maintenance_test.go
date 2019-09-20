@@ -16,7 +16,7 @@ package shoot_test
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
 	. "github.com/onsi/ginkgo"
@@ -28,19 +28,17 @@ var _ = Describe("Shoot Maintenance", func() {
 	now := time.Now()
 	expirationDateInTheFuture := metav1.Time{Time: now.Add(time.Minute * 10)}
 	expirationDateInThePast := metav1.Time{Time: now.AddDate(0, 0, -1)}
-	trueVar := true
-	falseVar := false
 
 	Context("Shoot Maintenance", func() {
 		Describe("ExpirationDateExpired", func() {
 			It("should determine that expirationDate applies", func() {
 				applies := ExpirationDateExpired(&expirationDateInThePast)
-				Expect(applies).To(Equal(trueVar))
+				Expect(applies).To(Equal(true))
 			})
 
 			It("should determine that expirationDate not applies", func() {
 				applies := ExpirationDateExpired(&expirationDateInTheFuture)
-				Expect(applies).To(Equal(falseVar))
+				Expect(applies).To(Equal(false))
 			})
 		})
 
@@ -67,7 +65,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				required := ForceMachineImageUpdateRequired(shootCurrentImage, imageCloudProvider)
-				Expect(required).To(Equal(trueVar))
+				Expect(required).To(Equal(true))
 			})
 
 			It("should determine that forceUpdate is not required", func() {
@@ -85,7 +83,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				required := ForceMachineImageUpdateRequired(shootCurrentImage, imageCloudProvider)
-				Expect(required).To(Equal(falseVar))
+				Expect(required).To(Equal(false))
 			})
 		})
 	})
@@ -135,7 +133,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				Spec: gardencorev1alpha1.ShootSpec{
 					Maintenance: &gardencorev1alpha1.Maintenance{
 						AutoUpdate: &gardencorev1alpha1.MaintenanceAutoUpdate{
-							MachineImageVersion: &trueVar,
+							MachineImageVersion: true,
 						},
 					},
 				},
@@ -143,10 +141,10 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - ForceUpdate", func() {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = &falseVar
+			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
 			cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
 
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
@@ -155,7 +153,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the apiserver)", func() {
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
 
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
@@ -164,9 +162,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = &falseVar
+			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
 
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).To(Equal(0))
@@ -185,7 +183,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
 
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
@@ -196,7 +194,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should return an error - cloud profile has no matching (machineImage.name) machine image defined", func() {
 			cloudProfile.Spec.MachineImages = cloudProfile.Spec.MachineImages[1:]
 
-			_, err := MaintainMachineImages(shoot, cloudProfile, shootCurrentImage, machineCurrentImages)
+			_, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
 
 			Expect(err).NotTo(BeNil())
 		})
@@ -206,11 +204,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		var (
 			cloudProfile       *gardencorev1alpha1.CloudProfile
 			shoot              *gardencorev1alpha1.Shoot
-			kubernetesSettings gardencorev1alpha1.KubernetesConstraints
+			kubernetesSettings gardencorev1alpha1.KubernetesSettings
 		)
 
 		BeforeEach(func() {
-			kubernetesSettings = gardencorev1alpha1.KubernetesConstraints{
+			kubernetesSettings = gardencorev1alpha1.KubernetesSettings{
 				Versions: []gardencorev1alpha1.ExpirableVersion{
 					{
 						Version: "1.0.2",
@@ -248,7 +246,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 		})
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = falseVar
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 
@@ -260,7 +258,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - MaintenanceAutoUpdate set to true", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = trueVar
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
 			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 
@@ -272,7 +270,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the kubernetes version must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = falseVar
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
 			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 

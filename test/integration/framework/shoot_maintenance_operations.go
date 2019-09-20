@@ -19,19 +19,19 @@ import (
 	"fmt"
 	"time"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
+
+	"k8s.io/apimachinery/pkg/api/equality"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NewShootMaintenanceTest creates a new ShootMaintenanceTest
@@ -209,7 +209,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedKubernetesVersionMaintenance(ctx c
 
 // TryUpdateShootForMachineImageMaintenance tries to update the maintenance section of the shoot spec regarding the machine image
 func (s *ShootMaintenanceTest) TryUpdateShootForMachineImageMaintenance(ctx context.Context, shootToUpdate *gardenv1beta1.Shoot, updateMachineImage bool, update func(*gardenv1beta1.Cloud)) error {
-	_, err := kutil.TryUpdateShoot(s.ShootGardenerTest.GardenClient.Garden(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	_, err := tryUpdateShoot(s.ShootGardenerTest.GardenClient.Garden(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 		shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.MachineImageVersion
 		shoot.Annotations = utils.MergeStringMaps(shoot.Annotations, shootToUpdate.Annotations)
 		if updateMachineImage {
@@ -222,7 +222,7 @@ func (s *ShootMaintenanceTest) TryUpdateShootForMachineImageMaintenance(ctx cont
 
 // TryUpdateShootForKubernetesMaintenance tries to update the maintenance section of the shoot spec regarding the Kubernetes version
 func (s *ShootMaintenanceTest) TryUpdateShootForKubernetesMaintenance(ctx context.Context, shootToUpdate *gardenv1beta1.Shoot) error {
-	_, err := kutil.TryUpdateShoot(s.ShootGardenerTest.GardenClient.Garden(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	_, err := tryUpdateShoot(s.ShootGardenerTest.GardenClient.Garden(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 		shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.KubernetesVersion
 		shoot.Annotations = utils.MergeStringMaps(shoot.Annotations, shootToUpdate.Annotations)
 		return shoot, nil
@@ -324,4 +324,54 @@ func (s *ShootMaintenanceTest) TryUpdateCloudProfileForKubernetesVersionMaintena
 		return err
 	}
 	return nil
+}
+
+func tryUpdateShootHelper(
+	g garden.Interface,
+	backoff wait.Backoff,
+	meta metav1.ObjectMeta,
+	transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error),
+	updateFunc func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error),
+	equalFunc func(cur, updated *gardenv1beta1.Shoot) bool,
+) (*gardenv1beta1.Shoot, error) {
+
+	var (
+		result  *gardenv1beta1.Shoot
+		attempt int
+	)
+	err := retry.RetryOnConflict(backoff, func() (err error) {
+		attempt++
+		cur, err := g.GardenV1beta1().Shoots(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		updated, err := transform(cur.DeepCopy())
+		if err != nil {
+			return err
+		}
+
+		if equalFunc(cur, updated) {
+			result = cur
+			return nil
+		}
+
+		result, err = updateFunc(g, updated)
+		if err != nil {
+			logger.Logger.Errorf("Attempt %d failed to update Shoot %s/%s due to %v", attempt, cur.Namespace, cur.Name, err)
+		}
+		return
+	})
+	if err != nil {
+		logger.Logger.Errorf("Failed to updated Shoot %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+	}
+	return result, err
+}
+
+func tryUpdateShoot(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
+	return tryUpdateShootHelper(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+		return equality.Semantic.DeepEqual(cur, updated)
+	})
 }

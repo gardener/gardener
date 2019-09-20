@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"time"
 
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
 
@@ -30,7 +30,7 @@ import (
 )
 
 // ServeHTTPS starts a HTTPS server.
-func ServeHTTPS(ctx context.Context, k8sGardenInformers gardeninformers.SharedInformerFactory, httpsHandlerFunctions map[string]func(http.ResponseWriter, *http.Request), serverHTTPSPort int, serverHTTPSBindAddress string, serverHTTPSTLSServerCertPath string, serverHTTPSTLSServerKeyPath string, informers ...cache.SharedInformer) {
+func ServeHTTPS(ctx context.Context, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, httpsHandlerFunctions map[string]func(http.ResponseWriter, *http.Request), serverHTTPSPort int, serverHTTPSBindAddress string, serverHTTPSTLSServerCertPath string, serverHTTPSTLSServerKeyPath string, informers ...cache.SharedInformer) {
 	var (
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverHTTPSBindAddress, serverHTTPSPort)
 		serverMuxHTTPS     = http.NewServeMux()
@@ -42,7 +42,7 @@ func ServeHTTPS(ctx context.Context, k8sGardenInformers gardeninformers.SharedIn
 		informersSynced = append(informersSynced, informer.HasSynced)
 	}
 
-	k8sGardenInformers.Start(ctx.Done())
+	k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), informersSynced...) {
 		panic("Timed out waiting for Garden caches to sync")
 	}

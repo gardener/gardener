@@ -160,13 +160,13 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 
 	updatedMachineImages, err := MaintainMachineImages(operation.Shoot.Info, operation.Shoot.CloudProfile, operation.Shoot.GetMachineImages())
 	if err != nil {
-		// continue execution to allow the machine image version update
+		// continue execution to allow the kubernetes version update
 		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
 	updatedKubernetesVersion, err := MaintainKubernetesVersion(operation.Shoot.Info, operation.Shoot.CloudProfile)
 	if err != nil {
-		// continue execution to allow the kubernetes version update
+		// continue execution to allow the machine image version update
 		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
 	}
 
@@ -181,10 +181,10 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 		s.Annotations[common.ShootOperation] = common.ShootOperationReconcile
 
 		if updatedMachineImages != nil {
-			gardencorev1alpha1helper.UpdateMachineImages(shoot.Spec.Provider.Workers, updatedMachineImages)
+			gardencorev1alpha1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
 		}
 		if updatedKubernetesVersion != nil {
-			shoot.Spec.Kubernetes.Version = *updatedKubernetesVersion
+			s.Spec.Kubernetes.Version = *updatedKubernetesVersion
 		}
 
 		return s, nil

@@ -25,7 +25,6 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -127,7 +126,6 @@ func NewDefaultControl(
 	config *config.ControllerManagerConfiguration,
 	secretLister kubecorev1listers.SecretLister,
 	shootLister gardencorelisters.ShootLister,
-	backupInfrastructureLister gardenlisters.BackupInfrastructureLister,
 ) ControlInterface {
 	return &defaultControl{k8sGardenClient,
 		k8sGardenCoreInformers,
@@ -139,22 +137,20 @@ func NewDefaultControl(
 		config,
 		secretLister,
 		shootLister,
-		backupInfrastructureLister,
 	}
 }
 
 type defaultControl struct {
-	k8sGardenClient            kubernetes.Interface
-	k8sGardenCoreInformers     gardencoreinformers.SharedInformerFactory
-	secrets                    map[string]*corev1.Secret
-	imageVector                imagevector.ImageVector
-	identity                   *gardencorev1alpha1.Gardener
-	recorder                   record.EventRecorder
-	updater                    UpdaterInterface
-	config                     *config.ControllerManagerConfiguration
-	secretLister               kubecorev1listers.SecretLister
-	shootLister                gardencorelisters.ShootLister
-	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	secrets                map[string]*corev1.Secret
+	imageVector            imagevector.ImageVector
+	identity               *gardencorev1alpha1.Gardener
+	recorder               record.EventRecorder
+	updater                UpdaterInterface
+	config                 *config.ControllerManagerConfiguration
+	secretLister           kubecorev1listers.SecretLister
+	shootLister            gardencorelisters.ShootLister
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string) error {
@@ -190,12 +186,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string)
 			seedLogger.Error(err.Error())
 			return err
 		}
-		associatedBackupInfrastructures, err := controllerutils.DetermineBackupInfrastructureAssociations(seed, c.backupInfrastructureLister)
-		if err != nil {
-			seedLogger.Error(err.Error())
-			return err
-		}
-
 		// As per design, backupBucket's are not tightly coupled with Seed resources. But to reconcile backup bucket on object store, seed
 		// provides the worker node for running backup extension controller. Hence, we do check if there is another Seed available for
 		// running this backup extension controller for associated backup buckets. Otherwise we block the deletion of current seed.
@@ -213,8 +203,8 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string)
 			return err
 		}
 		//}
-		if len(associatedShoots) == 0 && len(associatedBackupInfrastructures) == 0 && len(associatedBackupBuckets) == 0 {
-			seedLogger.Info("No Shoots or BackupInfrastructures or BackupBuckets are referencing the Seed. Deletion accepted.")
+		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
+			seedLogger.Info("No Shoots or BackupBuckets are referencing the Seed. Deletion accepted.")
 
 			// Remove finalizer from referenced secret
 			secret := &corev1.Secret{
@@ -239,9 +229,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string)
 		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it: "
 		if len(associatedShoots) != 0 {
 			seedLogger.Infof("%s Shoots=%v", parentLogMessage, associatedShoots)
-		}
-		if len(associatedBackupInfrastructures) != 0 {
-			seedLogger.Infof("%s BackupInfrastructures=%v", parentLogMessage, associatedBackupInfrastructures)
 		}
 		if len(associatedBackupBuckets) != 0 {
 			seedLogger.Infof("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
@@ -349,7 +336,7 @@ func (c *defaultControl) updateSeedStatus(seed *gardencorev1alpha1.Seed, updateC
 }
 
 func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardencorev1alpha1.Seed) error {
-	// By default, we assume the seed.Spec.Backup.Provider matches the seed.Spec.Backup.Cloud as per the validation logic.
+	// By default, we assume the seed.Spec.Backup.Provider matches the seed.Spec.Provider.Type as per the validation logic.
 	// However, if the backup region is specified we take it.
 	region := seed.Spec.Provider.Region
 	if seed.Spec.Backup.Region != nil {

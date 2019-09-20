@@ -486,7 +486,7 @@ var _ = Describe("helper", func() {
 			&gardencorev1alpha1.Shoot{
 				Spec: gardencorev1alpha1.ShootSpec{
 					Provider: gardencorev1alpha1.Provider{
-						Workers: []gardencorev1alpha1.Worker{{Name: "foo", Maximum: 1, Minimum: 2}},
+						Workers: []gardencorev1alpha1.Worker{{Name: "foo", Minimum: 1, Maximum: 2}},
 					},
 				},
 			},

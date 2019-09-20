@@ -47,7 +47,7 @@ var (
 )
 
 func roleOf(obj metav1.Object) string {
-	return obj.GetLabels()[common.GardenRole]
+	return obj.GetLabels()[v1alpha1constants.DeprecatedGardenRole]
 }
 
 func constDeploymentLister(deployments []*appsv1.Deployment) kutil.DeploymentLister {
@@ -81,7 +81,7 @@ func constMachineDeploymentLister(machineDeployments []*machinev1alpha1.MachineD
 }
 
 func roleLabels(role string) map[string]string {
-	return map[string]string{common.GardenRole: role}
+	return map[string]string{v1alpha1constants.DeprecatedGardenRole: role}
 }
 
 func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
@@ -187,11 +187,13 @@ var _ = Describe("health check", func() {
 		gcpShoot               = &gardencorev1alpha1.Shoot{}
 		gcpShootWithAutoscaler = &gardencorev1alpha1.Shoot{
 			Spec: gardencorev1alpha1.ShootSpec{
-				Provider: gardencorev1alpha1.Workers{
-					{
-						Name:          "foo",
-						AutoScalerMin: 1,
-						AutoScalerMax: 2,
+				Provider: gardencorev1alpha1.Provider{
+					Workers: []gardencorev1alpha1.Worker{
+						{
+							Name:    "foo",
+							Minimum: 1,
+							Maximum: 2,
+						},
 					},
 				},
 			},
@@ -201,13 +203,13 @@ var _ = Describe("health check", func() {
 		shootNamespace = metav1.NamespaceSystem
 
 		// control plane deployments
-		gardenerResourceManagerDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGardenerResourceManager, common.GardenRoleControlPlane, true)
-		kubeAPIServerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, common.GardenRoleControlPlane, true)
-		kubeControllerManagerDeployment    = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager, common.GardenRoleControlPlane, true)
-		kubeSchedulerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeScheduler, common.GardenRoleControlPlane, true)
-		machineControllerManagerDeployment = newDeployment(seedNamespace, common.MachineControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
-		dependencyWatchdogDeployment       = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameDependencyWatchdog, common.GardenRoleControlPlane, true)
-		clusterAutoscalerDeployment        = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
+		gardenerResourceManagerDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGardenerResourceManager, v1alpha1constants.GardenRoleControlPlane, true)
+		kubeAPIServerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, v1alpha1constants.GardenRoleControlPlane, true)
+		kubeControllerManagerDeployment    = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager, v1alpha1constants.GardenRoleControlPlane, true)
+		kubeSchedulerDeployment            = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeScheduler, v1alpha1constants.GardenRoleControlPlane, true)
+		machineControllerManagerDeployment = newDeployment(seedNamespace, common.MachineControllerManagerDeploymentName, v1alpha1constants.GardenRoleControlPlane, true)
+		dependencyWatchdogDeployment       = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameDependencyWatchdog, v1alpha1constants.GardenRoleControlPlane, true)
+		clusterAutoscalerDeployment        = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameClusterAutoscaler, v1alpha1constants.GardenRoleControlPlane, true)
 
 		requiredControlPlaneDeployments = []*appsv1.Deployment{
 			gardenerResourceManagerDeployment,
@@ -220,8 +222,8 @@ var _ = Describe("health check", func() {
 		}
 
 		// control plane stateful sets
-		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDMain, common.GardenRoleControlPlane, true)
-		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDEvents, common.GardenRoleControlPlane, true)
+		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDMain, v1alpha1constants.GardenRoleControlPlane, true)
+		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameETCDEvents, v1alpha1constants.GardenRoleControlPlane, true)
 
 		requiredControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			etcdMainStatefulSet,
@@ -229,11 +231,11 @@ var _ = Describe("health check", func() {
 		}
 
 		// system component deployments
-		calicoKubeControllersDeployment = newDeployment(shootNamespace, common.CalicoKubeControllersDeploymentName, common.GardenRoleSystemComponent, true)
-		calicoTyphaDeployment           = newDeployment(shootNamespace, common.CalicoTyphaDeploymentName, common.GardenRoleSystemComponent, true)
-		coreDNSDeployment               = newDeployment(shootNamespace, common.CoreDNSDeploymentName, common.GardenRoleSystemComponent, true)
-		vpnShootDeployment              = newDeployment(shootNamespace, common.VPNShootDeploymentName, common.GardenRoleSystemComponent, true)
-		metricsServerDeployment         = newDeployment(shootNamespace, common.MetricsServerDeploymentName, common.GardenRoleSystemComponent, true)
+		calicoKubeControllersDeployment = newDeployment(shootNamespace, common.CalicoKubeControllersDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
+		calicoTyphaDeployment           = newDeployment(shootNamespace, common.CalicoTyphaDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
+		coreDNSDeployment               = newDeployment(shootNamespace, common.CoreDNSDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
+		vpnShootDeployment              = newDeployment(shootNamespace, common.VPNShootDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
+		metricsServerDeployment         = newDeployment(shootNamespace, common.MetricsServerDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
 
 		requiredSystemComponentDeployments = []*appsv1.Deployment{
 			calicoKubeControllersDeployment,
@@ -244,24 +246,24 @@ var _ = Describe("health check", func() {
 		}
 
 		// system component daemon sets
-		calicoNodeDaemonSet = newDaemonSet(shootNamespace, common.CalicoNodeDaemonSetName, common.GardenRoleSystemComponent, true)
-		kubeProxyDaemonSet  = newDaemonSet(shootNamespace, common.KubeProxyDaemonSetName, common.GardenRoleSystemComponent, true)
+		calicoNodeDaemonSet = newDaemonSet(shootNamespace, common.CalicoNodeDaemonSetName, v1alpha1constants.GardenRoleSystemComponent, true)
+		kubeProxyDaemonSet  = newDaemonSet(shootNamespace, common.KubeProxyDaemonSetName, v1alpha1constants.GardenRoleSystemComponent, true)
 
 		requiredSystemComponentDaemonSets = []*appsv1.DaemonSet{
 			calicoNodeDaemonSet,
 			kubeProxyDaemonSet,
 		}
 
-		nodeExporterDaemonSet = newDaemonSet(shootNamespace, common.NodeExporterDaemonSetName, common.GardenRoleMonitoring, true)
+		nodeExporterDaemonSet = newDaemonSet(shootNamespace, common.NodeExporterDaemonSetName, v1alpha1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringSystemComponentDaemonSets = []*appsv1.DaemonSet{
 			nodeExporterDaemonSet,
 		}
 
-		grafanaDeployment               = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaOperators, common.GardenRoleMonitoring, true)
-		grafanaDeploymentUsers          = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaUsers, common.GardenRoleMonitoring, true)
-		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsSeed, common.GardenRoleMonitoring, true)
-		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsShoot, common.GardenRoleMonitoring, true)
+		grafanaDeployment               = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaOperators, v1alpha1constants.GardenRoleMonitoring, true)
+		grafanaDeploymentUsers          = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameGrafanaUsers, v1alpha1constants.GardenRoleMonitoring, true)
+		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsSeed, v1alpha1constants.GardenRoleMonitoring, true)
+		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKubeStateMetricsShoot, v1alpha1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
 			grafanaDeployment,
@@ -270,21 +272,21 @@ var _ = Describe("health check", func() {
 			kubeStateMetricsShootDeployment,
 		}
 
-		alertManagerStatefulSet = newStatefulSet(seedNamespace, common.AlertManagerStatefulSetName, common.GardenRoleMonitoring, true)
-		prometheusStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNamePrometheus, common.GardenRoleMonitoring, true)
+		alertManagerStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameAlertManager, v1alpha1constants.GardenRoleMonitoring, true)
+		prometheusStatefulSet   = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNamePrometheus, v1alpha1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			alertManagerStatefulSet,
 			prometheusStatefulSet,
 		}
 
-		kibanaDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKibana, common.GardenRoleLogging, true)
+		kibanaDeployment = newDeployment(seedNamespace, v1alpha1constants.DeploymentNameKibana, v1alpha1constants.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
 			kibanaDeployment,
 		}
 
-		elasticSearchStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameElasticSearch, common.GardenRoleLogging, true)
+		elasticSearchStatefulSet = newStatefulSet(seedNamespace, v1alpha1constants.StatefulSetNameElasticSearch, v1alpha1constants.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			elasticSearchStatefulSet,
@@ -292,7 +294,7 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardencorev1alpha1.Shoot, cloudProvider gardencorev1alpha1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, machineDeployments []*machinev1alpha1.MachineDeployment, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardencorev1alpha1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, machineDeployments []*machinev1alpha1.MachineDeployment, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister        = constDeploymentLister(deployments)
 				statefulSetLister       = constStatefulSetLister(statefulSets)
@@ -589,12 +591,12 @@ var _ = Describe("health check", func() {
 			nil,
 			BeNil()),
 		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{newDeployment(shootNamespace, "addon", common.GardenRoleOptionalAddon, false)},
+			[]*appsv1.Deployment{newDeployment(shootNamespace, "addon", v1alpha1constants.GardenRoleOptionalAddon, false)},
 			nil,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			nil,
-			[]*appsv1.DaemonSet{newDaemonSet(shootNamespace, "addon", common.GardenRoleOptionalAddon, false)},
+			[]*appsv1.DaemonSet{newDaemonSet(shootNamespace, "addon", v1alpha1constants.GardenRoleOptionalAddon, false)},
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 	)
 

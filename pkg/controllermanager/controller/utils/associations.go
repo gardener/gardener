@@ -20,7 +20,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -59,23 +58,6 @@ func DetermineShootAssociations(obj interface{}, shootLister gardencorelisters.S
 		}
 	}
 	return associatedShoots, nil
-}
-
-// DetermineBackupInfrastructureAssociations gets a <backupInfrastructureLister> to determine the BackupInfrastructures resources which are associated
-// to given <seed>
-func DetermineBackupInfrastructureAssociations(seed *gardencorev1alpha1.Seed, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ([]string, error) {
-	var associatedBackupInfrastructures []string
-	backupInfrastructures, err := backupInfrastructureLister.List(labels.Everything())
-	if err != nil {
-		logger.Logger.Info(err.Error())
-		return nil, err
-	}
-	for _, backupInfrastructure := range backupInfrastructures {
-		if backupInfrastructure.Spec.Seed == seed.Name {
-			associatedBackupInfrastructures = append(associatedBackupInfrastructures, fmt.Sprintf("%s/%s", backupInfrastructure.Namespace, backupInfrastructure.Name))
-		}
-	}
-	return associatedBackupInfrastructures, nil
 }
 
 // DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding

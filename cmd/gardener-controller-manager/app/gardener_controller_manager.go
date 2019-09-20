@@ -29,7 +29,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions" // TODO: remove after removing BackupInfrastructure resource
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -218,7 +217,6 @@ type Gardener struct {
 	Identity               *gardencorev1alpha1.Gardener
 	GardenerNamespace      string
 	K8sGardenClient        kubernetes.Interface
-	K8sGardenInformers     gardeninformers.SharedInformerFactory
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory    informers.SharedInformerFactory
 	Logger                 *logrus.Logger
@@ -324,7 +322,6 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		Logger:                 logger,
 		Recorder:               recorder,
 		K8sGardenClient:        k8sGardenClient,
-		K8sGardenInformers:     gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
 		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
@@ -349,17 +346,16 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Start HTTP server
 	var (
-		backupInfrastructureInformer = g.K8sGardenInformers.Garden().V1beta1().BackupInfrastructures()
-		projectInformer              = g.K8sGardenCoreInformers.Core().V1alpha1().Projects()
-		shootInformer                = g.K8sGardenCoreInformers.Core().V1alpha1().Shoots()
+		projectInformer = g.K8sGardenCoreInformers.Core().V1alpha1().Projects()
+		shootInformer   = g.K8sGardenCoreInformers.Core().V1alpha1().Shoots()
 
 		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
-			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), backupInfrastructureInformer.Lister(), shootInformer.Lister()),
+			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), shootInformer.Lister()),
 		}
 	)
 
 	go server.ServeHTTP(ctx, g.Config.Server.HTTP.Port, g.Config.Server.HTTP.BindAddress)
-	go server.ServeHTTPS(ctx, g.K8sGardenInformers, httpsHandlers, g.Config.Server.HTTPS.Port, g.Config.Server.HTTPS.BindAddress, g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath, shootInformer.Informer(), projectInformer.Informer(), backupInfrastructureInformer.Informer())
+	go server.ServeHTTPS(ctx, g.K8sGardenCoreInformers, httpsHandlers, g.Config.Server.HTTPS.Port, g.Config.Server.HTTPS.BindAddress, g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath, shootInformer.Informer(), projectInformer.Informer())
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
@@ -392,7 +388,6 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 func (g *Gardener) startControllers(ctx context.Context) {
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
-		g.K8sGardenInformers,
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,
 		g.Config,

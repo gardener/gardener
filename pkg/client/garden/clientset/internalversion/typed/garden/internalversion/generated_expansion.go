@@ -2,8 +2,6 @@
 
 package internalversion
 
-type BackupInfrastructureExpansion interface{}
-
 type CloudProfileExpansion interface{}
 
 type ProjectExpansion interface{}

@@ -46,6 +46,3 @@ etcdResources:
 
 hvpa:
   enabled: false
-
-# Temporary parameter for backward compatibility
-#failBelowRevision: 0

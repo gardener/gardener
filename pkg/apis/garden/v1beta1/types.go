@@ -1856,60 +1856,6 @@ const (
 	ShootAPIServerAvailable gardencorev1alpha1.ConditionType = "APIServerAvailable"
 )
 
-////////////////////////////////////////////////////
-//              Backup Infrastructure             //
-////////////////////////////////////////////////////
-
-// BackupInfrastructure holds details about backup infrastructure
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.lastOperation.state
-type BackupInfrastructure struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Specification of the Backup Infrastructure.
-	// +optional
-	Spec BackupInfrastructureSpec `json:"spec,omitempty"`
-	// Most recently observed status of the Backup Infrastructure.
-	// +optional
-	Status BackupInfrastructureStatus `json:"status,omitempty"`
-}
-
-// BackupInfrastructureList is a list of BackupInfrastructure objects.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type BackupInfrastructureList struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard list object metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
-	// Items is the list of BackupInfrastructure.
-	Items []BackupInfrastructure `json:"items"`
-}
-
-// BackupInfrastructureSpec is the specification of a Backup Infrastructure.
-type BackupInfrastructureSpec struct {
-	// Seed is the name of a Seed object.
-	Seed string `json:"seed"`
-	// ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.
-	ShootUID types.UID `json:"shootUID"`
-}
-
-// BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.
-type BackupInfrastructureStatus struct {
-	// LastOperation holds information about the last operation on the BackupInfrastructure.
-	// +optional
-	LastOperation *gardencorev1alpha1.LastOperation `json:"lastOperation,omitempty"`
-	// LastError holds information about the last occurred error during an operation.
-	// +optional
-	LastError *gardencorev1alpha1.LastError `json:"lastError,omitempty"`
-	// ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
-	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-}
-
 const (
 	// DefaultPodNetworkCIDR is a constant for the default pod network CIDR of a Shoot cluster.
 	DefaultPodNetworkCIDR = "100.96.0.0/11"

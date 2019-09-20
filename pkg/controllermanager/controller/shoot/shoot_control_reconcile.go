@@ -25,10 +25,7 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
-	"github.com/gardener/gardener/pkg/operation/common"
-	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -52,18 +49,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		return utilretry.Ok()
 	}); err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
-	}
-	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
-	}
-	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Shoot CloudBotanist (%s)", err.Error()))
-	}
-	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
@@ -93,7 +78,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
@@ -103,7 +88,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
@@ -147,23 +132,13 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, wailtUntilBackupEntryInGardenReconciled),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
-		})
-		deleteBackupInfrastructure = g.Add(flow.Task{
-			Name:         "Delete backup infrastructure resource",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until the backup infrastructure has been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureDeleted),
-			Dependencies: flow.NewTaskIDs(deleteBackupInfrastructure),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
@@ -182,7 +157,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -212,12 +187,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{

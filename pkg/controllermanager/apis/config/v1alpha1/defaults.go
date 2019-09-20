@@ -120,10 +120,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Shoot.RetrySyncPeriod = &durationVar
 	}
 
-	if obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours == nil || *obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours < 0 {
-		var defaultBackupInfrastructureDeletionGracePeriodHours = DefaultBackupInfrastructureDeletionGracePeriodHours
-		obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours = &defaultBackupInfrastructureDeletionGracePeriodHours
-	}
 	if obj.Controllers.BackupBucket == nil {
 		obj.Controllers.BackupBucket = &BackupBucketControllerConfiguration{
 			ConcurrentSyncs: 5,
@@ -135,7 +131,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 	if obj.Controllers.BackupEntry.DeletionGracePeriodHours == nil || *obj.Controllers.BackupEntry.DeletionGracePeriodHours < 0 {
-		var defaultBackupEntryDeletionGracePeriodHours = DefaultBackupInfrastructureDeletionGracePeriodHours
+		var defaultBackupEntryDeletionGracePeriodHours = DefaultBackupEntryDeletionGracePeriodHours
 		obj.Controllers.BackupEntry.DeletionGracePeriodHours = &defaultBackupEntryDeletionGracePeriodHours
 	}
 

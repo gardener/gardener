@@ -67,66 +67,12 @@ func tryUpdateShoot(
 	return result, err
 }
 
-func tryUpdateCoreShoot(
-	g gardencore.Interface,
-	backoff wait.Backoff,
-	meta metav1.ObjectMeta,
-	transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error),
-	updateFunc func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error),
-	equalFunc func(cur, updated *gardencorev1alpha1.Shoot) bool,
-) (*gardencorev1alpha1.Shoot, error) {
-
-	var (
-		result  *gardencorev1alpha1.Shoot
-		attempt int
-	)
-	err := retry.RetryOnConflict(backoff, func() (err error) {
-		attempt++
-		cur, err := g.CoreV1alpha1().Shoots(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		updated, err := transform(cur.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if equalFunc(cur, updated) {
-			result = cur
-			return nil
-		}
-
-		result, err = updateFunc(g, updated)
-		if err != nil {
-			logger.Logger.Errorf("Attempt %d failed to update Shoot %s/%s due to %v", attempt, cur.Namespace, cur.Name, err)
-		}
-		return
-	})
-	if err != nil {
-		logger.Logger.Errorf("Failed to updated Shoot %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
-	}
-	return result, err
-}
-
 // TryUpdateShoot tries to update the shoot matching the given <meta>.
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.
 func TryUpdateShoot(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
 	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
-		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
-	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
-		return equality.Semantic.DeepEqual(cur, updated)
-	})
-}
-
-// TryUpdateCoreShoot tries to update the shoot matching the given <meta>.
-// It retries with the given <backoff> characteristics as long as it gets Conflict errors.
-// The transformation function is applied to the current state of the Shoot object. If the transformation
-// yields a semantically equal Shoot, no update is done and the operation returns normally.
-func TryUpdateCoreShoot(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
-	return tryUpdateCoreShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 		return g.CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
 	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur, updated)

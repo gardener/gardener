@@ -26,7 +26,6 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -57,12 +56,7 @@ import (
 
 // New creates a new operation object with a Shoot resource object.
 func New(shoot *gardencorev1alpha1.Shoot, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
-	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot, nil, shootBackup)
-}
-
-// NewWithBackupInfrastructure creates a new operation object without a Shoot resource object but the BackupInfrastructure resource.
-func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfrastructure, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
-	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, &backupInfrastructure.Spec.Seed, nil, backupInfrastructure, nil)
+	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot, shootBackup)
 }
 
 func newOperation(
@@ -76,7 +70,6 @@ func newOperation(
 	namespace string,
 	seedName *string,
 	shoot *gardencorev1alpha1.Shoot,
-	backupInfrastructure *gardenv1beta1.BackupInfrastructure,
 	shootBackup *config.ShootBackup,
 ) (*Operation, error) {
 
@@ -119,7 +112,6 @@ func newOperation(
 		K8sGardenClient:        k8sGardenClient,
 		K8sGardenCoreInformers: k8sGardenCoreInformers,
 		ChartApplierGarden:     kubernetes.NewChartApplier(renderer, applier),
-		BackupInfrastructure:   backupInfrastructure,
 		ShootBackup:            shootBackup,
 	}
 
@@ -338,18 +330,6 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 	o.Shoot.Info = newShoot
 }
 
-// ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
-// by the current progress of the Flow execution.
-func (o *Operation) ReportBackupInfrastructureProgress(ctx context.Context, stats *flow.Stats) {
-	o.BackupInfrastructure.Status.LastOperation.Description = makeDescription(stats)
-	o.BackupInfrastructure.Status.LastOperation.Progress = stats.ProgressPercent()
-	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
-
-	if newBackupInfrastructure, err := o.K8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(o.BackupInfrastructure.Namespace).UpdateStatus(o.BackupInfrastructure); err == nil {
-		o.BackupInfrastructure = newBackupInfrastructure
-	}
-}
-
 // SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
 func (o *Operation) SeedVersion() string {
 	return o.K8sSeedClient.Version()
@@ -386,18 +366,6 @@ func (o *Operation) newTerraformer(purpose, namespace, name string) (*terraforme
 	}
 
 	return terraformer.NewForConfig(o.Logger, o.K8sSeedClient.RESTConfig(), purpose, namespace, name, image.String())
-}
-
-// NewBackupInfrastructureTerraformer creates a new Terraformer for the matching BackupInfrastructure.
-func (o *Operation) NewBackupInfrastructureTerraformer() (*terraformer.Terraformer, error) {
-	var backupInfrastructureName string
-	if o.Shoot != nil {
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(o.Shoot.SeedNamespace, o.Shoot.Info.Status.UID)
-	} else {
-		backupInfrastructureName = o.BackupInfrastructure.Name
-	}
-
-	return o.newTerraformer(common.TerraformerPurposeBackup, common.GenerateBackupNamespaceName(backupInfrastructureName), backupInfrastructureName)
 }
 
 // NewShootTerraformer creates a new Terraformer for the current shoot with the given purpose.
