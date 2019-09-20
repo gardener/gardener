@@ -62,3 +62,4 @@ Please find further resources about out project here:
 * [Introduction movie: "Gardener - Planting the Seeds of Success in the Cloud"](https://www.sap-tv.com/m/video/40962/gardener-planting-the-seeds-of-success-in-the-cloud)
 * ["Thinking Cloud Native" talk at EclipseCon 2018](https://www.youtube.com/watch?v=bfw22WPg99A)
 * [Blog - "Showcase of Gardener at OSCON 2018"](https://blogs.sap.com/2018/07/26/showcase-of-gardener-at-oscon/)
+
