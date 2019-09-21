@@ -23,6 +23,7 @@
   * [Trigger for reconcile operations](extensions/reconcile-trigger.md)
   * [Deploy resources into the shoot cluster](extensions/managedresources.md)
   * [Shoot resource customization webhooks](extensions/shoot-webhooks.md)
+  * [Logging and Monitoring configuration](extensions/logging-and-monitoring.md)
   * DNS providers
     * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
   * IaaS/Cloud providers
