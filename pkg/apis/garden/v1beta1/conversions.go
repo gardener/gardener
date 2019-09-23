@@ -1473,13 +1473,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.AWS.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.AWS.Networks.Nodes != nil {
+		if in.Spec.Cloud.AWS.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.AWS.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.AWS.Networks.Pods != nil {
+		if in.Spec.Cloud.AWS.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.AWS.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.AWS.Networks.Services != nil {
+		if in.Spec.Cloud.AWS.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.AWS.Networks.Services
 		}
 
@@ -1600,13 +1600,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.Azure.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Azure.Networks.Nodes != nil {
+		if in.Spec.Cloud.Azure.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.Azure.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Azure.Networks.Pods != nil {
+		if in.Spec.Cloud.Azure.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Azure.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Azure.Networks.Services != nil {
+		if in.Spec.Cloud.Azure.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.Azure.Networks.Services
 		}
 
@@ -1736,13 +1736,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.GCP.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.GCP.Networks.Nodes != nil {
+		if in.Spec.Cloud.GCP.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.GCP.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.GCP.Networks.Pods != nil {
+		if in.Spec.Cloud.GCP.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.GCP.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.GCP.Networks.Services != nil {
+		if in.Spec.Cloud.GCP.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.GCP.Networks.Services
 		}
 
@@ -1872,13 +1872,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.OpenStack.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.OpenStack.Networks.Nodes != nil {
+		if in.Spec.Cloud.OpenStack.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.OpenStack.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.OpenStack.Networks.Pods != nil {
+		if in.Spec.Cloud.OpenStack.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.OpenStack.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.OpenStack.Networks.Services != nil {
+		if in.Spec.Cloud.OpenStack.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.OpenStack.Networks.Services
 		}
 
@@ -2011,13 +2011,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.Alicloud.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Alicloud.Networks.Nodes != nil {
+		if in.Spec.Cloud.Alicloud.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.Alicloud.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Alicloud.Networks.Pods != nil {
+		if in.Spec.Cloud.Alicloud.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Alicloud.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Alicloud.Networks.Services != nil {
+		if in.Spec.Cloud.Alicloud.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.Alicloud.Networks.Services
 		}
 
@@ -2112,13 +2112,13 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		}
 		out.Spec.Cloud.Packet.Workers = workers
 
-		if len(out.Spec.Networking.Nodes) == 0 && in.Spec.Cloud.Packet.Networks.Nodes != nil {
+		if in.Spec.Cloud.Packet.Networks.Nodes != nil {
 			out.Spec.Networking.Nodes = *in.Spec.Cloud.Packet.Networks.Nodes
 		}
-		if out.Spec.Networking.Pods == nil && in.Spec.Cloud.Packet.Networks.Pods != nil {
+		if in.Spec.Cloud.Packet.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Packet.Networks.Pods
 		}
-		if out.Spec.Networking.Services == nil && in.Spec.Cloud.Packet.Networks.Services != nil {
+		if in.Spec.Cloud.Packet.Networks.Services != nil {
 			out.Spec.Networking.Services = in.Spec.Cloud.Packet.Networks.Services
 		}
 
