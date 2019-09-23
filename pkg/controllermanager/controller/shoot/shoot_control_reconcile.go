@@ -160,7 +160,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deleteBackupInfrastructure = g.Add(flow.Task{
 			Name:         "Delete backup infrastructure resource",
 			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
-			Dependencies: flow.NewTaskIDs(deployETCD),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until the backup infrastructure has been deleted",
