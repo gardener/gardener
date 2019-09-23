@@ -543,7 +543,6 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 				if err := b.Botanist.DeleteBackupInfrastructure(); err != nil {
 					return err
 				}
-				delete(etcd, "failBelowRevision")
 			}
 
 			// Restore the replica count from capture statefulset state.
@@ -553,6 +552,8 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 				etcd["replicas"] = *statefulset.Spec.Replicas
 			}
 		}
+
+		delete(etcd, "failBelowRevision")
 
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
 			return err
