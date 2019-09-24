@@ -1,0 +1,3190 @@
+<p>Packages:</p>
+<ul>
+<li>
+<a href="#extensions.gardener.cloud%2fv1alpha1">extensions.gardener.cloud/v1alpha1</a>
+</li>
+</ul>
+<h2 id="extensions.gardener.cloud/v1alpha1">extensions.gardener.cloud/v1alpha1</h2>
+<p>
+<p>Package v1alpha1 is the v1alpha1 version of the API.</p>
+</p>
+Resource Types:
+<ul><li>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Cluster">Cluster</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Extension">Extension</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Infrastructure">Infrastructure</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Network">Network</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfig">OperatingSystemConfig</a>
+</li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Worker">Worker</a>
+</li></ul>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupBucket">BackupBucket
+</h3>
+<p>
+<p>BackupBucket is a specification for backup bucket.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>BackupBucket</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucketSpec">
+BackupBucketSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this bucket.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucketStatus">
+BackupBucketStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupEntry">BackupEntry
+</h3>
+<p>
+<p>BackupEntry is a specification for backup Entry.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>BackupEntry</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntrySpec">
+BackupEntrySpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this Entry.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>bucketName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BucketName is the name of backup bucket for this Backup Entry.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntryStatus">
+BackupEntryStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Cluster">Cluster
+</h3>
+<p>
+<p>Cluster is a specification for a Cluster resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Cluster</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ClusterSpec">
+ClusterSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is a raw extension field that contains the cloudprofile resource referenced
+by the shoot that has to be reconciled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seed</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Seed is a raw extension field that contains the seed resource referenced by the shoot that
+has to be reconciled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shoot</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Shoot is a raw extension field that contains the shoot resource that has to be reconciled.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane
+</h3>
+<p>
+<p>ControlPlane is a specification for a ControlPlane resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ControlPlane</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">
+ControlPlaneSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Purpose">
+Purpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for this control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>infrastructureProviderStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InfrastructureProviderStatus contains the provider status that has
+been generated by the controller responsible for the <code>Infrastructure</code> resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">
+ControlPlaneStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Extension">Extension
+</h3>
+<p>
+<p>Extension is a specification for a Extension resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Extension</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ExtensionSpec">
+ExtensionSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration for the respective extension controller.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ExtensionStatus">
+ExtensionStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Infrastructure">Infrastructure
+</h3>
+<p>
+<p>Infrastructure is a specification for cloud provider infrastructure.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Infrastructure</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureSpec">
+InfrastructureSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for this infrastructure.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this infrastructure.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshPublicKey</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHPublicKey is the public SSH key that should be used with this infrastructure.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatus">
+InfrastructureStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Network">Network
+</h3>
+<p>
+<p>Network is the specification for cluster networking.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Network</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">
+NetworkSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodCIDR defines the CIDR that will be used for pods.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ServiceCIDR defines the CIDR that will be used for services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains plugin-specific configuration.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkStatus">
+NetworkStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfig">OperatingSystemConfig
+</h3>
+<p>
+<p>OperatingSystemConfig is a specification for a OperatingSystemConfig resource</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>OperatingSystemConfig</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">
+OperatingSystemConfigSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigPurpose">
+OperatingSystemConfigPurpose
+</a>
+</em>
+</td>
+<td>
+<p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
+gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+cloud-config-downloader script already running on a bootstrapped VM.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reloadConfigFilePath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
+are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
+the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>units</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">
+[]Unit
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Units is a list of unit for the operating system configuration (usually, a systemd unit).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>files</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">
+[]File
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to extension resource.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">
+OperatingSystemConfigStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Worker">Worker
+</h3>
+<p>
+<p>Worker is a specification for a Worker resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Worker</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerSpec">
+WorkerSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>infrastructureProviderStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InfrastructureProviderStatus is a raw extension field that contains the provider status that has
+been generated by the controller responsible for the <code>Infrastructure</code> resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the name of the region where the worker pool should be deployed to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshPublicKey</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHPublicKey is the public SSH key that should be used with these workers.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pools</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">
+[]WorkerPool
+</a>
+</em>
+</td>
+<td>
+<p>Pools is a list of worker pools.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerStatus">
+WorkerStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>)
+</p>
+<p>
+<p>BackupBucketSpec is the spec for an BackupBucket resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this bucket.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>)
+</p>
+<p>
+<p>BackupBucketStatus is the status for an BackupBucket resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>generatedSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GeneratedSecretRef is reference to the secret generated by backup bucket, which
+will have object store specific credentials.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupEntrySpec">BackupEntrySpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>)
+</p>
+<p>
+<p>BackupEntrySpec is the spec for an BackupEntry resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this Entry.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>bucketName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BucketName is the name of backup bucket for this Backup Entry.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>)
+</p>
+<p>
+<p>BackupEntryStatus is the status for an BackupEntry resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CloudConfig">CloudConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
+</p>
+<p>
+<p>CloudConfig is a structure for containing the generated output for the given operating system
+config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ClusterSpec">ClusterSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Cluster">Cluster</a>)
+</p>
+<p>
+<p>ClusterSpec is the spec for a Cluster resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is a raw extension field that contains the cloudprofile resource referenced
+by the shoot that has to be reconciled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seed</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Seed is a raw extension field that contains the seed resource referenced by the shoot that
+has to be reconciled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shoot</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>Shoot is a raw extension field that contains the shoot resource that has to be reconciled.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>)
+</p>
+<p>
+<p>ControlPlaneSpec is the spec of a ControlPlane resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Purpose">
+Purpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for this control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>infrastructureProviderStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InfrastructureProviderStatus contains the provider status that has
+been generated by the controller responsible for the <code>Infrastructure</code> resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this control plane.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">ControlPlaneStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>)
+</p>
+<p>
+<p>ControlPlaneStatus is the status of a ControlPlane resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus contains provider-specific output for this control plane.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DefaultSpec">DefaultSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntrySpec">BackupEntrySpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec</a>)
+</p>
+<p>
+<p>DefaultSpec contains common status fields for every extension resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type contains the instance of the resource&rsquo;s kind.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DefaultStatus">DefaultStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">ControlPlaneStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ExtensionStatus">ExtensionStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+</p>
+<p>
+<p>DefaultStatus contains common status fields for every extension resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>conditions</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.Condition">
+[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions represents the latest available observations of a Seed&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastError</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.LastError">
+github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastError holds information about the last occurred error during an operation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastOperation</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.LastOperation">
+github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>observedGeneration</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<p>ObservedGeneration is the most recent generation observed for this resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>state</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>State can be filled by the operating controller with what ever data it needs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DropIn">DropIn
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">Unit</a>)
+</p>
+<p>
+<p>DropIn is a drop-in configuration for a systemd unit.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the drop-in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>content</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Content is the content of the drop-in.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Extension">Extension</a>)
+</p>
+<p>
+<p>ExtensionSpec is the spec for a Extension resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration for the respective extension controller.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ExtensionStatus">ExtensionStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Extension">Extension</a>)
+</p>
+<p>
+<p>ExtensionStatus is the status for a Extension resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus contains provider-specific output for this extension.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.File">File
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>File is a file that should get written to the host&rsquo;s file system. The content can either be inlined or
+referenced from a secret in the same namespace.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>path</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Path is the path of the file system where the file should get written to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>permissions</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Permissions describes with which permissions the file should get written to the file system.
+Should be defaulted to octal 0644.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>content</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContent">
+FileContent
+</a>
+</em>
+</td>
+<td>
+<p>Content describe the file&rsquo;s content.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileContent">FileContent
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">File</a>)
+</p>
+<p>
+<p>FileContent can either reference a secret or contain inline configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContentSecretRef">
+FileContentSecretRef
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecretRef is a struct that contains information about the referenced secret.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inline</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContentInline">
+FileContentInline
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Inline is a struct that contains information about the inlined data.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileContentInline">FileContentInline
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContent">FileContent</a>)
+</p>
+<p>
+<p>FileContentInline contains keys for inlining a file content&rsquo;s data and encoding.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>encoding</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Encoding is the file&rsquo;s encoding (e.g. base64).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Data is the file&rsquo;s data.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileContentSecretRef">FileContentSecretRef
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContent">FileContent</a>)
+</p>
+<p>
+<p>FileContentSecretRef contains keys for referencing a file content&rsquo;s data from a secret in the same namespace.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the secret.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dataKey</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>DataKey is the key in the secret&rsquo;s <code>.data</code> field that should be read.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Infrastructure">Infrastructure</a>)
+</p>
+<p>
+<p>InfrastructureSpec is the spec for an Infrastructure resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for this infrastructure.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the region of this infrastructure.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshPublicKey</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHPublicKey is the public SSH key that should be used with this infrastructure.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Infrastructure">Infrastructure</a>)
+</p>
+<p>
+<p>InfrastructureStatus is the status for an Infrastructure resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus contains provider-specific output for this infrastructure.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.LastError">LastError
+</h3>
+<p>
+<p>LastError is the last error on an object.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.LastOperation">LastOperation
+</h3>
+<p>
+<p>LastOperation is the last operation on an object.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.MachineDeployment">MachineDeployment
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+</p>
+<p>
+<p>MachineDeployment is a created machine deployment.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the <code>MachineDeployment</code> resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minimum</code></br>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Minimum is the minimum number for this machine deployment.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximum</code></br>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Maximum is the maximum number for this machine deployment.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.MachineImage">MachineImage
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>MachineImage contains logical information about the name and the version of the machie image that
+should be used. The logical information must be mapped to the provider-specific information (e.g.,
+AMIs, &hellip;) by the provider itself.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the logical name of the machine image.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the version of the machine image.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Network">Network</a>)
+</p>
+<p>
+<p>NetworkSpec is the spec for an Network resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodCIDR defines the CIDR that will be used for pods.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ServiceCIDR defines the CIDR that will be used for services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains plugin-specific configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Network">Network</a>)
+</p>
+<p>
+<p>NetworkStatus is the status for an Network resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus contains plugin-specific output.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Object">Object
+</h3>
+<p>
+<p>Object is an extension object resource.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigPurpose">OperatingSystemConfigPurpose
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>OperatingSystemConfigPurpose  is a string alias.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfig">OperatingSystemConfig</a>)
+</p>
+<p>
+<p>OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigPurpose">
+OperatingSystemConfigPurpose
+</a>
+</em>
+</td>
+<td>
+<p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
+gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+cloud-config-downloader script already running on a bootstrapped VM.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reloadConfigFilePath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
+are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
+the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>units</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">
+[]Unit
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Units is a list of unit for the operating system configuration (usually, a systemd unit).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>files</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">
+[]File
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to extension resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfig">OperatingSystemConfig</a>)
+</p>
+<p>
+<p>OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CloudConfig">
+CloudConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudConfig is a structure for containing the generated output for the given operating system
+config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>command</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
+&ldquo;/usr/bin/reload-cloud-config -from-file=<path>&rdquo;. The <path> is optionally provided by Gardener
+in the .spec.reloadConfigFilePath field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>units</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
+restarted when a new version has been downloaded.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Purpose">Purpose
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec</a>)
+</p>
+<p>
+<p>Purpose is a string alias.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.Spec">Spec
+</h3>
+<p>
+<p>Spec is the spec section of an Object.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.Status">Status
+</h3>
+<p>
+<p>Status is the status of an Object.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.Unit">Unit
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>Unit is a unit for the operating system configuration (usually, a systemd unit).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of a unit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>command</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Command is the unit&rsquo;s command.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enable</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enable describes whether the unit is enabled or not.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>content</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Content is the unit&rsquo;s content.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dropIns</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DropIn">
+[]DropIn
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DropIns is a list of drop-ins for this unit.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Volume">Volume
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>Volume contains information about the root disks that should be used for worker pools.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Size is the size of the volume.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec</a>)
+</p>
+<p>
+<p>WorkerPool is the definition of a specific worker pool.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>machineType</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>MachineType contains information about the machine type that should be used for this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximum</code></br>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Maximum is the maximum size of the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxSurge</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/util/intstr#IntOrString">
+k8s.io/apimachinery/pkg/util/intstr.IntOrString
+</a>
+</em>
+</td>
+<td>
+<p>MaxSurge is maximum number of VMs that are created during an update.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxUnavailable</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/util/intstr#IntOrString">
+k8s.io/apimachinery/pkg/util/intstr.IntOrString
+</a>
+</em>
+</td>
+<td>
+<p>MaxUnavailable is the maximum number of VMs that can be unavailable during an update.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of key/value pairs for annotations for all the <code>Node</code> objects in this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>labels</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Labels is a map of key/value pairs for labels for all the <code>Node</code> objects in this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>taints</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core">
+[]Kubernetes core/v1.Taint
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Taints is a list of taints for all the <code>Node</code> objects in this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImage</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.MachineImage">
+MachineImage
+</a>
+</em>
+</td>
+<td>
+<p>MachineImage contains logical information about the name and the version of the machie image that
+should be used. The logical information must be mapped to the provider-specific information (e.g.,
+AMIs, &hellip;) by the provider itself.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minimum</code></br>
+<em>
+int
+</em>
+</td>
+<td>
+<p>Minimum is the minimum size of the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is a provider specific configuration for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>userData</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<p>UserData is a base64-encoded string that contains the data that is sent to the provider&rsquo;s APIs
+when a new machine/VM that is part of this worker pool shall be spawned.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volume</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Volume">
+Volume
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Volume contains information about the root disks that should be used for this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones contains information about availability zones for this worker pool.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Worker">Worker</a>)
+</p>
+<p>
+<p>WorkerSpec is the spec for a Worker resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>infrastructureProviderStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InfrastructureProviderStatus is a raw extension field that contains the provider status that has
+been generated by the controller responsible for the <code>Infrastructure</code> resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is the name of the region where the worker pool should be deployed to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshPublicKey</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHPublicKey is the public SSH key that should be used with these workers.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pools</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">
+[]WorkerPool
+</a>
+</em>
+</td>
+<td>
+<p>Pools is a list of worker pools.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Worker">Worker</a>)
+</p>
+<p>
+<p>WorkerStatus is the status for a Worker resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineDeployments</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.MachineDeployment">
+[]MachineDeployment
+</a>
+</em>
+</td>
+<td>
+<p>MachineDeployments is a list of created machine deployments. It will be used to e.g. configure
+the cluster-autoscaler properly.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus contains provider-specific output for this worker.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<p><em>
+Generated with <code>gen-crd-api-reference-docs</code>
+on git commit <code>51504b4f</code>.
+</em></p>

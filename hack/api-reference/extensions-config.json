@@ -1,0 +1,32 @@
+{
+    "hideMemberFields": [
+        "TypeMeta"
+    ],
+    "hideTypePatterns": [
+        "ParseError$",
+        "List$"
+    ],
+    "externalPackages": [
+        {
+            "typeMatchPrefix": "^k8s\\.io/apimachinery/pkg/runtime\\.RawExtension$",
+            "docsURLTemplate": "https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension"
+        },
+        {
+            "typeMatchPrefix": "^k8s\\.io/apimachinery/pkg/util/intstr\\.IntOrString$",
+            "docsURLTemplate": "https://godoc.org/k8s.io/apimachinery/pkg/util/intstr#IntOrString"
+        },
+        {
+            "typeMatchPrefix": "^github\\.com/gardener/gardener/pkg/apis/core/",
+            "docsURLTemplate": "../core#core.gardener.cloud/v1alpha1.{{.TypeIdentifier}}"
+        },
+        {
+            "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
+            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+        }
+    ],
+    "typeDisplayNamePrefixOverrides": {
+        "k8s.io/api/": "Kubernetes ",
+        "k8s.io/apimachinery/pkg/apis/": "Kubernetes "
+    },
+    "markdownDisabled": false
+}

@@ -153,3 +153,4 @@ test-clean:
 generate:
 	@./hack/generate-code
 	@./hack/generate-examples
+	@./hack/generate-reference-doc
