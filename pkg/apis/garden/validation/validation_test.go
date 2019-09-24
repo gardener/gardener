@@ -7222,6 +7222,18 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.networking.type"),
 				}))))
 			})
+
+			It("should forbid changing the networking type", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.Type = "some-other-type"
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
 		})
 
 		Context("maintenance section", func() {
