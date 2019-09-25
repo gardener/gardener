@@ -17,6 +17,7 @@
 // +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/garden
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
+//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/garden-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/garden.md
 
 // Package v1beta1 is a version of the API.
 // +groupName=garden.sapcloud.io

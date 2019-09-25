@@ -7,6 +7,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.20.0+incompatible // indirect
+	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/aliyun/aliyun-oss-go-sdk v2.0.1+incompatible
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
+	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/common v0.6.0

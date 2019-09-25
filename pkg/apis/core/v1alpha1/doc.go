@@ -17,6 +17,7 @@
 // +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/core
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
+//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/core-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/core.md
 
 // Package v1alpha1 is a version of the API.
 // +groupName=core.gardener.cloud

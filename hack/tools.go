@@ -18,6 +18,7 @@
 package tools
 
 import (
+	_ "github.com/ahmetb/gen-crd-api-reference-docs"
 	_ "github.com/onsi/ginkgo/ginkgo"
 	_ "golang.org/x/lint/golint"
 	_ "k8s.io/code-generator/cmd/client-gen"
