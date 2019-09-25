@@ -193,12 +193,12 @@ func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, client k
 // DashboardAvailable checks if the kubernetes dashboard is available
 func (o *GardenerTestOperation) DashboardAvailable(ctx context.Context) error {
 	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Spec.DNS.Domain)
-	dashboardPassword, err := o.getAdminPassword(ctx)
+	dashboardToken, err := o.getAdminToken(ctx)
 	if err != nil {
 		return err
 	}
 
-	return o.dashboardAvailable(ctx, url, dashboardUserName, dashboardPassword)
+	return o.dashboardAvailableWithToken(ctx, url, dashboardToken)
 }
 
 // KibanaDashboardAvailable checks if Kibana instance in shoot seed namespace is available
@@ -209,7 +209,7 @@ func (o *GardenerTestOperation) KibanaDashboardAvailable(ctx context.Context) er
 		return err
 	}
 
-	return o.dashboardAvailable(ctx, url, dashboardUserName, loggingPassword)
+	return o.dashboardAvailableWithBasicAuth(ctx, url, dashboardUserName, loggingPassword)
 }
 
 // HTTPGet performs an HTTP GET request with context
