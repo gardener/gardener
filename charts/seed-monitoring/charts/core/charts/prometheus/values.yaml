@@ -256,8 +256,10 @@ allowedMetrics:
   - prometheus_tsdb_head_gc_duration_seconds_count
   - prometheus_tsdb_head_samples_appended_total
   - prometheus_tsdb_head_series
+  - prometheus_tsdb_lowest_timestamp
   - prometheus_tsdb_reloads_failures_total
   - prometheus_tsdb_reloads_total
+  - prometheus_tsdb_storage_blocks_bytes
   - prometheus_tsdb_wal_corruptions_total
   blackboxExporter:
   - probe_duration_seconds
