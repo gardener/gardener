@@ -252,6 +252,17 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	seedLogger.Infof("[SEED RECONCILE] %s", key)
 	seedLogger.Debugf(string(seedJSON))
 
+	finalizers := sets.NewString(seed.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		seed.Finalizers = finalizers.UnsortedList()
+
+		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed); err != nil {
+			seedLogger.Errorf("Could not add finalizer to Seed: %s", err.Error())
+			return err
+		}
+	}
+
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
 	secret, err := common.GetSecretFromSecretRef(ctx, c.k8sGardenClient.Client(), &seed.Spec.SecretRef)

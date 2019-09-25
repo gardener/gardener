@@ -19,10 +19,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
 )
@@ -40,13 +38,6 @@ func (quotaStrategy) NamespaceScoped() bool {
 }
 
 func (quotaStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-	quota := obj.(*garden.Quota)
-
-	finalizers := sets.NewString(quota.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
-	}
-	quota.Finalizers = finalizers.UnsortedList()
 }
 
 func (quotaStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {

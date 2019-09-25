@@ -160,6 +160,17 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 		return errors.New("SecretBinding still has references")
 	}
 
+	finalizers := sets.NewString(secretBinding.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+
+		secretBinding.Finalizers = finalizers.UnsortedList()
+		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil {
+			secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
+			return err
+		}
+	}
+
 	// Add the Gardener finalizer to the referenced SecretBinding secret to protect it from deletion as long as
 	// the SecretBinding resource does exist.
 	secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)

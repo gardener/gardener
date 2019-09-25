@@ -256,6 +256,19 @@ func (c *Controller) reconcileShoot(shoot *gardenv1beta1.Shoot, o *operation.Ope
 		"allowedToUpdate":                            allowedToUpdate,
 	}).Info("Checking if Shoot can be reconciled")
 
+	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		o.Shoot.Info.Finalizers = finalizers.UnsortedList()
+
+		newShoot, err := c.k8sGardenClient.Garden().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
+		if err != nil {
+			o.Logger.Errorf("Could not add finalizer to Shoot: %s", err.Error())
+			return reconcile.Result{}, err
+		}
+		o.Shoot.Info = newShoot
+	}
+
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardenv1beta1.EventOperationPending, message)

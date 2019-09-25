@@ -140,5 +140,17 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 		quotaLogger.Infof("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
 		return errors.New("Quota still has references")
 	}
+
+	finalizers := sets.NewString(quota.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		quota.Finalizers = finalizers.UnsortedList()
+
+		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil {
+			quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
+			return err
+		}
+	}
+
 	return nil
 }

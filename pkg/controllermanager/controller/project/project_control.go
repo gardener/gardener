@@ -15,6 +15,7 @@
 package project
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -130,6 +131,17 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) (bool, err
 
 	if project.DeletionTimestamp != nil {
 		return c.delete(project, projectLogger)
+	}
+
+	finalizers := sets.NewString(project.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		project.Finalizers = finalizers.UnsortedList()
+
+		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Projects().Update(project); err != nil {
+			projectLogger.Errorf("Could not add finalizer to Project: %s", err.Error())
+			return false, err
+		}
 	}
 
 	return false, c.reconcile(project, projectLogger)

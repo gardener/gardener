@@ -149,6 +149,18 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 		cloudProfileLogger.Info(message)
 		return errors.New("CloudProfile still has references")
 	}
+
+	finalizers := sets.NewString(cloudProfile.Finalizers...)
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		cloudProfile.Finalizers = finalizers.UnsortedList()
+
+		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil {
+			logger.Logger.Errorf("Could not add finalizer to CloudProfile: %s", err.Error())
+			return err
+		}
+	}
+
 	return nil
 }
 
