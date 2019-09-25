@@ -1,6 +1,6 @@
-# Testing Manual
+# Integration Testing Manual
 
-This manual describes the Gardener integration test directory structure,
+This manual describes the Gardener integration test directory structure.
 
 ## Structure
 

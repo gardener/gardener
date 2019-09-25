@@ -1,5 +1,9 @@
 # Documentation Index
 
+* [General architecture](https://github.com/gardener/documentation/wiki/Architecture)
+* [Gardener landing page `gardener.cloud`](https://gardener.cloud/)
+* ["Gardener, the Kubernetes Botanist" blog on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/)
+
 ## Development
 
 * [Setting up a local development environment](development/local_setup.md)
@@ -9,9 +13,13 @@
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 
+## Testing
+
+* [Integration Testing Manual](testing/integration_tests.md)
+
 ## Concepts
 
-* [Configuration and Secrets](concepts/configuration.md)
+* [Gardener Scheduler](concepts/scheduler.md)
 
 ## Extensions
 
@@ -44,10 +52,16 @@
 
 ## Usage
 
-* [Audit a Kubernetes Cluster](usage/shoot_auditpolicy.md)
+* [Gardener configuration and usage](usage/configuration.md)
+* [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
-* [Trouble Shooting Guide](usage/trouble_shooting_guide.md)
+* [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
+* [Trigger shoot operations](usage/shoot_operations.md)
+* [Troubleshooting guide](usage/trouble_shooting_guide.md)
 
 ## Proposals
 
-* [Gardener extensibility and extraction of cloud-specific/OS-specific knowledge](proposals/01-extensibility.md)
+* [GEP-1: Gardener extensibility and extraction of cloud-specific/OS-specific knowledge](proposals/01-extensibility.md)
+* [GEP-2: `BackupInfrastructure` CRD and Controller Redesign](proposals/02-backupinfra.md)
+* [GEP-3: Network extensibility](proposals/03-networking-extensibility.md)
+* [GEP-4: New `core.gardener.cloud/v1alpha1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](proposals/04-new-core-gardener-cloud-apis.md)
