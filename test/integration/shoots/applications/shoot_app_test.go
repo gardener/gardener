@@ -78,7 +78,7 @@ const (
 
 	helmDeployNamespace = metav1.NamespaceDefault
 	RedisChart          = "stable/redis"
-	RedisChartVersion   = "7.0.0"
+	RedisChartVersion   = "9.2.0"
 )
 
 func validateFlags() {
