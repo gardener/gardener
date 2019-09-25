@@ -43,6 +43,7 @@ const (
 	kubeconfig                = "kubeconfig"
 	loggingIngressCredentials = "logging-ingress-credentials"
 	password                  = "password"
+	token                     = "token"
 )
 
 // GetFirstRunningPodWithLabels fetches the first running pod with the desired set of labels <labelsMap>
@@ -86,11 +87,47 @@ func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, e
 	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), common.KubecfgSecretName, password)
 }
 
+// getAdminToken gets the admin token for authenticating against the api
+func (o *GardenerTestOperation) getAdminToken(ctx context.Context) (string, error) {
+	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), common.KubecfgSecretName, token)
+}
+
 func (o *GardenerTestOperation) getLoggingPassword(ctx context.Context) (string, error) {
 	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), loggingIngressCredentials, password)
 }
 
-func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, userName, password string) error {
+func (o *GardenerTestOperation) dashboardAvailableWithToken(ctx context.Context, url, token string) error {
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	httpClient := http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(5 * time.Second),
+	}
+
+	httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	bearerToken := fmt.Sprintf("Bearer %s", token)
+	httpRequest.Header.Set("Authorization", bearerToken)
+	httpRequest = httpRequest.WithContext(ctx)
+
+	r, err := httpClient.Do(httpRequest)
+	if err != nil {
+		return err
+	}
+
+	if r.StatusCode != http.StatusOK {
+		return fmt.Errorf("dashboard unavailable")
+	}
+
+	return nil
+}
+
+func (o *GardenerTestOperation) dashboardAvailableWithBasicAuth(ctx context.Context, url, userName, password string) error {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
