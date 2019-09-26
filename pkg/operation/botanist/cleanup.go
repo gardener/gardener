@@ -76,6 +76,8 @@ var (
 
 	// ZeroGracePeriod is an option to delete resources with no grace period.
 	ZeroGracePeriod = utilclient.DeleteWith(utilclient.GracePeriodSeconds(0))
+	// GracePeriodFiveMinutes is an option to delete resources with a grace period of five minutes.
+	GracePeriodFiveMinutes = utilclient.DeleteWith(utilclient.GracePeriodSeconds(5 * 60))
 
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
 	NotSystemComponent = MustNewRequirement(common.GardenRole, selection.NotEquals, common.GardenRoleSystemComponent)
@@ -180,8 +182,8 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	)
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
 
@@ -193,8 +195,8 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	)
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
-		cleanResourceFn(ops, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterOneHour),
+		cleanResourceFn(ops, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
+		cleanResourceFn(ops, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
 	)(ctx)
 }
 
@@ -207,17 +209,17 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	ops := utilclient.DefaultCleanOps()
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
 
