@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REGISTRY                           := ggaurav10
+REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
 SCHEDULER_IMAGE_REPOSITORY         := $(REGISTRY)/scheduler

@@ -303,7 +303,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := c.Delete(ctx, &autoscalinghvpa.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: gardencorev1alpha1.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+	if err := c.Delete(ctx, &autoscalinghvpa.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1alpha1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
