@@ -242,7 +242,7 @@ const (
 	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
 
 	// CalicoTyphaDeploymentName is the name of the calico-typha deployment.
-	CalicoTyphaDeploymentName = "calico-typha"
+	CalicoTyphaDeploymentName = "calico-typha-deploy"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
