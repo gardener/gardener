@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go v1.21.10
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
+	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gardener/controller-manager-library v0.0.0-20190830161011-2626c078acef // indirect
 	github.com/gardener/etcd-backup-restore v0.0.0-20190807103447-4c8bc2972b60
 	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
