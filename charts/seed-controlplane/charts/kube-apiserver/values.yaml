@@ -113,6 +113,9 @@ enableBasicAuthentication: true
 #  #  tokens with this private key. (Requires the 'TokenRequest' feature gate.)
 #  signingKey: <private key in PEM format>
 
+hvpa:
+  enabled: true
+
 scaleUpStabilization:
   duration: "3m"
   minCpuChange:

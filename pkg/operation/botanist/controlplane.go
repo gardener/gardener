@@ -34,8 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	autoscalinghvpa "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -303,7 +303,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := c.Delete(ctx, &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1alpha1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+	if err := c.Delete(ctx, &autoscalinghvpa.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: gardencorev1alpha1.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

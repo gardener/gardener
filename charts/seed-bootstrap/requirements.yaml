@@ -12,6 +12,11 @@ dependencies:
 - name: vpa
   repository: http://localhost:10191
   version: 0.1.0
+- name: hvpa
+  repository: http://localhost:10191
+  version: 0.1.0
+  # needed for the HVPA feature gate
+  condition: hvpa.enabled
 - name: global-network-policies
   repository: http://localhost:10191
   version: 0.1.0

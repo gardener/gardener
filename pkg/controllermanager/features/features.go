@@ -24,6 +24,7 @@ var (
 	FeatureGate  = utilfeature.NewFeatureGate()
 	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
 		features.Logging: {Default: false, PreRelease: utilfeature.Alpha},
+		features.HVPA:    {Default: false, PreRelease: utilfeature.Alpha},
 	}
 )
 

@@ -89,3 +89,4 @@ shootBackup:
   schedule: "0 */24 * * *"
 featureGates:
   Logging: true
+  HVPA: true

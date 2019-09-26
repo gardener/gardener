@@ -44,5 +44,8 @@ etcdResources:
     cpu: "4"
     memory: 30G
 
+hvpa:
+  enabled: true
+
 # Temporary parameter for backward compatibility
 #failBelowRevision: 0

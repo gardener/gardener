@@ -116,6 +116,9 @@ alertmanager:
   emailConfigs: []
   storage: 1Gi
 
+hvpa:
+  enabled: true
+
 global-network-policies:
   denyAll: false
 

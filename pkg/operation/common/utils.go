@@ -271,6 +271,52 @@ func ComputeSecretCheckSum(m map[string][]byte) string {
 	return utils.ComputeSHA256Hex([]byte(hash))
 }
 
+// DeleteHvpa delete all resources required for the HVPA in the given namespace.
+func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", GardenRole, GardenRoleHvpa),
+	}
+
+	// Delete all Crds with label "garden.sapcloud.io/role=hvpa"
+	if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all Deployments with label "garden.sapcloud.io/role=hvpa"
+	deletePropagation := metav1.DeletePropagationForeground
+	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
+		&metav1.DeleteOptions{
+			PropagationPolicy: &deletePropagation,
+		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ClusterRoles with label "garden.sapcloud.io/role=hvpa"
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ClusterRoleBindings with label "garden.sapcloud.io/role=hvpa"
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ServiceAccounts with label "garden.sapcloud.io/role=hvpa"
+	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	return nil
+}
+
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
 func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
 	if k8sClient == nil {

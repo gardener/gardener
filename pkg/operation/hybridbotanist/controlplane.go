@@ -24,6 +24,8 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -164,6 +166,8 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
+	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":   2379,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -194,6 +198,9 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                b.CheckSums[v1alpha1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
 		},
 	}
 
@@ -248,8 +255,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		if foundDeployment == false {
-			// If deployment is not already created,
+		if foundDeployment == false || !hvpaEnabled {
+			// If deployment is not already created OR hvpa is not enabled
 			// initialize the values
 			cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
 			defaultValues["apiServerResources"] = map[string]interface{}{
@@ -263,7 +270,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 				},
 			}
 		} else {
-			// Deployment is already created
+			// Deployment is already created AND is controled by HVPA
 			// Keep the "resources" as it is.
 			for k := range deployment.Spec.Template.Spec.Containers {
 				v := &deployment.Spec.Template.Spec.Containers[k]
@@ -500,6 +507,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 // store the events data. The objectstore is also set up to store the backups.
 func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 	var (
+		hvpaEnabled          = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
 		backupInfraName      = common.GenerateBackupInfrastructureName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
 		lastSnapshotRevision int64
 	)
@@ -525,6 +533,9 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			"checksum/secret-etcd-ca":         b.CheckSums[v1alpha1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
+		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
 		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
@@ -581,8 +592,8 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			}
 		}
 
-		if foundEtcd {
-			// etcd is already created. As it is controlled by VPA
+		if foundEtcd && hvpaEnabled {
+			// etcd is already created AND is controlled by HVPA
 			// Keep the "resources" as it is.
 			for k := range statefulset.Spec.Template.Spec.Containers {
 				v := &statefulset.Spec.Template.Spec.Containers[k]

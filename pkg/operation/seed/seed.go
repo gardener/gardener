@@ -373,6 +373,15 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		}
 	}
 
+	// HVPA feature gate
+	var hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+
+	if !hvpaEnabled {
+		if err := common.DeleteHvpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
 	var vpaPodAnnotations map[string]interface{}
 
 	existingSecrets := &corev1.SecretList{}
@@ -538,6 +547,9 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"podAnnotations": vpaPodAnnotations,
+		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
 		},
 		"global-network-policies": map[string]interface{}{
 			// TODO (mvladev): Move the Provider specific metadata IP

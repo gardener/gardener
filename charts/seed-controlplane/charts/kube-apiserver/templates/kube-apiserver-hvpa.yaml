@@ -1,3 +1,4 @@
+{{ if .Values.hvpa.enabled }}
 {{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
 {{- if ne (.Values.replicas | toString) "0" }}
 apiVersion: autoscaling.k8s.io/v1alpha1
@@ -5,7 +6,6 @@ kind: Hvpa
 metadata:
   #annotations:
     #"hpa-controller": "hvpa"
-    #"enable-vertical-scale-down": "true"
   name: kube-apiserver
   namespace: {{ .Release.Namespace }}
 spec:
@@ -75,4 +75,5 @@ spec:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
     name: kube-apiserver
+{{ end }}
 {{ end }}
