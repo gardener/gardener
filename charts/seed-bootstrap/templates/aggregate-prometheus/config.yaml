@@ -54,7 +54,7 @@ data:
         - __meta_kubernetes_endpoint_port_name
         regex: shoot-(.+);prometheus-web;metrics
         action: keep
-      metric_relable_configs:
+      metric_relabel_configs:
       - source_labels:
         - exported_job
         - exported_instance
