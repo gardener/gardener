@@ -38,7 +38,7 @@ elasticsearch:
   resources:
     requests:
       cpu:
-        base: 200
+        base: 32
         perObject: 1
         weight: 5
         unit: m
@@ -49,7 +49,7 @@ elasticsearch:
         unit: Mi
     limits:
       cpu:
-        base: 1800
+        base: 1500
         perObject: 1
         weight: 5
         unit: m
@@ -108,7 +108,7 @@ elasticsearch:
     resources:
       requests:
         cpu:
-          base: 700
+          base: 200
           perObject: 1
           weight: 5
           unit: m
@@ -119,7 +119,7 @@ elasticsearch:
           unit: Mi
       limits:
         cpu:
-          base: 2300
+          base: 1800
           perObject: 1
           weight: 5
           unit: m
