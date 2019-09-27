@@ -63,7 +63,7 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int, hvpaEnabled bool) (string, string, string, string) {
 	var (
 		cpuRequest    string
 		memoryRequest string
@@ -75,23 +75,40 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	case nodeCount <= 2:
 		cpuRequest = "800m"
 		memoryRequest = "800Mi"
+
+		cpuLimit = "1000m"
+		memoryLimit = "1200Mi"
 	case nodeCount <= 10:
 		cpuRequest = "1000m"
 		memoryRequest = "1100Mi"
+
+		cpuLimit = "1200m"
+		memoryLimit = "1900Mi"
 	case nodeCount <= 50:
 		cpuRequest = "1200m"
 		memoryRequest = "1600Mi"
+
+		cpuLimit = "1500m"
+		memoryLimit = "3900Mi"
 	case nodeCount <= 100:
 		cpuRequest = "2500m"
 		memoryRequest = "5200Mi"
+
+		cpuLimit = "3000m"
+		memoryLimit = "5900Mi"
 	default:
 		cpuRequest = "3000m"
 		memoryRequest = "5200Mi"
+
+		cpuLimit = "4000m"
+		memoryLimit = "7800Mi"
 	}
 
-	// Since we are deploying HVPA for apiserver, we can keep the limits high
-	cpuLimit = "8"
-	memoryLimit = "16000M"
+	if hvpaEnabled {
+		// Since we are deploying HVPA for apiserver, we can keep the limits high
+		cpuLimit = "8"
+		memoryLimit = "16000M"
+	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
@@ -222,6 +239,9 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			apiServer  = b.ShootedSeed.APIServer
 			autoscaler = apiServer.Autoscaler
 		)
+		defaultValues["hvpa"] = map[string]interface{}{
+			"enabled": false,
+		}
 		defaultValues["replicas"] = *apiServer.Replicas
 		defaultValues["minReplicas"] = *autoscaler.MinReplicas
 		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
@@ -258,7 +278,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		if foundDeployment == false || !hvpaEnabled {
 			// If deployment is not already created OR hvpa is not enabled
 			// initialize the values
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
 			defaultValues["apiServerResources"] = map[string]interface{}{
 				"limits": map[string]interface{}{
 					"cpu":    cpuLimit,
@@ -563,6 +583,18 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			foundEtcd = false
 		}
 
+		if foundEtcd && hvpaEnabled {
+			// etcd is already created AND is controlled by HVPA
+			// Keep the "resources" as it is.
+			for k := range statefulset.Spec.Template.Spec.Containers {
+				v := &statefulset.Spec.Template.Spec.Containers[k]
+				if v.Name == "etcd" {
+					etcd["etcdResources"] = v.Resources.DeepCopy()
+					break
+				}
+			}
+		}
+
 		if b.Shoot.HibernationEnabled {
 			// NOTE: This is for backword compatibility.
 			// Scale up and scale down the etcd, so that it will store atleast one latest backup on new shared bucket.
@@ -589,18 +621,6 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 				etcd["replicas"] = 0
 			} else {
 				etcd["replicas"] = *statefulset.Spec.Replicas
-			}
-		}
-
-		if foundEtcd && hvpaEnabled {
-			// etcd is already created AND is controlled by HVPA
-			// Keep the "resources" as it is.
-			for k := range statefulset.Spec.Template.Spec.Containers {
-				v := &statefulset.Spec.Template.Spec.Containers[k]
-				if v.Name == "etcd" {
-					etcd["etcdResources"] = v.Resources.DeepCopy()
-					break
-				}
 			}
 		}
 
