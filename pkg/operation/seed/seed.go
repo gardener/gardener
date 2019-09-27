@@ -463,6 +463,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			new.Object["status"] = old.Object["status"]
 		}
 		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
 		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost           = seed.GetIngressFQDN("g-seed", "", "garden")
 		prometheusHost        = seed.GetIngressFQDN("p-seed", "", "garden")
@@ -474,6 +475,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
 	}
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
+	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
 	privateNetworks, err := common.ToExceptNetworks(

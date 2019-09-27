@@ -234,35 +234,48 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
 	}
 
+	foundDeployment := true
+	deployment := &appsv1.Deployment{}
+	if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	} else if apierrors.IsNotFound(err) {
+		foundDeployment = false
+	}
+
 	if b.ShootedSeed != nil {
 		var (
 			apiServer  = b.ShootedSeed.APIServer
 			autoscaler = apiServer.Autoscaler
 		)
-		defaultValues["hvpa"] = map[string]interface{}{
-			"enabled": false,
-		}
 		defaultValues["replicas"] = *apiServer.Replicas
 		defaultValues["minReplicas"] = *autoscaler.MinReplicas
 		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
-		defaultValues["apiServerResources"] = map[string]interface{}{
-			"requests": map[string]interface{}{
-				"cpu":    "1750m",
-				"memory": "2Gi",
-			},
-			"limits": map[string]interface{}{
-				"cpu":    "4000m",
-				"memory": "8Gi",
-			},
+
+		if hvpaEnabled {
+			// If HVPA is enabled, we can keep the limits very high
+			defaultValues["apiServerResources"] = map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "1750m",
+					"memory": "2Gi",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "8",
+					"memory": "16000M",
+				},
+			}
+		} else {
+			defaultValues["apiServerResources"] = map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "1750m",
+					"memory": "2Gi",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "4000m",
+					"memory": "8Gi",
+				},
+			}
 		}
 	} else {
-		foundDeployment := true
-		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		} else if apierrors.IsNotFound(err) {
-			foundDeployment = false
-		}
 		replicas := deployment.Spec.Replicas
 
 		// As kube-apiserver HPA manages the number of replicas, we have to maintain current number of replicas
@@ -275,32 +288,32 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		if foundDeployment == false || !hvpaEnabled {
-			// If deployment is not already created OR hvpa is not enabled
-			// initialize the values
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
-			defaultValues["apiServerResources"] = map[string]interface{}{
-				"limits": map[string]interface{}{
-					"cpu":    cpuLimit,
-					"memory": memoryLimit,
-				},
-				"requests": map[string]interface{}{
-					"cpu":    cpuRequest,
-					"memory": memoryRequest,
-				},
-			}
-		} else {
-			// Deployment is already created AND is controled by HVPA
-			// Keep the "resources" as it is.
-			for k := range deployment.Spec.Template.Spec.Containers {
-				v := &deployment.Spec.Template.Spec.Containers[k]
-				if v.Name == "kube-apiserver" {
-					defaultValues["apiServerResources"] = v.Resources.DeepCopy()
-				} else if v.Name == "vpn-seed" {
-					defaultValues["vpnSeedResources"] = v.Resources.DeepCopy()
-				} else if v.Name == "blackbox-exporter" {
-					defaultValues["blackBoxExporterResources"] = v.Resources.DeepCopy()
-				}
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
+		defaultValues["apiServerResources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    cpuLimit,
+				"memory": memoryLimit,
+			},
+			"requests": map[string]interface{}{
+				"cpu":    cpuRequest,
+				"memory": memoryRequest,
+			},
+		}
+	}
+
+	if foundDeployment && hvpaEnabled {
+		// Deployment is already created AND is controlled by HVPA
+		// Keep the "resources" as it is.
+		for k := range deployment.Spec.Template.Spec.Containers {
+			v := &deployment.Spec.Template.Spec.Containers[k]
+			switch v.Name {
+			case "kube-apiserver":
+				defaultValues["apiServerResources"] = v.Resources.DeepCopy()
+			case "vpn-seed":
+				defaultValues["vpnSeedResources"] = v.Resources.DeepCopy()
+			case "blackbox-exporter":
+				defaultValues["blackBoxExporterResources"] = v.Resources.DeepCopy()
+			default:
 			}
 		}
 	}

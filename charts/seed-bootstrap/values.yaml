@@ -117,7 +117,7 @@ alertmanager:
   storage: 1Gi
 
 hvpa:
-  enabled: true
+  enabled: false
 
 global-network-policies:
   denyAll: false

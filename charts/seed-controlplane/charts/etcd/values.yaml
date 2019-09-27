@@ -45,7 +45,7 @@ etcdResources:
     memory: 30G
 
 hvpa:
-  enabled: true
+  enabled: false
 
 # Temporary parameter for backward compatibility
 #failBelowRevision: 0

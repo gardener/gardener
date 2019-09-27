@@ -114,7 +114,7 @@ enableBasicAuthentication: true
 #  signingKey: <private key in PEM format>
 
 hvpa:
-  enabled: true
+  enabled: false
 
 scaleUpStabilization:
   duration: "3m"

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -278,16 +279,16 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 	}
 
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", GardenRole, GardenRoleHvpa),
+		LabelSelector: fmt.Sprintf("%s=%s", constants.GardenRole, GardenRoleHvpa),
 	}
 
-	// Delete all Crds with label "garden.sapcloud.io/role=hvpa"
+	// Delete all Crds with label "gardener.cloud/role=hvpa"
 	if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	// Delete all Deployments with label "garden.sapcloud.io/role=hvpa"
+	// Delete all Deployments with label "gardener.cloud/role=hvpa"
 	deletePropagation := metav1.DeletePropagationForeground
 	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
 		&metav1.DeleteOptions{
@@ -296,19 +297,19 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 		return err
 	}
 
-	// Delete all ClusterRoles with label "garden.sapcloud.io/role=hvpa"
+	// Delete all ClusterRoles with label "gardener.cloud/role=hvpa"
 	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	// Delete all ClusterRoleBindings with label "garden.sapcloud.io/role=hvpa"
+	// Delete all ClusterRoleBindings with label "gardener.cloud/role=hvpa"
 	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	// Delete all ServiceAccounts with label "garden.sapcloud.io/role=hvpa"
+	// Delete all ServiceAccounts with label "gardener.cloud/role=hvpa"
 	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err

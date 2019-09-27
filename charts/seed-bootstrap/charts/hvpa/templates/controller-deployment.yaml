@@ -30,7 +30,7 @@ spec:
       containers:
       - name: hvpa-controller
         image: {{ index .Values.global.images "hvpa-controller" }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command:
           - ./manager
           - --logtostderr=true
