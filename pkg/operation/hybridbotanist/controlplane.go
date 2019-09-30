@@ -24,6 +24,8 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -40,7 +42,6 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -62,7 +63,7 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int, hvpaEnabled bool) (string, string, string, string) {
 	var (
 		cpuRequest    string
 		memoryRequest string
@@ -101,6 +102,12 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 
 		cpuLimit = "4000m"
 		memoryLimit = "7800Mi"
+	}
+
+	if hvpaEnabled {
+		// Since we are deploying HVPA for apiserver, we can keep the limits high
+		cpuLimit = "8"
+		memoryLimit = "16000M"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -176,6 +183,8 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
+	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":   2379,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -189,7 +198,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"maxReplicas":               3,
+		"minReplicas":               1,
+		"maxReplicas":               4,
 		"enableBasicAuthentication": gardenv1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 		"probeCredentials":          b.APIServerHealthCheckToken,
 		"securePort":                443,
@@ -206,6 +216,9 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-etcd-ca":                b.CheckSums[v1alpha1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
 		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
+		},
 	}
 
 	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
@@ -221,6 +234,14 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
 	}
 
+	foundDeployment := true
+	deployment := &appsv1.Deployment{}
+	if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	} else if apierrors.IsNotFound(err) {
+		foundDeployment = false
+	}
+
 	if b.ShootedSeed != nil {
 		var (
 			apiServer  = b.ShootedSeed.APIServer
@@ -229,21 +250,32 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["replicas"] = *apiServer.Replicas
 		defaultValues["minReplicas"] = *autoscaler.MinReplicas
 		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
-		defaultValues["apiServerResources"] = map[string]interface{}{
-			"requests": map[string]interface{}{
-				"cpu":    "1750m",
-				"memory": "2Gi",
-			},
-			"limits": map[string]interface{}{
-				"cpu":    "4000m",
-				"memory": "8Gi",
-			},
+
+		if hvpaEnabled {
+			// If HVPA is enabled, we can keep the limits very high
+			defaultValues["apiServerResources"] = map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "1750m",
+					"memory": "2Gi",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "8",
+					"memory": "16000M",
+				},
+			}
+		} else {
+			defaultValues["apiServerResources"] = map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "1750m",
+					"memory": "2Gi",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "4000m",
+					"memory": "8Gi",
+				},
+			}
 		}
 	} else {
-		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
 		replicas := deployment.Spec.Replicas
 
 		// As kube-apiserver HPA manages the number of replicas, we have to maintain current number of replicas
@@ -256,7 +288,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    cpuLimit,
@@ -267,6 +299,39 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 				"memory": memoryRequest,
 			},
 		}
+	}
+
+	if foundDeployment && hvpaEnabled {
+		// Deployment is already created AND is controlled by HVPA
+		// Keep the "resources" as it is.
+		for k := range deployment.Spec.Template.Spec.Containers {
+			v := &deployment.Spec.Template.Spec.Containers[k]
+			switch v.Name {
+			case "kube-apiserver":
+				defaultValues["apiServerResources"] = v.Resources.DeepCopy()
+			case "vpn-seed":
+				defaultValues["vpnSeedResources"] = v.Resources.DeepCopy()
+			case "blackbox-exporter":
+				defaultValues["blackBoxExporterResources"] = v.Resources.DeepCopy()
+			default:
+			}
+		}
+	}
+
+	minReplicas, ok := defaultValues["minReplicas"].(int)
+	if !ok {
+		return fmt.Errorf("Error converting minReplicas '%v' to int", defaultValues["minReplicas"])
+	}
+	maxReplicas, ok := defaultValues["maxReplicas"].(int)
+	if !ok {
+		return fmt.Errorf("Error converting maxReplicas '%v' to int", defaultValues["maxReplicas"])
+	}
+	// APIserver will be horizontally scaled until last but one replicas,
+	// after which there will be vertical scaling
+	if maxReplicas > minReplicas {
+		defaultValues["lastReplicaCountForHpa"] = maxReplicas - 1
+	} else {
+		defaultValues["lastReplicaCountForHpa"] = minReplicas
 	}
 
 	var (
@@ -475,6 +540,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 // store the events data. The objectstore is also set up to store the backups.
 func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 	var (
+		hvpaEnabled          = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
 		backupInfraName      = common.GenerateBackupInfrastructureName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
 		lastSnapshotRevision int64
 	)
@@ -501,6 +567,9 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
+		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
@@ -519,13 +588,27 @@ func (b *HybridBotanist) DeployETCD(ctx context.Context) error {
 			}
 		}
 
-		if b.Shoot.HibernationEnabled {
-			// capture the old statefulset state
-			statefulset := &appsv1.StatefulSet{}
-			if err := client.IgnoreNotFound(b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset)); err != nil {
-				return err
-			}
+		foundEtcd := true
+		statefulset := &appsv1.StatefulSet{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		} else if apierrors.IsNotFound(err) {
+			foundEtcd = false
+		}
 
+		if foundEtcd && hvpaEnabled {
+			// etcd is already created AND is controlled by HVPA
+			// Keep the "resources" as it is.
+			for k := range statefulset.Spec.Template.Spec.Containers {
+				v := &statefulset.Spec.Template.Spec.Containers[k]
+				if v.Name == "etcd" {
+					etcd["etcdResources"] = v.Resources.DeepCopy()
+					break
+				}
+			}
+		}
+
+		if b.Shoot.HibernationEnabled {
 			// NOTE: This is for backword compatibility.
 			// Scale up and scale down the etcd, so that it will store atleast one latest backup on new shared bucket.
 			// And we can get rid of old bucket i.e. BackupInfra resources.

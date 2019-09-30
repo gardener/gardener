@@ -1,0 +1,77 @@
+{{ if .Values.hvpa.enabled }}
+{{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+{{- if ne (.Values.replicas | toString) "0" }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  name: kube-apiserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+{{- if .Values.scaleUpStabilization }}
+  scaleUpStabilization:
+{{ toYaml .Values.scaleUpStabilization | indent 4 }}
+{{- end }}
+{{- if .Values.scaleDownStabilization }}
+  scaleDownStabilization:
+{{ toYaml .Values.scaleDownStabilization | indent 4 }}
+{{- end }}
+  hpa:
+    selector:
+      matchLabels:
+        role: apiserver-hpa
+    template:
+      metadata:
+        labels:
+          role: apiserver-hpa
+      spec:
+        maxReplicas: {{ .Values.maxReplicas }}
+        minReplicas: {{ .Values.minReplicas }}
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+    updatePolicy:
+      updateMode: "Auto"
+  vpa:
+    selector:
+      matchLabels:
+        role: apiserver-vpa
+    template:
+      metadata:
+        labels:
+          role: apiserver-vpa
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: kube-apiserver
+              maxAllowed:
+                memory: 25G
+                cpu: "8"
+              minAllowed:
+                memory: 400M
+                cpu: 400m
+            - containerName: vpn-seed
+              mode: "Off"
+            - containerName: blackbox-exporter
+              mode: "Off"
+    updatePolicy:
+      updateMode: "ScaleUp"
+  weightBasedScalingIntervals:
+    - vpaWeight: 0
+      startReplicaCount: {{ .Values.minReplicas }}
+      lastReplicaCount: {{ .Values.lastReplicaCountForHpa }}
+    - vpaWeight: 100
+      startReplicaCount: {{ .Values.maxReplicas }}
+      lastReplicaCount: {{ .Values.maxReplicas }}
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: kube-apiserver
+{{ end }}
+{{ end }}

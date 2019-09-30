@@ -304,6 +304,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			common.VpaExporterImageName,
 			common.VpaRecommenderImageName,
 			common.VpaUpdaterImageName,
+			common.HvpaControllerImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -368,6 +369,15 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		}
 	} else {
 		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// HVPA feature gate
+	var hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+
+	if !hvpaEnabled {
+		if err := common.DeleteHvpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -453,6 +463,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			new.Object["status"] = old.Object["status"]
 		}
 		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
 		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost           = seed.GetIngressFQDN("g-seed", "", "garden")
 		prometheusHost        = seed.GetIngressFQDN("p-seed", "", "garden")
@@ -464,6 +475,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
 	}
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
+	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
 	privateNetworks, err := common.ToExceptNetworks(
@@ -537,6 +549,9 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"podAnnotations": vpaPodAnnotations,
+		},
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
 		},
 		"global-network-policies": map[string]interface{}{
 			// TODO (mvladev): Move the Provider specific metadata IP

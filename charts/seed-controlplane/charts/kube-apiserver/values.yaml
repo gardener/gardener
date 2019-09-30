@@ -63,13 +63,29 @@ images:
 blackboxExporterPort: 9115
 etcdServicePort: 2379
 
+vpnSeedResources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1000M
+
+blackBoxExporterResources:
+    requests:
+      cpu: 5m
+      memory: 16Mi
+    limits:
+      cpu: 50m
+      memory: 128Mi
+
 apiServerResources:
   requests:
-    cpu: 200m
-    memory: 512Mi
+    cpu: 400m
+    memory: 400M
   limits:
-    cpu: 1500m
-    memory: 2500Mi
+    cpu: "8"
+    memory: 25G
 
 maxReplicas: 1
 minReplicas: 1
@@ -96,3 +112,26 @@ enableBasicAuthentication: true
 #  # The current private key of the service account token issuer. The issuer will sign issued ID
 #  #  tokens with this private key. (Requires the 'TokenRequest' feature gate.)
 #  signingKey: <private key in PEM format>
+
+hvpa:
+  enabled: false
+
+scaleUpStabilization:
+  duration: "3m"
+  minCpuChange:
+    value: 300m
+    percentage: 80
+  minMemChange:
+    value: 200M
+    percentage: 80
+
+scaleDownStabilization:
+  duration: "15m"
+  minCpuChange:
+    value: 300m
+    percentage: 80
+  minMemChange:
+    value: 200M
+    percentage: 80
+
+lastReplicaCountForHpa: 1

@@ -1,0 +1,72 @@
+{{ if .Values.hvpa.enabled }}
+{{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+{{- if ne (.Values.replicas | toString) "0" }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  name: etcd-{{ .Values.role }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+{{- if .Values.scaleUpStabilization }}
+  scaleUpStabilization:
+{{ toYaml .Values.scaleUpStabilization | indent 4 }}
+{{- end }}
+{{- if .Values.scaleDownStabilization }}
+  scaleDownStabilization:
+{{ toYaml .Values.scaleDownStabilization | indent 4 }}
+{{- end }}
+  hpa:
+    selector:
+      matchLabels:
+        role: etcd-hpa-{{ .Values.role }}
+    template:
+      metadata:
+        labels:
+          role: etcd-hpa-{{ .Values.role }}
+      spec:
+        maxReplicas: {{ .Values.replicas }}
+        minReplicas: {{ .Values.replicas }}
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+          type: Resource
+    updatePolicy:
+      updateMode: "Auto"
+  vpa:
+    selector:
+      matchLabels:
+        role: etcd-vpa-{{ .Values.role }}
+    template:
+      metadata:
+        labels:
+          role: etcd-vpa-{{ .Values.role }}
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: etcd
+              maxAllowed:
+                memory: 30G
+                cpu: "4"
+              minAllowed:
+                memory: 1000M
+                cpu: 300m
+            - containerName: backup-restore
+              mode: "Off"
+    updatePolicy:
+      updateMode: "ScaleUp"
+  weightBasedScalingIntervals:
+    - vpaWeight: 100
+      startReplicaCount: {{ .Values.replicas }}
+      lastReplicaCount: {{ .Values.replicas }}
+  targetRef:
+    apiVersion:  {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: etcd-{{ .Values.role }}
+{{ end }}
+{{ end }}

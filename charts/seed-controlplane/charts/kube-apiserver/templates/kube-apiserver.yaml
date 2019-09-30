@@ -248,13 +248,10 @@ spec:
         - name: tcp-tunnel
           containerPort: 1194
           protocol: TCP
+        {{- if .Values.vpnSeedResources }}
         resources:
-          requests:
-            cpu: 11m
-            memory: 16Mi
-          limits:
-            cpu: 300m
-            memory: 512Mi
+{{ toYaml .Values.vpnSeedResources | indent 10 }}
+        {{- end }}
         securityContext:
           capabilities:
             add:
@@ -276,13 +273,10 @@ spec:
         - name: blackbox-export
           containerPort: {{ required ".blackboxExporterPort is required" .Values.blackboxExporterPort }}
           protocol: TCP
+        {{- if .Values.blackBoxExporterResources }}
         resources:
-          requests:
-            cpu: 5m
-            memory: 16Mi
-          limits:
-            cpu: 50m
-            memory: 128Mi
+{{ toYaml .Values.blackBoxExporterResources | indent 10 }}
+        {{- end }}
         volumeMounts:
         - name: blackbox-exporter-config-apiserver
           mountPath: /vpn

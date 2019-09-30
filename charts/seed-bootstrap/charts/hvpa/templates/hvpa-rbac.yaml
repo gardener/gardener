@@ -1,0 +1,109 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:hvpa-controller
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - replicationcontrollers
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: hvpa-controller-rolebinding
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:hvpa-controller
+subjects:
+- kind: ServiceAccount
+  name: hvpa-controller
+  namespace: garden

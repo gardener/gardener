@@ -1,0 +1,8 @@
+global:
+  images:
+    hvpa-controller: image-repository:image-tag
+
+enabled: false
+podAnnotations: {}
+labels:
+  gardener.cloud/role: hvpa

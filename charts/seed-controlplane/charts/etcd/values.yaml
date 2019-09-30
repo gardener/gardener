@@ -16,5 +16,36 @@ servicePorts:
 
 metrics: basic
 
+scaleUpStabilization:
+  duration: "5m"
+  minCpuChange:
+    value: "1"
+    percentage: 80
+  minMemChange:
+    value: 2G
+    percentage: 80
+
+scaleDownStabilization:
+  duration: "15m"
+  minCpuChange:
+    value: "1"
+    percentage: 80
+  minMemChange:
+    value: 2G
+    percentage: 80
+
+targetAverageUtilization: 80
+
+etcdResources:
+  requests:
+    cpu: 300m
+    memory: 1000M
+  limits:
+    cpu: "4"
+    memory: 30G
+
+hvpa:
+  enabled: false
+
 # Temporary parameter for backward compatibility
 #failBelowRevision: 0
