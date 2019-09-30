@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
 
@@ -29,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -57,13 +55,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = garden.ShootStatus{}
-
-	finalizers := sets.NewString(shoot.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
-	}
-	shoot.Finalizers = finalizers.UnsortedList()
-
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {

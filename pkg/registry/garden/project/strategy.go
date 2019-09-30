@@ -19,11 +19,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
 )
@@ -45,12 +43,6 @@ func (projectStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object)
 
 	project.Generation = 1
 	project.Status = garden.ProjectStatus{}
-
-	finalizers := sets.NewString(project.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
-	}
-	project.Finalizers = finalizers.UnsortedList()
 }
 
 func (projectStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
