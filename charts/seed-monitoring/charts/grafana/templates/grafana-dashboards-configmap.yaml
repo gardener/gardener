@@ -7,14 +7,17 @@ metadata:
     component: grafana
     role: {{ .Values.role }}
 data:
-  {{ if eq .Values.role "users" }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
+{{ if eq .Values.role "users" }}
+{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
-  {{ end }}
-  {{ else }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
+{{ end }}
+{{ else }}
+{{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
-  {{ end }}
-  {{ end }}
+{{ end }}
+{{ end }}
+{{- if .Values.extensions.dashboards }}
+{{- toString .Values.extensions.dashboards | indent 2 }}
+{{- end }}

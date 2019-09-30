@@ -315,35 +315,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeScheduler | indent 6 }}
 
-    - job_name: cloud-controller-manager
-      {{- if not (eq "alicloud" .Values.shoot.provider) }}
-      {{- if semverCompare ">= 1.13" .Values.kubernetesVersion  }}
-      scheme: https
-      tls_config:
-        insecure_skip_verify: true
-        cert_file: /etc/prometheus/seed/prometheus.crt
-        key_file: /etc/prometheus/seed/prometheus.key
-      {{- end }}
-      {{- end }}
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: cloud-controller-manager;metrics
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cloudControllerManager | indent 6 }}
-
 {{- if  (index .Values.rules.optional "cluster-autoscaler" ).enabled }}
     - job_name: cluster-autoscaler
       honor_labels: false
@@ -365,26 +336,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.clusterAutoscaler | indent 6 }}
 {{- end }}
-
-    - job_name: machine-controller-manager
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: machine-controller-manager;metrics
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.machineControllerManager | indent 6 }}
 
 {{- if  (index .Values.rules.optional "alertmanager" ).enabled }}
     - job_name: alertmanager
@@ -616,4 +567,8 @@ data:
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.elasticsearch | indent 6 }}
+{{- end }}
+
+{{- if .Values.extensions.scrapeConfigs }}
+{{ toString .Values.extensions.scrapeConfigs | indent 4 }}
 {{- end }}

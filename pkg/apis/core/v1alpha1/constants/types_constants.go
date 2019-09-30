@@ -127,6 +127,8 @@ const (
 	LabelExtensionConfiguration = "extensions.gardener.cloud/configuration"
 	// LabelLogging is a constant for a label for logging stack configurations
 	LabelLogging = "logging"
+	// LabelMonitoring is a constant for a label for monitoring stack configurations
+	LabelMonitoring = "monitoring"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
@@ -182,8 +184,16 @@ const (
 
 	// FluentBitConfigMapKubernetesFilterConfig is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"
-	// FluentBitConfigMapParserConfig is a constant for the Fluent Bit ConfigMap's section regarding Parses for common container types
+	// FluentBitConfigMapParserConfig is a constant for the Fluent Bit ConfigMap's section regarding Parsers for common container types
 	FluentBitConfigMapParser = "parsers.conf"
+	// PrometheusConfigMapAlertingRules is a constant for the Prometheus alerting rules tag in provider-specific monitoring configuration
+	PrometheusConfigMapAlertingRules = "alerting_rules"
+	// PrometheusConfigMapScrapeConfig is a constant for the Prometheus scrape config tag in provider-specific monitoring configuration
+	PrometheusConfigMapScrapeConfig = "scrape_config"
+	// GrafanaConfigMapUserDashboard is a constant for the Grafana user dashboard tag in provider-specific monitoring configuration
+	GrafanaConfigMapUserDashboard = "dashboard_users"
+	// GrafanaConfigMapOperatorDashboard is a constant for the Grafana operator dashboard tag in provider-specific monitoring configuration
+	GrafanaConfigMapOperatorDashboard = "dashboard_operators"
 
 	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
