@@ -34,7 +34,8 @@ spec:
         command:
           - ./manager
           - --logtostderr=true
-          - --v=4
+          - --enable-detailed-metrics=true
+          - --v=2
         resources:
           limits:
             cpu: 500m
