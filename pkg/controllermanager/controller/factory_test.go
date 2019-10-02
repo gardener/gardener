@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

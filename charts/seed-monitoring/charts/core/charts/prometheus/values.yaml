@@ -294,7 +294,7 @@ allowedMetrics:
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1
-  profile: penguin
+  provider: penguin
 
 shoot:
   apiserver: https://api.foo.bar

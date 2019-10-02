@@ -15,9 +15,10 @@
 package kubernetes
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,21 +26,21 @@ import (
 )
 
 func tryUpdateSeed(
-	g garden.Interface,
+	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
-	transform func(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error),
-	updateFunc func(g garden.Interface, seed *gardenv1beta1.Seed) (*gardenv1beta1.Seed, error),
-	equalFunc func(cur, updated *gardenv1beta1.Seed) bool,
-) (*gardenv1beta1.Seed, error) {
+	transform func(*gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error),
+	updateFunc func(g gardencore.Interface, seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error),
+	equalFunc func(cur, updated *gardencorev1alpha1.Seed) bool,
+) (*gardencorev1alpha1.Seed, error) {
 
 	var (
-		result  *gardenv1beta1.Seed
+		result  *gardencorev1alpha1.Seed
 		attempt int
 	)
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.GardenV1beta1().Seeds().Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1alpha1().Seeds().Get(meta.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -70,9 +71,9 @@ func tryUpdateSeed(
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Seed object. If the equal
 // func concludes a semantically equal Seed, no update is done and the operation returns normally.
-func TryUpdateSeedWithEqualFunc(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error), equal func(cur, updated *gardenv1beta1.Seed) bool) (*gardenv1beta1.Seed, error) {
-	return tryUpdateSeed(g, backoff, meta, transform, func(g garden.Interface, seed *gardenv1beta1.Seed) (*gardenv1beta1.Seed, error) {
-		return g.GardenV1beta1().Seeds().Update(seed)
+func TryUpdateSeedWithEqualFunc(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error), equal func(cur, updated *gardencorev1alpha1.Seed) bool) (*gardencorev1alpha1.Seed, error) {
+	return tryUpdateSeed(g, backoff, meta, transform, func(g gardencore.Interface, seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
+		return g.CoreV1alpha1().Seeds().Update(seed)
 	}, equal)
 }
 
@@ -80,8 +81,8 @@ func TryUpdateSeedWithEqualFunc(g garden.Interface, backoff wait.Backoff, meta m
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Seed object. If the transformation
 // yields a semantically equal Seed, no update is done and the operation returns normally.
-func TryUpdateSeed(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)) (*gardenv1beta1.Seed, error) {
-	return TryUpdateSeedWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardenv1beta1.Seed) bool {
+func TryUpdateSeed(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error)) (*gardencorev1alpha1.Seed, error) {
+	return TryUpdateSeedWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1alpha1.Seed) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }

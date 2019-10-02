@@ -53,10 +53,6 @@ controllers:
     concurrentSyncs: 5
     syncPeriod: 1m
     reserveExcessCapacity: false
-  backupInfrastructure:
-    concurrentSyncs: 20
-    syncPeriod: 24h
-    deletionGracePeriodHours: 0
   backupBucket:
     concurrentSyncs: 20
   backupEntry:

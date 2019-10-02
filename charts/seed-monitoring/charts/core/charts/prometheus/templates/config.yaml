@@ -20,7 +20,7 @@ data:
         cluster: {{ .Release.Namespace }}
         seed_api: {{ .Values.seed.apiserver }}
         seed_region: {{ .Values.seed.region }}
-        seed_profile: {{ .Values.seed.profile }}
+        seed_provider: {{ .Values.seed.provider }}
         shoot_infra: {{ .Values.shoot.provider }}
         ignoreAlerts: {{ .Values.ignoreAlerts }}
     rule_files:

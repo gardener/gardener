@@ -26,16 +26,15 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/version"
-	errors2 "github.com/pkg/errors"
 
 	jsoniter "github.com/json-iterator/go"
+	errors2 "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -99,26 +98,6 @@ func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap ma
 	return out
 }
 
-// ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
-func ExtractShootName(backupInfrastructureName string) string {
-	tokens := strings.Split(backupInfrastructureName, "-")
-	return strings.Join(tokens[:len(tokens)-1], "-")
-}
-
-// GenerateBackupInfrastructureName returns BackupInfrastructure resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupInfrastructureName(seedNamespace string, shootUID types.UID) string {
-	// TODO: Remove this and use only "--" as separator, once we have all shoots deployed as per new naming conventions.
-	if IsFollowingNewNamingConvention(seedNamespace) {
-		return fmt.Sprintf("%s--%s", seedNamespace, utils.ComputeSHA1Hex([]byte(shootUID))[:5])
-	}
-	return fmt.Sprintf("%s-%s", seedNamespace, utils.ComputeSHA1Hex([]byte(shootUID))[:5])
-}
-
-// GenerateBackupNamespaceName returns Backup namespace name created from provided <backupInfrastructureName>.
-func GenerateBackupNamespaceName(backupInfrastructureName string) string {
-	return fmt.Sprintf("%s--%s", BackupNamespacePrefix, backupInfrastructureName)
-}
-
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
 func GenerateBackupEntryName(seedNamespace string, shootUID types.UID) string {
 	return fmt.Sprintf("%s--%s", seedNamespace, shootUID)
@@ -147,7 +126,7 @@ func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value st
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace
 // name in the project statuses.
-func ProjectForNamespace(projectLister gardenlisters.ProjectLister, namespaceName string) (*gardenv1beta1.Project, error) {
+func ProjectForNamespace(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1alpha1.Project, error) {
 	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -159,7 +138,7 @@ func ProjectForNamespace(projectLister gardenlisters.ProjectLister, namespaceNam
 		}
 	}
 
-	return nil, apierrors.NewNotFound(gardenv1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
+	return nil, apierrors.NewNotFound(gardencorev1alpha1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
 // ProjectNameForNamespace determines the project name for a given <namespace>. It tries to identify it first per the namespace's ownerReferences.
@@ -279,7 +258,7 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 	}
 
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.GardenRole, GardenRoleHvpa),
+		LabelSelector: fmt.Sprintf("%s=%s", v1alpha1constants.GardenRole, GardenRoleHvpa),
 	}
 
 	// Delete all Crds with label "gardener.cloud/role=hvpa"
@@ -346,7 +325,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
-			client.MatchingLabels(map[string]string{GardenRole: GardenRoleLogging})); err != nil {
+			client.MatchingLabels(map[string]string{v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleLogging})); err != nil {
 			return err
 		}
 
@@ -365,7 +344,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 	objs := []runtime.Object{
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      AlertManagerStatefulSetName,
+				Name:      v1alpha1constants.StatefulSetNameAlertManager,
 				Namespace: namespace,
 			},
 		},
@@ -506,12 +485,12 @@ func CurrentReplicaCount(client client.Client, namespace, deploymentName string)
 }
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
-func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardenv1beta1.Shoot) bool {
-	return respectSyncPeriodOverwrite || shoot.Namespace == GardenNamespace
+func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot) bool {
+	return respectSyncPeriodOverwrite || shoot.Namespace == v1alpha1constants.GardenNamespace
 }
 
 // ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
-func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardenv1beta1.Shoot) bool {
+func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot) bool {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return false
 	}
@@ -526,7 +505,7 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardenv1beta1.Sho
 }
 
 // IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *gardenv1beta1.Shoot) bool {
+func IsShootFailed(shoot *gardencorev1alpha1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 
 	return lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateFailed &&
@@ -536,13 +515,13 @@ func IsShootFailed(shoot *gardenv1beta1.Shoot) bool {
 
 // IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
 // maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) bool {
+func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1alpha1.Shoot) bool {
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
 // IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
 // is Succeeded.
-func IsObservedAtLatestGenerationAndSucceeded(shoot *gardenv1beta1.Shoot) bool {
+func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1alpha1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 	return shoot.Generation == shoot.Status.ObservedGeneration &&
 		(lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded)
@@ -553,7 +532,7 @@ func IsObservedAtLatestGenerationAndSucceeded(shoot *gardenv1beta1.Shoot) bool {
 // If no overwrite is allowed, the defaultMinSyncPeriod is returned.
 // Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
 // the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
-func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardenv1beta1.Shoot) time.Duration {
+func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1alpha1.Shoot) time.Duration {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return defaultMinSyncPeriod
 	}
@@ -583,7 +562,7 @@ func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *ut
 }
 
 // EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) *utils.MaintenanceTimeWindow {
+func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1alpha1.Shoot) *utils.MaintenanceTimeWindow {
 	maintenance := shoot.Spec.Maintenance
 	if maintenance == nil || maintenance.TimeWindow == nil {
 		return utils.AlwaysTimeWindow
@@ -595,14 +574,6 @@ func EffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) *utils.Main
 	}
 
 	return EffectiveMaintenanceTimeWindow(timeWindow)
-}
-
-// GetPersistentVolumeProvider gets the Persistent Volume Provider of seed cluster. If it is not specified, return ""
-func GetPersistentVolumeProvider(seed *gardenv1beta1.Seed) string {
-	if seed.Annotations == nil {
-		return ""
-	}
-	return seed.Annotations[AnnotatePersistentVolumeProvider]
 }
 
 // GardenEtcdEncryptionSecretKey is the key to the 'backup' of the etcd encryption secret in the Garden cluster.

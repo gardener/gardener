@@ -19,12 +19,13 @@ import (
 	"sync"
 	"time"
 
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/prometheus/client_golang/prometheus"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -34,17 +35,17 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control  ControlInterface
 	recorder record.EventRecorder
 
-	secretBindingLister gardenlisters.SecretBindingLister
+	secretBindingLister gardencorelisters.SecretBindingLister
 	secretBindingQueue  workqueue.RateLimitingInterface
 	secretBindingSynced cache.InformerSynced
 
-	shootLister gardenlisters.ShootLister
+	shootLister gardencorelisters.ShootLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -53,26 +54,26 @@ type Controller struct {
 // NewSecretBindingController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <secretBindingInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
-		corev1Informer        = kubeInformerFactory.Core().V1()
+		gardenCoreV1alpha1Informer = gardenInformerFactory.Core().V1alpha1()
+		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		secretBindingInformer = gardenv1beta1Informer.SecretBindings()
+		secretBindingInformer = gardenCoreV1alpha1Informer.SecretBindings()
 		secretBindingLister   = secretBindingInformer.Lister()
 		secretLister          = corev1Informer.Secrets().Lister()
-		shootLister           = gardenv1beta1Informer.Shoots().Lister()
+		shootLister           = gardenCoreV1alpha1Informer.Shoots().Lister()
 	)
 
 	secretBindingController := &Controller{
-		k8sGardenClient:     k8sGardenClient,
-		k8sGardenInformers:  gardenInformerFactory,
-		control:             NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretLister, shootLister),
-		recorder:            recorder,
-		secretBindingLister: secretBindingLister,
-		secretBindingQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
-		shootLister:         shootLister,
-		workerCh:            make(chan int),
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenCoreInformers: gardenInformerFactory,
+		control:                NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretLister, shootLister),
+		recorder:               recorder,
+		secretBindingLister:    secretBindingLister,
+		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
+		shootLister:            shootLister,
+		workerCh:               make(chan int),
 	}
 
 	secretBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

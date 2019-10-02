@@ -19,15 +19,16 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) cloudProfileAdd(obj interface{}) {
@@ -81,22 +82,21 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileCloudProfile(cloudprofile *gardenv1beta1.CloudProfile, key string) error
+	ReconcileCloudProfile(cloudprofile *gardencorev1alpha1.CloudProfile, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for CloudProfiles.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, seedLister gardenlisters.SeedLister, shootLister gardenlisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, seedLister, shootLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, shootLister}
 }
 
 type defaultControl struct {
 	k8sGardenClient kubernetes.Interface
-	seedLister      gardenlisters.SeedLister
-	shootLister     gardenlisters.ShootLister
+	shootLister     gardencorelisters.ShootLister
 }
 
-func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, key string) error {
+func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1alpha1.CloudProfile, key string) error {
 	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
@@ -108,10 +108,10 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 	)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
-	// no Shoots and Seed  are assigned to the CloudProfile anymore. If this is the case then the controlller will remove
+	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
 	// the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
-		if !sets.NewString(cloudProfile.Finalizers...).Has(gardenv1beta1.GardenerName) {
+		if !sets.NewString(cloudProfile.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 			return nil
 		}
 
@@ -120,60 +120,38 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			cloudProfileLogger.Error(err.Error())
 			return err
 		}
-		associatedSeeds, err := c.determineSeedAssociations(cloudProfile.Name)
-		if err != nil {
-			cloudProfileLogger.Error(err.Error())
-			return err
-		}
 
-		if len(associatedShoots) == 0 && len(associatedSeeds) == 0 {
-			cloudProfileLogger.Infof("No Shoots and Seeds are referencing the CloudProfile. Deletion accepted.")
+		if len(associatedShoots) == 0 {
+			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
 			finalizers := sets.NewString(cloudProfile.Finalizers...)
-			finalizers.Delete(gardenv1beta1.GardenerName)
+			finalizers.Delete(gardencorev1alpha1.GardenerName)
 			cloudProfile.Finalizers = finalizers.UnsortedList()
 
-			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().CloudProfiles().Update(cloudProfile); client.IgnoreNotFound(err) != nil {
 				logger.Logger.Error(err)
 				return err
 			}
 			return nil
 		}
-		message := "Can't delete CloudProfile, because Shoots and/or Seeds are still referencing it."
+		message := "Can't delete CloudProfile, because Shoots are still referencing it."
 		if len(associatedShoots) != 0 {
 			message += fmt.Sprintf(" Shoots: %+v", associatedShoots)
-		}
-		if len(associatedSeeds) != 0 {
-			message += fmt.Sprintf(" Seeds: %+v", associatedSeeds)
 		}
 		cloudProfileLogger.Info(message)
 		return errors.New("CloudProfile still has references")
 	}
 
 	finalizers := sets.NewString(cloudProfile.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
+	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
 		cloudProfile.Finalizers = finalizers.UnsortedList()
 
-		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil {
+		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().CloudProfiles().Update(cloudProfile); err != nil {
 			logger.Logger.Errorf("Could not add finalizer to CloudProfile: %s", err.Error())
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (c *defaultControl) determineSeedAssociations(cloudProfileName string) ([]string, error) {
-	var associatedSeeds []string
-	seeds, err := c.seedLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-	for _, seed := range seeds {
-		if seed.Spec.Cloud.Profile == cloudProfileName {
-			associatedSeeds = append(associatedSeeds, cloudProfileName)
-		}
-	}
-	return associatedSeeds, nil
 }

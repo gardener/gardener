@@ -84,14 +84,6 @@ images:
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
   tag: v1.10.1
-- name: kube-lego
-  sourceRepository: github.com/jetstack/kube-lego
-  repository: jetstack/kube-lego
-  tag: "0.1.7"
-- name: kube2iam
-  sourceRepository: github.com/jtblin/kube2iam
-  repository: jtblin/kube2iam
-  tag: "0.10.4"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller

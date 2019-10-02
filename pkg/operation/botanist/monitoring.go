@@ -71,7 +71,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"networks": map[string]interface{}{
 				"pods":     b.Shoot.GetPodNetwork(),
 				"services": b.Shoot.GetServiceNetwork(),
-				"nodes":    b.Shoot.GetNodeNetwork(),
+				"nodes":    b.Shoot.Info.Spec.Networking.Nodes,
 			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
@@ -90,8 +90,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
 			"seed": map[string]interface{}{
 				"apiserver": b.K8sSeedClient.RESTConfig().Host,
-				"region":    b.Seed.Info.Spec.Cloud.Region,
-				"profile":   b.Seed.Info.Spec.Cloud.Profile,
+				"region":    b.Seed.Info.Spec.Provider.Region,
+				"provider":  b.Seed.Info.Spec.Provider.Type,
 			},
 			"rules": map[string]interface{}{
 				"optional": map[string]interface{}{
@@ -108,7 +108,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"shoot": map[string]interface{}{
 				"apiserver": fmt.Sprintf("https://%s", common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"provider":  b.Shoot.CloudProvider,
+				"provider":  b.Shoot.Info.Spec.Provider.Type,
 			},
 			"ignoreAlerts": b.Shoot.IgnoreAlerts,
 			"extensions": map[string]interface{}{
@@ -171,7 +171,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		var (
 			alertingSMTPKeys = b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
 			emailConfigs     = []map[string]interface{}{}
-			to, _            = b.Shoot.Info.Annotations[common.GardenOperatedBy]
+			to, _            = b.Shoot.Info.Annotations[v1alpha1constants.AnnotationShootOperatedBy]
 		)
 
 		for _, key := range alertingSMTPKeys {
@@ -234,7 +234,7 @@ func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain st
 func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	alertManagerStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.AlertManagerStatefulSetName,
+			Name:      v1alpha1constants.StatefulSetNameAlertManager,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}

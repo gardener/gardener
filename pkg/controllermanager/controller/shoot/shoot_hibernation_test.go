@@ -16,26 +16,20 @@ package shoot_test
 import (
 	"time"
 
-	mockgardenv1beta1 "github.com/gardener/gardener/pkg/mock/gardener/client/garden/clientset/versioned/typed/garden/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	mockgarden "github.com/gardener/gardener/pkg/mock/gardener/client/garden/clientset/versioned"
-
-	"github.com/gardener/gardener/pkg/utils"
-
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	mockgardencore "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned"
+	mockgardencorev1alpha1 "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned/typed/core/v1alpha1"
+	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/controllermanager/controller/shoot"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	"github.com/robfig/cron"
-
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/controllermanager/controller/shoot"
 	"github.com/golang/mock/gomock"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/robfig/cron"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // MustParseStandard parses the standardSpec and errors otherwise.
@@ -49,9 +43,11 @@ var _ = Describe("Shoot Hibernation", func() {
 	var (
 		ctrl *gomock.Controller
 	)
+
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 	})
+
 	AfterEach(func() {
 		ctrl.Finish()
 	})
@@ -64,14 +60,14 @@ var _ = Describe("Shoot Hibernation", func() {
 					locationEuropeBerlin = "Europe/Berlin"
 					locationUSCentral    = "US/Central"
 
-					s1 = gardenv1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s2 = gardenv1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s3 = gardenv1beta1.HibernationSchedule{Location: &locationUSCentral}
-					s4 = gardenv1beta1.HibernationSchedule{}
+					s1 = gardencorev1alpha1.HibernationSchedule{Location: &locationEuropeBerlin}
+					s2 = gardencorev1alpha1.HibernationSchedule{Location: &locationEuropeBerlin}
+					s3 = gardencorev1alpha1.HibernationSchedule{Location: &locationUSCentral}
+					s4 = gardencorev1alpha1.HibernationSchedule{}
 				)
 
-				grouped := GroupHibernationSchedulesByLocation([]gardenv1beta1.HibernationSchedule{s1, s2, s3, s4})
-				Expect(grouped).To(Equal(map[string][]gardenv1beta1.HibernationSchedule{
+				grouped := GroupHibernationSchedulesByLocation([]gardencorev1alpha1.HibernationSchedule{s1, s2, s3, s4})
+				Expect(grouped).To(Equal(map[string][]gardencorev1alpha1.HibernationSchedule{
 					locationEuropeBerlin: {s1, s2},
 					locationUSCentral:    {s3},
 					time.UTC.String():    {s4},
@@ -82,7 +78,7 @@ var _ = Describe("Shoot Hibernation", func() {
 		Describe("#ComputeHibernationSchedule", func() {
 			It("should compute a correct hibernation schedule", func() {
 				var (
-					c      = mockgarden.NewMockInterface(ctrl)
+					c      = mockgardencore.NewMockInterface(ctrl)
 					logger = utils.NewNopLogger()
 					now    time.Time
 
@@ -94,11 +90,11 @@ var _ = Describe("Shoot Hibernation", func() {
 					location       = time.UTC
 					locationString = location.String()
 
-					shoot = gardenv1beta1.Shoot{
-						Spec: gardenv1beta1.ShootSpec{
-							Hibernation: &gardenv1beta1.Hibernation{
+					shoot = gardencorev1alpha1.Shoot{
+						Spec: gardencorev1alpha1.ShootSpec{
+							Hibernation: &gardencorev1alpha1.Hibernation{
 								Enabled: &trueVar,
-								Schedules: []gardenv1beta1.HibernationSchedule{
+								Schedules: []gardencorev1alpha1.HibernationSchedule{
 									{
 										Start:    &start,
 										End:      &end,
@@ -175,6 +171,7 @@ var _ = Describe("Shoot Hibernation", func() {
 
 			reg HibernationScheduleRegistry
 		)
+
 		BeforeEach(func() {
 			k1 = "foo"
 			k2 = "bar"
@@ -225,35 +222,35 @@ var _ = Describe("Shoot Hibernation", func() {
 		Describe("#Run", func() {
 			It("should set the correct hibernation status", func() {
 				var (
-					c           = mockgarden.NewMockInterface(ctrl)
-					gardenIface = mockgardenv1beta1.NewMockGardenV1beta1Interface(ctrl)
-					shootIface  = mockgardenv1beta1.NewMockShootInterface(ctrl)
+					c           = mockgardencore.NewMockInterface(ctrl)
+					gardenIface = mockgardencorev1alpha1.NewMockCoreV1alpha1Interface(ctrl)
+					shootIface  = mockgardencorev1alpha1.NewMockShootInterface(ctrl)
 					logger      = utils.NewNopLogger()
 					enabled     = trueVar
 
 					namespace = "foo"
 					name      = "bar"
-					shoot     = gardenv1beta1.Shoot{
+					shoot     = gardencorev1alpha1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: namespace,
 							Name:      name,
 						},
-						Spec: gardenv1beta1.ShootSpec{
-							Hibernation: &gardenv1beta1.Hibernation{},
+						Spec: gardencorev1alpha1.ShootSpec{
+							Hibernation: &gardencorev1alpha1.Hibernation{},
 						},
 					}
 					job = NewHibernationJob(c, logger, &shoot, enabled)
 				)
 
 				gomock.InOrder(
-					c.EXPECT().GardenV1beta1().Return(gardenIface),
+					c.EXPECT().CoreV1alpha1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
 					shootIface.EXPECT().Get(name, metav1.GetOptions{}).Return(&shoot, nil),
 
-					c.EXPECT().GardenV1beta1().Return(gardenIface),
+					c.EXPECT().CoreV1alpha1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardenv1beta1.Shoot{})).Do(func(actual *gardenv1beta1.Shoot) {
-						Expect(actual.Spec.Hibernation).To(Equal(&gardenv1beta1.Hibernation{
+					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1alpha1.Shoot{})).Do(func(actual *gardencorev1alpha1.Shoot) {
+						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1alpha1.Hibernation{
 							Enabled: &enabled,
 						}))
 					}),

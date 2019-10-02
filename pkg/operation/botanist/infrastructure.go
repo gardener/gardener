@@ -24,7 +24,6 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
-	"github.com/gardener/gardener/pkg/migration"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -56,14 +55,13 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
+		providerConfig *runtime.RawExtension
 	)
 
-	// In the future the providerConfig will be blindly copied from the core.gardener.cloud/v1alpha1.Shoot
-	// resource. However, until we have completely moved to this resource, we have to compute the needed
-	// configuration ourselves from garden.sapcloud.io/v1beta1.Shoot.
-	providerConfig, err := migration.ShootToInfrastructureConfig(b.Shoot.Info)
-	if err != nil {
-		return err
+	if cfg := b.Shoot.Info.Spec.Provider.InfrastructureConfig; cfg != nil {
+		providerConfig = &runtime.RawExtension{
+			Raw: cfg.Raw,
+		}
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
@@ -73,17 +71,15 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 
 		infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.CloudProvider),
+				Type: b.Shoot.Info.Spec.Provider.Type,
 			},
-			Region:       b.Shoot.Info.Spec.Cloud.Region,
+			Region:       b.Shoot.Info.Spec.Region,
 			SSHPublicKey: b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
 			SecretRef: corev1.SecretReference{
 				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: infrastructure.Namespace,
 			},
-			ProviderConfig: &runtime.RawExtension{
-				Object: providerConfig,
-			},
+			ProviderConfig: providerConfig,
 		}
 		return nil
 	})

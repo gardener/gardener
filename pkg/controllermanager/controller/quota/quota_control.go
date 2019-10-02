@@ -19,16 +19,18 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) quotaAdd(obj interface{}) {
@@ -82,24 +84,24 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileQuota(quota *gardenv1beta1.Quota, key string) error
+	ReconcileQuota(quota *gardencorev1alpha1.Quota, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for Quotas. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, secretBindingLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient     kubernetes.Interface
-	k8sGardenInformers  gardeninformers.SharedInformerFactory
-	recorder            record.EventRecorder
-	secretBindingLister gardenlisters.SecretBindingLister
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	recorder               record.EventRecorder
+	secretBindingLister    gardencorelisters.SecretBindingLister
 }
 
-func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) error {
+func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key string) error {
 	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
@@ -114,7 +116,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
-		if !sets.NewString(quota.Finalizers...).Has(gardenv1beta1.GardenerName) {
+		if !sets.NewString(quota.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 			return nil
 		}
 
@@ -129,9 +131,9 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 
 			// Remove finalizer from Quota
 			quotaFinalizers := sets.NewString(quota.Finalizers...)
-			quotaFinalizers.Delete(gardenv1beta1.GardenerName)
+			quotaFinalizers.Delete(gardencorev1alpha1.GardenerName)
 			quota.Finalizers = quotaFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Quotas(quota.Namespace).Update(quota); client.IgnoreNotFound(err) != nil {
 				quotaLogger.Error(err.Error())
 				return err
 			}
@@ -142,11 +144,11 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 	}
 
 	finalizers := sets.NewString(quota.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
+	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
 		quota.Finalizers = finalizers.UnsortedList()
 
-		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil {
+		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Quotas(quota.Namespace).Update(quota); err != nil {
 			quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
 			return err
 		}

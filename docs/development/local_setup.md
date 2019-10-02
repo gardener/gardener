@@ -203,7 +203,6 @@ time="2019-03-06T15:24:18+02:00" level=info msg="Gardener controller manager (ve
 time="2019-03-06T15:24:18+02:00" level=info msg="ControllerInstallation controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="ControllerRegistration controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="Shoot controller initialized."
-time="2019-03-06T15:24:18+02:00" level=info msg="BackupInfrastructure controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="Seed controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="SecretBinding controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="Project controller initialized."

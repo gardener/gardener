@@ -849,3 +849,16 @@ const (
 	// ShootEventSchedulingFailed indicates that a scheduling decision failed.
 	ShootEventSchedulingFailed = "SchedulingFailed"
 )
+
+const (
+	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
+	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
+	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
+	ShootEveryNodeReady ConditionType = "EveryNodeReady"
+	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
+	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	// ShootAlertsInactive is a constant for a condition type indicating the Shoot cluster alert states.
+	ShootAlertsInactive ConditionType = "AlertsInactive"
+	// ShootAPIServerAvailable is a constant for a condition type indicating that the Shoot clusters API server is available.
+	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
+)

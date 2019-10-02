@@ -18,13 +18,12 @@ import (
 	"reflect"
 	"time"
 
-	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-
-	"github.com/sirupsen/logrus"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
+
 	"github.com/robfig/cron"
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 )
@@ -36,7 +35,7 @@ func hibernationLogger(key string) logrus.FieldLogger {
 	})
 }
 
-func getShootHibernationSchedules(shoot *gardenv1beta1.Shoot) []gardenv1beta1.HibernationSchedule {
+func getShootHibernationSchedules(shoot *gardencorev1alpha1.Shoot) []gardencorev1alpha1.HibernationSchedule {
 	hibernation := shoot.Spec.Hibernation
 	if hibernation == nil {
 		return nil
@@ -57,11 +56,10 @@ func newCronWithLocation(location *time.Location) Cron {
 }
 
 // GroupHibernationSchedulesByLocation groups the given HibernationSchedules by their Location.
-//
 // If the Location of a HibernationSchedule is `nil`, it is defaulted to UTC.
-func GroupHibernationSchedulesByLocation(schedules []gardenv1beta1.HibernationSchedule) map[string][]gardenv1beta1.HibernationSchedule {
+func GroupHibernationSchedulesByLocation(schedules []gardencorev1alpha1.HibernationSchedule) map[string][]gardencorev1alpha1.HibernationSchedule {
 	var (
-		locationToSchedules = make(map[string][]gardenv1beta1.HibernationSchedule)
+		locationToSchedules = make(map[string][]gardencorev1alpha1.HibernationSchedule)
 	)
 
 	for _, schedule := range schedules {
@@ -86,7 +84,7 @@ func LocationLogger(logger logrus.FieldLogger, location *time.Location) logrus.F
 }
 
 // ComputeHibernationSchedule computes the HibernationSchedule for the given Shoot.
-func ComputeHibernationSchedule(client garden.Interface, logger logrus.FieldLogger, shoot *gardenv1beta1.Shoot) (HibernationSchedule, error) {
+func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.FieldLogger, shoot *gardencorev1alpha1.Shoot) (HibernationSchedule, error) {
 	var (
 		schedules           = getShootHibernationSchedules(shoot)
 		locationToSchedules = GroupHibernationSchedulesByLocation(schedules)
@@ -128,12 +126,12 @@ func ComputeHibernationSchedule(client garden.Interface, logger logrus.FieldLogg
 	return schedule, nil
 }
 
-func shootHasHibernationSchedules(shoot *gardenv1beta1.Shoot) bool {
+func shootHasHibernationSchedules(shoot *gardencorev1alpha1.Shoot) bool {
 	return getShootHibernationSchedules(shoot) != nil
 }
 
 func (c *Controller) shootHibernationAdd(obj interface{}) {
-	shoot, ok := obj.(*gardenv1beta1.Shoot)
+	shoot, ok := obj.(*gardencorev1alpha1.Shoot)
 	if !ok {
 		return
 	}
@@ -150,8 +148,8 @@ func (c *Controller) shootHibernationAdd(obj interface{}) {
 
 func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 	var (
-		oldShoot = oldObj.(*gardenv1beta1.Shoot)
-		newShoot = newObj.(*gardenv1beta1.Shoot)
+		oldShoot = oldObj.(*gardencorev1alpha1.Shoot)
+		newShoot = newObj.(*gardencorev1alpha1.Shoot)
 
 		oldSchedule = getShootHibernationSchedules(oldShoot)
 		newSchedule = getShootHibernationSchedules(newShoot)
@@ -168,7 +166,7 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *Controller) shootHibernationDelete(obj interface{}) {
-	shoot, ok := obj.(*gardenv1beta1.Shoot)
+	shoot, ok := obj.(*gardencorev1alpha1.Shoot)
 	if !ok {
 		return
 	}
@@ -219,13 +217,13 @@ func (c *Controller) reconcileShootHibernationKey(key string) error {
 	return c.reconcileShootHibernation(logger, key, shoot.DeepCopy())
 }
 
-func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key string, shoot *gardenv1beta1.Shoot) error {
+func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key string, shoot *gardencorev1alpha1.Shoot) error {
 	c.deleteShootCron(logger, key)
 	if !shootHasHibernationSchedules(shoot) {
 		return nil
 	}
 
-	schedule, err := ComputeHibernationSchedule(c.k8sGardenClient.Garden(), logger, shoot)
+	schedule, err := ComputeHibernationSchedule(c.k8sGardenClient.GardenCore(), logger, shoot)
 	if err != nil {
 		return err
 	}

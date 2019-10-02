@@ -110,16 +110,6 @@ data:
         syncPeriod: {{ required ".Values.global.controller.config.controllers.shootQuota.syncPeriod is required" .Values.global.controller.config.controllers.shootQuota.syncPeriod }}
       shootHibernation:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.global.controller.config.controllers.shootHibernation.concurrentSyncs }}
-      backupInfrastructure:
-        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupInfrastructure.concurrentSyncs is required" .Values.global.controller.config.controllers.backupInfrastructure.concurrentSyncs }}
-        syncPeriod: {{ required ".Values.global.controller.config.controllers.backupInfrastructure.syncPeriod is required" .Values.global.controller.config.controllers.backupInfrastructure.syncPeriod }}
-        {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHours }}
-        deletionGracePeriodHours: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHours }}
-        {{- end }}
-        {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose }}
-        deletionGracePeriodHoursByPurpose:
-{{ toYaml .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose | indent 10 }}
-        {{- end }}
       backupBucket:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupBucket.concurrentSyncs is required" .Values.global.controller.config.controllers.backupBucket.concurrentSyncs }}
       backupEntry:

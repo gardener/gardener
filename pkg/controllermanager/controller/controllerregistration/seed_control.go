@@ -19,10 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -85,19 +84,18 @@ func (c *Controller) reconcileSeedKey(key string) error {
 // SeedControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type SeedControlInterface interface {
-	Reconcile(*gardenv1beta1.Seed) error
+	Reconcile(*gardencorev1alpha1.Seed) error
 }
 
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
 // for any scenario other than testing.
-func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, controllerRegistrationQueue workqueue.RateLimitingInterface) SeedControlInterface {
-	return &defaultSeedControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, controllerRegistrationLister, controllerInstallationLister, controllerRegistrationQueue}
+func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, controllerRegistrationQueue workqueue.RateLimitingInterface) SeedControlInterface {
+	return &defaultSeedControl{k8sGardenClient, k8sGardenCoreInformers, recorder, config, controllerRegistrationLister, controllerInstallationLister, controllerRegistrationQueue}
 }
 
 type defaultSeedControl struct {
 	k8sGardenClient              kubernetes.Interface
-	k8sGardenInformers           gardeninformers.SharedInformerFactory
 	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
 	recorder                     record.EventRecorder
 	config                       *config.ControllerManagerConfiguration
@@ -106,7 +104,7 @@ type defaultSeedControl struct {
 	controllerRegistrationQueue  workqueue.RateLimitingInterface
 }
 
-func (c *defaultSeedControl) Reconcile(obj *gardenv1beta1.Seed) error {
+func (c *defaultSeedControl) Reconcile(obj *gardencorev1alpha1.Seed) error {
 	var (
 		ctx    = context.TODO()
 		seed   = obj.DeepCopy()

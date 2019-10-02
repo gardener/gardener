@@ -20,13 +20,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/cache"
-
-	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )

@@ -19,21 +19,16 @@ import (
 	"net/http"
 	"time"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"k8s.io/client-go/rest"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
 )
 
 func requiredConditionMissing(conditionType string) error {
@@ -291,12 +286,12 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 
 var (
 	trueSeedConditionTypes = []gardencorev1alpha1.ConditionType{
-		gardenv1beta1.SeedAvailable,
+		gardencorev1alpha1.SeedAvailable,
 	}
 )
 
 // CheckSeed checks if the Seed is up-to-date and if its extensions have been successfully bootstrapped.
-func CheckSeed(seed *gardenv1beta1.Seed, identity *gardenv1beta1.Gardener) error {
+func CheckSeed(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Gardener) error {
 	if seed.Status.ObservedGeneration < seed.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", seed.Status.ObservedGeneration, seed.Generation)
 	}

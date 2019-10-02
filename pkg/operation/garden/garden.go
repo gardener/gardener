@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +36,7 @@ import (
 )
 
 // New creates a new Garden object (based on a Shoot object).
-func New(projectLister gardenlisters.ProjectLister, namespace string, secrets map[string]*corev1.Secret) (*Garden, error) {
+func New(projectLister gardencorelisters.ProjectLister, namespace string, secrets map[string]*corev1.Secret) (*Garden, error) {
 	project, err := common.ProjectForNamespace(projectLister, namespace)
 	if err != nil {
 		return nil, err
@@ -122,11 +122,11 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 		numberOfOpenVPNDiffieHellmanSecrets = 0
 	)
 
-	selector, err := labels.Parse(common.GardenRole)
+	selector, err := labels.Parse(v1alpha1constants.DeprecatedGardenRole)
 	if err != nil {
 		return nil, err
 	}
-	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(common.GardenNamespace).List(selector)
+	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1alpha1constants.GardenNamespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 	for _, secret := range secrets {
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
-		if secret.Labels[common.GardenRole] == common.GardenRoleDefaultDomain {
+		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleDefaultDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
@@ -147,7 +147,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
-		if secret.Labels[common.GardenRole] == common.GardenRoleInternalDomain {
+		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleInternalDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
@@ -162,7 +162,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 		// Retrieving alerting SMTP secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role alerting-smtp.
 		// Only when using the in-cluster config as we do not want to configure alerts in development modus.
-		if secret.Labels[common.GardenRole] == common.GardenRoleAlertingSMTP {
+		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleAlertingSMTP {
 			alertingSMTP := secret
 			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, secret.Name)] = alertingSMTP
 			logger.Logger.Infof("Found alerting SMTP secret %s.", secret.Name)
@@ -170,7 +170,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 
 		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[common.GardenRole] == common.GardenRoleOpenVPNDiffieHellman {
+		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleOpenVPNDiffieHellman {
 			openvpnDiffieHellman := secret
 			key := "dh2048.pem"
 			if _, ok := secret.Data[key]; !ok {
@@ -183,7 +183,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 
 		// Retrieving basic auth secret for aggregate monitoring with a label
 		// indicating the Garden role global-monitoring.
-		if secret.Labels[common.GardenRole] == common.GardenRoleGlobalMonitoring {
+		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleGlobalMonitoring {
 			monitoringSecret := secret
 			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
 			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
@@ -225,12 +225,12 @@ func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfSh
 	}
 
 	internalConfigMap := &corev1.ConfigMap{}
-	err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(common.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
+	err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(v1alpha1constants.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      common.ControllerManagerInternalConfigMapName,
-				Namespace: common.GardenNamespace,
+				Namespace: v1alpha1constants.GardenNamespace,
 			},
 		}
 		return kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), configMap, func() error {
@@ -295,7 +295,7 @@ func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamesp
 	}
 	if err := kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
-			common.GardenRole: common.GardenRoleGlobalMonitoring,
+			v1alpha1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
 		}
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = basicAuth.SecretData()

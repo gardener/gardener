@@ -12,10 +12,6 @@ type FakeGarden struct {
 	*testing.Fake
 }
 
-func (c *FakeGarden) BackupInfrastructures(namespace string) internalversion.BackupInfrastructureInterface {
-	return &FakeBackupInfrastructures{c, namespace}
-}
-
 func (c *FakeGarden) CloudProfiles() internalversion.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }

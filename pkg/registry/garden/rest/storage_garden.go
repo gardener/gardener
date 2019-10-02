@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	backupinfrastructurestore "github.com/gardener/gardener/pkg/registry/garden/backupinfrastructure/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
 	projectstore "github.com/gardener/gardener/pkg/registry/garden/project/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
@@ -48,10 +47,6 @@ func (p StorageProvider) GroupName() string {
 
 func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
-
-	backupInfrastructureStorage := backupinfrastructurestore.NewStorage(restOptionsGetter)
-	storage["backupinfrastructures"] = backupInfrastructureStorage.BackupInfrastructure
-	storage["backupinfrastructures/status"] = backupInfrastructureStorage.Status
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile

@@ -24,8 +24,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	machine "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -34,9 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
 	prometheusmodel "github.com/prometheus/common/model"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,11 +44,11 @@ import (
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
-		labels.SelectorFromSet(map[string]string{common.GardenRole: gardenRoles[0]})
+		labels.SelectorFromSet(map[string]string{v1alpha1constants.DeprecatedGardenRole: gardenRoles[0]})
 	}
 
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(common.GardenRole, selection.In, gardenRoles)
+	requirement, err := labels.NewRequirement(v1alpha1constants.DeprecatedGardenRole, selection.In, gardenRoles)
 	if err != nil {
 		panic(err)
 	}
@@ -61,11 +57,11 @@ func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 }
 
 var (
-	controlPlaneSelector    = mustGardenRoleLabelSelector(common.GardenRoleControlPlane)
-	systemComponentSelector = mustGardenRoleLabelSelector(common.GardenRoleSystemComponent)
-	monitoringSelector      = mustGardenRoleLabelSelector(common.GardenRoleMonitoring)
-	optionalAddonSelector   = mustGardenRoleLabelSelector(common.GardenRoleOptionalAddon)
-	loggingSelector         = mustGardenRoleLabelSelector(common.GardenRoleLogging)
+	controlPlaneSelector    = mustGardenRoleLabelSelector(v1alpha1constants.GardenRoleControlPlane)
+	systemComponentSelector = mustGardenRoleLabelSelector(v1alpha1constants.GardenRoleSystemComponent)
+	monitoringSelector      = mustGardenRoleLabelSelector(v1alpha1constants.GardenRoleMonitoring)
+	optionalAddonSelector   = mustGardenRoleLabelSelector(v1alpha1constants.GardenRoleOptionalAddon)
+	loggingSelector         = mustGardenRoleLabelSelector(v1alpha1constants.GardenRoleLogging)
 )
 
 // Now determines the current time.
@@ -192,10 +188,10 @@ func isRollingUpdateOngoing(machineDeploymentLister kutil.MachineDeploymentListe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(
-	shoot *gardenv1beta1.Shoot,
+	shoot *gardencorev1alpha1.Shoot,
 	machineDeploymentLister kutil.MachineDeploymentLister,
 ) (sets.String, error) {
-	shootWantsClusterAutoscaler, err := gardenv1beta1helper.ShootWantsClusterAutoscaler(shoot)
+	shootWantsClusterAutoscaler, err := gardencorev1alpha1helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -220,14 +216,14 @@ func computeRequiredControlPlaneDeployments(
 func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 	var requiredMonitoringStatefulSets = sets.NewString(v1alpha1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
-		requiredMonitoringStatefulSets.Insert(common.AlertManagerStatefulSetName)
+		requiredMonitoringStatefulSets.Insert(v1alpha1constants.StatefulSetNameAlertManager)
 	}
 	return requiredMonitoringStatefulSets
 }
 
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
-	shoot *gardenv1beta1.Shoot,
+	shoot *gardencorev1alpha1.Shoot,
 	namespace string,
 	condition gardencorev1alpha1.Condition,
 	deploymentLister kutil.DeploymentLister,
@@ -758,18 +754,18 @@ func newConditionOrError(oldCondition gardencorev1alpha1.Condition, newCondition
 
 var (
 	controlPlaneMonitoringLoggingSelector = mustGardenRoleLabelSelector(
-		common.GardenRoleControlPlane,
-		common.GardenRoleMonitoring,
-		common.GardenRoleLogging,
+		v1alpha1constants.GardenRoleControlPlane,
+		v1alpha1constants.GardenRoleMonitoring,
+		v1alpha1constants.GardenRoleLogging,
 	)
 	systemComponentsOptionalAddonsSelector = mustGardenRoleLabelSelector(
-		common.GardenRoleSystemComponent,
-		common.GardenRoleOptionalAddon,
+		v1alpha1constants.GardenRoleSystemComponent,
+		v1alpha1constants.GardenRoleOptionalAddon,
 	)
 	systemComponentsOptionalAddonsMonitoringSelector = mustGardenRoleLabelSelector(
-		common.GardenRoleSystemComponent,
-		common.GardenRoleOptionalAddon,
-		common.GardenRoleMonitoring,
+		v1alpha1constants.GardenRoleSystemComponent,
+		v1alpha1constants.GardenRoleOptionalAddon,
+		v1alpha1constants.GardenRoleMonitoring,
 	)
 
 	seedDeploymentListOptions        = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
@@ -789,7 +785,7 @@ func NewHealthChecker(conditionThresholds map[gardencorev1alpha1.ConditionType]t
 }
 
 func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMappings map[gardencorev1alpha1.ConditionType]time.Duration, apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition, gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
-	if b.Shoot.HibernationEnabled || (b.Shoot.Info.Status.IsHibernated != nil && *b.Shoot.Info.Status.IsHibernated) {
+	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 

@@ -518,9 +518,6 @@ Update the fields in [`example/90-deprecated-shoot-azure.yaml`](../../example/90
   apiserver is available at `api.johndoe-azure.garden-dev.your.domain.here`
 * **spec.dns.hostedZoneID**: This field doesn't exist in the example
   you need to add this field and place the Route53 Hosted Zone ID.
-* **spec.addons.kube-lego.email**: This is the email address used when
-  using kube-lego. See
-  [kube-lego Environment Variables](https://github.com/jetstack/kube-lego#environment-variables)
 
 ```
 HOSTED_ZONE_DOMAIN=$(aws route53 get-hosted-zone --id /hostedzone/${HOSTED_ZONE_ID:?"HOSTED_ZONE_ID is missing"} --query 'HostedZone.Name' --output text)
@@ -564,8 +561,6 @@ time="2018-06-09T07:35:51Z" level=info msg="Waiting for Terraform validation Pod
 time="2018-06-09T07:35:51Z" level=info msg="Executing (*Botanist).MoveBackupTerraformResources" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:52Z" level=info msg="Executing (*Botanist).WaitUntilKubeAPIServerServiceIsReady" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:52Z" level=info msg="Waiting until the kube-apiserver service is ready..." opid=VIBBBGFx shoot=garden-dev/johndoe-azure
-time="2018-06-09T07:35:52Z" level=info msg="Executing (*Botanist).DeployBackupInfrastructure" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
-time="2018-06-09T07:35:52Z" level=info msg="Executing (*Botanist).WaitUntilBackupInfrastructureReconciled" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:52Z" level=info msg="Waiting until the backup-infrastructure has been reconciled in the Garden cluster..." opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:56Z" level=info msg="Waiting for Terraform validation Pod 'johndoe-azure.external-dns.tf-pod-d8f66' to be completed..." opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:57Z" level=info msg="Waiting until the kube-apiserver service is ready..." opid=VIBBBGFx shoot=garden-dev/johndoe-azure

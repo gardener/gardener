@@ -15,12 +15,12 @@
 package plant
 
 import (
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/record"
-
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 )
 
 type defaultPlantControl struct {

@@ -20,13 +20,13 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/seed"
+
 	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("seed", func() {

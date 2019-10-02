@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -129,7 +131,7 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 	}
 
 	// If the Shoot manifest specifies the 'unmanaged' DNS provider, then we do nothing.
-	if shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && *shoot.Spec.DNS.Providers[0].Type == garden.DNSUnmanaged {
+	if shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == garden.DNSUnmanaged {
 		return nil
 	}
 
@@ -153,15 +155,28 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		return
 	}
 
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleDefaultDomain))
+	var domainSecrets []*corev1.Secret
+	deprecatedSelector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
 		return
 	}
-	secrets, err := secretLister.Secrets(common.GardenNamespace).List(selector)
+	secrets, err := secretLister.Secrets(v1alpha1constants.GardenNamespace).List(deprecatedSelector)
 	if err != nil {
 		return
 	}
-	if len(secrets) == 0 {
+	domainSecrets = append(domainSecrets, secrets...)
+
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.GardenRole, common.GardenRoleDefaultDomain))
+	if err != nil {
+		return
+	}
+	secrets, err = secretLister.Secrets(v1alpha1constants.GardenNamespace).List(selector)
+	if err != nil {
+		return
+	}
+	domainSecrets = append(domainSecrets, secrets...)
+
+	if len(domainSecrets) == 0 {
 		return
 	}
 
@@ -174,7 +189,7 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		return
 	}
 
-	for _, secret := range secrets {
+	for _, secret := range domainSecrets {
 		_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return

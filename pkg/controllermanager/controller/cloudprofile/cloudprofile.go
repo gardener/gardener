@@ -19,56 +19,52 @@ import (
 	"sync"
 	"time"
 
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Controller controls CloudProfiles.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control ControlInterface
 
-	cloudProfileLister gardenlisters.CloudProfileLister
+	cloudProfileLister gardencorelisters.CloudProfileLister
 	cloudProfileQueue  workqueue.RateLimitingInterface
 	cloudprofileSynced cache.InformerSynced
 
-	seedLister  gardenlisters.SeedLister
-	shootLister gardenlisters.ShootLister
+	shootLister gardencorelisters.ShootLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
-// NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenInformers> for the Garden clusters.
+// NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenCoreInformers> for the Garden clusters.
 // It creates and return a new Garden controller to control CloudProfiles.
-func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory) *Controller {
+func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory) *Controller {
 	var (
-		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
-		cloudProfileInformer  = gardenv1beta1Informer.CloudProfiles()
-		seedLister            = gardenv1beta1Informer.Seeds().Lister()
-		shootLister           = gardenv1beta1Informer.Shoots().Lister()
+		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
+		cloudProfileInformer       = gardenCoreV1alpha1Informer.CloudProfiles()
+		shootLister                = gardenCoreV1alpha1Informer.Shoots().Lister()
 	)
 
 	cloudProfileController := &Controller{
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: k8sGardenInformers,
-		cloudProfileLister: cloudProfileInformer.Lister(),
-		cloudProfileQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
-		seedLister:         seedLister,
-		shootLister:        shootLister,
-		control:            NewDefaultControl(k8sGardenClient, seedLister, shootLister),
-		workerCh:           make(chan int),
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenCoreInformers: k8sGardenCoreInformers,
+		cloudProfileLister:     cloudProfileInformer.Lister(),
+		cloudProfileQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
+		shootLister:            shootLister,
+		control:                NewDefaultControl(k8sGardenClient, shootLister),
+		workerCh:               make(chan int),
 	}
 
 	cloudProfileInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

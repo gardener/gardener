@@ -17,13 +17,11 @@ package health_test
 import (
 	"testing"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	gardenv1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -248,50 +246,50 @@ var _ = Describe("health", func() {
 
 	Context("CheckSeed", func() {
 		DescribeTable("seeds",
-			func(seed *gardenv1beta1.Seed, identity *gardenv1beta1.Gardener, matcher types.GomegaMatcher) {
+			func(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Gardener, matcher types.GomegaMatcher) {
 				Expect(health.CheckSeed(seed, identity)).To(matcher)
 			},
-			Entry("healthy", &gardenv1beta1.Seed{
-				Status: gardenv1beta1.SeedStatus{
+			Entry("healthy", &gardencorev1alpha1.Seed{
+				Status: gardencorev1alpha1.SeedStatus{
 					Conditions: []gardencorev1alpha1.Condition{
-						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+						{Type: gardencorev1alpha1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
 					},
 				},
-			}, &gardenv1beta1.Gardener{}, Succeed()),
-			Entry("healthy with non-default identity", &gardenv1beta1.Seed{
-				Status: gardenv1beta1.SeedStatus{
-					Gardener: gardenv1beta1.Gardener{ID: "thegardener"},
+			}, &gardencorev1alpha1.Gardener{}, Succeed()),
+			Entry("healthy with non-default identity", &gardencorev1alpha1.Seed{
+				Status: gardencorev1alpha1.SeedStatus{
+					Gardener: gardencorev1alpha1.Gardener{ID: "thegardener"},
 					Conditions: []gardencorev1alpha1.Condition{
-						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+						{Type: gardencorev1alpha1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
 					},
 				},
-			}, &gardenv1beta1.Gardener{ID: "thegardener"}, Succeed()),
-			Entry("unhealthy available condition", &gardenv1beta1.Seed{
-				Status: gardenv1beta1.SeedStatus{
+			}, &gardencorev1alpha1.Gardener{ID: "thegardener"}, Succeed()),
+			Entry("unhealthy available condition", &gardencorev1alpha1.Seed{
+				Status: gardencorev1alpha1.SeedStatus{
 					Conditions: []gardencorev1alpha1.Condition{
-						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionFalse},
+						{Type: gardencorev1alpha1.SeedAvailable, Status: gardencorev1alpha1.ConditionFalse},
 					},
 				},
-			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
-			Entry("unhealthy due to missing available condition", &gardenv1beta1.Seed{}, &gardenv1beta1.Gardener{}, HaveOccurred()),
-			Entry("unhealthy due to non-matching identity", &gardenv1beta1.Seed{
-				Status: gardenv1beta1.SeedStatus{
-					Gardener: gardenv1beta1.Gardener{ID: "thegardener"},
+			}, &gardencorev1alpha1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy due to missing available condition", &gardencorev1alpha1.Seed{}, &gardencorev1alpha1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy due to non-matching identity", &gardencorev1alpha1.Seed{
+				Status: gardencorev1alpha1.SeedStatus{
+					Gardener: gardencorev1alpha1.Gardener{ID: "thegardener"},
 					Conditions: []gardencorev1alpha1.Condition{
-						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+						{Type: gardencorev1alpha1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
 					},
 				},
-			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
-			Entry("not observed at latest generation", &gardenv1beta1.Seed{
+			}, &gardencorev1alpha1.Gardener{}, HaveOccurred()),
+			Entry("not observed at latest generation", &gardencorev1alpha1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 1,
 				},
-				Status: gardenv1beta1.SeedStatus{
+				Status: gardencorev1alpha1.SeedStatus{
 					Conditions: []gardencorev1alpha1.Condition{
-						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+						{Type: gardencorev1alpha1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
 					},
 				},
-			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
+			}, &gardencorev1alpha1.Gardener{}, HaveOccurred()),
 		)
 	})
 

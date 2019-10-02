@@ -20,15 +20,12 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
-	"github.com/gardener/gardener/pkg/operation/common"
-	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -53,18 +50,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}); err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
-	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
-	}
-	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Shoot CloudBotanist (%s)", err.Error()))
-	}
-	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
-	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether all required extensions exist (%s)", err.Error()))
@@ -75,13 +60,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	var (
-		defaultTimeout            = 30 * time.Second
-		defaultInterval           = 5 * time.Second
-		managedExternalDNS        = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		creationPhase             = operationType == gardencorev1alpha1.LastOperationTypeCreate
-		requireKube2IAMDeployment = o.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS && (creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource))
-		allowBackup               = (o.Seed.Info.Spec.Backup != nil)
+		defaultTimeout     = 30 * time.Second
+		defaultInterval    = 5 * time.Second
+		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
+		allowBackup        = o.Seed.Info.Spec.Backup != nil
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -95,7 +78,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
@@ -105,7 +88,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
@@ -149,23 +132,13 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, wailtUntilBackupEntryInGardenReconciled),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
-		})
-		deleteBackupInfrastructure = g.Add(flow.Task{
-			Name:         "Delete backup infrastructure resource",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until the backup infrastructure has been deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureDeleted),
-			Dependencies: flow.NewTaskIDs(deleteBackupInfrastructure),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
@@ -184,7 +157,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -214,12 +187,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
@@ -261,13 +234,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Waiting until shoot worker nodes have been reconciled",
 			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
 			Dependencies: flow.NewTaskIDs(deployWorker),
-		})
-		// kube2iam is deprecated and is kept here only for backwards compatibility reasons because some end-users may depend
-		// on it. It will be removed very soon in the future.
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DeployKube2IAMResources(o) }).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
@@ -324,6 +290,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying Kube2IAM resources",
+			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DestroyKube2IAMResources(o) }).DoIf(o.Shoot.Info.Spec.Provider.Type == "aws"),
+			Dependencies: flow.NewTaskIDs(waitUntilVPNConnectionExists),
+		})
 		f = g.Compile()
 	)
 
@@ -334,7 +305,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
-	if o.Shoot.Info.Namespace == common.GardenNamespace {
+	if o.Shoot.Info.Namespace == v1alpha1constants.GardenNamespace {
 		if o.ShootedSeed != nil {
 			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs, o.ShootedSeed.ShootDefaults, o.ShootedSeed.Backup); err != nil {
 				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
@@ -357,8 +328,8 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 		observedGeneration = o.Shoot.Info.Generation
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			if len(status.UID) == 0 {
 				shoot.Status.UID = shoot.UID
 			}
@@ -408,8 +379,8 @@ func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, ope
 
 func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	// Remove task list from Shoot annotations since reconciliation was successful.
-	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			controllerutils.RemoveAllTasks(shoot.Annotations)
 			return shoot, nil
 		})
@@ -418,11 +389,11 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 		return err
 	}
 
-	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, newShoot.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, newShoot.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
-			shoot.Status.Seed = o.Seed.Info.Name
-			shoot.Status.IsHibernated = &o.Shoot.HibernationEnabled
+			shoot.Status.Seed = &o.Seed.Info.Name
+			shoot.Status.IsHibernated = o.Shoot.HibernationEnabled
 			shoot.Status.LastError = nil
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           operationType,
@@ -449,8 +420,8 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 		willRetry     = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			if willRetry {
 				description += " Operation will be retried."
 				state = gardencorev1alpha1.LastOperationStateError
@@ -477,7 +448,7 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 		o.Shoot.Info = newShoot
 	}
 
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
+	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}

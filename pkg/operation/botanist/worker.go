@@ -54,41 +54,32 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		pools []extensionsv1alpha1.WorkerPool
 	)
 
-	for _, worker := range b.Shoot.GetWorkers() {
+	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
 		var volume *extensionsv1alpha1.Volume
-		ok, volumeType, volumeSize, err := b.Shoot.GetWorkerVolumesByName(worker.Name)
-		if err != nil {
-			return fmt.Errorf("could not find worker volume information for pool %q: %+v", worker.Name, err)
-		}
-		if ok {
+		if worker.Volume != nil {
 			volume = &extensionsv1alpha1.Volume{
-				Type: volumeType,
-				Size: volumeSize,
+				Type: worker.Volume.Type,
+				Size: worker.Volume.Size,
 			}
-		}
-
-		machineImage := worker.MachineImage
-		if machineImage == nil {
-			machineImage = b.Shoot.GetDefaultMachineImage()
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           worker.Name,
-			Minimum:        worker.AutoScalerMin,
-			Maximum:        worker.AutoScalerMax,
+			Minimum:        int(worker.Minimum),
+			Maximum:        int(worker.Maximum),
 			MaxSurge:       *worker.MaxSurge,
 			MaxUnavailable: *worker.MaxUnavailable,
 			Annotations:    worker.Annotations,
 			Labels:         worker.Labels,
 			Taints:         worker.Taints,
-			MachineType:    worker.MachineType,
+			MachineType:    worker.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
-				Name:    string(machineImage.Name),
-				Version: machineImage.Version,
+				Name:    worker.Machine.Image.Name,
+				Version: worker.Machine.Image.Version,
 			},
 			UserData: []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
 			Volume:   volume,
-			Zones:    b.Shoot.GetZones(),
+			Zones:    worker.Zones,
 		})
 	}
 
@@ -97,9 +88,9 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.CloudProvider),
+				Type: string(b.Shoot.Info.Spec.Provider.Type),
 			},
-			Region: b.Shoot.Info.Spec.Cloud.Region,
+			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1alpha1constants.SecretNameCloudProvider,
 				Namespace: worker.Namespace,

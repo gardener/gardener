@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/utils"
 
 	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
 	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
@@ -312,17 +312,17 @@ func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversio
 	}
 
 	if v, ok := out.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
-		if out.Spec.Networks.ShootDefaults.Pods == nil && !gardencorev1alpha1helper.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
+		if out.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
 			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
 		}
-		if out.Spec.Networks.ShootDefaults.Services == nil && !gardencorev1alpha1helper.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
+		if out.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
 			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
 		}
 	} else {
-		if out.Spec.Networks.ShootDefaults.Pods == nil && !gardencorev1alpha1helper.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDR) {
+		if out.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDR) {
 			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
 		}
-		if out.Spec.Networks.ShootDefaults.Services == nil && !gardencorev1alpha1helper.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDR) {
+		if out.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDR) {
 			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
 		}
 	}

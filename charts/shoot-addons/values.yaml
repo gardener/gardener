@@ -1,11 +1,3 @@
-kube-lego:
-  enabled: false
-  images:
-    kube-lego: image-repository:image-tag
-kube2iam:
-  enabled: false
-  images:
-    kube2iam: image-repository:image-tag
 kubernetes-dashboard:
   enabled: false
   images:

@@ -19,16 +19,16 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DetermineShootAssociations gets a <shootLister> to determine the Shoots resources which are associated
 // to given <obj> (either a CloudProfile a or a Seed object).
-func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.ShootLister) ([]string, error) {
+func DetermineShootAssociations(obj interface{}, shootLister gardencorelisters.ShootLister) ([]string, error) {
 	var associatedShoots []string
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
@@ -38,19 +38,19 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 
 	for _, shoot := range shoots {
 		switch t := obj.(type) {
-		case *gardenv1beta1.CloudProfile:
-			cloudProfile := obj.(*gardenv1beta1.CloudProfile)
-			if shoot.Spec.Cloud.Profile == cloudProfile.Name {
+		case *gardencorev1alpha1.CloudProfile:
+			cloudProfile := obj.(*gardencorev1alpha1.CloudProfile)
+			if shoot.Spec.CloudProfileName == cloudProfile.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
-		case *gardenv1beta1.Seed:
-			seed := obj.(*gardenv1beta1.Seed)
-			if shoot.Spec.Cloud.Seed != nil && *shoot.Spec.Cloud.Seed == seed.Name {
+		case *gardencorev1alpha1.Seed:
+			seed := obj.(*gardencorev1alpha1.Seed)
+			if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seed.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
-		case *gardenv1beta1.SecretBinding:
-			binding := obj.(*gardenv1beta1.SecretBinding)
-			if shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name && shoot.Namespace == binding.Namespace {
+		case *gardencorev1alpha1.SecretBinding:
+			binding := obj.(*gardencorev1alpha1.SecretBinding)
+			if shoot.Spec.SecretBindingName == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:
@@ -60,26 +60,9 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 	return associatedShoots, nil
 }
 
-// DetermineBackupInfrastructureAssociations gets a <backupInfrastructureLister> to determine the BackupInfrastructures resources which are associated
-// to given <seed>
-func DetermineBackupInfrastructureAssociations(seed *gardenv1beta1.Seed, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ([]string, error) {
-	var associatedBackupInfrastructures []string
-	backupInfrastructures, err := backupInfrastructureLister.List(labels.Everything())
-	if err != nil {
-		logger.Logger.Info(err.Error())
-		return nil, err
-	}
-	for _, backupInfrastructure := range backupInfrastructures {
-		if backupInfrastructure.Spec.Seed == seed.Name {
-			associatedBackupInfrastructures = append(associatedBackupInfrastructures, fmt.Sprintf("%s/%s", backupInfrastructure.Namespace, backupInfrastructure.Name))
-		}
-	}
-	return associatedBackupInfrastructures, nil
-}
-
 // DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding
 // resources which are associated to given Quota <obj>.
-func DetermineSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.SecretBindingLister) ([]string, error) {
+func DetermineSecretBindingAssociations(quota *gardencorev1alpha1.Quota, bindingLister gardencorelisters.SecretBindingLister) ([]string, error) {
 	var associatedBindings []string
 	bindings, err := bindingLister.List(labels.Everything())
 	if err != nil {

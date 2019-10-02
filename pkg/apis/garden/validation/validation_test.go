@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
 
 	. "github.com/onsi/ginkgo"
@@ -7222,6 +7221,18 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.networking.type"),
 				}))))
 			})
+
+			It("should forbid changing the networking type", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.Type = "some-other-type"
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networking.type"),
+				}))))
+			})
 		})
 
 		Context("maintenance section", func() {
@@ -7402,80 +7413,6 @@ var _ = Describe("validation", func() {
 			})
 		})
 	})
-
-	Describe("#ValidateBackupInfrastructure", func() {
-		var backupInfrastructure *garden.BackupInfrastructure
-
-		BeforeEach(func() {
-			backupInfrastructure = &garden.BackupInfrastructure{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "example-backupinfrastructure",
-					Namespace: "garden",
-					Annotations: map[string]string{
-						common.BackupInfrastructureForceDeletion: "true",
-					},
-				},
-				Spec: garden.BackupInfrastructureSpec{
-					Seed:     "aws",
-					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte("shoot-garden-backup-infrastructure"))),
-				},
-			}
-		})
-
-		It("should not return any errors", func() {
-			errorList := ValidateBackupInfrastructure(backupInfrastructure)
-
-			Expect(errorList).To(HaveLen(0))
-		})
-
-		It("should forbid BackupInfrastructure resources with empty metadata", func() {
-			backupInfrastructure.ObjectMeta = metav1.ObjectMeta{}
-
-			errorList := ValidateBackupInfrastructure(backupInfrastructure)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("metadata.namespace"),
-				}))))
-		})
-
-		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
-			backupInfrastructure.Spec.Seed = ""
-			backupInfrastructure.Spec.ShootUID = ""
-
-			errorList := ValidateBackupInfrastructure(backupInfrastructure)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.seed"),
-			})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shootUID"),
-				}))))
-		})
-
-		It("should forbid updating some keys", func() {
-			newBackupInfrastructure := prepareBackupInfrastructureForUpdate(backupInfrastructure)
-			newBackupInfrastructure.Spec.Seed = "another-seed"
-			newBackupInfrastructure.Spec.ShootUID = "another-uid"
-
-			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.seed"),
-			})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.shootUID"),
-				}))))
-		})
-	})
 })
 
 // Helper functions
@@ -7514,12 +7451,6 @@ func prepareSeedForUpdate(seed *garden.Seed) *garden.Seed {
 	s := seed.DeepCopy()
 	s.ResourceVersion = "1"
 	return s
-}
-
-func prepareBackupInfrastructureForUpdate(backupInfrastructure *garden.BackupInfrastructure) *garden.BackupInfrastructure {
-	b := backupInfrastructure.DeepCopy()
-	b.ResourceVersion = "1"
-	return b
 }
 
 func prepareSecretBindingForUpdate(secretBinding *garden.SecretBinding) *garden.SecretBinding {

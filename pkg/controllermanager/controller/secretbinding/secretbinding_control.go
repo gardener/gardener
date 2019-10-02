@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -85,25 +86,25 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileSecretBinding(secretBinding *gardenv1beta1.SecretBinding, key string) error
+	ReconcileSecretBinding(secretBinding *gardencorev1alpha1.SecretBinding, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for SecretBindings. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretLister, shootLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardencorelisters.ShootLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, secretLister, shootLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
-	recorder           record.EventRecorder
-	secretLister       kubecorev1listers.SecretLister
-	shootLister        gardenlisters.ShootLister
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	recorder               record.EventRecorder
+	secretLister           kubecorev1listers.SecretLister
+	shootLister            gardencorelisters.ShootLister
 }
 
-func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding, key string) error {
+func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBinding, key string) error {
 	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
@@ -118,7 +119,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 	// it has to be ensured that no Shoots are depending on the SecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the SecretBinding so that it can be garbage collected.
 	if secretBinding.DeletionTimestamp != nil {
-		if !sets.NewString(secretBinding.Finalizers...).Has(gardenv1beta1.GardenerName) {
+		if !sets.NewString(secretBinding.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
 			return nil
 		}
 
@@ -135,7 +136,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 			secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)
 			if err == nil {
 				secretFinalizers := sets.NewString(secret.Finalizers...)
-				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
+				secretFinalizers.Delete(gardencorev1alpha1.ExternalGardenerName)
 				secret.Finalizers = secretFinalizers.UnsortedList()
 				if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
 					secretBindingLogger.Error(err.Error())
@@ -148,9 +149,9 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 
 			// Remove finalizer from SecretBinding
 			secretBindingFinalizers := sets.NewString(secretBinding.Finalizers...)
-			secretBindingFinalizers.Delete(gardenv1beta1.GardenerName)
+			secretBindingFinalizers.Delete(gardencorev1alpha1.GardenerName)
 			secretBinding.Finalizers = secretBindingFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); client.IgnoreNotFound(err) != nil {
+			if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().SecretBindings(secretBinding.Namespace).Update(secretBinding); client.IgnoreNotFound(err) != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}
@@ -161,11 +162,11 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 	}
 
 	finalizers := sets.NewString(secretBinding.Finalizers...)
-	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		finalizers.Insert(gardenv1beta1.GardenerName)
+	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
 
 		secretBinding.Finalizers = finalizers.UnsortedList()
-		if _, err := c.k8sGardenClient.Garden().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil {
+		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil {
 			secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
 			return err
 		}
@@ -179,8 +180,8 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 		return err
 	}
 	secretFinalizers := sets.NewString(secret.Finalizers...)
-	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
-		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
+	if !secretFinalizers.Has(gardencorev1alpha1.ExternalGardenerName) {
+		secretFinalizers.Insert(gardencorev1alpha1.ExternalGardenerName)
 		secret.Finalizers = secretFinalizers.UnsortedList()
 		if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); err != nil {
 			secretBindingLogger.Error(err.Error())

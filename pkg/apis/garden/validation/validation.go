@@ -1811,6 +1811,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider.Type, oldSpec.Provider.Type, fldPath.Child("provider", "type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
 
 	if oldSpec.Networking.Pods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Pods, oldSpec.Networking.Pods, fldPath.Child("networking", "pods"))...)
@@ -2606,61 +2607,6 @@ func validateDNS1123Label(value string, fldPath *field.Path) field.ErrorList {
 	for _, msg := range validation.IsDNS1123Label(value) {
 		allErrs = append(allErrs, field.Invalid(fldPath, value, msg))
 	}
-
-	return allErrs
-}
-
-////////////////////////////////////////////////////
-//          BACKUP INFRASTRUCTURE                 //
-////////////////////////////////////////////////////
-
-// ValidateBackupInfrastructure validates a BackupInfrastructure object.
-func ValidateBackupInfrastructure(backupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&backupInfrastructure.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateBackupInfrastructureSpec(&backupInfrastructure.Spec, field.NewPath("spec"))...)
-
-	return allErrs
-}
-
-// ValidateBackupInfrastructureUpdate validates a BackupInfrastructure object before an update.
-func ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBackupInfrastructure.ObjectMeta, &oldBackupInfrastructure.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateBackupInfrastructureSpecUpdate(&newBackupInfrastructure.Spec, &oldBackupInfrastructure.Spec, newBackupInfrastructure.DeletionTimestamp != nil, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateBackupInfrastructure(newBackupInfrastructure)...)
-
-	return allErrs
-}
-
-// ValidateBackupInfrastructureSpec validates the specification of a BackupInfrastructure object.
-func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(spec.Seed) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), spec.Seed, "seed name must not be empty"))
-	}
-	if len(spec.ShootUID) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("shootUID"), spec.Seed, "shootUID must not be empty"))
-	}
-
-	return allErrs
-}
-
-// ValidateBackupInfrastructureSpecUpdate validates the specification of a BackupInfrastructure object.
-func ValidateBackupInfrastructureSpecUpdate(newSpec, oldSpec *garden.BackupInfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootUID, oldSpec.ShootUID, fldPath.Child("shootUID"))...)
-	return allErrs
-}
-
-// ValidateBackupInfrastructureStatusUpdate validates the status field of a BackupInfrastructure object.
-func ValidateBackupInfrastructureStatusUpdate(newBackupInfrastructure, oldBackupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
-	allErrs := field.ErrorList{}
 
 	return allErrs
 }

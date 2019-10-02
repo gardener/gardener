@@ -17,8 +17,8 @@ package shoot
 import (
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,10 +26,9 @@ import (
 
 // Shoot is an object containing information about a Shoot cluster.
 type Shoot struct {
-	Info          *gardenv1beta1.Shoot
-	Secret        *corev1.Secret
-	CloudProfile  *gardenv1beta1.CloudProfile
-	CloudProvider gardenv1beta1.CloudProvider
+	Info         *gardencorev1alpha1.Shoot
+	Secret       *corev1.Secret
+	CloudProfile *gardencorev1alpha1.CloudProfile
 
 	SeedNamespace               string
 	KubernetesMajorMinorVersion string

@@ -29,8 +29,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/pkg/errors"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -176,7 +176,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupEntrySecretName(a.backupEntry.Name),
-			Namespace: common.GardenNamespace,
+			Namespace: v1alpha1constants.GardenNamespace,
 		},
 	}
 
@@ -282,7 +282,7 @@ func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupEntrySecretName(a.backupEntry.Name),
-			Namespace: common.GardenNamespace,
+			Namespace: v1alpha1constants.GardenNamespace,
 		},
 	}
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, extensionSecret))

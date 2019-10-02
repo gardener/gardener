@@ -30,8 +30,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/sirupsen/logrus"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -143,7 +143,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: common.GardenNamespace,
+			Namespace: v1alpha1constants.GardenNamespace,
 		},
 	}
 
@@ -171,7 +171,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 			Region: a.backupBucket.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-				Namespace: common.GardenNamespace,
+				Namespace: v1alpha1constants.GardenNamespace,
 			},
 		}
 		return nil
@@ -209,7 +209,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		coreGeneratedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
-				Namespace: common.GardenNamespace,
+				Namespace: v1alpha1constants.GardenNamespace,
 			},
 		}
 		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1alpha1.SchemeGroupVersion.WithKind("BackupBucket"))
@@ -293,7 +293,7 @@ func (a *actuator) deleteBackupBucketExtensionSecret(ctx context.Context) error 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: common.GardenNamespace,
+			Namespace: v1alpha1constants.GardenNamespace,
 		},
 	}
 

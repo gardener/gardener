@@ -657,9 +657,6 @@ spec:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
       machineImageVersion: ${value("maintenance.autoUpdate.machineImageVersion", "true")}
   addons:
-    # nginx-ingress addon is still supported but deprecated.
-    # This field will be removed in the future. You should deploy your own ingress controller
-    # instead of enabling it here. You should not use this field anymore.
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "false")}
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
@@ -667,10 +664,10 @@ spec:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
     # authenticationMode: basic # allowed values: basic,token
   % if cloud == "aws":
-    # kube2iam addon is still supported but deprecated.
-    # This field will be removed in the future. You should deploy kube2iam as well as
-    # the desired AWS IAM roles on your own instead of enabling it here. Please do not
-    # use this field anymore.
+    # kube2iam addon is deprecated and no longer supported.
+    # This field will be removed in the future and is only kept for API compatibility reasons. It is not
+    # evaluated or respected at all. You should deploy kube2iam on your own instead of enabling it here.
+    # Please do not use this field anymore.
     kube2iam:
       enabled: ${value("spec.addons.kube2iam.enabled", "true")}
       roles:<% roles=value("spec.addons.kube2iam.roles", []) %>
@@ -712,9 +709,10 @@ spec:
     # you put here has no effect. This field will be removed in the future. Please do not use it anymore.
     cluster-autoscaler:
       enabled: ${value("spec.addons.cluster-autoscaler.enabled", "true")}
-    # kube-lego addon is still supported but deprecated.
-    # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
-    # instead of enabling it here. You should not use this field anymore.
+    # kube-lego addon is deprecated and no longer supported.
+    # This field will be removed in the future and is only kept for API compatibility reasons. It is not
+    # evaluated or respected at all. You should deploy kube-lego on your own instead of enabling it here.
+    # Please do not use this field anymore.
     kube-lego:
       enabled: ${value("spec.addons.kube-lego.enabled", "false")}
       email: ${value("spec.addons.kube-lego.email", "john.doe@example.com")}

@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -41,21 +41,20 @@ import (
 type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Interface
 
-	projectLister              gardenlisters.ProjectLister
-	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
-	shootLister                gardenlisters.ShootLister
+	projectLister gardencorelisters.ProjectLister
+	shootLister   gardencorelisters.ShootLister
 
 	scheme *runtime.Scheme
 	codecs serializer.CodecFactory
 }
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardenlisters.ProjectLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister, shootLister gardenlisters.ShootLister) func(http.ResponseWriter, *http.Request) {
+func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister, shootLister gardencorelisters.ShootLister) func(http.ResponseWriter, *http.Request) {
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	admissionregistrationv1beta1.AddToScheme(scheme)
 
-	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, backupInfrastructureLister, shootLister, scheme, serializer.NewCodecFactory(scheme)}
+	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, shootLister, scheme, serializer.NewCodecFactory(scheme)}
 	return h.ValidateNamespaceDeletion
 }
 
@@ -114,7 +113,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 	respond(w, reviewResponse)
 }
 
-// admitNamespaces does only allow the request if no Shoots and no BackupInfrastructures exist in this
+// admitNamespaces does only allow the request if no Shoots  exist in this
 // specific namespace anymore.
 func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 	namespaceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
@@ -155,7 +154,7 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 		if namespaceEmpty {
 			return admissionResponse(true, "")
 		}
-		return admissionResponse(false, fmt.Sprintf("Deletion of namespace %q is not permitted (there are still Shoots or BackupInfrastructures).", namespace.Name))
+		return admissionResponse(false, fmt.Sprintf("Deletion of namespace %q is not permitted (there are still Shoots).", namespace.Name))
 	}
 
 	// Namespace is not yet marked to be deleted and project is not marked as well. We do not admit and respond that namespace deletion is only
@@ -164,15 +163,6 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 }
 
 func (h *namespaceDeletionHandler) isNamespaceEmpty(namespace string) (bool, error) {
-	backupInfrastructureList, err := h.backupInfrastructureLister.BackupInfrastructures(namespace).List(labels.Everything())
-	if err != nil {
-		return false, err
-	}
-
-	if len(backupInfrastructureList) != 0 {
-		return false, nil
-	}
-
 	shootList, err := h.shootLister.Shoots(namespace).List(labels.Everything())
 	if err != nil {
 		return false, err

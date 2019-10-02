@@ -19,16 +19,16 @@ import (
 	"sync"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -39,19 +39,19 @@ import (
 
 // Controller controls Seeds.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config *config.ControllerManagerConfiguration
 
 	control  ControlInterface
 	recorder record.EventRecorder
 
-	seedLister gardenlisters.SeedLister
+	seedLister gardencorelisters.SeedLister
 	seedQueue  workqueue.RateLimitingInterface
 	seedSynced cache.InformerSynced
 
-	shootLister gardenlisters.ShootLister
+	shootLister gardencorelisters.ShootLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -62,36 +62,35 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewSeedController(
 	k8sGardenClient kubernetes.Interface,
-	gardenInformerFactory gardeninformers.SharedInformerFactory,
+	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	identity *gardenv1beta1.Gardener,
+	identity *gardencorev1alpha1.Gardener,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
 ) *Controller {
 	var (
-		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
-		corev1Informer        = kubeInformerFactory.Core().V1()
+		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
+		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		seedInformer               = gardenv1beta1Informer.Seeds()
-		seedLister                 = seedInformer.Lister()
-		seedUpdater                = NewRealUpdater(k8sGardenClient, seedLister)
-		secretLister               = corev1Informer.Secrets().Lister()
-		shootLister                = gardenv1beta1Informer.Shoots().Lister()
-		backupInfrastructureLister = gardenv1beta1Informer.BackupInfrastructures().Lister()
+		seedInformer = gardenCoreV1alpha1Informer.Seeds()
+		seedLister   = seedInformer.Lister()
+		seedUpdater  = NewRealUpdater(k8sGardenClient, seedLister)
+		secretLister = corev1Informer.Secrets().Lister()
+		shootLister  = gardenCoreV1alpha1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: gardenInformerFactory,
-		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister, backupInfrastructureLister),
-		config:             config,
-		recorder:           recorder,
-		seedLister:         seedLister,
-		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		shootLister:        shootLister,
-		workerCh:           make(chan int),
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenCoreInformers: gardenCoreInformerFactory,
+		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister),
+		config:                 config,
+		recorder:               recorder,
+		seedLister:             seedLister,
+		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		shootLister:            shootLister,
+		workerCh:               make(chan int),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

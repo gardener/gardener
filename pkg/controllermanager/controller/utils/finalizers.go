@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +44,7 @@ func EnsureFinalizer(ctx context.Context, c client.Client, obj kutil.Object, fin
 
 // RemoveGardenerFinalizer removes the gardener finalizer from the object.
 func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj kutil.Object) error {
-	return RemoveFinalizer(ctx, c, obj, gardenv1beta1.GardenerName)
+	return RemoveFinalizer(ctx, c, obj, gardencorev1alpha1.GardenerName)
 }
 
 // RemoveFinalizer removes the <finalizer> from the object.
