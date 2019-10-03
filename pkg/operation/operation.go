@@ -18,9 +18,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"path/filepath"
 	"strings"
-	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -40,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	prometheusapi "github.com/prometheus/client_golang/api"
@@ -371,35 +368,6 @@ func (o *Operation) newTerraformer(purpose, namespace, name string) (*terraforme
 // NewShootTerraformer creates a new Terraformer for the current shoot with the given purpose.
 func (o *Operation) NewShootTerraformer(purpose string) (*terraformer.Terraformer, error) {
 	return o.newTerraformer(purpose, o.Shoot.SeedNamespace, o.Shoot.Info.Name)
-}
-
-// ChartInitializer initializes a terraformer based on the given chart and values.
-func (o *Operation) ChartInitializer(chartName string, values map[string]interface{}) terraformer.Initializer {
-	return func(config *terraformer.InitializerConfig) error {
-		chartRenderer, err := chartrenderer.NewForConfig(o.K8sSeedClient.RESTConfig())
-		if err != nil {
-			return err
-		}
-		applier, err := kubernetes.NewApplierForConfig(o.K8sSeedClient.RESTConfig())
-		if err != nil {
-			return err
-		}
-		chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
-
-		values["names"] = map[string]interface{}{
-			"configuration": config.ConfigurationName,
-			"variables":     config.VariablesName,
-			"state":         config.StateName,
-		}
-		values["initializeEmptyState"] = config.InitializeState
-
-		return utilretry.UntilTimeout(context.TODO(), 5*time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-			if err := chartApplier.ApplyChart(ctx, filepath.Join(common.TerraformerChartPath, chartName), config.Namespace, chartName, nil, values); err != nil {
-				return utilretry.MinorError(err)
-			}
-			return utilretry.Ok()
-		})
-	}
 }
 
 // SyncClusterResourceToSeed creates or updates the `Cluster` extension resource for the shoot in the seed cluster.

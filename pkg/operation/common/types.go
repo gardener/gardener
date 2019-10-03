@@ -15,8 +15,6 @@
 package common
 
 import (
-	"path/filepath"
-
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -466,9 +464,6 @@ const (
 )
 
 var (
-	// TerraformerChartPath is the path where the seed-terraformer charts reside.
-	TerraformerChartPath = filepath.Join(ChartPath, "seed-terraformer", "charts")
-
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
