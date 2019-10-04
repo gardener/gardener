@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Terraformer chart containing common templates
-name: terraformer-common
-version: 0.1.0

@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Meta chart for Terraformer resources
-name: seed-terraformer
-version: 0.1.0

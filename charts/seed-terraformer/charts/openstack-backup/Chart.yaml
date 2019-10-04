@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Openstack chart for backup infrastructure
-name: openstack-backup
-version: 0.1.0

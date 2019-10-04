@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Azure chart for backup infrastructure
-name: azure-backup
-version: 0.1.0
