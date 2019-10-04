@@ -256,10 +256,6 @@ const (
 	// TerraformerJobSuffix is the suffix used for the name of the Job which executes the Terraform configuration.
 	TerraformerJobSuffix = ".tf-job"
 
-	// TerraformerPurposeInfraDeprecated is a constant for the complete Terraform setup with purpose 'infrastructure'.
-	// deprecated
-	TerraformerPurposeInfraDeprecated = "infra"
-
 	// TerraformerPurposeInternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'internal cluster domain'
 	// deprecated
 	TerraformerPurposeInternalDNSDeprecated = "internal-dns"

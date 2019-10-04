@@ -26,10 +26,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-type terraformState struct {
+type terraformStateV3 struct {
 	Modules []struct {
-		Outputs map[string]map[string]interface{} `json:"outputs"`
+		Outputs map[string]outputState `json:"outputs"`
 	} `json:"modules"`
+}
+
+type outputState struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+type terraformStateV4 struct {
+	Outputs map[string]outputState `json:"outputs"`
 }
 
 // GetState returns the Terraform state as byte slice.
@@ -47,7 +56,6 @@ func (t *Terraformer) GetState() ([]byte, error) {
 // In case the variable was not found, an error is returned.
 func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]string, error) {
 	var (
-		state  terraformState
 		output = make(map[string]string)
 
 		wantedVariables = sets.NewString(variables...)
@@ -63,13 +71,14 @@ func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 		return nil, &variablesNotFoundError{wantedVariables.List()}
 	}
 
-	if err := json.Unmarshal(stateConfigMap, &state); err != nil {
+	outputVariables, err := getOutputVariables(stateConfigMap)
+	if err != nil {
 		return nil, err
 	}
 
 	for _, variable := range variables {
-		if value, ok := state.Modules[0].Outputs[variable]["value"]; ok {
-			output[variable] = value.(string)
+		if outputVariable, ok := outputVariables[variable]; ok {
+			output[variable] = outputVariable.Value.(string)
 			foundVariables.Insert(variable)
 		}
 	}
@@ -109,4 +118,49 @@ func IsVariablesNotFoundError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func getOutputVariables(stateConfigMap []byte) (map[string]outputState, error) {
+	version, err := sniffJSONStateVersion(stateConfigMap)
+	if err != nil {
+		return nil, err
+	}
+
+	var outputVariables map[string]outputState
+	switch {
+	case version == 2 || version == 3:
+		var state terraformStateV3
+		if err := json.Unmarshal(stateConfigMap, &state); err != nil {
+			return nil, err
+		}
+
+		outputVariables = state.Modules[0].Outputs
+	case version == 4:
+		var state terraformStateV4
+		if err := json.Unmarshal(stateConfigMap, &state); err != nil {
+			return nil, err
+		}
+
+		outputVariables = state.Outputs
+	default:
+		return nil, fmt.Errorf("the state file uses format version %d, which is not supported by Terraformer", version)
+	}
+
+	return outputVariables, nil
+}
+
+func sniffJSONStateVersion(stateConfigMap []byte) (uint64, error) {
+	type VersionSniff struct {
+		Version *uint64 `json:"version"`
+	}
+	var sniff VersionSniff
+	if err := json.Unmarshal(stateConfigMap, &sniff); err != nil {
+		return 0, fmt.Errorf("the state file could not be parsed as JSON: %v", err)
+	}
+
+	if sniff.Version == nil {
+		return 0, fmt.Errorf("the state file does not have a \"version\" attribute, which is required to identify the format version")
+	}
+
+	return *sniff.Version, nil
 }

@@ -16,6 +16,8 @@ package terraformer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -28,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestTerraformer(t *testing.T) {
@@ -42,13 +45,13 @@ var (
 
 var _ = Describe("terraformer", func() {
 	var (
-		ctrl   *gomock.Controller
-		client *mockclient.MockClient
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		client = mockclient.NewMockClient(ctrl)
+		c = mockclient.NewMockClient(ctrl)
 	})
 
 	AfterEach(func() {
@@ -77,14 +80,14 @@ var _ = Describe("terraformer", func() {
 			)
 
 			gomock.InOrder(
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, name), &corev1.ConfigMap{ObjectMeta: ObjectMeta}).
 					Return(apierrors.NewNotFound(configMapGroupResource, name)),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateConfigurationConfigMap(context.TODO(), client, namespace, name, main, variables)
+			actual, err := CreateOrUpdateConfigurationConfigMap(context.TODO(), c, namespace, name, main, variables)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -110,14 +113,14 @@ var _ = Describe("terraformer", func() {
 			)
 
 			gomock.InOrder(
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, name), &corev1.ConfigMap{ObjectMeta: ObjectMeta}).
 					Return(apierrors.NewNotFound(configMapGroupResource, name)),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateStateConfigMap(context.TODO(), client, namespace, name, state)
+			actual, err := CreateOrUpdateStateConfigMap(context.TODO(), c, namespace, name, state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -142,14 +145,14 @@ var _ = Describe("terraformer", func() {
 			)
 
 			gomock.InOrder(
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, name), &corev1.Secret{ObjectMeta: ObjectMeta}).
 					Return(apierrors.NewNotFound(secretGroupResource, name)),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateTFVarsSecret(context.TODO(), client, namespace, name, tfVars)
+			actual, err := CreateOrUpdateTFVarsSecret(context.TODO(), c, namespace, name, tfVars)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -207,7 +210,7 @@ var _ = Describe("terraformer", func() {
 		)
 
 		runInitializer := func(initializeState bool) error {
-			return DefaultInitializer(client, main, variables, tfVars)(&InitializerConfig{
+			return DefaultInitializer(c, main, variables, tfVars)(&InitializerConfig{
 				Namespace:         namespace,
 				ConfigurationName: configurationName,
 				VariablesName:     variablesName,
@@ -218,22 +221,22 @@ var _ = Describe("terraformer", func() {
 
 		It("should create all resources", func() {
 			gomock.InOrder(
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
 					Return(configurationNotFound),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), createConfiguration.DeepCopy()),
 
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
 					Return(variablesNotFound),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), createVariables.DeepCopy()),
 
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), stateKey, getState.DeepCopy()).
 					Return(stateNotFound),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), createState.DeepCopy()),
 			)
 
@@ -242,20 +245,123 @@ var _ = Describe("terraformer", func() {
 
 		It("should not initialize state when initializeState is false", func() {
 			gomock.InOrder(
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
 					Return(configurationNotFound),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), createConfiguration.DeepCopy()),
 
-				client.EXPECT().
+				c.EXPECT().
 					Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
 					Return(variablesNotFound),
-				client.EXPECT().
+				c.EXPECT().
 					Create(gomock.Any(), createVariables.DeepCopy()),
 			)
 
 			Expect(runInitializer(false)).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#GetStateOutputVariables", func() {
+		const (
+			namespace = "namespace"
+			name      = "name"
+			purpose   = "purpose"
+			image     = "image"
+		)
+
+		var (
+			stateName = fmt.Sprintf("%s.%s.tf-state", name, purpose)
+			stateKey  = kutil.Key(namespace, stateName)
+		)
+
+		It("should return err when state version is not supported", func() {
+			state := map[string]interface{}{
+				"version": 1,
+			}
+			stateJSON, err := json.Marshal(state)
+			Expect(err).NotTo((HaveOccurred()))
+
+			c.EXPECT().
+				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+					cm.Data = map[string]string{
+						StateKey: string(stateJSON),
+					}
+					return nil
+				})
+
+			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables("variableV1")
+
+			Expect(actual).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should get state v3 output variables", func() {
+			state := map[string]interface{}{
+				"version": 3,
+				"modules": []map[string]interface{}{
+					{
+						"outputs": map[string]interface{}{
+							"variableV3": map[string]string{
+								"value": "valueV3",
+							},
+						},
+					},
+				},
+			}
+			stateJSON, err := json.Marshal(state)
+			Expect(err).NotTo((HaveOccurred()))
+
+			c.EXPECT().
+				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+					cm.Data = map[string]string{
+						StateKey: string(stateJSON),
+					}
+					return nil
+				})
+
+			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables("variableV3")
+
+			expected := map[string]string{
+				"variableV3": "valueV3",
+			}
+			Expect(actual).To(Equal(expected))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should get state v4 output variables", func() {
+			state := map[string]interface{}{
+				"version": 4,
+				"outputs": map[string]interface{}{
+					"variableV4": map[string]string{
+						"value": "valueV4",
+					},
+				},
+			}
+			stateJSON, err := json.Marshal(state)
+			Expect(err).NotTo((HaveOccurred()))
+
+			c.EXPECT().
+				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap) error {
+					cm.Data = map[string]string{
+						StateKey: string(stateJSON),
+					}
+					return nil
+				})
+
+			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables("variableV4")
+
+			expected := map[string]string{
+				"variableV4": "valueV4",
+			}
+			Expect(actual).To(Equal(expected))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
