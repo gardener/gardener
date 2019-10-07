@@ -12,18 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+	Overview
+		- Tests the update of a Shoot's Kubernetes version to the next minor version
+
+	Prerequisites
+		- A Shoot exists.
+
+	Test: Update the Shoot's Kubernetes version to the next minor version
+	Expected Output
+		- Successful reconciliation of the Shoot after the Kubernetes Version update.
+ **/
+
 package shootupdate
 
 import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"time"
 
 	. "github.com/gardener/gardener/test/integration/shoots"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/onsi/ginkgo"
@@ -33,14 +45,12 @@ import (
 )
 
 var (
-	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+	kubeconfig        = flag.String("kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
 	kubernetesVersion = flag.String("version", "", "the version to update the shoot")
-	shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
-	shootNamespace    = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
+	shootName         = flag.String("shoot-name", "", "the name of the shoot we want to test")
+	shootNamespace    = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
 	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
 	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-	cleanup           = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
 )
 
 const (
@@ -50,18 +60,8 @@ const (
 )
 
 func validateFlags() {
-	if StringSet(*shootTestYamlPath) && StringSet(*shootName) {
-		Fail("You can set either the shoot YAML path or specify a shootName to test against")
-	}
-
-	if !StringSet(*shootTestYamlPath) && !StringSet(*shootName) {
-		Fail("You should either set the shoot YAML path or specify a shootName to test against")
-	}
-
-	if StringSet(*shootTestYamlPath) {
-		if !FileExists(*shootTestYamlPath) {
-			Fail("shoot yaml path is set but invalid")
-		}
+	if !StringSet(*shootName) {
+		Fail("You should specify a shootName to test against")
 	}
 
 	if !StringSet(*kubeconfig) {
@@ -85,32 +85,13 @@ var _ = Describe("Shoot update testing", func() {
 		validateFlags()
 		shootTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
 
-		// check if a shoot spec is provided, if yes create a shoot object from it and use it for testing
-		if StringSet(*shootTestYamlPath) {
-			*cleanup = true
-			// parse shoot yaml into shoot object and generate random test names for shoots
-			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
-			Expect(err).NotTo(HaveOccurred())
+		var err error
+		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootTestLogger)
+		Expect(err).NotTo(HaveOccurred())
 
-			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, shootTestLogger)
-			Expect(err).NotTo(HaveOccurred())
-
-			targetTestShoot, err := shootGardenerTest.CreateShoot(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, targetTestShoot)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		if StringSet(*shootName) {
-			var err error
-			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootTestLogger)
-			Expect(err).NotTo(HaveOccurred())
-
-			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
-			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
-			Expect(err).NotTo(HaveOccurred())
-		}
+		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
+		Expect(err).NotTo(HaveOccurred())
 
 	}, InitializationTimeout)
 
@@ -126,8 +107,8 @@ var _ = Describe("Shoot update testing", func() {
 				err error
 				ok  bool
 			)
-			cloudprofile := shootTestOperations.SeedCloudProfile
-			ok, newVersion, err = helper.DetermineNextKubernetesMinorVersion(*cloudprofile, currentVersion)
+			cloudprofile := shootTestOperations.CloudProfile
+			ok, newVersion, err = helper.DetermineNextKubernetesMinorVersion(cloudprofile, currentVersion)
 			Expect(err).ToNot(HaveOccurred())
 			if !ok {
 				Skip("no new version found")

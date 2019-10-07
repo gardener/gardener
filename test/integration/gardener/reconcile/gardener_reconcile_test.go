@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+	Overview
+		- Tests the Gardener Controller Manager reconciliation.
+
+	Test: Shoot Reconciliation
+	Expected Output
+	- Should reconcile all shoots (determined if the shoot.Status.Gardener.Version == flag provided Gardener version).
+ **/
+
 package gardener_reconcile_test
 
 import (
@@ -20,10 +29,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/framework"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -36,7 +47,7 @@ import (
 )
 
 var (
-	kubeconfigPath  = flag.String("kubeconfig", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
+	kubeconfigPath  = flag.String("kubecfg", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
 	gardenerVersion = flag.String("version", "", "current gardener version")
 	logLevel        = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 )
@@ -64,7 +75,7 @@ func validateFlags() {
 
 var _ = Describe("Shoot reconciliation testing", func() {
 	var (
-		gardenerTestOperation *framework.GardenerTestOperation
+		gardenerTestOperation *GardenerTestOperation
 		gardenClient          kubernetes.Interface
 		testLogger            *logrus.Logger
 	)
@@ -81,7 +92,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger)
+		gardenerTestOperation, err = NewGardenTestOperation(gardenClient, testLogger)
 		Expect(err).ToNot(HaveOccurred())
 
 	}, InitializationTimeout)
@@ -92,7 +103,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 
 	CIt("Should reconcile all shoots", func(ctx context.Context) {
 		err := retry.UntilTimeout(ctx, 30*time.Second, ReconcileShootsTimeout, func(ctx context.Context) (bool, error) {
-			shoots := &v1beta1.ShootList{}
+			shoots := &gardencorev1alpha1.ShootList{}
 			err := gardenClient.Client().List(ctx, shoots)
 			if err != nil {
 				testLogger.Debug(err.Error())
@@ -107,7 +118,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 					testLogger.Debugf("last acted gardener version %s does not match current gardener version %s", shoot.Status.Gardener.Version, *gardenerVersion)
 					continue
 				}
-				if framework.ShootCreationCompleted(&shoot) {
+				if ShootCreationCompleted(&shoot) {
 					reconciledShoots++
 				}
 			}

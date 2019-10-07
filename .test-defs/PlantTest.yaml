@@ -11,10 +11,10 @@ spec:
   command: [bash, -c]
   args:
     - >-
-      go test -mod=vendor ./test/integration/plants
+      go test -timeout=0 -mod=vendor ./test/integration/plants
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-      -kubeconfig-path=$TM_KUBECONFIG_PATH/gardener.config
-      -kubeconfig-path-externalcluster=$TM_KUBECONFIG_PATH/shoot.config
+      -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
+      -kubecfg-externalcluster=$TM_KUBECONFIG_PATH/shoot.config
       -plant-path=$(realpath ./example/100-plant.yaml)
       -plant-test-namespace=$PROJECT_NAMESPACE
 

@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
@@ -40,14 +40,12 @@ import (
 )
 
 var (
-	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-	shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
-	shootNamespace    = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
-	shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	logsCount         = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
-	cleanup           = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
+	kubeconfig       = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+	shootName        = flag.String("shoot-name", "", "the name of the shoot we want to test")
+	shootNamespace   = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+	testShootsPrefix = flag.String("prefix", "", "prefix to use for test shoots")
+	logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	logsCount        = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
 )
 
 const (
@@ -66,20 +64,6 @@ const (
 )
 
 func validateFlags() {
-	if StringSet(*shootTestYamlPath) && StringSet(*shootName) {
-		Fail("You can set either the shoot YAML path or specify a shootName to test against")
-	}
-
-	if !StringSet(*shootTestYamlPath) && !StringSet(*shootName) {
-		Fail("You should either set the shoot YAML path or specify a shootName to test against")
-	}
-
-	if StringSet(*shootTestYamlPath) {
-		if !FileExists(*shootTestYamlPath) {
-			Fail("shoot yaml path is set but invalid")
-		}
-	}
-
 	if !StringSet(*kubeconfig) {
 		Fail("you need to specify the correct path for the kubeconfig")
 	}
@@ -92,7 +76,6 @@ func validateFlags() {
 var _ = Describe("Seed logging testing", func() {
 	var (
 		gardenTestOperation *GardenerTestOperation
-		shootGardenerTest   *ShootGardenerTest
 		seedLogTestLogger   *logrus.Logger
 		shootSeedNamespace  string
 	)
@@ -132,36 +115,8 @@ var _ = Describe("Seed logging testing", func() {
 			}
 		}
 
-		// check if a shoot spec is provided, if yes create a shoot object from it and use it for testing
-		if StringSet(*shootTestYamlPath) {
-			*cleanup = true
-			// parse shoot yaml into shoot object and generate random test names for shoots
-			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
-			Expect(err).NotTo(HaveOccurred())
-
-			seed := &v1beta1.Seed{}
-			err = k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: *shootObject.Spec.Cloud.Seed}, seed)
-			Expect(err).NotTo(HaveOccurred())
-
-			seedSecretRef := seed.Spec.SecretRef
-			seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Checking for required logging resources")
-			checkRequiredResources(ctx, seedClient)
-
-			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, seedLogTestLogger)
-			Expect(err).NotTo(HaveOccurred())
-
-			targetTestShoot, err := shootGardenerTest.CreateShoot(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, seedLogTestLogger, targetTestShoot)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
 		if StringSet(*shootName) {
-			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+			shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 			gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, k8sGardenClient, seedLogTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -191,12 +146,6 @@ var _ = Describe("Seed logging testing", func() {
 			}
 
 			err := deleteResource(ctx, loggerDeploymentToDelete)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		if StringSet(*shootTestYamlPath) && *cleanup && shootGardenerTest != nil {
-			By("Cleaning up test shoot")
-			err := shootGardenerTest.DeleteShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, FinalizationTimeout)

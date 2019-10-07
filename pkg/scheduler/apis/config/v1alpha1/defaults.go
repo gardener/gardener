@@ -95,6 +95,10 @@ func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 		obj.Schedulers.Shoot.Strategy = Default
 	}
 
+	if obj.Schedulers.Shoot.ConcurrentSyncs == 0 {
+		obj.Schedulers.Shoot.ConcurrentSyncs = 5
+	}
+
 }
 
 // SetDefaults_ClientConnection sets defaults for the client connection.

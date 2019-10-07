@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applications_test
+package hibernation
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -23,5 +23,5 @@ import (
 
 func TestShootApplications(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Applications Integration Test Suite")
+	RunSpecs(t, "Hibernation Test Suite")
 }

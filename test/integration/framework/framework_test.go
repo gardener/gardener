@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package framework_test
+package framework
 
 import (
 	"context"
@@ -24,9 +24,8 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 )
 
 func TestFramework(t *testing.T) {
@@ -73,142 +72,52 @@ var _ = Describe("Framework tests", func() {
 
 	Context("Scheduler Operations - ChooseRegionAndZoneWithNoSeed", func() {
 		var (
-			cloudProfile     gardenv1beta1.CloudProfile
-			seed             gardenv1beta1.Seed
-			allSeeds         []gardenv1beta1.Seed
-			cloudProfileName = "cloudprofile-1"
+			seed             gardencorev1alpha1.Seed
+			allSeeds         []gardencorev1alpha1.Seed
 			seedName         = "seed-1"
 			regionEuropeWest = "europe-west1"
 			regionEuropeEast = "us-east1"
+			providerType     = "aws"
 
-			seedBase = gardenv1beta1.Seed{
+			seedBase = gardencorev1alpha1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
-				Spec: gardenv1beta1.SeedSpec{
-					Cloud: gardenv1beta1.SeedCloud{
-						Profile: cloudProfileName,
-						Region:  regionEuropeWest,
-					},
+				Spec: gardencorev1alpha1.SeedSpec{
+					Provider: gardencorev1alpha1.SeedProvider{Type: providerType, Region: regionEuropeWest},
 				},
 			}
 
-			zones = []gardenv1beta1.Zone{
+			regions = []gardencorev1alpha1.Region{
 				{
-					Region: regionEuropeWest,
+					Name: regionEuropeWest,
 				},
 				{
-					Region: regionEuropeEast,
-					Names: []string{
-						"europe-east1-b",
-						"europe-east1-c",
+					Name: regionEuropeEast,
+					Zones: []gardencorev1alpha1.AvailabilityZone{
+						{
+							Name: "europe-east1-b",
+						},
+						{
+							Name: "europe-east1-c",
+						},
 					},
-				},
-			}
-
-			cloudProfileGCEBase = gardenv1beta1.GCPProfile{
-				Constraints: gardenv1beta1.GCPConstraints{
-					Zones: zones,
-				},
-			}
-
-			cloudProfileBase = gardenv1beta1.CloudProfile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: cloudProfileName,
-				},
-				Spec: gardenv1beta1.CloudProfileSpec{
-					GCP: &cloudProfileGCEBase,
 				},
 			}
 		)
 
 		BeforeEach(func() {
-			cloudProfile = *cloudProfileBase.DeepCopy()
 			seed = *seedBase.DeepCopy()
-			allSeeds = []gardenv1beta1.Seed{
+			allSeeds = []gardencorev1alpha1.Seed{
 				seed,
 			}
 		})
 
-		It("GCP", func() {
-			unsupportedRegion, zones, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderGCP, zones, &cloudProfile, allSeeds)
+		It("Unsupported Provider is being returned", func() {
+			unsupportedRegion, err := ChooseRegionAndZoneWithNoSeed(regions, allSeeds)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(*unsupportedRegion).To(Equal(regionEuropeEast))
-			Expect(zones).ToNot(Equal(nil))
-			Expect(len(zones)).ToNot(Equal(0))
-		})
-		It("AWS", func() {
-			unsupportedRegion, zones, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderAWS, zones, &cloudProfile, allSeeds)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(unsupportedRegion).ToNot(Equal(nil))
-			Expect(*unsupportedRegion).To(Equal(regionEuropeEast))
-			Expect(zones).ToNot(Equal(nil))
-			Expect(len(zones)).ToNot(Equal(0))
-		})
-		It("Alicloud", func() {
-			unsupportedRegion, zones, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderAlicloud, zones, &cloudProfile, allSeeds)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(unsupportedRegion).ToNot(Equal(nil))
-			Expect(*unsupportedRegion).To(Equal(regionEuropeEast))
-			Expect(zones).ToNot(Equal(nil))
-			Expect(len(zones)).ToNot(Equal(0))
-		})
-		It("Openstack", func() {
-			unsupportedRegion, zones, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderOpenStack, zones, &cloudProfile, allSeeds)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(unsupportedRegion).ToNot(Equal(nil))
-			Expect(*unsupportedRegion).To(Equal(regionEuropeEast))
-			Expect(zones).ToNot(Equal(nil))
-			Expect(len(zones)).ToNot(Equal(0))
-		})
-		It("Packet", func() {
-			unsupportedRegion, zones, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderPacket, zones, &cloudProfile, allSeeds)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(unsupportedRegion).ToNot(Equal(nil))
-			Expect(*unsupportedRegion).To(Equal(regionEuropeEast))
-			Expect(zones).ToNot(Equal(nil))
-			Expect(len(zones)).ToNot(Equal(0))
-		})
-		It("Azure", func() {
-
-			azureRegionWestEurope := "westeurope"
-			azureRegionEastEurope := "eastus"
-			var (
-				westeurope = gardenv1beta1.AzureDomainCount{
-					Region: azureRegionWestEurope,
-					Count:  5,
-				}
-				eastEurope = gardenv1beta1.AzureDomainCount{
-					Region: azureRegionEastEurope,
-					Count:  5,
-				}
-				failureDomainCounts = []gardenv1beta1.AzureDomainCount{
-					westeurope,
-					eastEurope,
-				}
-				updateDomainCounts = []gardenv1beta1.AzureDomainCount{
-					westeurope,
-					eastEurope,
-				}
-				cloudProfileAzureBase = gardenv1beta1.AzureProfile{
-					CountUpdateDomains: updateDomainCounts,
-					CountFaultDomains:  failureDomainCounts,
-				}
-				cloudProfileSpecAzure = gardenv1beta1.CloudProfileSpec{
-					Azure: &cloudProfileAzureBase,
-				}
-			)
-
-			seed.Spec.Cloud.Region = azureRegionWestEurope
-			allSeedsAzure := []gardenv1beta1.Seed{
-				seed,
-			}
-
-			cloudProfile.Spec = cloudProfileSpecAzure
-			unsupportedRegion, _, err := ChooseRegionAndZoneWithNoSeed(gardenv1beta1.CloudProviderAzure, []gardenv1beta1.Zone{}, &cloudProfile, allSeedsAzure)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(unsupportedRegion).ToNot(Equal(nil))
-			Expect(*unsupportedRegion).To(Equal(azureRegionEastEurope))
+			Expect(unsupportedRegion.Name).To(Equal(regionEuropeEast))
+			Expect(len(unsupportedRegion.Zones)).ToNot(Equal(0))
 		})
 	})
 })

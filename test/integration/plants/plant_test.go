@@ -12,6 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+	Overview
+		- Tests the Gardener Controller Manager Plants Controller.
+
+	Prerequisites
+		- Kubeconfig to external cluster available to register as Plant
+
+	BeforeSuite
+		- Parse valid Plant from example folder and flags.
+
+	Test: Create Plant
+	Expected Output
+	- should create & reconcile the plant successfully.
+
+	Test: Update the Plant's secret with an invalid kubeconfig
+	Expected Output
+	- Should update Plant Status to 'unknown'.
+
+	Test: Update the Plant's secret with a valid kubeconfig
+	Expected Output
+	- Should reconcile the plant successfully.
+
+	Test: Update the Plant's secret & removing the kubeconfig
+	Expected Output
+	- Should update Plant Status to 'unknown'.
+
+ **/
+
 package plants_test
 
 import (
@@ -34,8 +62,8 @@ import (
 )
 
 var (
-	kubeconfigPath                = flag.String("kubeconfig-path", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
-	kubeconfigPathExternalCluster = flag.String("kubeconfig-path-externalcluster", "", "the path to the kubeconfig path  of the external cluster that will be registered as a plant")
+	kubeconfigPath                = flag.String("kubecfg", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
+	kubeconfigPathExternalCluster = flag.String("kubecfg-externalcluster", "", "the path to the kubeconfig path  of the external cluster that will be registered as a plant")
 	logLevel                      = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 	plantTestYamlPath             = flag.String("plant-path", "", "the path to the plant yaml that will be used for testing")
 	plantTestNamespace            = flag.String("plant-test-namespace", "", "the namespace where the plant will be created")
@@ -121,7 +149,7 @@ var _ = Describe("Plant testing", func() {
 			plantTest, err = NewPlantTest(*kubeconfigPath, *kubeconfigPathExternalCluster, plantObject, plantTestLogger)
 			Expect(err).NotTo(HaveOccurred())
 
-			gardenerTestOperation, err = NewGardenTestOperation(ctx, plantTest.GardenClient, plantTestLogger)
+			gardenerTestOperation, err = NewGardenTestOperation(plantTest.GardenClient, plantTestLogger)
 			Expect(err).ToNot(HaveOccurred())
 		}
 

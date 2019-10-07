@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+	Overview
+		- Tests the Gardener Controller Manager reconciliation.
+
+	Test: Check if RBAC is enabled.
+	Expected Output
+	- Is enabled.
+
+	Test: Create Service Account in non-garden namespace.
+	Expected Output
+	- Service account should not have access to garden namespace.
+ **/
+
 package gardener_rbac_test
 
 import (
@@ -20,24 +33,27 @@ import (
 	"time"
 
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/framework"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	kubeconfigPath   = flag.String("kubeconfig", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
+	kubeconfigPath   = flag.String("kubecfg", "", "the path to the kubeconfig path  of the garden cluster that will be used for integration tests")
 	projectNamespace = flag.String("project-namespace", "garden-it", "garden project to create the service account")
 	logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 )
@@ -62,7 +78,7 @@ func validateFlags() {
 
 var _ = Describe("RBAC testing", func() {
 	var (
-		gardenerTestOperation *framework.GardenerTestOperation
+		gardenerTestOperation *GardenerTestOperation
 		gardenClient          kubernetes.Interface
 	)
 
@@ -78,7 +94,7 @@ var _ = Describe("RBAC testing", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		testLogger := logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-		gardenerTestOperation, err = framework.NewGardenTestOperation(ctx, gardenClient, testLogger)
+		gardenerTestOperation, err = NewGardenTestOperation(gardenClient, testLogger)
 		Expect(err).ToNot(HaveOccurred())
 
 	}, InitializationTimeout)
@@ -129,10 +145,10 @@ var _ = Describe("RBAC testing", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		saClient, err := framework.NewClientFromServiceAccount(ctx, gardenClient, serviceAccount)
+		saClient, err := NewClientFromServiceAccount(ctx, gardenClient, serviceAccount)
 		Expect(err).ToNot(HaveOccurred())
 
-		shoots := &v1beta1.ShootList{}
+		shoots := &gardencorev1alpha1.ShootList{}
 		err = saClient.Client().List(ctx, shoots, client.InNamespace(v1alpha1constants.GardenNamespace))
 		Expect(err).To(HaveOccurred())
 		Expect(errors.IsForbidden(err)).To(BeTrue())

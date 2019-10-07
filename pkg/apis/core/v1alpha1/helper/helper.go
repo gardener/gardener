@@ -16,6 +16,7 @@ package helper
 
 import (
 	"fmt"
+	"github.com/gardener/gardener/pkg/logger"
 	"sort"
 	"strconv"
 	"strings"
@@ -605,6 +606,7 @@ func UpdateMachineImages(workers []gardencorev1alpha1.Worker, machineImages []*g
 	for _, machineImage := range machineImages {
 		for idx, worker := range workers {
 			if worker.Machine.Image != nil && machineImage.Name == worker.Machine.Image.Name {
+				logger.Logger.Infof("Updating worker images of worker '%s' from version %s to version %s", worker.Name, worker.Machine.Image.Version, machineImage.Version)
 				workers[idx].Machine.Image = machineImage
 			}
 		}
@@ -675,4 +677,23 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1alpha1.CloudProfi
 	}
 
 	return true, newerVersionsString, newerVersions, nil
+}
+
+// SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
+func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1alpha1.MachineImage, imageName string, imageVersions []gardencorev1alpha1.ExpirableVersion) ([]gardencorev1alpha1.MachineImage, error) {
+	for index, image := range machineImages {
+		if strings.ToLower(image.Name) == strings.ToLower(imageName) {
+			machineImages[index].Versions = imageVersions
+			return machineImages, nil
+		}
+	}
+	return nil, fmt.Errorf("machine image with name '%s' could not be found", imageName)
+}
+
+// GetDefaultMachineImageFromCloudProfile gets the first MachineImage from the CloudProfile
+func GetDefaultMachineImageFromCloudProfile(profile gardencorev1alpha1.CloudProfile) *gardencorev1alpha1.MachineImage {
+	if len(profile.Spec.MachineImages) == 0 {
+		return nil
+	}
+	return &profile.Spec.MachineImages[0]
 }

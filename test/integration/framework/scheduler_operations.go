@@ -31,8 +31,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -61,12 +60,12 @@ func NewGardenSchedulerTest(ctx context.Context, shootGardenTest *ShootGardenerT
 		return nil, err
 	}
 
-	cloudProfileForShoot := &gardenv1beta1.CloudProfile{}
-	if err := shootGardenTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: "garden", Name: shootGardenTest.Shoot.Spec.Cloud.Profile}, cloudProfileForShoot); err != nil {
+	cloudProfileForShoot := &gardencorev1alpha1.CloudProfile{}
+	if err := shootGardenTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: "garden", Name: shootGardenTest.Shoot.Spec.CloudProfileName}, cloudProfileForShoot); err != nil {
 		return nil, err
 	}
 
-	allSeeds := &gardenv1beta1.SeedList{}
+	allSeeds := &gardencorev1alpha1.SeedList{}
 	if err := shootGardenTest.GardenClient.Client().List(ctx, allSeeds); err != nil {
 		return nil, err
 	}
@@ -106,7 +105,7 @@ func parseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.Sched
 }
 
 // CreateShoot Creates a shoot from a shoot Object
-func (s *SchedulerGardenerTest) CreateShoot(ctx context.Context) (*gardenv1beta1.Shoot, error) {
+func (s *SchedulerGardenerTest) CreateShoot(ctx context.Context) (*gardencorev1alpha1.Shoot, error) {
 	_, err := s.ShootGardenerTest.GetShoot(ctx)
 	if !apierrors.IsNotFound(err) {
 		return nil, err
@@ -117,102 +116,60 @@ func (s *SchedulerGardenerTest) CreateShoot(ctx context.Context) (*gardenv1beta1
 
 // ScheduleShoot set the Spec.Cloud.Seed of a shoot to the specified seed.
 // This is the request the Gardener Scheduler executes after a scheduling decision.
-func (s *SchedulerGardenerTest) ScheduleShoot(ctx context.Context, shoot *gardenv1beta1.Shoot, seed *gardenv1beta1.Seed) error {
-	executeSchedulingRequest := func(ctx context.Context, shootToUpdate *gardenv1beta1.Shoot) error {
-		if _, err := s.ShootGardenerTest.GardenClient.Garden().GardenV1beta1().Shoots(shootToUpdate.Namespace).Update(shootToUpdate); err != nil {
+func (s *SchedulerGardenerTest) ScheduleShoot(ctx context.Context, shoot *gardencorev1alpha1.Shoot, seed *gardencorev1alpha1.Seed) error {
+	executeSchedulingRequest := func(ctx context.Context, shootToUpdate *gardencorev1alpha1.Shoot) error {
+		if _, err := s.ShootGardenerTest.GardenClient.GardenCore().CoreV1alpha1().Shoots(shootToUpdate.Namespace).Update(shootToUpdate); err != nil {
 			return err
 		}
 		return nil
 	}
-	shoot.Spec.Cloud.Seed = &seed.Name
+	shoot.Spec.SeedName = &seed.Name
 	return executeSchedulingRequest(ctx, shoot)
 }
 
 // ChooseRegionAndZoneWithNoSeed determines all available Zones from the Shoot and the CloudProfile and then delegates the choosing of a region were no seed is deployed
-func (s *SchedulerGardenerTest) ChooseRegionAndZoneWithNoSeed() (*gardenv1beta1.CloudProvider, *string, []string, error) {
-	// use helper to get all available Zones
-	cloudProvider, allAvailableZones, err := helper.GetZones(*s.ShootGardenerTest.Shoot, s.CloudProfile)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	foundRegion, zones, err := ChooseRegionAndZoneWithNoSeed(cloudProvider, allAvailableZones, s.CloudProfile, s.Seeds)
-	return &cloudProvider, foundRegion, zones, err
+func (s *SchedulerGardenerTest) ChooseRegionAndZoneWithNoSeed() (*gardencorev1alpha1.Region, error) {
+	return ChooseRegionAndZoneWithNoSeed(s.CloudProfile.Spec.Regions, s.Seeds)
 }
 
 // ChooseRegionAndZoneWithNoSeed chooses a region within the cloud provider of the shoot were no seed is deployed and that is allowed by the cloud profile
-func ChooseRegionAndZoneWithNoSeed(cloudProvider gardenv1beta1.CloudProvider, allAvailableZones []gardenv1beta1.Zone, cloudProfile *gardenv1beta1.CloudProfile, seeds []gardenv1beta1.Seed) (*string, []string, error) {
-	allAvailableRegions := []string{}
-
-	if cloudProvider == gardenv1beta1.CloudProviderAzure {
-		allAvailableRegions = append(allAvailableRegions, GetAllAzureRegions(cloudProfile.Spec.Azure.CountUpdateDomains)...)
-		allAvailableRegions = append(allAvailableRegions, GetAllAzureRegions(cloudProfile.Spec.Azure.CountFaultDomains)...)
-	} else {
-		for _, zone := range allAvailableZones {
-			allAvailableRegions = append(allAvailableRegions, zone.Region)
-		}
+func ChooseRegionAndZoneWithNoSeed(regions []gardencorev1alpha1.Region, seeds []gardencorev1alpha1.Seed) (*gardencorev1alpha1.Region, error) {
+	if len(regions) == 0 {
+		return nil, fmt.Errorf("no regions configured in CloudProfile")
 	}
-
-	if len(allAvailableRegions) == 0 {
-		return nil, nil, fmt.Errorf("could not find any region in Cloud Profile %s", cloudProfile.Name)
-	}
-
-	var (
-		foundRegion string
-		zones       []string
-	)
 
 	// Find Region where no seed is deployed -
-	for index, region := range allAvailableRegions {
+	for _, region := range regions {
 		foundRegionInSeed := false
 		for _, seed := range seeds {
-			if seed.Spec.Cloud.Region == region {
+			if seed.Spec.Provider.Region == region.Name {
 				foundRegionInSeed = true
 				break
 			}
 		}
 		if foundRegionInSeed == false {
-			foundRegion = region
-			// Azure has no regions, so for all other cloud providers we get a zoneName from the CloudProvider for the determined region
-			if len(allAvailableZones) >= index {
-				// we only pick one zone in the test. The shoot must specify as many workers networks as zones.
-				zones = []string{allAvailableZones[index].Names[0]}
-			}
-			break
+			return &region, nil
 		}
 	}
-
-	if len(foundRegion) == 0 {
-		return nil, nil, fmt.Errorf("could not determine a region where no seed is deployed already")
-	}
-
-	return &foundRegion, zones, nil
+	return nil, fmt.Errorf("could not determine a region where no seed is deployed already")
 }
 
-// ChooseSeedWhereTestShootIsNotDeployed determines a Seed different from the shoot's seed respecting the CloudProvider
+// ChooseSeedWhereTestShootIsNotDeployed determines a Seed different from the shoot's seed using the same Provider(e.g aws)
 // If none can be found, it returns an error
-func (s *SchedulerGardenerTest) ChooseSeedWhereTestShootIsNotDeployed(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Seed, error) {
+func (s *SchedulerGardenerTest) ChooseSeedWhereTestShootIsNotDeployed(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Seed, error) {
 	for _, seed := range s.Seeds {
-		if seed.Name != *shoot.Spec.Cloud.Seed && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile {
+		if seed.Name != *shoot.Spec.SeedName && seed.Spec.Provider.Type == shoot.Spec.Provider.Type {
 			return &seed, nil
 		}
 	}
 
-	return nil, fmt.Errorf("Could not find another seed that is not in use by the test shoot")
-}
-
-// GetAllAzureRegions extract the regions as a string slice from AzureDomainCounts
-func GetAllAzureRegions(domainCounts []gardenv1beta1.AzureDomainCount) []string {
-	regions := []string{}
-	for _, domainCount := range domainCounts {
-		regions = append(regions, domainCount.Region)
-	}
-	return regions
+	return nil, fmt.Errorf("could not find another seed that is not in use by the test shoot")
 }
 
 // WaitForShootToBeUnschedulable waits for the shoot to be unschedulable. This is indicated by Events created by the scheduler on the shoot
 func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Context) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
-		shoot := &gardenv1beta1.Shoot{}
+		shoot := &gardencorev1alpha1.Shoot{}
 		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
 		if err != nil {
 			return false, err
@@ -240,7 +197,7 @@ func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Contex
 // WaitForShootToBeScheduled waits for the shoot to be scheduled successfully
 func (s *SchedulerGardenerTest) WaitForShootToBeScheduled(ctx context.Context) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
-		shoot := &gardenv1beta1.Shoot{}
+		shoot := &gardencorev1alpha1.Shoot{}
 		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
 		if err != nil {
 			return retry.SevereError(err)
@@ -257,7 +214,7 @@ func (s *SchedulerGardenerTest) WaitForShootToBeScheduled(ctx context.Context) e
 }
 
 // GenerateInvalidShoot generates a shoot with an invalid dummy name
-func (s *SchedulerGardenerTest) GenerateInvalidShoot() (*gardenv1beta1.Shoot, error) {
+func (s *SchedulerGardenerTest) GenerateInvalidShoot() (*gardencorev1alpha1.Shoot, error) {
 	shoot := s.ShootGardenerTest.Shoot.DeepCopy()
 	randomString, err := utils.GenerateRandomString(10)
 	if err != nil {
@@ -268,7 +225,7 @@ func (s *SchedulerGardenerTest) GenerateInvalidShoot() (*gardenv1beta1.Shoot, er
 }
 
 // GenerateInvalidSeed generates a seed with an invalid dummy name
-func (s *SchedulerGardenerTest) GenerateInvalidSeed() (*gardenv1beta1.Seed, error) {
+func (s *SchedulerGardenerTest) GenerateInvalidSeed() (*gardencorev1alpha1.Seed, error) {
 	validSeed := s.Seeds[0]
 	if len(validSeed.Name) == 0 {
 		return nil, fmt.Errorf("failed to retrieve a valid seed from the current cluster")
