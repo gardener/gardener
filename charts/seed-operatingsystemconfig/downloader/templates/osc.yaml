@@ -28,17 +28,6 @@ spec:
       RestartSec=30
       EnvironmentFile=/etc/environment
       ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
-  - name: gardener-user.service
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Configure gardener user
-      After=sshd.service
-      [Service]
-      Restart=on-failure
-      EnvironmentFile=/etc/environment
-      ExecStart=/var/lib/gardener-user/run.sh
   files:
   - path: /var/lib/cloud-config-downloader/credentials/server
     permissions: 0644
@@ -70,9 +59,3 @@ spec:
       inline:
         encoding: b64
         data: {{ include "seed-operatingsystemconfig.downloader.download-script" . | b64enc }}
-  - path: /var/lib/gardener-user/run.sh
-    permissions: 0744
-    content:
-      inline:
-        encoding: b64
-        data: {{ include "seed-operatingsystemconfig.gardener-user" . | b64enc }}
