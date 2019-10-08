@@ -86,9 +86,5 @@ func getSecrets(cs kubernetes.Interface, namespace string) (map[string]*corev1.S
 }
 
 func deleteSecret(cs kubernetes.Interface, namespace, name string) error {
-	err := cs.CoreV1().Secrets(namespace).Delete(name, &metav1.DeleteOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "could not delete secret '%s/%s'", namespace, name)
-	}
-	return nil
+	return cs.CoreV1().Secrets(namespace).Delete(name, &metav1.DeleteOptions{})
 }
