@@ -195,7 +195,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
-			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated != nil && *o.Shoot.Info.Status.IsHibernated || o.Shoot.Info.Status.IsHibernated == nil && o.Shoot.HibernationEnabled) && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(((o.Shoot.Info.Status.IsHibernated != nil && *o.Shoot.Info.Status.IsHibernated) || o.Shoot.HibernationEnabled) && cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed, waitUntilControlPlaneReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
