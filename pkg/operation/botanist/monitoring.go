@@ -104,6 +104,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"elasticsearch": map[string]interface{}{
 						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.Logging),
 					},
+					"hvpa": map[string]interface{}{
+						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.HVPA),
+					},
 				},
 			},
 			"shoot": map[string]interface{}{

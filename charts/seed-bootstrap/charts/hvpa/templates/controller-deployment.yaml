@@ -44,4 +44,23 @@ spec:
             cpu: 50m
             memory: 500Mi
         ports:
-        - containerPort: 8080
+        - containerPort: 9569
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hvpa-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: hvpa-controller
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    app: hvpa-controller
+  ports:
+  - name: metrics
+    protocol: TCP
+    port: 9569
+    targetPort: 9569
