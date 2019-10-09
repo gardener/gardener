@@ -18,27 +18,10 @@ horizontalPodAutoscaler:
   readinessDelay: 30s
   cpuInitializationPeriod: 5m0s
 
-objectCount: 4
 resources:
   requests:
-    cpu:
-      base: 100
-      perObject: 4
-      weight: 5
-      unit: m
-    memory:
-      base: 128
-      perObject: 28
-      weight: 5
-      unit: Mi
+    cpu: 100m
+    memory: 128Mi
   limits:
-    cpu:
-      base: 1500
-      perObject: 7
-      weight: 5
-      unit: m
-    memory:
-      base: 1500
-      perObject: 50
-      weight: 5
-      unit: Mi
+    cpu: 400m
+    memory: 512Mi

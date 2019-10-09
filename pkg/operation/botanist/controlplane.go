@@ -967,7 +967,6 @@ func (b *Botanist) DeployKubeControllerManager() error {
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
-		"objectCount": b.Shoot.GetNodeCount(),
 	}
 
 	if b.Shoot.HibernationEnabled {
