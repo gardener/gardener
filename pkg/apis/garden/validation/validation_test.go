@@ -4778,6 +4778,37 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			Context("Zoned", func() {
+				var (
+					specField = "spec.cloud.azure.zones"
+					azZones   = []string{"1", "2"}
+				)
+				It("should forbid to move a zoned shoot into a non zoned shoot", func() {
+					shoot.Spec.Cloud.Azure.Zones = azZones
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Cloud.Azure.Zones = []string{}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(specField),
+						"Detail": ContainSubstring(`Can't move from zoned cluster to non zoned cluster`),
+					}))
+				})
+
+				It("should forbid to move a non zoned shoot into a zoned shoot", func() {
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Cloud.Azure.Zones = azZones
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(specField),
+						"Detail": ContainSubstring(`Can't move from non zoned cluster to zoned cluster`),
+					}))
+				})
+			})
+
 			Context("CIDR", func() {
 
 				It("should forbid invalid VNet CIDRs", func() {

@@ -6172,6 +6172,20 @@ func schema_pkg_apis_garden_v1beta1_AzureCloud(ref common.ReferenceCallback) com
 							},
 						},
 					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is a list of availability zones to deploy the Shoot cluster to.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"networks", "workers"},
 			},
@@ -6246,12 +6260,25 @@ func schema_pkg_apis_garden_v1beta1_AzureConstraints(ref common.ReferenceCallbac
 							},
 						},
 					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"kubernetes", "machineImages", "machineTypes", "volumeTypes"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 	}
 }
 
@@ -6322,6 +6349,20 @@ func schema_pkg_apis_garden_v1beta1_AzureNetworks(ref common.ReferenceCallback) 
 							Description: "Workers is a CIDR of a worker subnet (private) to create (used for the VMs).",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"serviceEndpoints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceEndpoints is a list of Azure ServiceEndpoints which should be associated with the worker subnet.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},

@@ -191,6 +191,8 @@ type AzureConstraints struct {
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
+	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
+	Zones []Zone
 }
 
 // AzureDomainCount defines the region and the count for this domain count value.
@@ -1002,6 +1004,8 @@ type AzureCloud struct {
 	ResourceGroup *AzureResourceGroup
 	// Workers is a list of worker groups.
 	Workers []Worker
+	// Zones is a list of availability zones to deploy the Shoot cluster to.
+	Zones []string
 }
 
 // AzureResourceGroup indicates whether to use an existing resource group or create a new one.
@@ -1017,6 +1021,8 @@ type AzureNetworks struct {
 	VNet AzureVNet
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
 	Workers string
+	// ServiceEndpoints is a list of Azure ServiceEndpoints which should be associated with the worker subnet.
+	ServiceEndpoints []string
 }
 
 // AzureVNet indicates whether to use an existing VNet or create a new one.

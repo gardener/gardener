@@ -349,6 +349,12 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 										Usable: &volumeType1Usable,
 									},
 								},
+								Zones: []gardenv1beta1.Zone{
+									{
+										Region: region1Name,
+										Names:  []string{region1Zone1},
+									},
+								},
 							},
 							CountUpdateDomains: []gardenv1beta1.AzureDomainCount{
 								{Region: countUpdateDomainRegion, Count: countUpdateDomain},
@@ -365,8 +371,6 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				out1 := &garden.CloudProfile{}
 				Expect(scheme.Convert(in, out1, nil)).To(BeNil())
 
-				regionsJSON, _ := json.Marshal(out1.Spec.Regions)
-				expectedOut.Annotations[garden.MigrationCloudProfileRegions] = string(regionsJSON)
 				out2 := &gardenv1beta1.CloudProfile{}
 				Expect(scheme.Convert(out1, out2, nil)).To(BeNil())
 				Expect(out2).To(Equal(expectedOut))
@@ -380,7 +384,6 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				expectedOutAfterRoundTrip := in.DeepCopy()
 				expectedOutAfterRoundTrip.Annotations[garden.MigrationCloudProfileProviderConfig] = string(providerConfigJSON)
 				expectedOutAfterRoundTrip.Annotations[garden.MigrationCloudProfileSeedSelector] = string(seedSelectorJSON)
-				expectedOutAfterRoundTrip.Annotations[garden.MigrationCloudProfileRegions] = string(regionsJSON)
 				Expect(out4).To(Equal(expectedOutAfterRoundTrip))
 			})
 		})
@@ -1382,6 +1385,12 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 										Class:  volumeType1Class,
 										Name:   volumeType1Name,
 										Usable: &volumeType1Usable,
+									},
+								},
+								Zones: []gardenv1beta1.Zone{
+									{
+										Region: region1Name,
+										Names:  []string{region1Zone1},
 									},
 								},
 							},

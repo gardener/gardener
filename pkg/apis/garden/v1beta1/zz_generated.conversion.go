@@ -1964,6 +1964,7 @@ func autoConvert_v1beta1_AzureCloud_To_garden_AzureCloud(in *AzureCloud, out *ga
 	} else {
 		out.Workers = nil
 	}
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
@@ -1997,6 +1998,7 @@ func autoConvert_garden_AzureCloud_To_v1beta1_AzureCloud(in *garden.AzureCloud, 
 	} else {
 		out.Workers = nil
 	}
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
@@ -2023,6 +2025,7 @@ func autoConvert_v1beta1_AzureConstraints_To_garden_AzureConstraints(in *AzureCo
 	}
 	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
+	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
@@ -2049,6 +2052,7 @@ func autoConvert_garden_AzureConstraints_To_v1beta1_AzureConstraints(in *garden.
 	}
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
+	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
@@ -2087,6 +2091,7 @@ func autoConvert_v1beta1_AzureNetworks_To_garden_AzureNetworks(in *AzureNetworks
 		return err
 	}
 	out.Workers = in.Workers
+	out.ServiceEndpoints = *(*[]string)(unsafe.Pointer(&in.ServiceEndpoints))
 	return nil
 }
 
@@ -2103,6 +2108,7 @@ func autoConvert_garden_AzureNetworks_To_v1beta1_AzureNetworks(in *garden.AzureN
 		return err
 	}
 	out.Workers = in.Workers
+	out.ServiceEndpoints = *(*[]string)(unsafe.Pointer(&in.ServiceEndpoints))
 	return nil
 }
 
