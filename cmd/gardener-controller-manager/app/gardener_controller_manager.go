@@ -15,6 +15,7 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -416,11 +417,17 @@ func determineGardenerIdentity() (*gardencorev1alpha1.Gardener, string, error) {
 
 	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
 	// Otherwise generate a random string for the gardenerID
-	if cgroup, err := ioutil.ReadFile("/proc/self/cgroup"); err == nil {
-		splitByNewline := strings.Split(string(cgroup), "\n")
-		splitBySlash := strings.Split(splitByNewline[0], "/")
-		gardenerID = splitBySlash[len(splitBySlash)-1]
-	} else {
+	if cGroupFile, err := os.Open("/proc/self/cgroup"); err == nil {
+		defer cGroupFile.Close()
+		reader := bufio.NewReaderSize(cGroupFile, 4096)
+		line, con, err := reader.ReadLine()
+		if !con && err == nil {
+			splitBySlash := strings.Split(string(line), "/")
+			gardenerID = splitBySlash[len(splitBySlash)-1]
+		}
+	}
+
+	if gardenerID == "" {
 		gardenerID, err = gardenerutils.GenerateRandomString(64)
 		if err != nil {
 			return nil, "", fmt.Errorf("unable to generate gardenerID: %v", err)
