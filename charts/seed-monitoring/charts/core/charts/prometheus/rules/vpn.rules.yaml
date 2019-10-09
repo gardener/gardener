@@ -8,7 +8,7 @@ groups:
       service: vpn
       severity: critical
       type: shoot
-      visibiliy: operator
+      visibility: operator
     annotations:
       description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
       summary: VPN Shoot deployment no pods
@@ -19,7 +19,7 @@ groups:
       service: vpn
       severity: critical
       type: shoot
-      visibiliy: operator
+      visibility: operator
     annotations:
       description: VPN connection check failed. No communication from control plane (Prometheus pod) to the Shoot workers possible.
       summary: VPN connection down
@@ -30,7 +30,7 @@ groups:
       service: vpn-test
       severity: critical
       type: shoot
-      visibiliy: all
+      visibility: all
     annotations:
       description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
       summary: API Server Proxy not usable
