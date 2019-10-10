@@ -87,13 +87,13 @@ func (b *Botanist) DeleteStaleExtensionResources(ctx context.Context) error {
 	fns := make([]flow.TaskFn, 0, meta.LenList(deployedExtensions))
 	for _, deployedExtension := range deployedExtensions.Items {
 		if !wantedExtensions.Has(deployedExtension.Spec.Type) {
+			toDelete := &extensionsv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deployedExtension.Name,
+					Namespace: deployedExtension.Namespace,
+				},
+			}
 			fns = append(fns, func(ctx context.Context) error {
-				toDelete := &extensionsv1alpha1.Extension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      deployedExtension.Name,
-						Namespace: deployedExtension.Namespace,
-					},
-				}
 				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptionFuncs...))
 			})
 		}
