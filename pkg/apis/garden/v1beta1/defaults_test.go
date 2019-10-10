@@ -153,6 +153,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							aws.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							aws.Workers = []v1beta1.AWSWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.AWS.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.AWS.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.AWS.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
@@ -281,6 +313,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							azure.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							azure.Workers = []v1beta1.AzureWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.Azure.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.Azure.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.Azure.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
@@ -425,6 +489,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							gcp.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							gcp.Workers = []v1beta1.GCPWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.GCP.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.GCP.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.GCP.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
@@ -583,6 +679,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							alicloud.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							alicloud.Workers = []v1beta1.AlicloudWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.Alicloud.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.Alicloud.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.Alicloud.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
@@ -728,6 +856,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							openstack.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							openstack.Workers = []v1beta1.OpenStackWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.OpenStack.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.OpenStack.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.OpenStack.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
@@ -841,6 +1001,38 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(&expectedSize))
 						})
 					})
+
+					Context("global machine image", func() {
+						globalMachineImageName := "jeOs"
+						globalMachineImageVersion := "1.1"
+						BeforeEach(func() {
+							packet.MachineImage = &v1beta1.ShootMachineImage{
+								Name:    globalMachineImageName,
+								Version: globalMachineImageVersion,
+							}
+							packet.Workers = []v1beta1.PacketWorker{
+								{
+									Worker: v1beta1.Worker{
+										Name: "worker-default",
+									},
+								},
+								{
+									Worker: v1beta1.Worker{
+										MachineImage: &v1beta1.ShootMachineImage{
+											Name:    "coreos",
+											Version: "1.0",
+										},
+									},
+								},
+							}
+						})
+						It("should respect global machine image", func() {
+							Expect(shoot.Spec.Cloud.Packet.Workers[0].MachineImage).ToNot(BeNil())
+							Expect(shoot.Spec.Cloud.Packet.Workers[0].MachineImage.Name).To(Equal(globalMachineImageName))
+							Expect(shoot.Spec.Cloud.Packet.Workers[0].MachineImage.Version).To(Equal(globalMachineImageVersion))
+						})
+					})
+
 					Context("kubernetes.Kubelet global default max pod", func() {
 						BeforeEach(func() {
 							var (
