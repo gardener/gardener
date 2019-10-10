@@ -1,3 +1,17 @@
+// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package errors
 
 import (
@@ -64,4 +78,139 @@ func WithSuppressed(err, suppressed error) error {
 		cause:      err,
 		suppressed: suppressed,
 	}
+}
+
+// reconciliationError implements ErrorIDer and Causer
+type reconciliationError struct {
+	error
+	errorID string
+}
+
+// WithID annotates the error with the given errorID which can afterwards be retrieved by ErrorID()
+func WithID(id string, err error) error {
+	return &reconciliationError{err, id}
+}
+
+// ErrorID implements the errorIDer interface and returns the id of the reconciliationError
+func (t *reconciliationError) ErrorID() string {
+	return t.errorID
+}
+
+// Cause implements the causer interface and returns the underlying error
+func (t *reconciliationError) Cause() error {
+	return t.error
+}
+
+// GetID returns the ID of the error if possible.
+// If err does not implement ErrorID or is nill an empty string will be returned.
+func GetID(err error) string {
+	type errorIDer interface {
+		ErrorID() string
+	}
+
+	var id string
+	if err != nil {
+		if errWithID, ok := err.(errorIDer); ok {
+			id = errWithID.ErrorID()
+		}
+	}
+	return id
+}
+
+// The ErrorContext holds the lastError IDs from the previous reconciliaton and the IDs of the errors that are processed in this context during the current reconciliation
+type ErrorContext struct {
+	name         string
+	lastErrorIDs []string
+	errorIDs     map[string]struct{}
+}
+
+// NewErrorContext creates a new error context with the given name and lastErrors from the previous reconciliation
+func NewErrorContext(name string, lastErrorIDs []string) *ErrorContext {
+	return &ErrorContext{
+		name:         name,
+		lastErrorIDs: lastErrorIDs,
+		errorIDs:     map[string]struct{}{},
+	}
+}
+
+// AddErrorID adds an error ID which will be tracked by the context and panics if more than one error have the same ID
+func (e *ErrorContext) AddErrorID(errorID string) {
+	if e.HasErrorWithID(errorID) {
+		panic(fmt.Sprintf("Error with id %q already exists in error context %q", errorID, e.name))
+	}
+	e.errorIDs[errorID] = struct{}{}
+}
+
+// HasErrorWithID checks if the ErrorContext already contains an error with id errorID
+func (e *ErrorContext) HasErrorWithID(errorID string) bool {
+	_, ok := e.errorIDs[errorID]
+	return ok
+}
+
+// HasLastErrorWithID checks if the previous reconciliation had encountered an error with id errorID
+func (e *ErrorContext) HasLastErrorWithID(errorID string) bool {
+	for _, lastErrorID := range e.lastErrorIDs {
+		if errorID == lastErrorID {
+			return true
+		}
+	}
+	return false
+}
+
+// FailureHandler is a function which is called when an error occurs
+type FailureHandler func(string, error) error
+
+// SuccessHandler is called when a task completes successfully
+type SuccessHandler func(string) error
+
+// TaskFunc is an interface for a task which should belong to an ErrorContext and can trigger OnSuccess and OnFailure callbacks depending on whether it completes successfully or not
+type TaskFunc interface {
+	Do(errorContext *ErrorContext) (string, error)
+}
+
+// taskFunc implements TaskFunc
+type taskFunc func(*ErrorContext) (string, error)
+
+func (f taskFunc) Do(errorContext *ErrorContext) (string, error) {
+	return f(errorContext)
+}
+
+func defaultFailureHandler(errorID string, err error) error {
+	err = fmt.Errorf("%s failed (%v)", errorID, err)
+	return WithID(errorID, err)
+}
+
+//ToExecute takes an errorID and a function and creates a TaskFunc from them.
+func ToExecute(errorID string, task func() error) TaskFunc {
+	return taskFunc(func(errorContext *ErrorContext) (string, error) {
+		errorContext.AddErrorID(errorID)
+		err := task()
+		if err != nil {
+			err = WithID(errorID, err)
+			return errorID, err
+		}
+		return errorID, nil
+	})
+}
+
+// HandleErrors takes a reference to an ErrorContext, onSuccess and onFailure callback functions and a variadic list of taskFuncs.
+// It sequentially adds the Tasks' errorIDs to the provided ErrorContext and executes them.
+// If the ErrorContext has errors from the previous reconcilation and the tasks which caused errors complete successfully OnSuccess is called.
+// If a task fails OnFailure is called
+func HandleErrors(errorContext *ErrorContext, onSuccess SuccessHandler, onFailure FailureHandler, tasks ...TaskFunc) error {
+	for _, task := range tasks {
+		errorID, err := task.Do(errorContext)
+		if err != nil {
+			if onFailure != nil {
+				return onFailure(errorID, err)
+			}
+			return defaultFailureHandler(errorID, err)
+		}
+		if onSuccess != nil && errorContext.HasLastErrorWithID(errorID) {
+			if err := onSuccess(errorID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

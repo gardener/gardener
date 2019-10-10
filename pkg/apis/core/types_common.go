@@ -36,6 +36,8 @@ const (
 type LastError struct {
 	// A human readable message indicating details about the last error.
 	Description string
+	// ID of the task which caused this last error
+	TaskID *string
 	// Well-defined error codes of the last error(s).
 	// +optional
 	Codes []ErrorCode

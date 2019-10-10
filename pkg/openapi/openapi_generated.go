@@ -2800,6 +2800,13 @@ func schema_pkg_apis_core_v1alpha1_LastError(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"taskID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID of the task which caused this last error",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"codes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Well-defined error codes of the last error(s).",
@@ -4875,6 +4882,19 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
+						},
+					},
+					"lastErrors": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastErrors holds information about the last occurred error(s) during an operation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
+									},
+								},
+							},
 						},
 					},
 					"observedGeneration": {
@@ -11041,6 +11061,19 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
+						},
+					},
+					"lastErrors": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastErrors holds information about the last occurred error(s) during an operation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
+									},
+								},
+							},
 						},
 					},
 					"observedGeneration": {

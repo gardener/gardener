@@ -4833,7 +4833,8 @@ func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out 
 		return err
 	}
 	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
+	// WARNING: in.LastError requires manual conversion: does not exist in peer-type
+	out.LastErrors = *(*[]garden.LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	if err := metav1.Convert_string_To_Pointer_string(&in.Seed, &out.Seed, s); err != nil {
@@ -4851,7 +4852,7 @@ func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatu
 		return err
 	}
 	out.LastOperation = (*v1alpha1.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*v1alpha1.LastError)(unsafe.Pointer(in.LastError))
+	out.LastErrors = *(*[]v1alpha1.LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	if err := metav1.Convert_Pointer_string_To_string(&in.Seed, &out.Seed, s); err != nil {

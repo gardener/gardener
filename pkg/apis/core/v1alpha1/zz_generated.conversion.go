@@ -2755,6 +2755,7 @@ func Convert_garden_KubernetesSettings_To_v1alpha1_KubernetesSettings(in *garden
 
 func autoConvert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
 	out.Description = in.Description
+	out.TaskID = (*string)(unsafe.Pointer(in.TaskID))
 	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
 	out.LastUpdateTime = (*metav1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
@@ -2767,6 +2768,7 @@ func Convert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastE
 
 func autoConvert_core_LastError_To_v1alpha1_LastError(in *core.LastError, out *LastError, s conversion.Scope) error {
 	out.Description = in.Description
+	out.TaskID = (*string)(unsafe.Pointer(in.TaskID))
 	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
 	out.LastUpdateTime = (*metav1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
@@ -4068,7 +4070,8 @@ func autoConvert_v1alpha1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out
 		return err
 	}
 	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
+	// WARNING: in.LastError requires manual conversion: does not exist in peer-type
+	out.LastErrors = *(*[]garden.LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = (*string)(unsafe.Pointer(in.Seed))
@@ -4083,7 +4086,7 @@ func autoConvert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStat
 		return err
 	}
 	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
+	out.LastErrors = *(*[]LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = (*string)(unsafe.Pointer(in.Seed))

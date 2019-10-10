@@ -114,7 +114,7 @@ func BoolToStatus(cond bool) Status {
 }
 
 // ComputeStatus computes the label Status of a shoot depending on the given lastOperation, lastError and conditions.
-func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastError *gardencorev1alpha1.LastError, conditions ...gardencorev1alpha1.Condition) Status {
+func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastErrors []gardencorev1alpha1.LastError, lastError *gardencorev1alpha1.LastError, conditions ...gardencorev1alpha1.Condition) Status {
 	// Shoot has been created and not yet reconciled.
 	if lastOperation == nil {
 		return StatusHealthy
@@ -122,14 +122,14 @@ func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastError *g
 
 	// If shoot is created or deleted then the last error indicates the healthiness.
 	if lastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate || lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete {
-		return BoolToStatus(lastError == nil)
+		return BoolToStatus(len(lastErrors) == 0 && lastError == nil)
 	}
 
 	status := ComputeConditionStatus(conditions...)
 
 	// If an operation is currently processing then the last error state is reported.
 	if lastOperation.State == gardencorev1alpha1.LastOperationStateProcessing {
-		return status.OrWorse(BoolToStatus(lastError == nil))
+		return status.OrWorse(BoolToStatus(len(lastErrors) == 0 && lastError == nil))
 	}
 
 	// If the last operation has succeeded then the shoot is healthy.

@@ -34,6 +34,9 @@ const (
 type LastError struct {
 	// A human readable message indicating details about the last error.
 	Description string `json:"description"`
+	// ID of the task which caused this last error
+	// +optional
+	TaskID *string `json:"taskID,omitempty"`
 	// Well-defined error codes of the last error(s).
 	// +optional
 	Codes []ErrorCode `json:"codes,omitempty"`
@@ -45,6 +48,11 @@ type LastError struct {
 // GetDescription implements LastError.
 func (l *LastError) GetDescription() string {
 	return l.Description
+}
+
+// GetTaskID implements LastError
+func (l *LastError) GetTaskID() *string {
+	return l.TaskID
 }
 
 // GetCodes implements LastError.

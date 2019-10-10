@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -28,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/errors"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/version"
 
@@ -37,25 +37,49 @@ import (
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
+func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
-	var botanist *botanistpkg.Botanist
-	if err := utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
-		botanist, err = botanistpkg.New(o)
-		if err != nil {
-			return utilretry.MinorError(err)
+	var (
+		botanist             *botanistpkg.Botanist
+		enableEtcdEncryption bool
+		tasksWithErrors      []string
+		err                  error
+	)
+
+	for _, lastError := range o.Shoot.Info.Status.LastErrors {
+		if lastError.TaskID != nil {
+			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
 		}
-		return utilretry.Ok()
-	}); err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
 
-	if err := botanist.RequiredExtensionsExist(); err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether all required extensions exist (%s)", err.Error()))
-	}
-	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	errorContext := errors.NewErrorContext("Shoot cluster reconciliation", tasksWithErrors)
+
+	err = errors.HandleErrors(errorContext,
+		func(errorID string) error {
+			o.CleanShootTaskError(context.TODO(), errorID)
+			return nil
+		},
+		nil,
+		errors.ToExecute("Create botanist", func() error {
+			return utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+				botanist, err = botanistpkg.New(o)
+				if err != nil {
+					return utilretry.MinorError(err)
+				}
+				return utilretry.Ok()
+			})
+		}),
+		errors.ToExecute("Check required extensions", func() error {
+			return botanist.RequiredExtensionsExist()
+		}),
+		errors.ToExecute("Check version constraint", func() error {
+			enableEtcdEncryption, err = utils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+			return err
+		}),
+	)
+
 	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check version constraint (%s)", err.Error()))
+		return gardencorev1alpha1helper.NewWrappedLastErrors(gardencorev1alpha1helper.FormatLastErrDescription(err), err)
 	}
 
 	var (
@@ -292,10 +316,10 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		f = g.Compile()
 	)
 
-	err = f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress})
+	err = f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress, ErrorContext: errorContext, ErrorCleaner: o.CleanShootTaskError})
 	if err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
-		return gardencorev1alpha1helper.LastError(gardencorev1alpha1helper.FormatLastErrDescription(err), gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err))...)
+		return gardencorev1alpha1helper.NewWrappedLastErrors(gardencorev1alpha1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
@@ -388,6 +412,7 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.Seed = &o.Seed.Info.Name
 			shoot.Status.IsHibernated = o.Shoot.HibernationEnabled
+			shoot.Status.LastErrors = nil
 			shoot.Status.LastError = nil
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           operationType,
@@ -405,14 +430,20 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 	return err
 }
 
-func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, lastError *gardencorev1alpha1.LastError) error {
+func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, description string, lastErrors ...gardencorev1alpha1.LastError) error {
 	var (
 		state         = gardencorev1alpha1.LastOperationStateFailed
-		description   = lastError.Description
 		lastOperation = o.Shoot.Info.Status.LastOperation
 		progress      = 1
 		willRetry     = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
+
+	// TODO: Remove this after LastError is removed from the ShootStatus API
+	var codes []gardencorev1alpha1.ErrorCode
+	for _, lastErr := range lastErrors {
+		codes = append(codes, lastErr.Codes...)
+	}
+	lastError := gardencorev1alpha1helper.LastError(description, codes...)
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
@@ -427,7 +458,11 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 				progress = lastOperation.Progress
 			}
 
+			shoot.Status.LastErrors = lastErrors
+
+			// TODO: Remove this after LastError is removed from the ShootStatus API
 			shoot.Status.LastError = lastError
+
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           operationType,
 				State:          state,

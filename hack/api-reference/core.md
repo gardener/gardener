@@ -4386,6 +4386,18 @@ string
 </tr>
 <tr>
 <td>
+<code>taskID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ID of the task which caused this last error</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>codes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1alpha1.ErrorCode">
@@ -6717,6 +6729,20 @@ LastError
 </tr>
 <tr>
 <td>
+<code>lastErrors</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.LastError">
+[]LastError
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastErrors holds information about the last occurred error(s) during an operation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>observedGeneration</code></br>
 <em>
 int64
@@ -7113,5 +7139,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>4aea89b25</code>.
+on git commit <code>486dac1fc</code>.
 </em></p>
