@@ -526,6 +526,11 @@ func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, lastEr
 
 			shoot.Status.Gardener = *o.GardenerInfo
 			shoot.Status.LastError = lastError
+
+			if shoot.Status.LastOperation == nil {
+				shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{}
+			}
+
 			shoot.Status.LastOperation.Type = gardencorev1alpha1.LastOperationTypeDelete
 			shoot.Status.LastOperation.State = state
 			shoot.Status.LastOperation.Description = description
