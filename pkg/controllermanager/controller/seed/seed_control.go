@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"k8s.io/client-go/util/retry"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -239,15 +240,23 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string)
 	seedLogger.Infof("[SEED RECONCILE] %s", key)
 	seedLogger.Debugf(string(seedJSON))
 
-	finalizers := sets.NewString(seed.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-		seed.Finalizers = finalizers.UnsortedList()
-
-		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().Update(seed); err != nil {
-			seedLogger.Errorf("Could not add finalizer to Seed: %s", err.Error())
-			return err
+	// need retry logic, because controllerregistration controller is acting on it at the same time and cached object might not be up to date
+	seed, err = kutil.TryUpdateSeed(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta, func(curSeed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
+		finalizers := sets.NewString(curSeed.Finalizers...)
+		if finalizers.Has(gardencorev1alpha1.GardenerName) {
+			return curSeed, nil
 		}
+
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
+		curSeed.Finalizers = finalizers.UnsortedList()
+
+		return curSeed, nil
+	})
+
+	if err != nil {
+		err = fmt.Errorf("Could not add finalizer to Seed: %s", err.Error())
+		seedLogger.Error(err)
+		return err
 	}
 
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
