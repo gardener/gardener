@@ -35,6 +35,7 @@ spec:
           - ./manager
           - --logtostderr=true
           - --enable-detailed-metrics=true
+          - --metrics-addr=:9569
           - --v=2
         resources:
           limits:

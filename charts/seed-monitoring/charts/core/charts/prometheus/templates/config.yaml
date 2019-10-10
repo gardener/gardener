@@ -547,7 +547,7 @@ data:
         action: keep
         regex: ^{{ .Release.Namespace }}$
 
-{{ if  (index .Values.rules.optional "hvpa" ).enabled -}}
+{{- if  (index .Values.rules.optional "hvpa" ).enabled }}
     - job_name: 'hvpa-controller'
       kubernetes_sd_configs:
       - role: endpoints
@@ -567,7 +567,7 @@ data:
         regex: ^{{ .Release.Namespace }}$
 {{ end }}
 
-{{- if  (index .Values.rules.optional "elasticsearch" ).enabled }}
+{{ if  (index .Values.rules.optional "elasticsearch" ).enabled }}
     - job_name: elasticsearch-logging
       honor_labels: false
       kubernetes_sd_configs:
