@@ -54,6 +54,10 @@ for file in rules/*.yaml; do
 done
 popd > /dev/null
 
-git add $SOURCE_PATH/docs/development/user_alerts.md
-git add $SOURCE_PATH/docs/development/operator_alerts.md
-git commit -m "Update alert documentation"
+if [ -n "$(git status --porcelain)" ]; then
+  git add $SOURCE_PATH/docs/development/user_alerts.md
+  git add $SOURCE_PATH/docs/development/operator_alerts.md
+  git commit -m "Update alert documentation"
+else
+  echo "no changes";
+fi
