@@ -1861,6 +1861,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 			if data, ok := workerMigrationInfo[worker.Name]; ok {
 				w.ProviderConfig = data.ProviderConfig
 				w.Zones = data.Zones
+				w.Volume = data.Volume
 			}
 
 			if w.Zones == nil {
@@ -2195,6 +2196,7 @@ func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conve
 			workerMigrationInfo[worker.Name] = garden.WorkerMigrationData{
 				ProviderConfig: worker.ProviderConfig,
 				Zones:          worker.Zones,
+				Volume:         worker.Volume,
 			}
 		}
 		data, err := json.Marshal(workerMigrationInfo)
