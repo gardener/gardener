@@ -161,6 +161,19 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - dashboard.gardener.cloud
+  resources:
+  - terminals
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 # ClusterRole defines the required permissions for the gardener-scheduler
 # Configmap: GET on gardener-scheduler-configmap to read the scheduler configuration & DELETE, GET, PATCH, UPDATE on gardener-scheduler-leader-election
 # Events: CREATE, PATCH, UPDATE to send scheduling events
