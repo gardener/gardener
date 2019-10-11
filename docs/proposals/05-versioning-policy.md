@@ -20,7 +20,7 @@ Gardener classifies Kubernetes versions differently while they go through their 
 
 Example: Assuming the Kubernetes community maintains at present the following minor versions v1.16.1, v1.15.4 and v1.14.9, then we classify as follows:
 
-- **preview:** After a fresh release of a new Kubernetes **minor** version (e.g. v1.16.0) we tag it as _preview_ until we have gained sufficient experience. It will not become the default in the Gardener Dashboard until we promote that minor version to _supported_, which usually happens a few weeks later with the first patch version (as a rule of thumb, e.g. v1.16.1, but it could be also v1.16.0 if it was stable and there was no patch version or v1.16.2 or higher if there were many because quality was not good enough in the beginning of that Kubernetes minor release).
+- **preview:** After a fresh release of a new Kubernetes **minor** version (e.g. v1.17.0) we tag it as _preview_ until we have gained sufficient experience. It will not become the default in the Gardener Dashboard until we promote that minor version to _supported_, which usually happens a few weeks later with the first patch version (as a rule of thumb, e.g. v1.17.1, but it could be also v1.17.0 if it was stable and there was no patch version or v1.17.2 or higher if there were many because quality was not good enough in the beginning of that Kubernetes minor release).
 
 - **supported:** We tag the latest Kubernetes patch versions of the actual (if not still in _preview_) and the last two minor Kubernetes versions as _supported_ (e.g. v1.16.1, v1.15.4 and v1.14.9). The latest of these becomes the default in the Gardener Dashboard (e.g. v1.16.1).
 
