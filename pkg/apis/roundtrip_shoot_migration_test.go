@@ -733,7 +733,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":null,\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -897,7 +897,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
 				worker1Zones        = []string{"zone1", "zone2"}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":null,\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1060,7 +1060,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":null,\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1407,7 +1407,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":null,\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1553,7 +1553,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":null,\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()

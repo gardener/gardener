@@ -28,7 +28,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "oidc Suite")
+	RunSpecs(t, "Admission OpenIDConnectPreset Suite")
 }
 
 var _ = Describe("Applier", func() {
