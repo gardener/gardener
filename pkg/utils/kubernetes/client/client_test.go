@@ -268,7 +268,7 @@ var _ = Describe("Cleaner", func() {
 				Expect(cleaner.Clean(ctx, c, &nsWithFinalizer, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
-			It("should delete the object if its deletion timestamp is not over the finalize grace period", func() {
+			It("should not delete the object if its deletion timestamp is not over the finalize grace period", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
@@ -282,13 +282,12 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
-			It("should delete the object if its deletion timestamp is over the finalize grace period and no finalizer is left", func() {
+			It("should not delete the object if its deletion timestamp is over the finalize grace period and no finalizer is left", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
@@ -302,7 +301,6 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(10))).To(Succeed())
@@ -329,7 +327,7 @@ var _ = Describe("Cleaner", func() {
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
-			It("should delete the list if the object's deletion timestamps are not over the finalize grace period", func() {
+			It("should not delete the list if the object's deletion timestamp is not over the finalize grace period", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
@@ -344,13 +342,12 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Delete(ctx, &cm2WithFinalizer, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
 			})
 
-			It("should delete the list if the object's deletion timestamps is over the finalize grace period and no finalizers are left", func() {
+			It("should not delete the list if the object's deletion timestamp is over the finalize grace period and no finalizers are left", func() {
 				var (
 					ctx               = context.TODO()
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
@@ -365,7 +362,6 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2}}),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())

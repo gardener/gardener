@@ -349,13 +349,16 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 		}
 	}
 
-	if err := delete(ctx, c, obj, &cleanOptions.DeleteOptions); err != nil {
-		for _, tolerate := range cleanOptions.ErrorToleration {
-			if tolerate(err) {
-				return nil
+	// Ref: https://github.com/kubernetes/kubernetes/issues/83771
+	if acc.GetDeletionTimestamp().IsZero() {
+		if err := delete(ctx, c, obj, &cleanOptions.DeleteOptions); err != nil {
+			for _, tolerate := range cleanOptions.ErrorToleration {
+				if tolerate(err) {
+					return nil
+				}
 			}
+			return err
 		}
-		return err
 	}
 	return nil
 }
