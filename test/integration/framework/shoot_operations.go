@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,14 +28,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // NewShootGardenerTest creates a new shootGardenerTest object, given an already created shoot (created after parsing a shoot YAML)
-func NewShootGardenerTest(kubeconfig string, shoot *v1beta1.Shoot, logger *logrus.Logger) (*ShootGardenerTest, error) {
+func NewShootGardenerTest(kubeconfig string, shoot *gardencorev1alpha1.Shoot, logger *logrus.Logger) (*ShootGardenerTest, error) {
 	if len(kubeconfig) == 0 {
 		return nil, fmt.Errorf("please specify the kubeconfig path correctly")
 	}
@@ -48,17 +49,24 @@ func NewShootGardenerTest(kubeconfig string, shoot *v1beta1.Shoot, logger *logru
 		return nil, err
 	}
 
+	cloudProfileForShoot := &gardencorev1alpha1.CloudProfile{}
+	if shoot != nil && len(shoot.Spec.CloudProfileName) != 0 {
+		if err := k8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Namespace: "garden", Name: shoot.Spec.CloudProfileName}, cloudProfileForShoot); err != nil {
+			return nil, err
+		}
+	}
+
 	return &ShootGardenerTest{
 		GardenClient: k8sGardenClient,
-
-		Shoot:  shoot,
-		Logger: logger,
+		Shoot:        shoot,
+		Logger:       logger,
+		CloudProfile: cloudProfileForShoot,
 	}, nil
 }
 
 // GetShoot gets the test shoot
-func (s *ShootGardenerTest) GetShoot(ctx context.Context) (*v1beta1.Shoot, error) {
-	shoot := &v1beta1.Shoot{}
+func (s *ShootGardenerTest) GetShoot(ctx context.Context) (*gardencorev1alpha1.Shoot, error) {
+	shoot := &gardencorev1alpha1.Shoot{}
 	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
 		Namespace: s.Shoot.Namespace,
 		Name:      s.Shoot.Name,
@@ -71,7 +79,7 @@ func (s *ShootGardenerTest) GetShoot(ctx context.Context) (*v1beta1.Shoot, error
 }
 
 // CreateShootResource creates a shoot from a shoot Object
-func (s *ShootGardenerTest) CreateShootResource(ctx context.Context, shootToCreate *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+func (s *ShootGardenerTest) CreateShootResource(ctx context.Context, shootToCreate *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 	shoot := s.Shoot
 	if err := s.GardenClient.Client().Create(ctx, shoot); err != nil {
 		return nil, err
@@ -82,7 +90,7 @@ func (s *ShootGardenerTest) CreateShootResource(ctx context.Context, shootToCrea
 }
 
 // CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
-func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, error) {
+func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*gardencorev1alpha1.Shoot, error) {
 	_, err := s.GetShoot(ctx)
 	if !apierrors.IsNotFound(err) {
 		return nil, err
@@ -112,7 +120,7 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 }
 
 // UpdateShoot Updates a shoot from a shoot Object and waits for its reconciliation
-func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = s.GardenClient.Client().Update(ctx, newShoot)
 		if err != nil {
@@ -135,6 +143,22 @@ func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *v1beta1.S
 
 	s.Logger.Infof("Shoot %s was successfully updated!", newShoot.Name)
 	return s.Shoot, nil
+}
+
+// DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
+func (s *ShootGardenerTest) DeleteShootAndWaitForDeletion(ctx context.Context) error {
+	err := s.DeleteShoot(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.WaitForShootToBeDeleted(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.Logger.Infof("Shoot %s was deleted successfully!", s.Shoot.Name)
+	return nil
 }
 
 // DeleteShoot deletes the test shoot
@@ -169,13 +193,6 @@ func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	err = s.WaitForShootToBeDeleted(ctx)
-	if err != nil {
-		return err
-	}
-
-	s.Logger.Infof("Shoot %s was deleted successfully!", s.Shoot.Name)
 	return nil
 }
 
@@ -286,8 +303,8 @@ func (s *ShootGardenerTest) AnnotateShoot(ctx context.Context, annotations map[s
 
 // WaitForShootToBeCreated waits for the shoot to be created
 func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
-	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		shoot := &v1beta1.Shoot{}
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		shoot := &gardencorev1alpha1.Shoot{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			s.Logger.Infof("Error while waiting for shoot to be created: %s", err.Error())
@@ -298,7 +315,7 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
-			s.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+			s.Logger.Infof("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
 		return retry.MinorError(fmt.Errorf("shoot %q was not successfully reconciled", shoot.Name))
 	})
@@ -306,8 +323,8 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 
 // WaitForShootToBeReconciled waits for the shoot to be successfully reconciled
 func (s *ShootGardenerTest) WaitForShootToBeReconciled(ctx context.Context) error {
-	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		shoot := &v1beta1.Shoot{}
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		shoot := &gardencorev1alpha1.Shoot{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			s.Logger.Infof("Error while waiting for shoot to be reconciled: %s", err.Error())
@@ -326,8 +343,8 @@ func (s *ShootGardenerTest) WaitForShootToBeReconciled(ctx context.Context) erro
 
 // WaitForShootToBeDeleted waits for the shoot to be deleted
 func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
-	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		shoot := &v1beta1.Shoot{}
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		shoot := &gardencorev1alpha1.Shoot{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -342,4 +359,19 @@ func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
 		}
 		return retry.MinorError(fmt.Errorf("shoot %q still exists", shoot.Name))
 	})
+}
+
+// SetupShootWorker prepares the Shoot with one worker with provider specific volume. Clears the currently configured workers.
+func (s *ShootGardenerTest) SetupShootWorker(workerZone *string) error {
+	if len(s.CloudProfile.Spec.MachineImages) < 1 {
+		return fmt.Errorf("at least one different machine image has to be defined in the CloudProfile")
+	}
+
+	// clear current workers
+	s.Shoot.Spec.Provider.Workers = []gardencorev1alpha1.Worker{}
+
+	if err := AddWorker(s.Shoot, s.CloudProfile, s.CloudProfile.Spec.MachineImages[0], workerZone); err != nil {
+		return err
+	}
+	return nil
 }

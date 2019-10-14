@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/hashicorp/go-multierror"
@@ -66,7 +66,7 @@ func (o *GardenerTestOperation) dumpDefaultResourcesInAllNamespaces(ctx context.
 	return result
 }
 
-func (o *GardenerTestOperation) dumpControlplaneInSeed(ctx context.Context, k8sClient kubernetes.Interface, seed *v1beta1.Seed, namespace string) error {
+func (o *GardenerTestOperation) dumpControlplaneInSeed(ctx context.Context, k8sClient kubernetes.Interface, seed *gardencorev1alpha1.Seed, namespace string) error {
 	cxtIdentifier := fmt.Sprintf("[SEED %s]", o.Seed.Name)
 	o.Logger.Info(cxtIdentifier)
 

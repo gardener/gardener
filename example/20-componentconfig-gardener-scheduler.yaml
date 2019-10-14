@@ -22,11 +22,11 @@ server:
   http:
     bindAddress: 0.0.0.0
     port: 10251
-# schedulers:
-#   backupBucket:
-#     concurrentSyncs: 5 # defaults to 5
-#     retrySyncPeriod: 15s # initial retry period, then uses exponential backoff
-#   shoot:
-#     concurrentSyncs: 5 # defaults to 5
-#     retrySyncPeriod: 15s # initial retry period, then uses exponential backoff
-#     candidateDeterminationStrategy: MinimalDistance # either {SameRegion,MinimalDistance}
+#schedulers:
+#  backupBucket:
+#    concurrentSyncs: 5 # defaults to 5
+#    retrySyncPeriod: 15s # initial retry period, then uses exponential backoff
+#  shoot:
+#    concurrentSyncs: 5 # defaults to 5
+#    retrySyncPeriod: 15s # initial retry period, then uses exponential backoff
+#    candidateDeterminationStrategy: MinimalDistance # either {SameRegion,MinimalDistance}

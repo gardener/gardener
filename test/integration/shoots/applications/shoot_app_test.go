@@ -12,6 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+	Overview
+		- Tests the workload deployment on top of a Shoot
+
+	AfterSuite
+		- Cleanup Workload in Shoot
+
+	Test: Create Redis Deployment
+	Expected Output
+		- Redis Deployment is ready
+
+	Test: Deploy Guestbook Application
+	Expected Output
+		- Guestbook application should be functioning
+ **/
+
 package applications
 
 import (
@@ -33,10 +49,8 @@ import (
 
 	. "github.com/gardener/gardener/test/integration/shoots"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -44,18 +58,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/test/integration/framework"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
-	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
-	shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
-	shootNamespace    = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
-	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	downloadPath      = flag.String("downloadPath", "/tmp/test", "the path to which you download the kubeconfig")
-	shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-	cleanup           = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
+	kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+	shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+	shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+	logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	downloadPath   = flag.String("download-path", "/tmp/test", "the path to which you download the kubeconfig")
 )
 
 const (
@@ -66,15 +81,10 @@ const (
 	FinalizationTimeout       = 1800 * time.Second
 	DumpStateTimeout          = 5 * time.Minute
 
-	GuestBook                 = "guestbook"
-	RedisMaster               = "redis-master"
-	RedisSalve                = "redis-slave"
-	APIServer                 = "kube-apiserver"
-	Kibana                    = "kibana-logging"
-	loggingUserName           = "admin"
-	loggingIngressCredentials = "logging-ingress-credentials"
-	passwordKey               = "password"
-	GuestBookTemplateName     = "guestbook-app.yaml.tpl"
+	GuestBook             = "guestbook"
+	RedisMaster           = "redis-master"
+	RedisSlave            = "redis-slave"
+	GuestBookTemplateName = "guestbook-app.yaml.tpl"
 
 	helmDeployNamespace = metav1.NamespaceDefault
 	RedisChart          = "stable/redis"
@@ -82,18 +92,8 @@ const (
 )
 
 func validateFlags() {
-	if StringSet(*shootTestYamlPath) && StringSet(*shootName) {
-		Fail("You can set either the shoot YAML path or specify a shootName to test against")
-	}
-
-	if !StringSet(*shootTestYamlPath) && !StringSet(*shootName) {
-		Fail("You should either set the shoot YAML path or specify a shootName to test against")
-	}
-
-	if StringSet(*shootTestYamlPath) {
-		if !FileExists(*shootTestYamlPath) {
-			Fail("shoot yaml path is set but invalid")
-		}
+	if !StringSet(*shootName) {
+		Fail("You should specify a shootName to test against")
 	}
 
 	if !StringSet(*kubeconfig) {
@@ -109,10 +109,8 @@ var _ = Describe("Shoot application testing", func() {
 	var (
 		shootGardenerTest   *ShootGardenerTest
 		shootTestOperations *GardenerTestOperation
-		cloudProvider       v1beta1.CloudProvider
 		shootAppTestLogger  *logrus.Logger
 		guestBooktpl        *template.Template
-		targetTestShoot     *v1beta1.Shoot
 		resourcesDir        = filepath.Join("..", "..", "resources")
 		chartRepo           = filepath.Join(resourcesDir, "charts")
 	)
@@ -122,37 +120,21 @@ var _ = Describe("Shoot application testing", func() {
 		validateFlags()
 		shootAppTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
 
-		// check if a shoot spec is provided, if yes create a shoot object from it and use it for testing
-		if StringSet(*shootTestYamlPath) {
-			*cleanup = true
-			// parse shoot yaml into shoot object and generate random test names for shoots
-			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
-			Expect(err).NotTo(HaveOccurred())
-
-			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, shootAppTestLogger)
-			Expect(err).NotTo(HaveOccurred())
-
-			targetTestShoot, err = shootGardenerTest.CreateShoot(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, targetTestShoot)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		if StringSet(*shootName) {
-			var err error
-			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootAppTestLogger)
-			Expect(err).NotTo(HaveOccurred())
-
-			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
-			shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
-			Expect(err).NotTo(HaveOccurred())
-		}
 		var err error
-		cloudProvider, err = shootTestOperations.GetCloudProvider()
+		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootAppTestLogger)
 		Expect(err).NotTo(HaveOccurred())
 
-		guestBooktpl = template.Must(template.ParseFiles(filepath.Join(TemplateDir, GuestBookTemplateName)))
+		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
+		Expect(err).NotTo(HaveOccurred())
+
+		templateFilepath := filepath.Join(TemplateDir, GuestBookTemplateName)
+
+		if !FileExists(templateFilepath) {
+			Fail(fmt.Sprintf("could not find Guest book template in '%s'", templateFilepath))
+		}
+
+		guestBooktpl = template.Must(template.ParseFiles(templateFilepath))
 	}, InitializationTimeout)
 
 	CAfterSuite(func(ctx context.Context) {
@@ -217,14 +199,14 @@ var _ = Describe("Shoot application testing", func() {
 				redisSlaveServiceToDelete = &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: helmDeployNamespace,
-						Name:      RedisSalve,
+						Name:      RedisSlave,
 					},
 				}
 
 				redisSlaveStatefulSetToDelete = &appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: helmDeployNamespace,
-						Name:      RedisSalve,
+						Name:      RedisSlave,
 					},
 				}
 			)
@@ -251,12 +233,6 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("redis and the guestbook app have been cleaned up!")
-
-		if *cleanup {
-			By("Cleaning up test shoot")
-			err := shootGardenerTest.DeleteShoot(ctx)
-			Expect(err).NotTo(HaveOccurred())
-		}
 	}, FinalizationTimeout)
 
 	CAfterEach(func(ctx context.Context) {
@@ -264,7 +240,7 @@ var _ = Describe("Shoot application testing", func() {
 	}, DumpStateTimeout)
 
 	CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
-		err := shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), v1beta1.GardenerName, *downloadPath)
+		err := shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), gardencorev1alpha1.GardenerName, *downloadPath)
 		Expect(err).NotTo(HaveOccurred())
 
 		By(fmt.Sprintf("Shoot Kubeconfig downloaded successfully to %s", *downloadPath))
@@ -289,7 +265,7 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Applying redis chart")
-		if cloudProvider == v1beta1.CloudProviderAlicloud {
+		if shoot.Spec.Provider.Type == "alicloud" {
 			// AliCloud requires a minimum of 20 GB for its PVCs
 			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", map[string]interface{}{"master": map[string]interface{}{
 				"persistence": map[string]interface{}{

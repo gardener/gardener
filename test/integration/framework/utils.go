@@ -22,8 +22,6 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
@@ -31,8 +29,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -157,7 +157,7 @@ func (o *GardenerTestOperation) dashboardAvailableWithBasicAuth(ctx context.Cont
 	return nil
 }
 
-func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *gardenv1beta1.Shoot) error {
+func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *gardencorev1alpha1.Shoot) error {
 	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
 	if err != nil {
 		return fmt.Errorf("failed to patch bytes")
@@ -177,7 +177,7 @@ func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, n
 }
 
 // ShootCreationCompleted checks if a shoot is successfully reconciled.
-func ShootCreationCompleted(newShoot *gardenv1beta1.Shoot) bool {
+func ShootCreationCompleted(newShoot *gardencorev1alpha1.Shoot) bool {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
 		return false
 	}
@@ -279,18 +279,18 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 	return false
 }
 
-func shootIsScheduledSuccessfully(newSpec *gardenv1beta1.ShootSpec) bool {
-	if newSpec.Cloud.Seed != nil {
+func shootIsScheduledSuccessfully(newSpec *gardencorev1alpha1.ShootSpec) bool {
+	if newSpec.SeedName != nil {
 		return true
 	}
 	return false
 }
 
-func setHibernation(shoot *gardenv1beta1.Shoot, hibernated bool) {
+func setHibernation(shoot *gardencorev1alpha1.Shoot, hibernated bool) {
 	if shoot.Spec.Hibernation != nil {
 		shoot.Spec.Hibernation.Enabled = &hibernated
 	}
-	shoot.Spec.Hibernation = &gardenv1beta1.Hibernation{
+	shoot.Spec.Hibernation = &gardencorev1alpha1.Hibernation{
 		Enabled: &hibernated,
 	}
 }
@@ -348,4 +348,45 @@ func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namesp
 
 		return retry.MinorError(fmt.Errorf("deployment currently has '%d' replicas. Desired: %d", deployment.Status.AvailableReplicas, desiredReplicas))
 	})
+}
+
+// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
+func scaleGardenerComponentForIntegrationTests(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32, name string) (*int32, error) {
+	if desiredReplicas == nil {
+		return nil, nil
+	}
+
+	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
+	defer cancelCtxSetup()
+
+	replicas, err := GetDeploymentReplicas(ctxSetup, client, "garden", name)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve the replica count of the %s deployment: '%v'", name, err)
+	}
+	if replicas == nil || *replicas == *desiredReplicas {
+		return nil, nil
+	}
+	// scale the scheduler deployment
+	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key("garden", name), *desiredReplicas); err != nil {
+		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
+	}
+
+	// wait until scaled
+	if err := WaitUntilDeploymentScaled(ctxSetup, client, "garden", name, *desiredReplicas); err != nil {
+		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
+	}
+	return replicas, nil
+}
+
+// ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
+func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return scaleGardenerComponentForIntegrationTests(setupContextTimeout, client, desiredReplicas, "gardener-scheduler")
+}
+
+// ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
+func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return scaleGardenerComponentForIntegrationTests(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager")
 }

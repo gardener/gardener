@@ -679,4 +679,153 @@ var _ = Describe("helper", func() {
 			false,
 		),
 	)
+
+	Describe("#GetShootMachineImageFromLatestExpirableVersion", func() {
+		It("should return the Machine Image containing only the latest machine image version", func() {
+			latestVersion := "1.0.0"
+			inputImage := gardencorev1alpha1.MachineImage{
+				Name: "coreos",
+				Versions: []gardencorev1alpha1.ExpirableVersion{
+					{
+						Version: "0.0.2",
+					},
+					{
+						Version: latestVersion,
+					},
+					{
+						Version: "0.0.2",
+					},
+				},
+			}
+
+			version, image, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).NotTo(HaveOccurred())
+
+			latestSemverVersion, _ := semver.NewVersion(latestVersion)
+			Expect(version).To(Equal(latestSemverVersion))
+			Expect(image.Name).To(Equal("coreos"))
+			Expect(image.Version).To(Equal(latestVersion))
+		})
+
+		It("should return the Machine Image", func() {
+			latestVersion := "1.1"
+			inputImage := gardencorev1alpha1.MachineImage{
+				Name: "coreos",
+				Versions: []gardencorev1alpha1.ExpirableVersion{
+					{
+						Version: latestVersion,
+					},
+				},
+			}
+
+			version, image, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).NotTo(HaveOccurred())
+
+			latestSemverVersion, err := semver.NewVersion(latestVersion)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(Equal(latestSemverVersion))
+			Expect(image.Version).To(Equal(latestVersion))
+		})
+
+		It("should return an error for invalid semVerVersion", func() {
+			inputImage := gardencorev1alpha1.MachineImage{
+				Name: "coreos",
+				Versions: []gardencorev1alpha1.ExpirableVersion{
+					{
+						Version: "0.0.XX",
+					},
+				},
+			}
+
+			_, _, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#ShootExpirableVersionExists", func() {
+		var (
+			constraint        gardencorev1alpha1.MachineImage
+			shootMachineImage gardencorev1alpha1.ShootMachineImage
+		)
+		BeforeEach(func() {
+			constraint = gardencorev1alpha1.MachineImage{
+				Name: "coreos",
+				Versions: []gardencorev1alpha1.ExpirableVersion{
+					{
+						Version: "0.0.2",
+					},
+					{
+						Version: "0.0.3",
+					},
+				},
+			}
+
+			shootMachineImage = gardencorev1alpha1.ShootMachineImage{
+				Name:    "coreos",
+				Version: "0.0.2",
+			}
+		})
+		It("should determine that the version exists", func() {
+			exists, index := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(trueVar))
+			Expect(index).To(Equal(0))
+		})
+		It("should determine that the version does not exist", func() {
+			shootMachineImage.Name = "xy"
+			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(false))
+		})
+		It("should determine that the version does not exist", func() {
+			shootMachineImage.Version = "0.0.4"
+			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(false))
+		})
+	})
+
+	var (
+		expirableVersions = []gardencorev1alpha1.ExpirableVersion{
+			{Version: "1.15.1"},
+			{Version: "1.14.4"},
+			{Version: "1.12.9"},
+		}
+	)
+
+	DescribeTable("#DetermineNextKubernetesMinorVersion",
+		func(cloudProfile gardencorev1alpha1.CloudProfile, currentVersion, expectedVersion string, expectVersion bool) {
+			ok, newVersion, err := DetermineNextKubernetesMinorVersion(&cloudProfile, currentVersion)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ok).To(Equal(expectVersion))
+			Expect(newVersion).To(Equal(expectedVersion))
+		},
+		Entry("version = 1.15.1",
+			gardencorev1alpha1.CloudProfile{
+				Spec: gardencorev1alpha1.CloudProfileSpec{
+					Kubernetes: gardencorev1alpha1.KubernetesSettings{Versions: expirableVersions},
+				},
+			},
+			"1.14.4",
+			"1.15.1",
+			true,
+		),
+		Entry("version = 1.12.9",
+			gardencorev1alpha1.CloudProfile{
+				Spec: gardencorev1alpha1.CloudProfileSpec{
+					Kubernetes: gardencorev1alpha1.KubernetesSettings{Versions: expirableVersions},
+				},
+			},
+			"1.11.0",
+			"1.12.9",
+			true,
+		),
+		Entry("no new version",
+			gardencorev1alpha1.CloudProfile{
+				Spec: gardencorev1alpha1.CloudProfileSpec{
+					Kubernetes: gardencorev1alpha1.KubernetesSettings{Versions: expirableVersions},
+				},
+			},
+			"1.15.1",
+			"",
+			false,
+		),
+	)
 })

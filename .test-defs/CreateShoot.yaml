@@ -8,6 +8,30 @@ spec:
 
   command: [bash, -c]
   args:
-  - go run -mod=vendor ./.test-defs/cmd/create-shoot
+  - >-
+    go test -timeout=0 -mod=vendor ./test/integration/shoots/creation
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -verbose=debug
+    -gardener-kubecfg-path=$TM_KUBECONFIG_PATH/gardener.config
+    -seed-kubecfg-path=$TM_KUBECONFIG_PATH/seed.config
+    -shoot-kubecfg-path=$TM_KUBECONFIG_PATH/shoot.config
+    -shoot-name=$SHOOT_NAME
+    -cloud-profile=$CLOUDPROFILE
+    -secret-binding=$SECRET_BINDING
+    -provider-type=$PROVIDER_TYPE
+    -k8s-version=$K8S_VERSION
+    -region=$REGION
+    -project-namespace=$PROJECT_NAMESPACE
+    -infrastructure-provider-config-filepath=$INFRASTRUCTURE_PROVIDER_CONFIG_FILEPATH
+    -controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH
+    -networking-provider-config-filepath=$NETWORKING_PROVIDER_CONFIG_FILEPATH
+    -worker-zone=$ZONE
+    -networking-pods=$NETWORKING_PODS
+    -networking-services=$NETWORKING_SERVICES
+    -networking-nodes=$NETWORKING_NODES
+#    -machine-image-name=$MACHINE_IMAGE
+#    -machine-image-version=$MACHINE_IMAGE_VERSION
+#    -machine-type=$MACHINE_TYPE
+#    -external-domain=
 
   image: golang:1.13.0

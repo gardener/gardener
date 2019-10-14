@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operations_test
+package deletion
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestShootOperations(t *testing.T) {
+func TestShootApplications(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Operations Integration Test Suite")
+	RunSpecs(t, "Shoot Deletion Test Suite")
 }

@@ -26,7 +26,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "settings v1alpha1 Suite")
+	RunSpecs(t, "Settings V1alpha1 Suite")
 }
 
 var _ = Describe("Defaults", func() {

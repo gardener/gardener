@@ -58,7 +58,7 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener-extensions v0.0.0-20190906160200-5c329d46ae81 => github.com/gardener/gardener-extensions v0.0.0-20190906160200-5c329d46ae81
+# github.com/gardener/gardener-extensions v0.0.0-20191007140606-8fe857e58f6f => github.com/gardener/gardener-extensions v0.0.0-20190906160200-5c329d46ae81
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/install
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1
@@ -254,7 +254,7 @@ github.com/shurcooL/sanitized_anchor_name
 github.com/sirupsen/logrus
 # github.com/spf13/cobra v0.0.5
 github.com/spf13/cobra
-# github.com/spf13/pflag v1.0.3
+# github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
 # github.com/ulikunitz/xz v0.5.6
 github.com/ulikunitz/xz

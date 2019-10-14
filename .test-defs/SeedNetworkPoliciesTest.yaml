@@ -12,11 +12,11 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -mod=vendor ./test/integration/seeds/networkpolicies/$CLOUDPROVIDER
+    go test -timeout=0 -mod=vendor ./test/integration/seeds/networkpolicies/$CLOUDPROVIDER
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor -ginkgo.nodes=25
     -ginkgo.randomizeAllSpecs -ginkgo.randomizeSuites -ginkgo.failOnPending
     -ginkgo.trace -ginkgo.race
-    --kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    --kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     --shootName=$SHOOT_NAME
     --shootNamespace=$PROJECT_NAMESPACE
     --cleanup=true

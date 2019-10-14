@@ -14,82 +14,45 @@
 package framework
 
 import (
-	"context"
+	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 // NewWorkerGardenerTest creates a new NewWorkerGardenerTest
-func NewWorkerGardenerTest(ctx context.Context, shootGardenTest *ShootGardenerTest, k8sShootClient kubernetes.Interface) (*WorkerGardenerTest, error) {
-	cloudProfileForShoot := &gardenv1beta1.CloudProfile{}
-	if err := shootGardenTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: "garden", Name: shootGardenTest.Shoot.Spec.Cloud.Profile}, cloudProfileForShoot); err != nil {
-		return nil, err
-	}
-
+func NewWorkerGardenerTest(shootGardenTest *ShootGardenerTest) (*WorkerGardenerTest, error) {
 	return &WorkerGardenerTest{
 		ShootGardenerTest: shootGardenTest,
-		CloudProfile:      cloudProfileForShoot,
-		ShootClient:       k8sShootClient,
 	}, nil
 }
 
-// GetMachineImagesFromShoot returns the MachineImages specified in the Shoot spec
-func (s *WorkerGardenerTest) GetMachineImagesFromShoot() ([]gardenv1beta1.ShootMachineImage, error) {
-	cloudProvider, err := s.GetCloudProvider()
-	if err != nil {
-		s.ShootGardenerTest.Logger.Infof("Can not get CloudProvider")
-		return nil, err
+// SetupShootWorkers prepares the Shoot with multiple workers. Only supporting one optional zone.
+func (s *WorkerGardenerTest) SetupShootWorkers(shootMachineImageName *string, shootMachineImageName2 *string, workerZone *string) error {
+	if len(s.CloudProfile.Spec.MachineImages) < 2 {
+		return fmt.Errorf("this integration tests needs at least two different machine images to be defined in the CloudProfile")
 	}
 
-	machineImages := []gardenv1beta1.ShootMachineImage{}
+	// clear current workers
+	s.ShootGardenerTest.Shoot.Spec.Provider.Workers = []gardencorev1alpha1.Worker{}
 
-	switch cloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.AWS.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
+	// determine two different machine image names from the CloudProfile
+	if shootMachineImageName == nil || len(*shootMachineImageName) == 0 || shootMachineImageName2 == nil || len(*shootMachineImageName2) == 0 {
+		for imageNumber := 0; imageNumber < 2; imageNumber++ {
+			if err := AddWorker(s.ShootGardenerTest.Shoot, s.ShootGardenerTest.CloudProfile, s.CloudProfile.Spec.MachineImages[imageNumber], workerZone); err != nil {
+				return err
 			}
 		}
-	case gardenv1beta1.CloudProviderAzure:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Azure.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
-			}
+	} else {
+		// set the latest version for the provided image names
+		err := AddWorkerForName(s.ShootGardenerTest.Shoot, s.ShootGardenerTest.CloudProfile, shootMachineImageName, workerZone)
+		if err != nil {
+			return err
 		}
-	case gardenv1beta1.CloudProviderGCP:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.GCP.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
-			}
-		}
-	case gardenv1beta1.CloudProviderAlicloud:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Alicloud.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
-			}
-		}
-	case gardenv1beta1.CloudProviderOpenStack:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.OpenStack.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
-			}
-		}
-	case gardenv1beta1.CloudProviderPacket:
-		for _, worker := range s.ShootGardenerTest.Shoot.Spec.Cloud.Packet.Workers {
-			if worker.MachineImage != nil {
-				machineImages = append(machineImages, *worker.MachineImage)
-			}
+
+		err = AddWorkerForName(s.ShootGardenerTest.Shoot, s.ShootGardenerTest.CloudProfile, shootMachineImageName2, workerZone)
+		if err != nil {
+			return err
 		}
 	}
-
-	return machineImages, nil
-}
-
-//GetCloudProvider returns the CloudProvider of the shoot
-func (s *WorkerGardenerTest) GetCloudProvider() (gardenv1beta1.CloudProvider, error) {
-	return helper.DetermineCloudProviderInProfile(s.CloudProfile.Spec)
+	return nil
 }

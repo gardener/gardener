@@ -11,8 +11,8 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -mod=vendor ./test/integration/gardener/rbac
+    go test -timeout=0 -mod=vendor ./test/integration/gardener/rbac
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-    -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -project-namespace=$PROJECT_NAMESPACE
   image: golang:1.13.0

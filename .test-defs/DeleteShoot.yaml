@@ -8,6 +8,11 @@ spec:
 
   command: [bash, -c]
   args:
-  - go run -mod=vendor ./.test-defs/cmd/delete-shoot
+  - >-
+    go test -timeout=0 -mod=vendor ./test/integration/shoots/deletion
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    --shoot-name=$SHOOT_NAME
+    --project-namespace=$PROJECT_NAMESPACE
+    --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
 
   image: golang:1.13.0

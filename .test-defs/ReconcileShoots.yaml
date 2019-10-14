@@ -10,9 +10,9 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -mod=vendor ./test/integration/gardener/reconcile
+    go test -timeout=0 -mod=vendor ./test/integration/gardener/reconcile
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor --verbose=debug
-    -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -version=$GARDENER_VERSION
 
   image: golang:1.13.0
