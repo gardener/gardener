@@ -116,9 +116,10 @@ var _ = Describe("Shoot update testing", func() {
 		}
 
 		By(fmt.Sprintf("updating shoot %s to version %s", shootTestOperations.Shoot.Name, newVersion))
-		shootTestOperations.Shoot.Spec.Kubernetes.Version = newVersion
-
-		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot)
+		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+			shoot.Spec.Kubernetes.Version = newVersion
+			return nil
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 	}, UpdateKubernetesVersionTimeout)

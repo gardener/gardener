@@ -51,9 +51,9 @@ var (
 )
 
 const (
-	UpdateKubernetesVersionTimeout = 600 * time.Second
-	InitializationTimeout          = 600 * time.Second
-	DumpStateTimeout               = 5 * time.Minute
+	ScaleWorkerTimeout    = 15 * time.Minute
+	InitializationTimeout = 600 * time.Second
+	DumpStateTimeout      = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -97,19 +97,26 @@ var _ = Describe("Shoot update testing", func() {
 	}, DumpStateTimeout)
 
 	CIt("should add one machine to the worker pool", func(ctx context.Context) {
+		shoot := shootTestOperations.Shoot
 		if len(shootTestOperations.Shoot.Spec.Provider.Workers) == 0 {
 			Skip("no workers defined")
 		}
-
-		shootTestOperations.Shoot.Spec.Provider.Workers[0].Minimum = shootTestOperations.Shoot.Spec.Provider.Workers[0].Minimum + 1
-		if shootTestOperations.Shoot.Spec.Provider.Workers[0].Maximum < shootTestOperations.Shoot.Spec.Provider.Workers[0].Maximum {
-			shootTestOperations.Shoot.Spec.Provider.Workers[0].Maximum = shootTestOperations.Shoot.Spec.Provider.Workers[0].Minimum
+		var (
+			min = shoot.Spec.Provider.Workers[0].Minimum + 1
+			max = shoot.Spec.Provider.Workers[0].Maximum
+		)
+		if shoot.Spec.Provider.Workers[0].Maximum < min {
+			max = min
 		}
 
-		By(fmt.Sprintf("updating shoot worker to min of %d machines", shootTestOperations.Shoot.Spec.Provider.Workers[0].Minimum))
-		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot)
+		By(fmt.Sprintf("updating shoot worker to min of %d machines", min))
+		_, err := shootGardenerTest.UpdateShoot(ctx, shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+			shoot.Spec.Provider.Workers[0].Minimum = min
+			shoot.Spec.Provider.Workers[0].Maximum = max
+			return nil
+		})
 		Expect(err).ToNot(HaveOccurred())
 
-	}, UpdateKubernetesVersionTimeout)
+	}, ScaleWorkerTimeout)
 
 })

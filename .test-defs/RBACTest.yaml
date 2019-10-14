@@ -6,7 +6,7 @@ spec:
   description: Tests if rbac is enabled for the gardener and if a service acount has acccess to the garden ns
 
   activeDeadlineSeconds: 1800
-  labels: ["release"]
+  labels: ["release", "gardener"]
 
   command: [bash, -c]
   args:

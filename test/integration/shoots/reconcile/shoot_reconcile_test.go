@@ -30,7 +30,6 @@ import (
 	"context"
 	"flag"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	. "github.com/gardener/gardener/test/integration/shoots"
@@ -98,19 +97,18 @@ var _ = Describe("Shoot update testing", func() {
 	}, DumpStateTimeout)
 
 	CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
-		shoot := shootTestOperations.Shoot
-
 		By("maintain shoot")
-		shoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
-		_, err := shootGardenerTest.UpdateShoot(ctx, shoot)
-		Expect(err).ToNot(HaveOccurred())
-
-		err = shootTestOperations.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shootTestOperations.Shoot.Name, Namespace: shootTestOperations.Shoot.Namespace}, shoot)
+		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+			shoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+			return nil
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 		By("reconcile shoot")
-		shoot.Annotations[common.ShootOperation] = common.ShootOperationReconcile
-		_, err = shootGardenerTest.UpdateShoot(ctx, shoot)
+		_, err = shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+			shoot.Annotations[common.ShootOperation] = common.ShootOperationReconcile
+			return nil
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 	}, ReconcileTimeout)

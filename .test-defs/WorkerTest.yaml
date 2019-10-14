@@ -6,6 +6,8 @@ spec:
   description: Tests the creation of a shoot with worker pools having different machine images.
   activeDeadlineSeconds: 3600
 
+  labels: ["gardener"]
+
   command: [bash, -c]
   args:
   - >-

@@ -6,7 +6,7 @@ spec:
   description: Tests the deployment of a guestbook.
 
   activeDeadlineSeconds: 1800
-  labels: ["default", "release"]
+  labels: ["default", "release", "shoot"]
 
   command: [bash, -c]
   args:
