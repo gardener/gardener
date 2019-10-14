@@ -113,6 +113,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 	var (
 		secretBinding       = obj.DeepCopy()
 		secretBindingLogger = logger.NewFieldLogger(logger.Logger, "secretbinding", fmt.Sprintf("%s/%s", secretBinding.Namespace, secretBinding.Name))
+		ctx                 = context.TODO()
 	)
 
 	// The deletionTimestamp labels a SecretBinding as intended to get deleted. Before deletion,
@@ -138,7 +139,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 				secretFinalizers := sets.NewString(secret.Finalizers...)
 				secretFinalizers.Delete(gardencorev1alpha1.ExternalGardenerName)
 				secret.Finalizers = secretFinalizers.UnsortedList()
-				if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
+				if err := c.k8sGardenClient.Client().Update(ctx, secret); client.IgnoreNotFound(err) != nil {
 					secretBindingLogger.Error(err.Error())
 					return err
 				}
@@ -161,15 +162,9 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 		return errors.New("SecretBinding still has references")
 	}
 
-	finalizers := sets.NewString(secretBinding.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-
-		secretBinding.Finalizers = finalizers.UnsortedList()
-		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil {
-			secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
-			return err
-		}
+	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secretBinding, gardencorev1alpha1.GardenerName); err != nil {
+		secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
+		return err
 	}
 
 	// Add the Gardener finalizer to the referenced SecretBinding secret to protect it from deletion as long as
@@ -179,14 +174,10 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 		secretBindingLogger.Error(err.Error())
 		return err
 	}
-	secretFinalizers := sets.NewString(secret.Finalizers...)
-	if !secretFinalizers.Has(gardencorev1alpha1.ExternalGardenerName) {
-		secretFinalizers.Insert(gardencorev1alpha1.ExternalGardenerName)
-		secret.Finalizers = secretFinalizers.UnsortedList()
-		if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); err != nil {
-			secretBindingLogger.Error(err.Error())
-			return err
-		}
+
+	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardencorev1alpha1.ExternalGardenerName); err != nil {
+		secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
+		return err
 	}
 
 	return nil

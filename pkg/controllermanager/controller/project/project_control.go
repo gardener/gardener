@@ -15,11 +15,14 @@
 package project
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -27,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -132,15 +134,8 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1alpha1.Project) (bool
 		return c.delete(project, projectLogger)
 	}
 
-	finalizers := sets.NewString(project.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-		project.Finalizers = finalizers.UnsortedList()
-
-		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Projects().Update(project); err != nil {
-			projectLogger.Errorf("Could not add finalizer to Project: %s", err.Error())
-			return false, err
-		}
+	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), project, gardencorev1alpha1.GardenerName); err != nil {
+		return false, fmt.Errorf("could not add finalizer to Project: %s", err.Error())
 	}
 
 	return false, c.reconcile(project, projectLogger)

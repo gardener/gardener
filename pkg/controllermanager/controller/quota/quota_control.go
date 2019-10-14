@@ -15,6 +15,7 @@
 package quota
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -143,15 +144,9 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key strin
 		return errors.New("Quota still has references")
 	}
 
-	finalizers := sets.NewString(quota.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-		quota.Finalizers = finalizers.UnsortedList()
-
-		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Quotas(quota.Namespace).Update(quota); err != nil {
-			quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
-			return err
-		}
+	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), quota, gardencorev1alpha1.GardenerName); err != nil {
+		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
+		return err
 	}
 
 	return nil

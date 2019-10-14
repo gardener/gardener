@@ -15,6 +15,7 @@
 package cloudprofile
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -142,15 +143,9 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1alpha1.CloudProf
 		return errors.New("CloudProfile still has references")
 	}
 
-	finalizers := sets.NewString(cloudProfile.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-		cloudProfile.Finalizers = finalizers.UnsortedList()
-
-		if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().CloudProfiles().Update(cloudProfile); err != nil {
-			logger.Logger.Errorf("Could not add finalizer to CloudProfile: %s", err.Error())
-			return err
-		}
+	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), cloudProfile, gardencorev1alpha1.GardenerName); err != nil {
+		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
+		return err
 	}
 
 	return nil

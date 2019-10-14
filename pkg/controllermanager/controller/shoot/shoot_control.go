@@ -92,7 +92,7 @@ func (c *Controller) respectSyncPeriodOverwrite() bool {
 
 func (c *Controller) checkSeedAndSyncClusterResource(shoot *gardencorev1alpha1.Shoot, o *operation.Operation) error {
 	seedName := shoot.Spec.SeedName
-	if seedName == nil {
+	if seedName == nil || o.Seed == nil {
 		return nil
 	}
 
@@ -242,6 +242,27 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, o *operatio
 		reconcileAllowed                           = !reconcileInMaintenanceOnly || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow
 		allowedToUpdate                            = !failedOrIgnored && reconcileAllowed
 	)
+	// need retry logic, because the scheduler is acting on it at the same time and cached object might not be up to date
+	updatedShoot, err := kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(curShoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		finalizers := sets.NewString(curShoot.Finalizers...)
+		if finalizers.Has(gardencorev1alpha1.GardenerName) {
+			return curShoot, nil
+		}
+
+		finalizers.Insert(gardencorev1alpha1.GardenerName)
+		curShoot.Finalizers = finalizers.UnsortedList()
+
+		return curShoot, nil
+	})
+
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("Could not add finalizer to Shoot: %s", err.Error())
+	}
+
+	// make sure that the latest version of the shoot object is used as the basis for next operations
+	o.Shoot.Info = updatedShoot
+	shoot = updatedShoot
+
 	o.Logger.WithFields(logrus.Fields{
 		"operationType":              operationType,
 		"respectSyncPeriodOverwrite": respectSyncPeriodOverwrite,
@@ -254,19 +275,6 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, o *operatio
 		"reconcileAllowed":                           reconcileAllowed,
 		"allowedToUpdate":                            allowedToUpdate,
 	}).Info("Checking if Shoot can be reconciled")
-
-	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
-	if !finalizers.Has(gardencorev1alpha1.GardenerName) {
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
-		o.Shoot.Info.Finalizers = finalizers.UnsortedList()
-
-		newShoot, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
-		if err != nil {
-			o.Logger.Errorf("Could not add finalizer to Shoot: %s", err.Error())
-			return reconcile.Result{}, err
-		}
-		o.Shoot.Info = newShoot
-	}
 
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
@@ -291,7 +299,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, o *operatio
 		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
 	}
 
-	if shoot.Spec.SeedName == nil {
+	if shoot.Spec.SeedName == nil || o.Seed == nil {
 		message := "Cannot reconcile Shoot: Waiting for Shoot to get assigned to a Seed"
 		c.recorder.Event(shoot, corev1.EventTypeWarning, "OperationPending", message)
 		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("shoot %s/%s has not yet been scheduled on a Seed", shoot.Namespace, shoot.Name), c.updateShootStatusProcessing(shoot, message))
