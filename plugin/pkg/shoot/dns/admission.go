@@ -139,7 +139,7 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 	assignDefaultDomainIfNeeded(shoot, d.projectLister, d.secretLister)
 
 	// If the provider != unmanaged then we need a configured domain.
-	if shoot.Spec.DNS.Domain == nil {
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s", garden.DNSUnmanaged))
 	}
 
