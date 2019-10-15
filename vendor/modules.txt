@@ -507,7 +507,7 @@ gopkg.in/natefinch/lumberjack.v2
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
-# k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
+# k8s.io/api v0.0.0-20191004102349-159aefb8556b => k8s.io/api v0.0.0-20191004102349-159aefb8556b
 k8s.io/api/admission/v1beta1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
@@ -551,7 +551,7 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
-# k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d => k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1
+# k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689 => k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/meta
@@ -607,7 +607,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.0.0-20190313205120-8b27c41bdbb1 => k8s.io/apiserver v0.0.0-20190313205120-8b27c41bdbb1
+# k8s.io/apiserver v0.0.0-20191010014313-3893be10d307 => k8s.io/apiserver v0.0.0-20191010014313-3893be10d307
 k8s.io/apiserver/pkg/admission
 k8s.io/apiserver/pkg/admission/configuration
 k8s.io/apiserver/pkg/admission/initializer
@@ -902,10 +902,10 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70 => k8s.io/cluster-bootstrap v0.0.0-20190314002537-50662da99b70
+# k8s.io/cluster-bootstrap v0.0.0-20190816225014-88e17f53ad9d => k8s.io/cluster-bootstrap v0.0.0-20190816225014-88e17f53ad9d
 k8s.io/cluster-bootstrap/token/api
 k8s.io/cluster-bootstrap/token/util
-# k8s.io/code-generator v0.0.0-20190713022532-93d7507fc8ff => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
+# k8s.io/code-generator v0.0.0-20190713022532-93d7507fc8ff => k8s.io/code-generator v0.0.0-20190704094409-6c2a4329ac29
 k8s.io/code-generator/cmd/client-gen
 k8s.io/code-generator/cmd/client-gen/args
 k8s.io/code-generator/cmd/client-gen/generators
@@ -929,7 +929,7 @@ k8s.io/code-generator/cmd/lister-gen/args
 k8s.io/code-generator/cmd/lister-gen/generators
 k8s.io/code-generator/pkg/namer
 k8s.io/code-generator/pkg/util
-# k8s.io/component-base v0.0.0-20190314000054-4a91899592f4 => k8s.io/component-base v0.0.0-20190314000054-4a91899592f4
+# k8s.io/component-base v0.0.0-20190816222507-f3799749b6b7 => k8s.io/component-base v0.0.0-20190816222507-f3799749b6b7
 k8s.io/component-base/cli/flag
 k8s.io/component-base/config
 k8s.io/component-base/config/v1alpha1
@@ -967,7 +967,7 @@ k8s.io/helm/pkg/urlutil
 k8s.io/helm/pkg/version
 # k8s.io/klog v0.3.3 => k8s.io/klog v0.1.0
 k8s.io/klog
-# k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5 => k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
+# k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532 => k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532
 k8s.io/kube-aggregator/pkg/apis/apiregistration
 k8s.io/kube-aggregator/pkg/apis/apiregistration/install
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
@@ -996,7 +996,7 @@ k8s.io/kube-openapi/pkg/schemaconv
 k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
-# k8s.io/metrics v0.0.0-20190816224245-c61a0d549e17
+# k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 k8s.io/metrics/pkg/apis/metrics
 k8s.io/metrics/pkg/apis/metrics/v1alpha1
 k8s.io/metrics/pkg/apis/metrics/v1beta1
