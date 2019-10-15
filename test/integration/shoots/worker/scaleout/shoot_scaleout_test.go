@@ -24,13 +24,12 @@
 		- Successful reconciliation of the Shoot after the Kubernetes Version update.
  **/
 
-package shootupdate
+package shootscaleout_test
 
 import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"time"
 
 	. "github.com/gardener/gardener/test/integration/shoots"
@@ -45,18 +44,16 @@ import (
 )
 
 var (
-	kubeconfig        = flag.String("kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
-	kubernetesVersion = flag.String("version", "", "the version to update the shoot")
-	shootName         = flag.String("shoot-name", "", "the name of the shoot we want to test")
-	shootNamespace    = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
-	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+	shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+	shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+	logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 )
 
 const (
-	UpdateKubernetesVersionTimeout = 600 * time.Second
-	InitializationTimeout          = 600 * time.Second
-	DumpStateTimeout               = 5 * time.Minute
+	ScaleWorkerTimeout    = 15 * time.Minute
+	InitializationTimeout = 600 * time.Second
+	DumpStateTimeout      = 5 * time.Minute
 )
 
 func validateFlags() {
@@ -99,29 +96,27 @@ var _ = Describe("Shoot update testing", func() {
 		shootTestOperations.AfterEach(ctx)
 	}, DumpStateTimeout)
 
-	CIt("should update the kubernetes version of the shoot to the next available minor version", func(ctx context.Context) {
-		currentVersion := shootTestOperations.Shoot.Spec.Kubernetes.Version
-		newVersion := *kubernetesVersion
-		if newVersion == "" {
-			var (
-				err error
-				ok  bool
-			)
-			cloudprofile := shootTestOperations.CloudProfile
-			ok, newVersion, err = helper.DetermineNextKubernetesMinorVersion(cloudprofile, currentVersion)
-			Expect(err).ToNot(HaveOccurred())
-			if !ok {
-				Skip("no new version found")
-			}
+	CIt("should add one machine to the worker pool", func(ctx context.Context) {
+		shoot := shootTestOperations.Shoot
+		if len(shootTestOperations.Shoot.Spec.Provider.Workers) == 0 {
+			Skip("no workers defined")
+		}
+		var (
+			min = shoot.Spec.Provider.Workers[0].Minimum + 1
+			max = shoot.Spec.Provider.Workers[0].Maximum
+		)
+		if shoot.Spec.Provider.Workers[0].Maximum < min {
+			max = min
 		}
 
-		By(fmt.Sprintf("updating shoot %s to version %s", shootTestOperations.Shoot.Name, newVersion))
-		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
-			shoot.Spec.Kubernetes.Version = newVersion
+		By(fmt.Sprintf("updating shoot worker to min of %d machines", min))
+		_, err := shootGardenerTest.UpdateShoot(ctx, shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+			shoot.Spec.Provider.Workers[0].Minimum = min
+			shoot.Spec.Provider.Workers[0].Maximum = max
 			return nil
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-	}, UpdateKubernetesVersionTimeout)
+	}, ScaleWorkerTimeout)
 
 })

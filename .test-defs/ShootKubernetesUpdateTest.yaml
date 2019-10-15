@@ -6,6 +6,8 @@ spec:
   description: Tests the kubernetes update of a shoot.
   activeDeadlineSeconds: 1800
 
+  labels: ["shoot"]
+
   command: [bash, -c]
   args:
   - >-

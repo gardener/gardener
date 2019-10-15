@@ -119,21 +119,36 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*gardencorev1alpha
 	return shoot, nil
 }
 
+// UpdateShootFunc represents a function that mutates the shoot to be updated
+type UpdateShootFunc = func(shoot *gardencorev1alpha1.Shoot) error
+
 // UpdateShoot Updates a shoot from a shoot Object and waits for its reconciliation
-func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, shoot *gardencorev1alpha1.Shoot, update UpdateShootFunc) (*gardencorev1alpha1.Shoot, error) {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = s.GardenClient.Client().Update(ctx, newShoot)
+		key, err := client.ObjectKeyFromObject(shoot)
 		if err != nil {
-			s.Logger.Debugf("unable to update shoot %s: %s", newShoot.Name, err.Error())
+			return retry.SevereError(err)
+		}
+
+		updatedShoot := &gardencorev1alpha1.Shoot{}
+		if err := s.GardenClient.Client().Get(ctx, key, updatedShoot); err != nil {
 			return retry.MinorError(err)
 		}
+
+		if err := update(updatedShoot); err != nil {
+			return retry.MinorError(err)
+		}
+
+		if err := s.GardenClient.Client().Update(ctx, updatedShoot); err != nil {
+			s.Logger.Debugf("unable to update shoot %s: %s", updatedShoot.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		s.Shoot = updatedShoot
 		return retry.Ok()
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	s.Shoot = newShoot
 
 	// Then we wait for the shoot to be created
 	err = s.WaitForShootToBeReconciled(ctx)
@@ -141,7 +156,7 @@ func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *gardencor
 		return nil, err
 	}
 
-	s.Logger.Infof("Shoot %s was successfully updated!", newShoot.Name)
+	s.Logger.Infof("Shoot %s was successfully updated!", shoot.Name)
 	return s.Shoot, nil
 }
 
