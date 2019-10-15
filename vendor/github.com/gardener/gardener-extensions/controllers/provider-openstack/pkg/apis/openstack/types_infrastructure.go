@@ -84,6 +84,8 @@ type RouterStatus struct {
 type FloatingPoolStatus struct {
 	// ID is the floating pool id.
 	ID string
+	// Name is the floating pool name.
+	Name string
 }
 
 // Purpose is a purpose of resources.

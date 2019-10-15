@@ -44,4 +44,6 @@ type MachineImage struct {
 	Offer string
 	// SKU is the stock keeping unit to pull images from.
 	SKU string
+	// URN is the uniform resource name, it has the format 'publisher:offer:sku:version'
+	URN *string
 }

@@ -38,6 +38,6 @@ type MachineImage struct {
 	Name string
 	// Version is the logical version of the machine image.
 	Version string
-	// ID is the id of the image.
+	// ID is the ID of the image.
 	ID string
 }

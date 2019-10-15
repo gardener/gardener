@@ -343,6 +343,7 @@ func autoConvert_v1alpha1_InfrastructureConfig_To_azure_InfrastructureConfig(in 
 	if err := Convert_v1alpha1_NetworkConfig_To_azure_NetworkConfig(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
+	out.Zoned = in.Zoned
 	return nil
 }
 
@@ -356,6 +357,7 @@ func autoConvert_azure_InfrastructureConfig_To_v1alpha1_InfrastructureConfig(in 
 	if err := Convert_azure_NetworkConfig_To_v1alpha1_NetworkConfig(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
+	out.Zoned = in.Zoned
 	return nil
 }
 
@@ -374,6 +376,7 @@ func autoConvert_v1alpha1_InfrastructureStatus_To_azure_InfrastructureStatus(in 
 	out.AvailabilitySets = *(*[]azure.AvailabilitySet)(unsafe.Pointer(&in.AvailabilitySets))
 	out.RouteTables = *(*[]azure.RouteTable)(unsafe.Pointer(&in.RouteTables))
 	out.SecurityGroups = *(*[]azure.SecurityGroup)(unsafe.Pointer(&in.SecurityGroups))
+	out.Zoned = in.Zoned
 	return nil
 }
 
@@ -392,6 +395,7 @@ func autoConvert_azure_InfrastructureStatus_To_v1alpha1_InfrastructureStatus(in 
 	out.AvailabilitySets = *(*[]AvailabilitySet)(unsafe.Pointer(&in.AvailabilitySets))
 	out.RouteTables = *(*[]RouteTable)(unsafe.Pointer(&in.RouteTables))
 	out.SecurityGroups = *(*[]SecurityGroup)(unsafe.Pointer(&in.SecurityGroups))
+	out.Zoned = in.Zoned
 	return nil
 }
 
@@ -406,6 +410,7 @@ func autoConvert_v1alpha1_MachineImage_To_azure_MachineImage(in *MachineImage, o
 	out.Publisher = in.Publisher
 	out.Offer = in.Offer
 	out.SKU = in.SKU
+	out.URN = (*string)(unsafe.Pointer(in.URN))
 	return nil
 }
 
@@ -420,6 +425,7 @@ func autoConvert_azure_MachineImage_To_v1alpha1_MachineImage(in *azure.MachineIm
 	out.Publisher = in.Publisher
 	out.Offer = in.Offer
 	out.SKU = in.SKU
+	out.URN = (*string)(unsafe.Pointer(in.URN))
 	return nil
 }
 
@@ -477,6 +483,7 @@ func autoConvert_v1alpha1_NetworkConfig_To_azure_NetworkConfig(in *NetworkConfig
 		return err
 	}
 	out.Workers = in.Workers
+	out.ServiceEndpoints = *(*[]string)(unsafe.Pointer(&in.ServiceEndpoints))
 	return nil
 }
 
@@ -490,6 +497,7 @@ func autoConvert_azure_NetworkConfig_To_v1alpha1_NetworkConfig(in *azure.Network
 		return err
 	}
 	out.Workers = in.Workers
+	out.ServiceEndpoints = *(*[]string)(unsafe.Pointer(&in.ServiceEndpoints))
 	return nil
 }
 

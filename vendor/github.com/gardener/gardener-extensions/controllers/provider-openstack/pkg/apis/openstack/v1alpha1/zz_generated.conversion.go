@@ -374,6 +374,7 @@ func Convert_openstack_FloatingPool_To_v1alpha1_FloatingPool(in *openstack.Float
 
 func autoConvert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *FloatingPoolStatus, out *openstack.FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
+	out.Name = in.Name
 	return nil
 }
 
@@ -384,6 +385,7 @@ func Convert_v1alpha1_FloatingPoolStatus_To_openstack_FloatingPoolStatus(in *Flo
 
 func autoConvert_openstack_FloatingPoolStatus_To_v1alpha1_FloatingPoolStatus(in *openstack.FloatingPoolStatus, out *FloatingPoolStatus, s conversion.Scope) error {
 	out.ID = in.ID
+	out.Name = in.Name
 	return nil
 }
 
