@@ -261,6 +261,15 @@ func Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out 
 			}
 		}
 
+		for _, region := range in.Spec.Regions {
+			if !zonesHaveName(out.Spec.Azure.Constraints.Zones, region.Name) {
+				z := garden.Zone{Region: region.Name}
+				for _, zones := range region.Zones {
+					z.Names = append(z.Names, zones.Name)
+				}
+				out.Spec.Azure.Constraints.Zones = append(out.Spec.Azure.Constraints.Zones, z)
+			}
+		}
 		cloudProfileConfig := &azurev1alpha1.CloudProfileConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
@@ -1056,6 +1065,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.Azure.Networks.Workers = infrastructureConfig.Networks.Workers
 		out.Spec.Cloud.Azure.Networks.VNet.CIDR = infrastructureConfig.Networks.VNet.CIDR
 		out.Spec.Cloud.Azure.Networks.VNet.Name = infrastructureConfig.Networks.VNet.Name
+		out.Spec.Cloud.Azure.Networks.ServiceEndpoints = infrastructureConfig.Networks.ServiceEndpoints
 		out.Spec.Cloud.Azure.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.Azure.Networks.Services = in.Spec.Networking.Services
 		out.Spec.Cloud.Azure.Networks.Nodes = &in.Spec.Networking.Nodes
@@ -1103,6 +1113,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 			}
 		}
 
+		out.Spec.Cloud.Azure.Zones = nil
 		out.Spec.Cloud.Azure.Workers = nil
 		for _, worker := range in.Spec.Provider.Workers {
 			var o garden.Worker
@@ -1110,6 +1121,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 				return err
 			}
 			out.Spec.Cloud.Azure.Workers = append(out.Spec.Cloud.Azure.Workers, o)
+			out.Spec.Cloud.Azure.Zones = o.Zones
 		}
 
 	case "gcp":

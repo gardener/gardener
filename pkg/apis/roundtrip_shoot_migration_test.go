@@ -893,111 +893,114 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 					},
 				}
 				controlPlaneConfigJSON, _ = json.Marshal(controlPlaneConfig)
+				worker1VolumeSize = "20Gi"
+				worker1VolumeType = "voltype"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}}"
 
-				worker1VolumeSize   = "20Gi"
-				worker1VolumeType   = "voltype"
-				worker1Zones        = []string{"zone1", "zone2"}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
-
-				in          = defaultCoreShoot.DeepCopy()
-				expectedOut = defaultGardenShoot.DeepCopy()
+				in          *gardencorev1alpha1.Shoot
+				expectedOut *gardenv1beta1.Shoot
 			)
 
-			in.Spec.Provider = gardencorev1alpha1.Provider{
-				Type: providerType,
-				ControlPlaneConfig: &gardencorev1alpha1.ProviderConfig{
-					RawExtension: runtime.RawExtension{
-						Raw: controlPlaneConfigJSON,
-					},
-				},
-				InfrastructureConfig: &gardencorev1alpha1.ProviderConfig{
-					RawExtension: runtime.RawExtension{
-						Raw: infrastructureConfigJSON,
-					},
-				},
-				Workers: []gardencorev1alpha1.Worker{
-					{
-						Annotations: worker1Annotations,
-						CABundle:    &worker1CABundle,
-						Kubernetes:  workerKubernetes,
-						Labels:      worker1Labels,
-						Name:        worker1Name,
-						Machine: gardencorev1alpha1.Machine{
-							Type: worker1MachineType,
-							Image: &gardencorev1alpha1.ShootMachineImage{
-								Name:    worker1MachineImageName,
-								Version: worker1MachineImageVersion,
-							},
-						},
-						Maximum:        worker1Maximum,
-						Minimum:        worker1Minimum,
-						MaxSurge:       &worker1MaxSurge,
-						MaxUnavailable: &worker1MaxUnavailable,
-						ProviderConfig: &gardencorev1alpha1.ProviderConfig{
-							RawExtension: runtime.RawExtension{
-								Raw: []byte(worker1ProviderConfig),
-							},
-						},
-						Taints: worker1Taints,
-						Volume: &gardencorev1alpha1.Volume{
-							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
-						},
-						Zones: worker1Zones,
-					},
-				},
-			}
+			BeforeEach(func() {
+				in = defaultCoreShoot.DeepCopy()
+				expectedOut = defaultGardenShoot.DeepCopy()
 
-			expectedOut.Annotations = map[string]string{
-				garden.MigrationShootDNSProviders: dnsProviderMigrationJSON,
-				garden.MigrationShootWorkers:      workerMigrationJSON,
-			}
-			expectedOut.Spec.Cloud.Azure = &gardenv1beta1.AzureCloud{
-				MachineImage: nil,
-				ResourceGroup: &gardenv1beta1.AzureResourceGroup{
-					Name: resourceGroupName,
-				},
-				Networks: gardenv1beta1.AzureNetworks{
-					K8SNetworks: gardenv1beta1.K8SNetworks{
-						Nodes:    &networkingNodesCIDR,
-						Pods:     &networkingPodsCIDR,
-						Services: &networkingServicesCIDR,
+				in.Spec.Provider = gardencorev1alpha1.Provider{
+					Type: providerType,
+					ControlPlaneConfig: &gardencorev1alpha1.ProviderConfig{
+						RawExtension: runtime.RawExtension{
+							Raw: controlPlaneConfigJSON,
+						},
 					},
-					VNet: gardenv1beta1.AzureVNet{
-						Name: &vnetName,
-						CIDR: &vnetCIDR,
+					InfrastructureConfig: &gardencorev1alpha1.ProviderConfig{
+						RawExtension: runtime.RawExtension{
+							Raw: infrastructureConfigJSON,
+						},
 					},
-					Workers: workerCIDR,
-				},
-				Workers: []gardenv1beta1.AzureWorker{
-					{
-						Worker: gardenv1beta1.Worker{
-							Annotations:   worker1Annotations,
-							AutoScalerMax: int(worker1Maximum),
-							AutoScalerMin: int(worker1Minimum),
-							CABundle:      &worker1CABundle,
-							Kubelet:       workerKubelet,
-							Labels:        worker1Labels,
-							Name:          worker1Name,
-							MachineType:   worker1MachineType,
-							MachineImage: &gardenv1beta1.ShootMachineImage{
-								Name:    worker1MachineImageName,
-								Version: worker1MachineImageVersion,
+					Workers: []gardencorev1alpha1.Worker{
+						{
+							Annotations: worker1Annotations,
+							CABundle:    &worker1CABundle,
+							Kubernetes:  workerKubernetes,
+							Labels:      worker1Labels,
+							Name:        worker1Name,
+							Machine: gardencorev1alpha1.Machine{
+								Type: worker1MachineType,
+								Image: &gardencorev1alpha1.ShootMachineImage{
+									Name:    worker1MachineImageName,
+									Version: worker1MachineImageVersion,
+								},
 							},
+							Maximum:        worker1Maximum,
+							Minimum:        worker1Minimum,
 							MaxSurge:       &worker1MaxSurge,
 							MaxUnavailable: &worker1MaxUnavailable,
-							Taints:         worker1Taints,
+							ProviderConfig: &gardencorev1alpha1.ProviderConfig{
+								RawExtension: runtime.RawExtension{
+									Raw: []byte(worker1ProviderConfig),
+								},
+							},
+							Taints: worker1Taints,
+							Volume: &gardencorev1alpha1.Volume{
+								Size: worker1VolumeSize,
+								Type: worker1VolumeType,
+							},
 						},
-						VolumeSize: worker1VolumeSize,
-						VolumeType: worker1VolumeType,
 					},
-				},
-			}
-			expectedOut.Spec.Kubernetes.CloudControllerManager = &gardenv1beta1.CloudControllerManagerConfig{
-				KubernetesConfig: gardenv1beta1.KubernetesConfig{
-					FeatureGates: cloudControllerManagerFeatureGates,
-				},
-			}
+				}
+
+				expectedOut.Annotations = map[string]string{
+					garden.MigrationShootDNSProviders: dnsProviderMigrationJSON,
+					garden.MigrationShootWorkers:      workerMigrationJSON,
+				}
+
+				expectedOut.Spec.Cloud.Azure = &gardenv1beta1.AzureCloud{
+					MachineImage: nil,
+					ResourceGroup: &gardenv1beta1.AzureResourceGroup{
+						Name: resourceGroupName,
+					},
+					Networks: gardenv1beta1.AzureNetworks{
+						K8SNetworks: gardenv1beta1.K8SNetworks{
+							Nodes:    &networkingNodesCIDR,
+							Pods:     &networkingPodsCIDR,
+							Services: &networkingServicesCIDR,
+						},
+						VNet: gardenv1beta1.AzureVNet{
+							Name: &vnetName,
+							CIDR: &vnetCIDR,
+						},
+						Workers: workerCIDR,
+					},
+					Workers: []gardenv1beta1.AzureWorker{
+						{
+							Worker: gardenv1beta1.Worker{
+								Annotations:   worker1Annotations,
+								AutoScalerMax: int(worker1Maximum),
+								AutoScalerMin: int(worker1Minimum),
+								CABundle:      &worker1CABundle,
+								Kubelet:       workerKubelet,
+								Labels:        worker1Labels,
+								Name:          worker1Name,
+								MachineType:   worker1MachineType,
+								MachineImage: &gardenv1beta1.ShootMachineImage{
+									Name:    worker1MachineImageName,
+									Version: worker1MachineImageVersion,
+								},
+								MaxSurge:       &worker1MaxSurge,
+								MaxUnavailable: &worker1MaxUnavailable,
+								Taints:         worker1Taints,
+							},
+							VolumeSize: worker1VolumeSize,
+							VolumeType: worker1VolumeType,
+						},
+					},
+				}
+				expectedOut.Spec.Kubernetes.CloudControllerManager = &gardenv1beta1.CloudControllerManagerConfig{
+					KubernetesConfig: gardenv1beta1.KubernetesConfig{
+						FeatureGates: cloudControllerManagerFeatureGates,
+					},
+				}
+			})
 
 			It("should correctly convert core.gardener.cloud/v1alpha1.Shoot -> garden.sapcloud.io/v1beta1.Shoot -> core.gardener.cloud/v1alpha1.Shoot", func() {
 				out1 := &garden.Shoot{}
@@ -1017,6 +1020,58 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				expectedOutAfterRoundTrip.Annotations = out2.Annotations
 				Expect(out4).To(Equal(expectedOutAfterRoundTrip))
 			})
+
+			It("should correctly convert with zones and service endpoints from core.gardener.cloud/v1alpha1.Shoot -> garden.sapcloud.io/v1beta1.Shoot -> core.gardener.cloud/v1alpha1.Shoot", func() {
+				var (
+					worker1Zones     = []string{"1", "2"}
+					serviceEndpoints = []string{"Microsoft.Test"}
+
+					infrastructureConfig = &azurev1alpha1.InfrastructureConfig{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
+							Kind:       "InfrastructureConfig",
+						},
+						ResourceGroup: &azurev1alpha1.ResourceGroup{
+							Name: resourceGroupName,
+						},
+						Networks: azurev1alpha1.NetworkConfig{
+							VNet: azurev1alpha1.VNet{
+								Name: &vnetName,
+								CIDR: &vnetCIDR,
+							},
+							Workers:          workerCIDR,
+							ServiceEndpoints: serviceEndpoints,
+						},
+						Zoned: true,
+					}
+					infrastructureConfigJSON, _ = json.Marshal(infrastructureConfig)
+				)
+
+				in.Spec.Provider.InfrastructureConfig.RawExtension.Raw = infrastructureConfigJSON
+				in.Spec.Provider.Workers[0].Zones = worker1Zones
+
+				expectedOut.Annotations[garden.MigrationShootWorkers] = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				expectedOut.Spec.Cloud.Azure.Zones = worker1Zones
+				expectedOut.Spec.Cloud.Azure.Networks.ServiceEndpoints = serviceEndpoints
+
+				out1 := &garden.Shoot{}
+				Expect(scheme.Convert(in, out1, nil)).To(BeNil())
+
+				out2 := &gardenv1beta1.Shoot{}
+				Expect(scheme.Convert(out1, out2, nil)).To(BeNil())
+				Expect(out2).To(Equal(expectedOut))
+
+				out3 := &garden.Shoot{}
+				Expect(scheme.Convert(out2, out3, nil)).To(BeNil())
+
+				out4 := &gardencorev1alpha1.Shoot{}
+				Expect(scheme.Convert(out3, out4, nil)).To(BeNil())
+
+				expectedOutAfterRoundTrip := in.DeepCopy()
+				expectedOutAfterRoundTrip.Annotations = out2.Annotations
+				Expect(out4).To(Equal(expectedOutAfterRoundTrip))
+			})
+
 		})
 
 		Context("GCP provider", func() {
@@ -1967,6 +2022,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						Workers: workerCIDR,
 					},
+					Zoned: true,
 				}
 				infrastructureConfigJSON, _ = json.Marshal(infrastructureConfig)
 
@@ -2030,6 +2086,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						VolumeType: worker1VolumeType,
 					},
 				},
+				Zones: worker1Zones,
 			}
 			in.Spec.Kubernetes.CloudControllerManager = &gardenv1beta1.CloudControllerManagerConfig{
 				KubernetesConfig: gardenv1beta1.KubernetesConfig{

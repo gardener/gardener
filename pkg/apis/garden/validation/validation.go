@@ -207,6 +207,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		allErrs = append(allErrs, validateMachineImages(spec.Azure.Constraints.MachineImages, fldPath.Child("azure", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypes(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateVolumeTypes(spec.Azure.Constraints.VolumeTypes, fldPath.Child("azure", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateZonesOnly(spec.Azure.Constraints.Zones, fldPath.Child("azure", "constraints", "zones"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountFaultDomains, fldPath.Child("azure", "countFaultDomains"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountUpdateDomains, fldPath.Child("azure", "countUpdateDomains"))...)
 
@@ -630,6 +631,12 @@ func validateZones(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one zone"))
 	}
 
+	allErrs = append(allErrs, validateZonesOnly(zones, fldPath)...)
+	return allErrs
+}
+
+func validateZonesOnly(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 	for i, zone := range zones {
 		idxPath := fldPath.Index(i)
 		regionPath := idxPath.Child("region")
@@ -650,7 +657,6 @@ func validateZones(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 			}
 		}
 	}
-
 	return allErrs
 }
 
@@ -1760,6 +1766,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks.VNet, oldSpec.Cloud.Azure.Networks.VNet, azurePath.Child("networks", "vnet"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks.Workers, oldSpec.Cloud.Azure.Networks.Workers, azurePath.Child("networks", "workers"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.ResourceGroup, oldSpec.Cloud.Azure.ResourceGroup, azurePath.Child("resourceGroup"))...)
+
+		// Don't allow to move from a zoned cluster to a non zoned cluster or the other way.
+		if len(oldSpec.Cloud.Azure.Zones) > 0 && len(newSpec.Cloud.Azure.Zones) == 0 {
+			allErrs = append(allErrs, field.ErrorList{field.Invalid(azurePath.Child("zones"), newSpec.Cloud.Azure.Zones, "Can't move from zoned cluster to non zoned cluster")}...)
+		} else if len(oldSpec.Cloud.Azure.Zones) == 0 && len(newSpec.Cloud.Azure.Zones) > 0 {
+			allErrs = append(allErrs, field.ErrorList{field.Invalid(azurePath.Child("zones"), newSpec.Cloud.Azure.Zones, "Can't move from non zoned cluster to zoned cluster")}...)
+		}
 	}
 
 	gcpPath := fldPath.Child("cloud", "gcp")

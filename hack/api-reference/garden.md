@@ -2118,6 +2118,18 @@ AzureResourceGroup
 <p>Workers is a list of worker groups.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones is a list of availability zones to deploy the Shoot cluster to.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="garden.sapcloud.io/v1beta1.AzureConstraints">AzureConstraints
@@ -2201,6 +2213,20 @@ KubernetesConstraints
 </td>
 <td>
 <p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.Zone">
+[]Zone
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones contains constraints regarding allowed values for &lsquo;zones&rsquo; block in the Shoot specification.</p>
 </td>
 </tr>
 </tbody>
@@ -2300,6 +2326,18 @@ string
 </td>
 <td>
 <p>Workers is a CIDR of a worker subnet (private) to create (used for the VMs).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceEndpoints</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceEndpoints is a list of Azure ServiceEndpoints which should be associated with the worker subnet.</p>
 </td>
 </tr>
 </tbody>
@@ -2487,196 +2525,6 @@ string
 </td>
 <td>
 <p>VolumeSize is the size of the root volume.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="garden.sapcloud.io/v1beta1.BackupInfrastructure">BackupInfrastructure
-</h3>
-<p>
-<p>BackupInfrastructure holds details about backup infrastructure</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>metadata</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code></br>
-<em>
-<a href="#garden.sapcloud.io/v1beta1.BackupInfrastructureSpec">
-BackupInfrastructureSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Specification of the Backup Infrastructure.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>seed</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Seed is the name of a Seed object.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>shootUID</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">
-k8s.io/apimachinery/pkg/types.UID
-</a>
-</em>
-</td>
-<td>
-<p>ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<code>status</code></br>
-<em>
-<a href="#garden.sapcloud.io/v1beta1.BackupInfrastructureStatus">
-BackupInfrastructureStatus
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Most recently observed status of the Backup Infrastructure.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="garden.sapcloud.io/v1beta1.BackupInfrastructureSpec">BackupInfrastructureSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#garden.sapcloud.io/v1beta1.BackupInfrastructure">BackupInfrastructure</a>)
-</p>
-<p>
-<p>BackupInfrastructureSpec is the specification of a Backup Infrastructure.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>seed</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Seed is the name of a Seed object.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>shootUID</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/types#UID">
-k8s.io/apimachinery/pkg/types.UID
-</a>
-</em>
-</td>
-<td>
-<p>ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="garden.sapcloud.io/v1beta1.BackupInfrastructureStatus">BackupInfrastructureStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#garden.sapcloud.io/v1beta1.BackupInfrastructure">BackupInfrastructure</a>)
-</p>
-<p>
-<p>BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="../core#core.gardener.cloud/v1alpha1.LastOperation">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the BackupInfrastructure.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="../core#core.gardener.cloud/v1alpha1.LastError">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-int64
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
-BackupInfrastructure&rsquo;s generation, which is updated on mutation by the API Server.</p>
 </td>
 </tr>
 </tbody>
@@ -8143,6 +7991,7 @@ string
 (<em>Appears on:</em>
 <a href="#garden.sapcloud.io/v1beta1.AWSConstraints">AWSConstraints</a>, 
 <a href="#garden.sapcloud.io/v1beta1.AlicloudConstraints">AlicloudConstraints</a>, 
+<a href="#garden.sapcloud.io/v1beta1.AzureConstraints">AzureConstraints</a>, 
 <a href="#garden.sapcloud.io/v1beta1.GCPConstraints">GCPConstraints</a>, 
 <a href="#garden.sapcloud.io/v1beta1.OpenStackConstraints">OpenStackConstraints</a>, 
 <a href="#garden.sapcloud.io/v1beta1.PacketConstraints">PacketConstraints</a>)
@@ -8185,5 +8034,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>51504b4f</code>.
+on git commit <code>77713c395</code>.
 </em></p>

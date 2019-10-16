@@ -6996,5 +6996,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>51504b4f</code>.
+on git commit <code>77713c395</code>.
 </em></p>

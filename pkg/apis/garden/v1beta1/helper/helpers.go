@@ -968,7 +968,10 @@ func GetZones(shoot gardenv1beta1.Shoot, cloudProfile *gardenv1beta1.CloudProfil
 	case gardenv1beta1.CloudProviderAWS:
 		return gardenv1beta1.CloudProviderAWS, cloudProfile.Spec.AWS.Constraints.Zones, nil
 	case gardenv1beta1.CloudProviderAzure:
-		// Azure instead of Zones, has AzureDomainCounts
+		if len(shoot.Spec.Cloud.Azure.Zones) > 0 {
+			return gardenv1beta1.CloudProviderAzure, cloudProfile.Spec.Azure.Constraints.Zones, nil
+		}
+		// If Shoot has no zones configred use instead AzureDomainCounts.
 		return gardenv1beta1.CloudProviderAzure, []gardenv1beta1.Zone{}, nil
 	case gardenv1beta1.CloudProviderGCP:
 		return gardenv1beta1.CloudProviderGCP, cloudProfile.Spec.GCP.Constraints.Zones, nil

@@ -585,6 +585,11 @@ func (in *AzureCloud) DeepCopyInto(out *AzureCloud) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Zones != nil {
+		in, out := &in.Zones, &out.Zones
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -628,6 +633,13 @@ func (in *AzureConstraints) DeepCopyInto(out *AzureConstraints) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Zones != nil {
+		in, out := &in.Zones, &out.Zones
+		*out = make([]Zone, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 
@@ -662,6 +674,11 @@ func (in *AzureNetworks) DeepCopyInto(out *AzureNetworks) {
 	*out = *in
 	in.K8SNetworks.DeepCopyInto(&out.K8SNetworks)
 	in.VNet.DeepCopyInto(&out.VNet)
+	if in.ServiceEndpoints != nil {
+		in, out := &in.ServiceEndpoints, &out.ServiceEndpoints
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

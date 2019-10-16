@@ -539,14 +539,22 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 			out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, o)
 		}
 
+		for _, zone := range in.Spec.Azure.Constraints.Zones {
+			r := garden.Region{Name: zone.Region}
+			for _, name := range zone.Names {
+				r.Zones = append(r.Zones, garden.AvailabilityZone{
+					Name: name,
+				})
+			}
+			out.Spec.Regions = append(out.Spec.Regions, r)
+		}
+
 		if regionsJSON, ok := in.Annotations[garden.MigrationCloudProfileRegions]; ok {
 			var regions []garden.Region
 			if err := json.Unmarshal([]byte(regionsJSON), &regions); err != nil {
 				return err
 			}
 			out.Spec.Regions = regions
-		} else {
-			out.Spec.Regions = nil
 		}
 
 		providerConfig := &garden.ProviderConfig{}
@@ -1083,15 +1091,6 @@ func Convert_garden_CloudProfile_To_v1beta1_CloudProfile(in *garden.CloudProfile
 			}
 			out.Spec.Azure.Constraints.DNSProviders = stringSliceToDNSProviderConstraint(strings.Split(dnsProviders, ","))
 		}
-		if len(in.Spec.Regions) > 0 {
-			data, err := json.Marshal(in.Spec.Regions)
-			if err != nil {
-				return err
-			}
-			out.Annotations[garden.MigrationCloudProfileRegions] = string(data)
-		} else {
-			delete(out.Annotations, garden.MigrationCloudProfileRegions)
-		}
 
 	case "gcp":
 		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
@@ -1486,11 +1485,17 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 	case in.Spec.Cloud.Azure != nil:
 		out.Spec.Provider.Type = "azure"
 
+		var zoned bool
+		if len(in.Spec.Cloud.Azure.Zones) > 0 {
+			zoned = true
+		}
+
 		infrastructureConfig := &azurev1alpha1.InfrastructureConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: azurev1alpha1.SchemeGroupVersion.String(),
 				Kind:       "InfrastructureConfig",
 			},
+			Zoned: zoned,
 		}
 
 		var resourceGroup *azurev1alpha1.ResourceGroup
@@ -1511,8 +1516,9 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 
 		infrastructureConfig.ResourceGroup = resourceGroup
 		infrastructureConfig.Networks = azurev1alpha1.NetworkConfig{
-			VNet:    vnet,
-			Workers: in.Spec.Cloud.Azure.Networks.Workers,
+			VNet:             vnet,
+			Workers:          in.Spec.Cloud.Azure.Networks.Workers,
+			ServiceEndpoints: in.Spec.Cloud.Azure.Networks.ServiceEndpoints,
 		}
 
 		data, err := json.Marshal(infrastructureConfig)
@@ -1593,6 +1599,9 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 			if data, ok := workerMigrationInfo[worker.Name]; ok {
 				w.ProviderConfig = data.ProviderConfig
 				w.Zones = data.Zones
+			}
+			if w.Zones == nil && zoned {
+				w.Zones = in.Spec.Cloud.Azure.Zones
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
