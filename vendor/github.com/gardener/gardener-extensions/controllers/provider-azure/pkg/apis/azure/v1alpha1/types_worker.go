@@ -39,10 +39,13 @@ type MachineImage struct {
 	Name string `json:"name"`
 	// Version is the logical version of the machine image.
 	Version string `json:"version"`
-	// Publisher is the publisher of the image.
+	// DEPRECATED: Publisher is the publisher of the image.
 	Publisher string `json:"publisher"`
-	// Offer is the offering of the image.
+	// DEPRECATED: Offer is the offering of the image.
 	Offer string `json:"offer"`
-	// SKU is the stock keeping unit to pull images from.
+	// DEPRECATED: SKU is the stock keeping unit to pull images from.
 	SKU string `json:"sku"`
+	// URN is the uniform resource name, it has the format 'publisher:offer:sku:version'
+	// +optional
+	URN *string `json:"urn,omitempty"`
 }
