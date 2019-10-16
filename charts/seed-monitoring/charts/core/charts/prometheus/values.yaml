@@ -321,6 +321,7 @@ rules:
       enabled: true
     hvpa:
       enabled: false
+      rules: false
 
 ignoreAlerts: false
 

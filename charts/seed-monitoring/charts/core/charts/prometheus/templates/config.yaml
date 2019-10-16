@@ -565,9 +565,9 @@ data:
       - source_labels: [ namespace ]
         action: keep
         regex: ^{{ .Release.Namespace }}$
-{{ end }}
+{{- end }}
 
-{{ if  (index .Values.rules.optional "elasticsearch" ).enabled }}
+{{- if  (index .Values.rules.optional "elasticsearch" ).enabled }}
     - job_name: elasticsearch-logging
       honor_labels: false
       kubernetes_sd_configs:
