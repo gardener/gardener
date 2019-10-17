@@ -27,7 +27,7 @@ helm install charts/gardener \
 
 You can check the [default values file](../../charts/gardener/values.yaml) for other configuration values. Please note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
 
-:warning: The Seed Kubernetes clusters need to have a `nginx-ingress-controller` deployed to make the Gardener work properly. Moreover, there should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `ingressDomain` field of [a Seed cluster resource](../../example/50-seed-aws.yaml).
+:warning: The Seed Kubernetes clusters need to have a `nginx-ingress-controller` deployed to make the Gardener work properly. Moreover, there should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `ingressDomain` field of [a Seed cluster resource](../../example/50-seed.yaml).
 
 As we are progressing with [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) you need to install extensions for:
 

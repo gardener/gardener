@@ -14,11 +14,4 @@ The reason for that is that we require CRD status subresources for the extension
 
 ## Shoot cluster versions
 
-| Cloud provider | Kubernetes 1.10 | Kubernetes 1.11 | Kubernetes 1.12 | Kubernetes 1.13 | Kubernetes 1.14 | Kubernetes 1.15 | Kubernetes 1.16 |
-| -------------- | --------------- | --------------- | --------------- | --------------- | --------------- | --------------- | --------------- |
-| AWS            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
-| Azure          | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
-| GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
-| OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
-| Alicloud       | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
-| Packet         | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         | 1.16.0+         |
+Please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.

@@ -8,7 +8,7 @@
 [![GoDoc](https://godoc.org/github.com/gardener/gardener?status.svg)](https://godoc.org/github.com/gardener/gardener)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1822/badge)](https://bestpractices.coreinfrastructure.org/projects/1822)
 
-Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides support for multiple cloud providers (Alicloud, AWS, Azure, GCP, OpenStack, ...). Its main principle is to leverage Kubernetes concepts for all of its tasks.
+Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides extensibility concepts which allow support for any cloud or infrastructure provider. Its main principle is to leverage Kubernetes concepts for all of its tasks.
 
 In essence, Gardener is an [extension API server](https://kubernetes.io/docs/tasks/access-kubernetes-api/setup-extension-api-server/) that comes along with a bundle of custom controllers. It introduces new API objects in an existing Kubernetes cluster (which is called **garden** cluster) in order to use them for the management of end-user Kubernetes clusters (which are called **shoot** clusters). These shoot clusters are described via [declarative cluster specifications](https://github.com/gardener/gardener/blob/master/example/90-shoot.yaml) which are observed by the controllers. They will bring up the clusters, reconcile their state, perform automated updates and make sure they are always up and running.
 
@@ -17,9 +17,9 @@ To accomplish these tasks reliably and to offer a certain quality of service, Ga
 Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our [blog post on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/).
 
 ----
-## K8s conformance test coverage
+## K8s Conformance Test Coverage
 
-Conformance test results of latest stable Gardener release, transparently visible at the CNCF testgrid:
+Conformance test results of latest stable Gardener release, transparently visible at the CNCF test grid:
 
 | Provider/K8s | v1.16 | v1.15 | v1.14 |  v1.13 |  v1.12 |  v1.11 |  v1.10 |
 | ----------- | ----------- | -----------| ----------- |----------- |----------- |----------- |----------- |
@@ -54,7 +54,7 @@ All channels for getting in touch or learning about our project are listed under
 
 Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or join our [Slack channel #gardener](https://kubernetes.slack.com/messages/gardener) (please invite yourself to the Kubernetes workspace [here](http://slack.k8s.io)).
 
-## Learn more!
+## Learn More!
 
 Please find further resources about out project here:
 
