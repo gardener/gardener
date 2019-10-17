@@ -41,10 +41,8 @@ require (
 	github.com/spf13/pflag v1.0.3
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
-	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 	google.golang.org/api v0.7.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
 	k8s.io/apiextensions-apiserver v0.0.0-20190409022649-727a075fdec8
 	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
