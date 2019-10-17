@@ -53,11 +53,13 @@ import (
 )
 
 const (
-	defaultPollInterval  = 5 * time.Second
-	dashboardUserName    = "admin"
-	loggingUserName      = "admin"
-	elasticsearchLogging = "elasticsearch-logging"
-	elasticsearchPort    = 9200
+	defaultPollInterval       = 5 * time.Second
+	k8sClientInitPollInterval = 20 * time.Second
+	k8sClientInitTimeout      = 5 * time.Minute
+	dashboardUserName         = "admin"
+	loggingUserName           = "admin"
+	elasticsearchLogging      = "elasticsearch-logging"
+	elasticsearchPort         = 9200
 )
 
 // NewGardenTestOperation initializes a new test operation from a gardener kubernetes interface
@@ -154,11 +156,16 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev
 	if err != nil {
 		return errors.Wrap(err, "could not add schemes to shoot scheme")
 	}
-	shootClient, err = kubernetes.NewClientFromSecret(seedClient, computeTechnicalID(project.Name, shoot), gardencorev1alpha1.GardenerName, kubernetes.WithClientOptions(client.Options{
-		Scheme: shootScheme,
-	}))
-	if err != nil {
-		return errors.Wrap(err, "could not construct Shoot client")
+	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
+		shootClient, err = kubernetes.NewClientFromSecret(seedClient, computeTechnicalID(project.Name, shoot), gardencorev1alpha1.GardenerName, kubernetes.WithClientOptions(client.Options{
+			Scheme: shootScheme,
+		}))
+		if err != nil {
+			return retry.MinorError(errors.Wrap(err, "could not construct Shoot client"))
+		}
+		return retry.Ok()
+	}); err != nil {
+		return err
 	}
 
 	o.ShootClient = shootClient
@@ -332,6 +339,7 @@ func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Con
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := o.HTTPGet(ctx, guestbookAppURL)
 			if err != nil {
+				o.Logger.Infof("Guestbook app url: %q is not available yet: %s", guestbookAppURL, err.Error())
 				return retry.MinorError(err)
 			}
 
