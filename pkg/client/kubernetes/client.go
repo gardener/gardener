@@ -19,18 +19,20 @@ import (
 	"errors"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // KubeConfig is the key to the kubeconfig
@@ -42,15 +44,30 @@ func NewRuntimeClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (clien
 		return NewRuntimeClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("no valid kubeconfig found")
-
 }
 
 // NewRuntimeClientFromBytes creates a new controller runtime Client struct for a given kubeconfig byte slice.
 func NewRuntimeClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (client.Client, error) {
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
+
+	// Validate that the given kubeconfig doesn't have fields in its auth-info that are
+	// not acceptable.
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateClientConfig(rawConfig); err != nil {
+		return nil, err
+	}
+
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
 	return NewRuntimeClientForConfig(opts...)
 }
@@ -71,7 +88,30 @@ func NewRuntimeClientForConfig(fns ...ConfigFunc) (client.Client, error) {
 // master URL in the kubeconfig.
 // If no filepath is given, the in-cluster configuration will be taken into account.
 func NewClientFromFile(masterURL, kubeconfigPath string, fns ...ConfigFunc) (Interface, error) {
-	config, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfigPath)
+	if kubeconfigPath == "" && masterURL == "" {
+		kubeconfig, err := rest.InClusterConfig()
+		if err == nil {
+			opts := append([]ConfigFunc{WithRESTConfig(kubeconfig)}, fns...)
+			return NewWithConfig(opts...)
+		}
+	}
+
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: masterURL}},
+	)
+
+	// Validate that the given kubeconfig doesn't have fields in its auth-info that are
+	// not acceptable.
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateClientConfig(rawConfig); err != nil {
+		return nil, err
+	}
+
+	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +122,22 @@ func NewClientFromFile(masterURL, kubeconfigPath string, fns ...ConfigFunc) (Int
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
 func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error) {
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate that the given kubeconfig doesn't have fields in its auth-info that are
+	// not acceptable.
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateClientConfig(rawConfig); err != nil {
+		return nil, err
+	}
+
+	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +165,30 @@ func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interf
 		return NewClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
+}
+
+// ValidateClientConfig validates that the auth info of a given kubeconfig doesn't have unsupported fields.
+func ValidateClientConfig(config clientcmdapi.Config) error {
+	validFields := []string{"client-certificate-data", "client-key-data", "token", "username", "password"}
+
+	for user, authInfo := range config.AuthInfos {
+		switch {
+		case authInfo.ClientCertificate != "":
+			return fmt.Errorf("client certificate files are not supported (user %q), these are the valid fields: %+v", user, validFields)
+		case authInfo.ClientKey != "":
+			return fmt.Errorf("client key files are not supported (user %q), these are the valid fields: %+v", user, validFields)
+		case authInfo.TokenFile != "":
+			return fmt.Errorf("token files are not supported (user %q), these are the valid fields: %+v", user, validFields)
+		case authInfo.Impersonate != "" || len(authInfo.ImpersonateGroups) > 0:
+			return fmt.Errorf("impersonation is not supported, these are the valid fields: %+v", validFields)
+		case authInfo.AuthProvider != nil && len(authInfo.AuthProvider.Config) > 0:
+			return fmt.Errorf("auth provider configurations are not supported (user %q), these are the valid fields: %+v", user, validFields)
+		case authInfo.Exec != nil:
+			return fmt.Errorf("exec configurations are not supported (user %q), these are the valid fields: %+v", user, validFields)
+		}
+	}
+
+	return nil
 }
 
 var supportedKubernetesVersions = []string{
