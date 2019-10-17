@@ -156,7 +156,7 @@ endpoints/gardener-apiserver created
 endpoints/gardener-controller-manager created
 apiservice.apiregistration.k8s.io/v1beta1.garden.sapcloud.io created
 apiservice.apiregistration.k8s.io/v1alpha1.core.gardener.cloud created
-validatingwebhookconfiguration.admissionregistration.k8s.io/validate-namespace-deletion created
+validatingwebhookconfiguration.admissionregistration.k8s.io/gardener-controller-manager created
 ```
 
 Optionally, you can switch off the `Logging` feature gate of Gardener Controller Manager to save resources:

@@ -16,7 +16,6 @@ package webhooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"k8s.io/api/admission/v1beta1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +63,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 		body []byte
 
 		deserializer   = h.codecs.UniversalDeserializer()
-		receivedReview = v1beta1.AdmissionReview{}
+		receivedReview = admissionv1beta1.AdmissionReview{}
 
 		wantedContentType = "application/json"
 		wantedOperation   = admissionv1beta1.Delete
@@ -116,7 +114,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 
 // admitNamespaces does only allow the request if no Shoots and no BackupInfrastructures exist in this
 // specific namespace anymore.
-func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
 	namespaceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	if request.Resource != namespaceResource {
 		return errToAdmissionResponse(fmt.Errorf("expect resource to be %s", namespaceResource))
@@ -179,19 +177,4 @@ func (h *namespaceDeletionHandler) isNamespaceEmpty(namespace string) (bool, err
 	}
 
 	return len(shootList) == 0, nil
-}
-
-func respond(w http.ResponseWriter, response *v1beta1.AdmissionResponse) {
-	responseObj := v1beta1.AdmissionReview{}
-	if response != nil {
-		responseObj.Response = response
-	}
-
-	jsonResponse, err := json.Marshal(responseObj)
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	if _, err := w.Write(jsonResponse); err != nil {
-		logger.Logger.Error(err)
-	}
 }
