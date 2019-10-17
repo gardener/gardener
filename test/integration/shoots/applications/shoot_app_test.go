@@ -28,10 +28,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	apiextensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-
 	. "github.com/gardener/gardener/test/integration/shoots"
+	apiextensions "k8s.io/api/extensions/v1beta1"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -305,12 +303,7 @@ var _ = Describe("Shoot application testing", func() {
 		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.ShootClient)
 		Expect(err).NotTo(HaveOccurred())
 
-		redisSlaveLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{
-			"app":  "redis",
-			"role": "slave",
-		}))
-
-		err = shootTestOperations.WaitUntilDeploymentsWithLabelsIsReady(ctx, redisSlaveLabelSelector, helmDeployNamespace, shootTestOperations.ShootClient)
+		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-slave", helmDeployNamespace, shootTestOperations.ShootClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		guestBookParams := struct {
