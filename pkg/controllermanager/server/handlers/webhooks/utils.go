@@ -15,12 +15,17 @@
 package webhooks
 
 import (
-	"k8s.io/api/admission/v1beta1"
+	"encoding/json"
+	"net/http"
+
+	"github.com/gardener/gardener/pkg/logger"
+
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func admissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
-	response := &v1beta1.AdmissionResponse{
+func admissionResponse(allowed bool, msg string) *admissionv1beta1.AdmissionResponse {
+	response := &admissionv1beta1.AdmissionResponse{
 		Allowed: allowed,
 	}
 
@@ -33,6 +38,21 @@ func admissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
 	return response
 }
 
-func errToAdmissionResponse(err error) *v1beta1.AdmissionResponse {
+func errToAdmissionResponse(err error) *admissionv1beta1.AdmissionResponse {
 	return admissionResponse(false, err.Error())
+}
+
+func respond(w http.ResponseWriter, response *admissionv1beta1.AdmissionResponse) {
+	responseObj := admissionv1beta1.AdmissionReview{}
+	if response != nil {
+		responseObj.Response = response
+	}
+
+	jsonResponse, err := json.Marshal(responseObj)
+	if err != nil {
+		logger.Logger.Error(err)
+	}
+	if _, err := w.Write(jsonResponse); err != nil {
+		logger.Logger.Error(err)
+	}
 }

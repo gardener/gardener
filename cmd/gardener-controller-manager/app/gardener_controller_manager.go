@@ -352,6 +352,7 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
 			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), shootInformer.Lister()),
+			"/webhooks/validate-kubeconfig-secrets": webhooks.NewValidateKubeconfigSecretsHandler(),
 		}
 	)
 
