@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	"context"
+	corev1 "k8s.io/api/core/v1"
 
 	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -173,4 +174,12 @@ type Interface interface {
 	CheckForwardPodPort(string, string, int, int) error
 
 	Version() string
+}
+
+// RuntimeClientFactory is used to dynamically create controller-runtime Clients
+// from a given secret
+type RuntimeClientFactory interface {
+	// CreateRuntimeClientFromSecret creates a controller-runtime Client from the given secret
+	// and applies the given ConfigFuncs
+	CreateRuntimeClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (client.Client, error)
 }

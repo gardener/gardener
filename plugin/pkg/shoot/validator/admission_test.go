@@ -15,20 +15,32 @@
 package validator_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockfactory "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
+	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/gardener/gardener/test"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("validator", func() {
@@ -36,6 +48,7 @@ var _ = Describe("validator", func() {
 		var (
 			admissionHandler      *ValidateShoot
 			gardenInformerFactory gardeninformers.SharedInformerFactory
+			kubeInformerFactory   kubeinformers.SharedInformerFactory
 			cloudProfile          garden.CloudProfile
 			seed                  garden.Seed
 			project               garden.Project
@@ -66,6 +79,17 @@ var _ = Describe("validator", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
+			seedSecret       = v1.Secret{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      seedName,
+					Namespace: "garden",
+				},
+				Data: map[string][]byte{
+					kubeclient.KubeConfig: []byte(""),
+				},
+				Type: v1.SecretTypeOpaque,
+			}
 
 			projectBase = garden.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -133,6 +157,10 @@ var _ = Describe("validator", func() {
 						Services: seedServicesCIDR,
 						Nodes:    seedNodesCIDR,
 					},
+					SecretRef: v1.SecretReference{
+						Name:      seedSecret.Name,
+						Namespace: seedSecret.Namespace,
+					},
 				},
 			}
 			shootBase = garden.Shoot{
@@ -193,6 +221,8 @@ var _ = Describe("validator", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 		})
 
 		AfterEach(func() {
@@ -443,6 +473,75 @@ var _ = Describe("validator", func() {
 				err = admissionHandler.Admit(attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
+			})
+		})
+
+		Context("finalizer removal checks", func() {
+			var (
+				oldShoot *garden.Shoot
+				ctrl     *gomock.Controller
+				c        *mockclient.MockClient
+				f        *mockfactory.MockRuntimeClientFactory
+				ctx      context.Context
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				c = mockclient.NewMockClient(ctrl)
+				f = mockfactory.NewMockRuntimeClientFactory(ctrl)
+				ctx = context.TODO()
+
+				admissionHandler.SetRuntimeClientFactory(f)
+
+				shoot = *shootBase.DeepCopy()
+
+				// technical ID is used to determine the namespace in the seed
+				shoot.Status.TechnicalID = operationshoot.ComputeTechnicalID(projectName, &corev1alpha1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: shoot.Name,
+					},
+				})
+
+				// set old shoot for update and add gardener finalizer to it
+				oldShoot = shoot.DeepCopy()
+				finalizers := sets.NewString(oldShoot.GetFinalizers()...)
+				finalizers.Insert(corev1alpha1.GardenerName)
+				oldShoot.SetFinalizers(finalizers.UnsortedList())
+			})
+
+			It("should reject removing the gardener finalizer if the shoot namespace in the seed still exists", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&seedSecret)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				gomock.InOrder(
+					f.EXPECT().CreateRuntimeClientFromSecret(&seedSecret, gomock.Any()).Return(c, nil),
+					c.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID), &v1.Namespace{}).Return(nil),
+				)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("shoot namespace in the seed exists"))
+			})
+
+			It("should admit removing the gardener finalizer if the shoot namespace in the seed does not exist anymore", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&seedSecret)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				gomock.InOrder(
+					f.EXPECT().CreateRuntimeClientFromSecret(&seedSecret, gomock.Any()).Return(c, nil),
+					c.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID), &v1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, _ *v1.Namespace) error {
+						return apierrors.NewNotFound(v1.Resource("Namespace"), key.Name)
+					}),
+				)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
