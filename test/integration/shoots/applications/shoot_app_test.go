@@ -289,11 +289,18 @@ var _ = Describe("Shoot application testing", func() {
 		By("Applying redis chart")
 		if cloudProvider == v1beta1.CloudProviderAlicloud {
 			// AliCloud requires a minimum of 20 GB for its PVCs
-			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", map[string]interface{}{"master": map[string]interface{}{
-				"persistence": map[string]interface{}{
-					"size": "20Gi",
+			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", map[string]interface{}{
+				"master": map[string]interface{}{
+					"persistence": map[string]interface{}{
+						"size": "20Gi",
+					},
 				},
-			}})
+				"slave": map[string]interface{}{
+					"persistence": map[string]interface{}{
+						"size": "20Gi",
+					},
+				},
+			})
 			Expect(err).NotTo(HaveOccurred())
 		} else {
 			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", nil)
