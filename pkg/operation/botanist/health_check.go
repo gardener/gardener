@@ -21,9 +21,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	machine "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -35,11 +37,14 @@ import (
 	prometheusmodel "github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
@@ -553,6 +558,17 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 	return nil, nil
 }
 
+// CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
+func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1alpha1.Condition, extensionsCondition []extensionCondition) *gardencorev1alpha1.Condition {
+	for _, cond := range extensionsCondition {
+		if cond.condition.Status == gardencorev1alpha1.ConditionFalse {
+			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), cond.condition.Message)
+			return &c
+		}
+	}
+	return nil
+}
+
 // checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
 func (b *Botanist) checkControlPlane(
 	checker *HealthChecker,
@@ -560,6 +576,7 @@ func (b *Botanist) checkControlPlane(
 	seedDeploymentLister kutil.DeploymentLister,
 	seedStatefulSetLister kutil.StatefulSetLister,
 	machineDeploymentLister kutil.MachineDeploymentLister,
+	extensionConditions []extensionCondition,
 ) (*gardencorev1alpha1.Condition, error) {
 
 	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, machineDeploymentLister); err != nil || exitCondition != nil {
@@ -570,8 +587,11 @@ func (b *Botanist) checkControlPlane(
 	}
 	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
 		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
-			return exitCondition, nil
+			return exitCondition, err
 		}
+	}
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	c := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
@@ -584,6 +604,7 @@ func (b *Botanist) checkSystemComponents(
 	condition gardencorev1alpha1.Condition,
 	shootDeploymentLister kutil.DeploymentLister,
 	shootDaemonSetLister kutil.DaemonSetLister,
+	extensionConditions []extensionCondition,
 ) (*gardencorev1alpha1.Condition, error) {
 
 	if exitCondition, err := checker.CheckSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
@@ -594,6 +615,9 @@ func (b *Botanist) checkSystemComponents(
 	}
 	if exitCondition, err := checker.CheckOptionalAddonsSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
+	}
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	c := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
@@ -607,10 +631,14 @@ func (b *Botanist) checkClusterNodes(
 	condition gardencorev1alpha1.Condition,
 	shootNodeLister kutil.NodeLister,
 	seedMachineDeploymentLister kutil.MachineDeploymentLister,
+	extensionConditions []extensionCondition,
 ) (*gardencorev1alpha1.Condition, error) {
 
 	if exitCondition, err := checker.CheckClusterNodes(b.Shoot.SeedNamespace, condition, shootNodeLister, seedMachineDeploymentLister); err != nil || exitCondition != nil {
 		return exitCondition, err
+	}
+	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	c := gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready.")
@@ -797,6 +825,11 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		checker = NewHealthChecker(thresholdMappings)
 	)
 
+	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := b.getAllExtensionConditions(context.TODO())
+	if err != nil {
+		b.Logger.Errorf("error getting extension conditions: %+v", err)
+	}
+
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
@@ -804,7 +837,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		nodes = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
@@ -824,17 +857,17 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	go func() {
 		defer wg.Done()
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	go func() {
 		defer wg.Done()
-		newNodes, err := b.checkClusterNodes(checker, nodes, shootNodeLister, seedMachineDeploymentLister)
+		newNodes, err := b.checkClusterNodes(checker, nodes, shootNodeLister, seedMachineDeploymentLister, extensionConditionsEveryNodeReady)
 		nodes = newConditionOrError(nodes, newNodes, err)
 	}()
 	go func() {
 		defer wg.Done()
-		newSystemComponents, err := b.checkSystemComponents(checker, systemComponents, shootDeploymentLister, shootDaemonSetLister)
+		newSystemComponents, err := b.checkSystemComponents(checker, systemComponents, shootDeploymentLister, shootDaemonSetLister, extensionConditionsSystemComponentsHealthy)
 		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
 	}()
 	wg.Wait()
@@ -882,4 +915,61 @@ func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts
 		return gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(inactiveAlerts, message)
 	}
 	return b.checkAlerts(checker, inactiveAlerts)
+}
+
+type extensionCondition struct {
+	condition     gardencorev1alpha1.Condition
+	extensionType string
+	extensionName string
+}
+
+func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]extensionCondition, []extensionCondition, []extensionCondition, error) {
+	var (
+		conditionsControlPlaneHealthy     []extensionCondition
+		conditionsEveryNodeReady          []extensionCondition
+		conditionsSystemComponentsHealthy []extensionCondition
+	)
+
+	for _, listObj := range []runtime.Object{
+		&extensionsv1alpha1.BackupEntryList{},
+		&extensionsv1alpha1.ControlPlaneList{},
+		&extensionsv1alpha1.ExtensionList{},
+		&extensionsv1alpha1.InfrastructureList{},
+		&extensionsv1alpha1.NetworkList{},
+		&extensionsv1alpha1.OperatingSystemConfigList{},
+		&extensionsv1alpha1.WorkerList{},
+	} {
+		listKind := listObj.GetObjectKind().GroupVersionKind().Kind
+		if err := b.K8sSeedClient.Client().List(ctx, listObj, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+			return nil, nil, nil, err
+		}
+
+		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+			acc, err := extensions.Accessor(obj)
+			if err != nil {
+				return err
+			}
+
+			kind := obj.GetObjectKind().GroupVersionKind().Kind
+			name := acc.GetName()
+
+			for _, condition := range acc.GetExtensionStatus().GetConditions() {
+				switch condition.Type {
+				case gardencorev1alpha1.ShootControlPlaneHealthy:
+					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, extensionCondition{condition, kind, name})
+				case gardencorev1alpha1.ShootEveryNodeReady:
+					conditionsEveryNodeReady = append(conditionsEveryNodeReady, extensionCondition{condition, kind, name})
+				case gardencorev1alpha1.ShootSystemComponentsHealthy:
+					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, extensionCondition{condition, kind, name})
+				}
+			}
+
+			return nil
+		}); err != nil {
+			b.Logger.Errorf("Error during evaluation of kind %q for extensions health check: %+v", listKind, err)
+			return nil, nil, nil, err
+		}
+	}
+
+	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
 }

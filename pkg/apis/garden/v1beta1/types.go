@@ -1876,8 +1876,6 @@ const (
 	ShootEveryNodeReady gardencorev1alpha1.ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy gardencorev1alpha1.ConditionType = "SystemComponentsHealthy"
-	// ShootAlertsInactive is a constant for a condition type indicating the Shoot cluster alert states.
-	ShootAlertsInactive gardencorev1alpha1.ConditionType = "AlertsInactive"
 	// ShootAPIServerAvailable is a constant for a condition type indicating that the Shoot clusters API server is available.
 	ShootAPIServerAvailable gardencorev1alpha1.ConditionType = "APIServerAvailable"
 )
