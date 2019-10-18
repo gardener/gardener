@@ -3956,6 +3956,9 @@ var _ = Describe("validation", func() {
 							End:   "230000+0100",
 						},
 					},
+					Monitoring: &garden.Monitoring{
+						Alerting: &garden.Alerting{},
+					},
 				},
 			}
 		})
@@ -4116,6 +4119,26 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.cloud.seed"),
+				})),
+			))
+		})
+
+		It("should forbid adding invalid/duplicate emails", func() {
+			shoot.Spec.Monitoring.Alerting.EmailReceivers = []string{
+				"z",
+				"foo@bar.baz",
+				"foo@bar.baz",
+			}
+			errorList := ValidateShoot(shoot)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.monitoring.alerting.emailReceivers[0]"),
+					"Detail": Equal("must provide a valid email"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.monitoring.alerting.emailReceivers[2]"),
 				})),
 			))
 		})

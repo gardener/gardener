@@ -1156,6 +1156,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
+	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, fldPath.Child("provider"))...)
 
@@ -2211,6 +2212,31 @@ func validateKubeProxy(kp *garden.KubeProxyConfig, fldPath *field.Path) field.Er
 			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
 		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
+		}
+	}
+	return allErrs
+}
+
+func validateMonitoring(monitoring *garden.Monitoring, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if monitoring != nil && monitoring.Alerting != nil {
+		allErrs = append(allErrs, validateAlerting(monitoring.Alerting, fldPath.Child("alerting"))...)
+	}
+	return allErrs
+}
+
+func validateAlerting(alerting *garden.Alerting, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	emails := make(map[string]struct{})
+	for i, email := range alerting.EmailReceivers {
+		if !utils.TestEmail(email) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("emailReceivers").Index(i), email, "must provide a valid email"))
+		}
+
+		if _, duplicate := emails[email]; duplicate {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("emailReceivers").Index(i), email))
+		} else {
+			emails[email] = struct{}{}
 		}
 	}
 	return allErrs

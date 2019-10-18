@@ -171,21 +171,22 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		var (
 			alertingSMTPKeys = b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
 			emailConfigs     = []map[string]interface{}{}
-			to, _            = b.Shoot.Info.Annotations[v1alpha1constants.AnnotationShootOperatedBy]
 		)
-
-		for _, key := range alertingSMTPKeys {
-			secret := b.Secrets[key]
-			emailConfigs = append(emailConfigs, map[string]interface{}{
-				"to":            to,
-				"from":          string(secret.Data["from"]),
-				"smarthost":     string(secret.Data["smarthost"]),
-				"auth_username": string(secret.Data["auth_username"]),
-				"auth_identity": string(secret.Data["auth_identity"]),
-				"auth_password": string(secret.Data["auth_password"]),
-			})
+		if b.Shoot.Info.Spec.Monitoring != nil && b.Shoot.Info.Spec.Monitoring.Alerting != nil {
+			for _, email := range b.Shoot.Info.Spec.Monitoring.Alerting.EmailReceivers {
+				for _, key := range alertingSMTPKeys {
+					secret := b.Secrets[key]
+					emailConfigs = append(emailConfigs, map[string]interface{}{
+						"to":            email,
+						"from":          string(secret.Data["from"]),
+						"smarthost":     string(secret.Data["smarthost"]),
+						"auth_username": string(secret.Data["auth_username"]),
+						"auth_identity": string(secret.Data["auth_identity"]),
+						"auth_password": string(secret.Data["auth_password"]),
+					})
+				}
+			}
 		}
-
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuthUsers,

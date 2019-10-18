@@ -656,6 +656,10 @@ spec:
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
       machineImageVersion: ${value("maintenance.autoUpdate.machineImageVersion", "true")}
+  monitoring:
+    alerting:
+      emailReceivers:
+      - john.doe@example.com
   addons:
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "false")}

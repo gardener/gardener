@@ -173,6 +173,10 @@ spec:
     autoUpdate:
       kubernetesVersion: true
       machineImageVersion: true
+  monitoring:
+    alerting:
+      emailReceivers:
+      - john.doe@example.com
   addons:
     nginx-ingress:
       enabled: false
