@@ -30,6 +30,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
@@ -208,6 +209,8 @@ func (o *Options) config() (*apiserver.Config, error) {
 
 		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
+		runtimeClientFactory := kubeclient.NewRuntimeClientFactory()
+
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				coreInformerFactory,
@@ -218,6 +221,7 @@ func (o *Options) config() (*apiserver.Config, error) {
 				kubeInformerFactory,
 				kubeClient,
 				gardenerAPIServerConfig.Authorization.Authorizer,
+				runtimeClientFactory,
 			),
 		}, nil
 	}
