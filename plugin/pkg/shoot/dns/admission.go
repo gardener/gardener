@@ -136,7 +136,9 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 	}
 
 	// Generate a Shoot domain if none is configured.
-	assignDefaultDomainIfNeeded(shoot, d.projectLister, d.secretLister)
+	if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, d.secretLister); err != nil {
+		return err
+	}
 
 	// If the provider != unmanaged then we need a configured domain.
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
@@ -149,35 +151,35 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
-func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) {
+func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) error {
 	project, err := admissionutils.GetProject(shoot.Namespace, projectLister)
 	if err != nil {
-		return
+		return apierrors.NewInternalError(err)
 	}
 
 	var domainSecrets []*corev1.Secret
 	deprecatedSelector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
-		return
+		return apierrors.NewInternalError(err)
 	}
 	secrets, err := secretLister.Secrets(v1alpha1constants.GardenNamespace).List(deprecatedSelector)
 	if err != nil {
-		return
+		return apierrors.NewInternalError(err)
 	}
 	domainSecrets = append(domainSecrets, secrets...)
 
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.GardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
-		return
+		return apierrors.NewInternalError(err)
 	}
 	secrets, err = secretLister.Secrets(v1alpha1constants.GardenNamespace).List(selector)
 	if err != nil {
-		return
+		return apierrors.NewInternalError(err)
 	}
 	domainSecrets = append(domainSecrets, secrets...)
 
 	if len(domainSecrets) == 0 {
-		return
+		return nil
 	}
 
 	var shootDomain *string
@@ -185,20 +187,23 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		shootDomain = shoot.Spec.DNS.Domain
 	}
 
-	if shootDomain != nil {
-		return
-	}
-
 	for _, secret := range domainSecrets {
 		_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
-			return
+			return apierrors.NewInternalError(err)
 		}
 
-		if shootDomain != nil && strings.HasSuffix(*shootDomain, domain) {
+		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
 			// Shoot already specifies a default domain, set providers to nil
 			shoot.Spec.DNS.Providers = nil
-			return
+
+			// Check that the specified domain matches the pattern for default domains, especially in order
+			// to prevent shoots from "stealing" domain names for shoots in other projects
+			if *shootDomain != fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain) {
+				return apierrors.NewBadRequest("shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain>")
+			}
+
+			return nil
 		}
 
 		// Shoot did not specify a domain, assign default domain and set provider to nil
@@ -209,7 +214,9 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 			generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
 			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.DNS.Domain = &generatedDomain
-			return
+			return nil
 		}
 	}
+
+	return nil
 }
