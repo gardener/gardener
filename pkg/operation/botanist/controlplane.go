@@ -590,7 +590,7 @@ func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string
 	if hvpaEnabled {
 		// Since we are deploying HVPA for apiserver, we can keep the limits high
 		cpuLimit = "8"
-		memoryLimit = "16000M"
+		memoryLimit = "25G"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -779,17 +779,15 @@ func (b *Botanist) DeployKubeAPIServer() error {
 
 	if foundDeployment && hvpaEnabled {
 		// Deployment is already created AND is controlled by HVPA
-		// Keep the "resources" as it is.
+		// Keep the "requests" as it is.
 		for k := range deployment.Spec.Template.Spec.Containers {
 			v := &deployment.Spec.Template.Spec.Containers[k]
-			switch v.Name {
-			case "kube-apiserver":
-				defaultValues["apiServerResources"] = v.Resources.DeepCopy()
-			case "vpn-seed":
-				defaultValues["vpnSeedResources"] = v.Resources.DeepCopy()
-			case "blackbox-exporter":
-				defaultValues["blackBoxExporterResources"] = v.Resources.DeepCopy()
-			default:
+			if v.Name == "kube-apiserver" {
+				defaultValues["apiServerResources"].(map[string]interface{})["requests"] = map[string]interface{}{
+					"cpu":    v.Resources.Requests.Cpu(),
+					"memory": v.Resources.Requests.Memory(),
+				}
+				break
 			}
 		}
 	}
