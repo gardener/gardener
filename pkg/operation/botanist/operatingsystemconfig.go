@@ -161,12 +161,15 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		}
 	}
 
+	sshKey := b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
+
 	originalConfig["osc"] = map[string]interface{}{
 		"type":                 machineImage.Name,
 		"purpose":              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		"reloadConfigFilePath": common.CloudConfigFilePath,
 		"secretName":           secretName,
 		"customization":        customization,
+		"sshKey":               string(sshKey),
 	}
 
 	if data := worker.CABundle; data != nil {
