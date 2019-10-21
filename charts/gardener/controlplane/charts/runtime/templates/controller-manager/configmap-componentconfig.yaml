@@ -1,0 +1,102 @@
+{{- if .Values.global.controller.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-controller-manager-configmap
+  namespace: garden
+  labels:
+    app: gardener
+    role: controller-manager
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  config.yaml: |
+    ---
+    apiVersion: controllermanager.config.gardener.cloud/v1alpha1
+    kind: ControllerManagerConfiguration
+    gardenClientConnection:
+      acceptContentTypes: {{ required ".Values.global.controller.config.gardenClientConnection.acceptContentTypes is required" .Values.global.controller.config.gardenClientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.global.controller.config.gardenClientConnection.contentType is required" .Values.global.controller.config.gardenClientConnection.contentType }}
+      qps: {{ required ".Values.global.controller.config.gardenClientConnection.qps is required" .Values.global.controller.config.gardenClientConnection.qps }}
+      burst: {{ required ".Values.global.controller.config.gardenClientConnection.burst is required" .Values.global.controller.config.gardenClientConnection.burst }}
+      {{- if .Values.global.controller.config.gardenClientConnection.kubeconfig }}
+      kubeconfig: {{ .Values.global.controller.config.gardenClientConnection.kubeconfig }}
+      {{- end }}
+      {{- if .Values.global.controller.kubeconfig }}
+      kubeconfig: /etc/gardener-controller-manager/kubeconfig/kubeconfig
+      {{- end }}
+    controllers:
+      {{- if .Values.global.controller.config.controllers.cloudProfile }}
+      cloudProfile:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.cloudProfile.concurrentSyncs is required" .Values.global.controller.config.controllers.cloudProfile.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerRegistration }}
+      controllerRegistration:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs }}
+      {{- end }}
+      plant:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.plant.concurrentSyncs is required" .Values.global.controller.config.controllers.plant.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.plant.syncPeriod is required" .Values.global.controller.config.controllers.plant.syncPeriod }}
+      {{- if .Values.global.controller.config.controllers.project }}
+      project:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.project.concurrentSyncs is required" .Values.global.controller.config.controllers.project.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.quota }}
+      quota:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.quota.concurrentSyncs is required" .Values.global.controller.config.controllers.quota.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.secretBinding }}
+      secretBinding:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.global.controller.config.controllers.secretBinding.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.seed }}
+      seed:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.seed.concurrentSyncs is required" .Values.global.controller.config.controllers.seed.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.seed.syncPeriod is required" .Values.global.controller.config.controllers.seed.syncPeriod }}
+        {{- if .Values.global.controller.config.controllers.seed.monitorPeriod }}
+        monitorPeriod: {{ .Values.global.controller.config.controllers.seed.monitorPeriod }}
+        {{- end }}
+      {{- end }}
+      shootMaintenance:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs }}
+      shootQuota:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootQuota.concurrentSyncs is required" .Values.global.controller.config.controllers.shootQuota.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.shootQuota.syncPeriod is required" .Values.global.controller.config.controllers.shootQuota.syncPeriod }}
+      shootHibernation:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.global.controller.config.controllers.shootHibernation.concurrentSyncs }}
+    leaderElection:
+      leaderElect: {{ required ".Values.global.controller.config.leaderElection.leaderElect is required" .Values.global.controller.config.leaderElection.leaderElect }}
+      leaseDuration: {{ required ".Values.global.controller.config.leaderElection.leaseDuration is required" .Values.global.controller.config.leaderElection.leaseDuration }}
+      renewDeadline: {{ required ".Values.global.controller.config.leaderElection.renewDeadline is required" .Values.global.controller.config.leaderElection.renewDeadline }}
+      retryPeriod: {{ required ".Values.global.controller.config.leaderElection.retryPeriod is required" .Values.global.controller.config.leaderElection.retryPeriod }}
+      resourceLock: {{ required ".Values.global.controller.config.leaderElection.resourceLock is required" .Values.global.controller.config.leaderElection.resourceLock }}
+    discovery:
+      {{- with .Values.global.controller.config.discovery }}
+      {{- if .discoveryCacheDir }}
+      discoveryCacheDir: {{ .discoveryCacheDir }}
+      {{- end }}
+      {{- if .httpCacheDir }}
+      httpCacheDir: {{ .httpCacheDir }}
+      {{- end }}
+      {{- if .ttl }}
+      ttl: {{ .ttl }}
+      {{- end }}
+      {{- end }}
+    logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
+    kubernetesLogLevel: {{ required ".Values.global.controller.config.kubernetesLogLevel is required" .Values.global.controller.config.kubernetesLogLevel }}
+    server:
+      http:
+        bindAddress: {{ required ".Values.global.controller.config.server.http.bindAddress is required" .Values.global.controller.config.server.http.bindAddress }}
+        port: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
+      https:
+        bindAddress: {{ required ".Values.global.controller.config.server.https.bindAddress is required" .Values.global.controller.config.server.https.bindAddress }}
+        port: {{ required ".Values.global.controller.config.server.https.port is required" .Values.global.controller.config.server.https.port }}
+        tls:
+          serverCertPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.crt
+          serverKeyPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.key
+    {{- if .Values.global.controller.config.featureGates }}
+    featureGates:
+{{ toYaml .Values.global.controller.config.featureGates | indent 6 }}
+    {{- end }}
+{{- end }}

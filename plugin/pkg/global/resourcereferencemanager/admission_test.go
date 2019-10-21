@@ -106,7 +106,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Cloud: garden.SeedCloud{
 						Profile: cloudProfileName,
 					},
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      secretName,
 						Namespace: namespace,
 					},
@@ -425,6 +425,27 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				attrs := admission.NewAttributesRecord(newSeed, &seed, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept because the secret does not have a secret ref", func() {
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				seedObj := garden.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       seedName,
+						Finalizers: finalizers,
+					},
+					Spec: garden.SeedSpec{
+						Cloud: garden.SeedCloud{
+							Profile: cloudProfileName,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&seedObj, nil, garden.Kind("Seed").WithVersion("version"), "", seedObj.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs, nil)
 

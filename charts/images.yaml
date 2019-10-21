@@ -4,6 +4,11 @@
 # the respective tag can be used. The syntax must be as described in the
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
 images:
+# Gardenlet
+- name: gardenlet
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/gardenlet
+
 # Seed bootstrap
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile

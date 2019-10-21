@@ -1,4 +1,4 @@
-# Integrating etcd-druid with Gardener.
+# Integrating etcd-druid with Gardener
 
 Etcd is currently deployed by garden-controller-manager as a Statefulset. The sidecar container spec contains details pertaining to cloud-provider object-store which is injected into the statefulset via a mutable webhook running as part of the gardener extension [story](https://github.com/gardener/gardener/blob/master/docs/extensions/controlplane-webhooks.md#what-needs-to-be-implemented-to-support-a-new-cloud-provider).  This approach restricts the operations on etcd such as scale-up and upgrade. Etcd-druid will eliminate the need to hijack statefulset creation to add cloudprovider details. It has been designed to provide an intricate control over the procedure of deploying and maintaining etcd. The roadmap for etcd-druid can be found [here](https://github.com/gardener/etcd-druid/issues/2). 
 

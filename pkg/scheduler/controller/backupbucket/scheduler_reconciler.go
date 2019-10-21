@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -106,7 +105,7 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) 
 			return err
 		}
 
-		if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedAvailable); cond != nil && cond.Status != gardencorev1alpha1.ConditionUnknown {
+		if common.VerifySeedReadiness(seed) {
 			schedulerLogger.Infof("Seed %s is available, ignoring further reconciliation.", *backupBucket.Spec.Seed)
 			return nil
 		}
@@ -156,7 +155,7 @@ func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket
 	}
 
 	for _, seed := range seeds.Items {
-		if seed.DeletionTimestamp != nil || !verifySeedAvailability(&seed) {
+		if seed.DeletionTimestamp != nil || !common.VerifySeedReadiness(&seed) {
 			continue
 		}
 
@@ -178,13 +177,6 @@ func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket
 		return candidatesWithoutMatchingProvider[0], nil
 	}
 	return nil, fmt.Errorf("failed to find valid seed for scheduling")
-}
-
-func verifySeedAvailability(seed *gardencorev1alpha1.Seed) bool {
-	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedAvailable); cond != nil {
-		return cond.Status == gardencorev1alpha1.ConditionTrue
-	}
-	return false
 }
 
 // updateBackupBucketToBeScheduledOntoSeed sets the seed name where the backupBucket should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.

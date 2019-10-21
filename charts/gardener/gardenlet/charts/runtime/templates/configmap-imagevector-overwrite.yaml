@@ -1,0 +1,16 @@
+{{- if and .Values.global.gardenlet.enabled .Values.global.gardenlet.imageVectorOverwrite }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardenlet-imagevector-overwrite
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  images_overwrite.yaml: |
+{{ .Values.global.gardenlet.imageVectorOverwrite | indent 4 }}
+{{- end }}

@@ -78,7 +78,7 @@ var _ = Describe("Conversion", func() {
 						DNS: SeedDNS{
 							IngressDomain: ingressDomain,
 						},
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
@@ -129,7 +129,7 @@ var _ = Describe("Conversion", func() {
 							Region: regionName,
 						},
 						IngressDomain: ingressDomain,
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
@@ -185,7 +185,7 @@ var _ = Describe("Conversion", func() {
 							Region: regionName,
 						},
 						IngressDomain: ingressDomain,
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
@@ -234,7 +234,7 @@ var _ = Describe("Conversion", func() {
 						DNS: SeedDNS{
 							IngressDomain: ingressDomain,
 						},
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},

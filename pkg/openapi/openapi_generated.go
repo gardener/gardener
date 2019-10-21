@@ -1329,7 +1329,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"caBundle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.",
+							Description: "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -1958,7 +1958,7 @@ func schema_pkg_apis_core_v1alpha1_DNS(ref common.ReferenceCallback) common.Open
 					"providers": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
-								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-merge-key": "type",
 								"x-kubernetes-patch-strategy":  "merge",
 							},
 						},
@@ -4681,7 +4681,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"dns", "networks", "provider", "secretRef"},
+				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
@@ -4696,12 +4696,6 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 				Description: "SeedStatus is the status of a Seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"gardener": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener"),
-						},
-					},
 					"conditions": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -4719,6 +4713,19 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 									},
 								},
 							},
+						},
+					},
+					"gardener": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Gardener holds information about the Gardener instance which last acted on the Seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener"),
+						},
+					},
+					"kubernetesVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubernetesVersion is the Kubernetes version of the seed cluster.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"observedGeneration": {
@@ -6300,6 +6307,12 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 						},
 					},
 					"machineImages": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
 							Type:        []string{"array"},
@@ -6313,6 +6326,12 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 						},
 					},
 					"machineTypes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.",
 							Type:        []string{"array"},
@@ -6332,6 +6351,12 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 						},
 					},
 					"regions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Regions contains constraints regarding allowed values for regions and zones.",
 							Type:        []string{"array"},
@@ -6358,6 +6383,12 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 						},
 					},
 					"volumeTypes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.",
 							Type:        []string{"array"},
@@ -6676,6 +6707,12 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref common.Refere
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a ControllerInstallations's current state.",
 							Type:        []string{"array"},
@@ -6885,6 +6922,12 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 						},
 					},
 					"providers": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used.",
 							Type:        []string{"array"},
@@ -7276,6 +7319,12 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 						},
 					},
 					"admissionPlugins": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding configuration.",
 							Type:        []string{"array"},
@@ -7840,6 +7889,12 @@ func schema_pkg_apis_core_v1beta1_KubernetesSettings(ref common.ReferenceCallbac
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"versions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "version",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.",
 							Type:        []string{"array"},
@@ -8004,6 +8059,12 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 						},
 					},
 					"versions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "version",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Versions contains versions and expiration dates of the machine image",
 							Type:        []string{"array"},
@@ -8312,6 +8373,13 @@ func schema_pkg_apis_core_v1beta1_NginxIngress(ref common.ReferenceCallback) com
 							},
 						},
 					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service` exposing the nginx-ingress. Defaults to `Cluster`.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
@@ -8562,6 +8630,12 @@ func schema_pkg_apis_core_v1beta1_PlantSpec(ref common.ReferenceCallback) common
 						},
 					},
 					"endpoints": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Endpoints is the configuration plant endpoints",
 							Type:        []string{"array"},
@@ -8591,6 +8665,12 @@ func schema_pkg_apis_core_v1beta1_PlantStatus(ref common.ReferenceCallback) comm
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a Plant's current state.",
 							Type:        []string{"array"},
@@ -8884,6 +8964,12 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 						},
 					},
 					"workers": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Workers is a list of worker groups.",
 							Type:        []string{"array"},
@@ -9064,6 +9150,12 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 						},
 					},
 					"zones": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Zones is a list of availability zones in this region.",
 							Type:        []string{"array"},
@@ -9483,7 +9575,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 						},
 					},
 				},
-				Required: []string{"dns", "networks", "provider", "secretRef"},
+				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
@@ -9504,7 +9596,20 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener"),
 						},
 					},
+					"kubernetesVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubernetesVersion is the Kubernetes version of the seed cluster.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a Seed's current state.",
 							Type:        []string{"array"},
@@ -9574,6 +9679,12 @@ func schema_pkg_apis_core_v1beta1_SeedVolume(ref common.ReferenceCallback) commo
 						},
 					},
 					"providers": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is a list of storage class provisioner types for the seed.",
 							Type:        []string{"array"},
@@ -9921,6 +10032,12 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a Shoots's current state.",
 							Type:        []string{"array"},
@@ -9934,6 +10051,12 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 						},
 					},
 					"constraints": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Constraints represents conditions of a Shoot's current state that constraint some operations on it.",
 							Type:        []string{"array"},
@@ -15862,11 +15985,6 @@ func schema_pkg_apis_garden_v1beta1_Seed(ref common.ReferenceCallback) common.Op
 					},
 				},
 			},
-			VendorExtensible: spec.VendorExtensible{
-				Extensions: spec.Extensions{
-					"x-kubernetes-print-columns": "custom-columns=NAME:.metadata.name,DOMAIN:.spec.ingressDomain,CLOUDPROFILE:.spec.cloud.profile,REGION:.spec.cloud.profile,READY:.status.conditions[?(@.type == 'Available')].status",
-				},
-			},
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
@@ -16060,7 +16178,7 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"cloud", "ingressDomain", "secretRef", "networks"},
+				Required: []string{"cloud", "ingressDomain", "networks"},
 			},
 		},
 		Dependencies: []string{
@@ -16075,12 +16193,6 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 				Description: "SeedStatus holds the most recently observed status of the Seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"gardener": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"),
-						},
-					},
 					"conditions": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -16098,6 +16210,19 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 									},
 								},
 							},
+						},
+					},
+					"gardener": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Gardener holds information about the Gardener which last acted on the Seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"),
+						},
+					},
+					"kubernetesVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubernetesVersion is the Kubernetes version of the seed cluster.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"observedGeneration": {
@@ -16181,11 +16306,6 @@ func schema_pkg_apis_garden_v1beta1_Shoot(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus"),
 						},
 					},
-				},
-			},
-			VendorExtensible: spec.VendorExtensible{
-				Extensions: spec.Extensions{
-					"x-kubernetes-print-columns": "custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.cloud.seed,DOMAIN:.spec.dns.domain,VERSION:.spec.kubernetes.version,CONTROL:.status.conditions[?(@.type == 'ControlPlaneHealthy')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status,SYSTEM:.status.conditions[?(@.type == 'SystemComponentsHealthy')].status,LATEST:.status.lastOperation.state",
 				},
 			},
 		},

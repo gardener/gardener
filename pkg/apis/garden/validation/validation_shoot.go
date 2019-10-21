@@ -924,7 +924,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if new != nil && old != nil && new.Domain != old.Domain {
+	if new != nil && old != nil && old.Domain != nil && new.Domain != old.Domain {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
 	}
 

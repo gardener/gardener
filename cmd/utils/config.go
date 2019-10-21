@@ -16,29 +16,14 @@ package utils
 
 import (
 	"fmt"
+	"os"
+
 	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 	componentbaseconfig "k8s.io/component-base/config"
-	"os"
 )
-
-// RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration & the configured kubeconfig
-func RESTConfigFromClientConnectionConfiguration(cfg componentbaseconfig.ClientConnectionConfiguration) (*rest.Config, error) {
-	restConfig, err := clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig.Burst = int(cfg.Burst)
-	restConfig.QPS = cfg.QPS
-	restConfig.AcceptContentTypes = cfg.AcceptContentTypes
-	restConfig.ContentType = cfg.ContentType
-	return restConfig, nil
-}
 
 // MakeLeaderElectionConfig creates a *leaderelection.LeaderElectionConfig from a set of configurations
 func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguration, lockObjectNamespace string, lockObjectName string, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {

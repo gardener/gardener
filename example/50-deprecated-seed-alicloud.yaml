@@ -10,9 +10,10 @@ spec:
   cloud:
     profile: alicloud
     region: cn-beijing
-  secretRef:
-    name: seed-alicloud
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-alicloud
+#   namespace: garden
   ingressDomain: dev.alicloud.seed.example.com
   networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16

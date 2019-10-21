@@ -19,19 +19,15 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/prometheus/client_golang/prometheus"
-	corev1 "k8s.io/api/core/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -42,16 +38,13 @@ type Controller struct {
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	config *config.ControllerManagerConfiguration
-
+	config   *config.ControllerManagerConfiguration
 	control  ControlInterface
 	recorder record.EventRecorder
 
 	seedLister gardencorelisters.SeedLister
 	seedQueue  workqueue.RateLimitingInterface
 	seedSynced cache.InformerSynced
-
-	shootLister gardencorelisters.ShootLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -60,43 +53,26 @@ type Controller struct {
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSeedController(
-	k8sGardenClient kubernetes.Interface,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	secrets map[string]*corev1.Secret,
-	imageVector imagevector.ImageVector,
-	identity *gardencorev1alpha1.Gardener,
-	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
-) *Controller {
+func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
-
-		seedInformer = gardenCoreV1alpha1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-		seedUpdater  = NewRealUpdater(k8sGardenClient, seedLister)
-		secretLister = corev1Informer.Secrets().Lister()
-		shootLister  = gardenCoreV1alpha1Informer.Shoots().Lister()
+		gardenCoreV1alpha1Informer = gardenInformerFactory.Core().V1alpha1()
+		seedInformer               = gardenCoreV1alpha1Informer.Seeds()
+		seedLister                 = seedInformer.Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister),
+		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
+		control:                NewDefaultControl(k8sGardenClient, gardenCoreV1alpha1Informer, config),
 		recorder:               recorder,
 		seedLister:             seedLister,
-		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		shootLister:            shootLister,
+		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:               make(chan int),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    seedController.seedAdd,
-		UpdateFunc: seedController.seedUpdate,
-		DeleteFunc: seedController.seedDelete,
+		AddFunc: seedController.seedAdd,
 	})
 	seedController.seedSynced = seedInformer.Informer().HasSynced
 
@@ -152,9 +128,9 @@ func (c *Controller) RunningWorkers() int {
 
 // CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
 func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "seed")
+	metric, err := prometheus.NewConstMetric(controllermanager.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "seed")
 	if err != nil {
-		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "seed-controller"}).Inc()
+		controllermanager.ScrapeFailures.With(prometheus.Labels{"kind": "seed-controller"}).Inc()
 		return
 	}
 	ch <- metric

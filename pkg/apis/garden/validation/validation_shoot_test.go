@@ -3670,6 +3670,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should allow assigning the dns domain (dns nil)", func() {
+				oldShoot := prepareShootForUpdate(shoot)
+				oldShoot.Spec.DNS = nil
+				newShoot := prepareShootForUpdate(oldShoot)
+				newShoot.Spec.DNS = &garden.DNS{
+					Domain: makeStringPointer("some-domain.com"),
+				}
+
+				errorList := ValidateShootUpdate(newShoot, oldShoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow assigning the dns domain (dns non-nil)", func() {
+				oldShoot := prepareShootForUpdate(shoot)
+				oldShoot.Spec.DNS = &garden.DNS{}
+				newShoot := prepareShootForUpdate(oldShoot)
+				newShoot.Spec.DNS.Domain = makeStringPointer("some-domain.com")
+
+				errorList := ValidateShootUpdate(newShoot, oldShoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")

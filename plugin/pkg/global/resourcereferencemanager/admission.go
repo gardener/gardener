@@ -383,6 +383,9 @@ func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
 		}
 	}
 
+	if seed.Spec.SecretRef == nil {
+		return nil
+	}
 	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 

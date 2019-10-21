@@ -180,8 +180,9 @@ Currently the gardener tests consists of:
 
 The gardener RBAC test is meant to test if RBAC is enabled on the gardener cluster.
 This is tested by:
+
 1. Check if the RBAC API-Resource is available
-2. Check if a service account in a project namespace can access the `garden` project.
+1. Check if a service account in a project namespace can access the `garden` project.
 
 #### Example Run
 

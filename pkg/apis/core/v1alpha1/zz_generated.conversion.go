@@ -3876,7 +3876,7 @@ func autoConvert_v1alpha1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.
 	if err := Convert_v1alpha1_SeedProvider_To_garden_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
-	out.SecretRef = in.SecretRef
+	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Taints = *(*[]garden.SeedTaint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*garden.SeedVolume)(unsafe.Pointer(in.Volume))
 	return nil
@@ -3888,7 +3888,7 @@ func autoConvert_garden_SeedSpec_To_v1alpha1_SeedSpec(in *garden.SeedSpec, out *
 		return err
 	}
 	// WARNING: in.IngressDomain requires manual conversion: does not exist in peer-type
-	out.SecretRef = in.SecretRef
+	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	if err := Convert_garden_SeedNetworks_To_v1alpha1_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -3899,10 +3899,9 @@ func autoConvert_garden_SeedSpec_To_v1alpha1_SeedSpec(in *garden.SeedSpec, out *
 }
 
 func autoConvert_v1alpha1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garden.SeedStatus, s conversion.Scope) error {
-	if err := Convert_v1alpha1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
-		return err
-	}
 	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Gardener = (*garden.Gardener)(unsafe.Pointer(in.Gardener))
+	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
@@ -3914,9 +3913,8 @@ func Convert_v1alpha1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garde
 
 func autoConvert_garden_SeedStatus_To_v1alpha1_SeedStatus(in *garden.SeedStatus, out *SeedStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
-	if err := Convert_garden_Gardener_To_v1alpha1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
-		return err
-	}
+	out.Gardener = (*Gardener)(unsafe.Pointer(in.Gardener))
+	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }

@@ -1,4 +1,4 @@
-# Deploying the Gardener and a Seed into an AKS cluster
+# Deploying the previous Gardener versions and a Seed into an AKS cluster
 
 This document demonstrates how to install Gardener into an existing
 AKS cluster. We'll use a single cluster to host both Gardener and a Seed to the

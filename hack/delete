@@ -23,4 +23,4 @@ if [[ "$1" != "project" ]]; then
 fi
 
 kubectl $NAMESPACE annotate "$RESOURCE" "$NAME" confirmation.garden.sapcloud.io/deletion=true --overwrite
-kubectl $NAMESPACE delete   "$RESOURCE" "$NAME"
+kubectl $NAMESPACE delete   "$RESOURCE" "$NAME" --wait=false

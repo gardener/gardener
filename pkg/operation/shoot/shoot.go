@@ -158,17 +158,6 @@ func (s *Shoot) GetServiceNetwork() string {
 	return ""
 }
 
-// GetMachineImages returns the name of the used machine image.
-func (s *Shoot) GetMachineImages() []*gardencorev1alpha1.ShootMachineImage {
-	var workerMachineImages []*gardencorev1alpha1.ShootMachineImage
-	for _, worker := range s.Info.Spec.Provider.Workers {
-		if worker.Machine.Image != nil {
-			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
-		}
-	}
-	return workerMachineImages
-}
-
 // KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
 func (s *Shoot) KubernetesDashboardEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubernetesDashboard != nil && s.Info.Spec.Addons.KubernetesDashboard.Enabled

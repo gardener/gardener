@@ -24,7 +24,7 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
@@ -120,7 +120,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1alpha1.CloudProf
 			return nil
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootAssociations(cloudProfile, c.shootLister)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(cloudProfile, c.shootLister)
 		if err != nil {
 			cloudProfileLogger.Error(err.Error())
 			return err

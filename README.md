@@ -17,6 +17,7 @@ To accomplish these tasks reliably and to offer a certain quality of service, Ga
 Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our [blog post on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/).
 
 ----
+
 ## K8s Conformance Test Coverage
 
 Conformance test results of latest stable Gardener release, transparently visible at the CNCF test grid:
@@ -34,11 +35,11 @@ Conformance test results of latest stable Gardener release, transparently visibl
 
 Besides the conformance tests, over 400 additional e2e tests are executed on a daily basis. Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
 
-## To start using or developing the Gardener locally
+## Start using or developing the Gardener locally
 
 See our documentation in the `/docs` repository, please [find the index here](docs/README.md).
 
-## Setting up your own Gardener landscape in the cloud
+## Setting up your own Gardener landscape in the Cloud
 
 The quickest way to test drive Gardener is to install it virtually onto an existing Kubernetes cluster, just like you would install any other Kubernetes-ready application. Launch your automatic installer [here](https://gardener.cloud/installer/)
 

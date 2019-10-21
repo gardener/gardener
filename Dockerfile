@@ -26,7 +26,7 @@ ENTRYPOINT ["/gardener-apiserver"]
 ############# controller-manager #############
 FROM alpine:3.10.3 AS controller-manager
 
-RUN apk add --update bash curl openvpn tzdata
+RUN apk add --update bash curl tzdata
 
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
@@ -45,3 +45,15 @@ COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
 WORKDIR /
 
 ENTRYPOINT ["/gardener-scheduler"]
+
+############# gardenlet #############
+FROM alpine:3.10.3 AS gardenlet
+
+RUN apk add --update bash curl openvpn tzdata
+
+COPY --from=builder /go/bin/gardenlet /gardenlet
+COPY charts /charts
+
+WORKDIR /
+
+ENTRYPOINT ["/gardenlet"]

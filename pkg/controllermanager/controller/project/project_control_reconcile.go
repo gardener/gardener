@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -84,7 +86,7 @@ func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectL
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
 			if err := utilretry.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
-				if err := c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptions...); err != nil {
+				if err := c.k8sGardenClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
 					if apierrors.IsNotFound(err) {
 						return utilretry.Ok()
 					}
@@ -131,7 +133,7 @@ func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectL
 		}
 	}
 
-	if err := chartApplier.ApplyChart(context.TODO(), filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
+	if err := chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":    project.Name,
 			"uid":     project.UID,
@@ -143,6 +145,25 @@ func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectL
 		c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
 		return err
+	}
+
+	// Delete legacy resources
+	// TODO: This can be removed in a future version of Gardener.
+	for _, obj := range []runtime.Object{
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: project.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: project.Name}},
+	} {
+		if err := c.k8sGardenClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Error while cleaning up legacy RBAC rules for namespace %q: %+v", namespace.Name, err)
+			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
+			return err
+		}
 	}
 
 	// Update the project status to mark it as 'ready'.

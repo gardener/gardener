@@ -20,10 +20,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/logger"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -43,6 +42,7 @@ func InitCondition(conditionType gardencorev1alpha1.ConditionType) gardencorev1a
 		Reason:             "ConditionInitialized",
 		Message:            "The condition has been initialized but its semantic check has not been performed yet.",
 		LastTransitionTime: Now(),
+		LastUpdateTime:     Now(),
 	}
 }
 
@@ -114,7 +114,7 @@ func UpdatedConditionUnknownErrorMessage(condition gardencorev1alpha1.Condition,
 // the <newConditions> (depending on the condition type).
 func MergeConditions(oldConditions []gardencorev1alpha1.Condition, newConditions ...gardencorev1alpha1.Condition) []gardencorev1alpha1.Condition {
 	var (
-		out         = make([]gardencorev1alpha1.Condition, 0, len(oldConditions))
+		out         = make([]gardencorev1alpha1.Condition, 0, len(oldConditions)+len(newConditions))
 		typeToIndex = make(map[gardencorev1alpha1.ConditionType]int, len(oldConditions))
 	)
 
@@ -194,6 +194,8 @@ type ShootedSeed struct {
 	BlockCIDRs        []string
 	ShootDefaults     *gardencorev1alpha1.ShootNetworks
 	Backup            *gardencorev1alpha1.SeedBackup
+	NoGardenlet       bool
+	WithSecretRef     bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -270,6 +272,13 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	if _, ok := flags["disable-dns"]; ok {
 		shootedSeed.DisableDNS = &trueVar
 	}
+	if _, ok := flags["no-gardenlet"]; ok {
+		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["with-secret-ref"]; ok {
+		shootedSeed.WithSecretRef = true
+	}
+
 	if _, ok := flags["protected"]; ok {
 		shootedSeed.Protected = &trueVar
 	}
@@ -553,6 +562,17 @@ func ShootWantsBasicAuthentication(shoot *gardencorev1alpha1.Shoot) bool {
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *gardencorev1alpha1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
+}
+
+// GetMachineImagesFor returns a list of all machine images for a given shoot.
+func GetMachineImagesFor(shoot *gardencorev1alpha1.Shoot) []*gardencorev1alpha1.ShootMachineImage {
+	var workerMachineImages []*gardencorev1alpha1.ShootMachineImage
+	for _, worker := range shoot.Spec.Provider.Workers {
+		if worker.Machine.Image != nil {
+			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
+		}
+	}
+	return workerMachineImages
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and

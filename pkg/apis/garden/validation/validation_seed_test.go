@@ -57,7 +57,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						Region: "eu-west-1",
 					},
 					IngressDomain: "ingress.my-seed-1.example.com",
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      "seed-aws",
 						Namespace: "garden",
 					},
@@ -116,7 +116,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
 			seed.Spec.Provider = garden.SeedProvider{}
 			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
-			seed.Spec.SecretRef = corev1.SecretReference{}
+			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
 				Nodes:    invalidCIDR,
 				Pods:     "300.300.300.300/300",

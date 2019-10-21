@@ -34,7 +34,7 @@ In addition to the requirements to integrate with the cloud provider, you also n
 
 * Expose the cloud provider to the consumers of the Gardener API, so it can be told to use that cloud provider as an option
 * Validate that API as requests come in
-* Write cloud provider specific implementation (called Botanist)
+* Write cloud provider specific implementation (called "provider extension")
 
 ## Cloud Provider API Requirements
 
@@ -61,4 +61,3 @@ To add a new cloud provider, you need some or all of the following. Each reposit
 |Seed only|etcd backup/restore|[etcd-backup-restore](https://github.com/gardener/etcd-backup-restore/)| In process |
 |All|Gardener Shoot API extension and validation|[gardener](https://github.com/gardener/gardener)| [Gardener API extension](./new-cloud-provider-api-extension.md) |
 |All|Extension implementation|[gardener](https://github.com/gardener/gardener)| [Extension controller](../extensions/overview.md) |
-
