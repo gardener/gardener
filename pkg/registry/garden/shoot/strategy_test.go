@@ -38,9 +38,13 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := strategy.ToSelectableFields(newShoot("foo"))
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(5))
+		Expect(result.Has(garden.ShootSeedNameDeprecated)).To(BeTrue())
+		Expect(result.Get(garden.ShootSeedNameDeprecated)).To(Equal("foo"))
 		Expect(result.Has(garden.ShootSeedName)).To(BeTrue())
 		Expect(result.Get(garden.ShootSeedName)).To(Equal("foo"))
+		Expect(result.Has(garden.ShootCloudProfileName)).To(BeTrue())
+		Expect(result.Get(garden.ShootCloudProfileName)).To(Equal("baz"))
 	})
 })
 
@@ -55,16 +59,21 @@ var _ = Describe("GetAttrs", func() {
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
+		Expect(fs.Get(garden.ShootSeedNameDeprecated)).To(Equal("foo"))
 		Expect(fs.Get(garden.ShootSeedName)).To(Equal("foo"))
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
 
-var _ = Describe("SeedTriggerFunc", func() {
+var _ = Describe("TriggerFunc", func() {
 	It("should return correct matching values", func() {
-		expected := []storage.MatchValue{{IndexName: garden.ShootSeedName, Value: "foo"}}
+		expected := []storage.MatchValue{
+			{IndexName: garden.ShootSeedNameDeprecated, Value: "foo"},
+			{IndexName: garden.ShootSeedName, Value: "foo"},
+			{IndexName: garden.ShootCloudProfileName, Value: "baz"},
+		}
 
-		mv := strategy.SeedTriggerFunc(newShoot("foo"))
+		mv := strategy.TriggerFunc(newShoot("foo"))
 
 		Expect(mv).To(Equal(expected))
 
@@ -80,8 +89,7 @@ var _ = Describe("MatchShoot", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(garden.ShootSeedName))
-
+		Expect(result.IndexFields).To(ConsistOf(garden.ShootSeedNameDeprecated, garden.ShootSeedName, garden.ShootCloudProfileName))
 	})
 })
 
@@ -135,9 +143,8 @@ func newShoot(seedName string) *garden.Shoot {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: garden.ShootSpec{
-			Cloud: garden.Cloud{
-				Seed: &seedName,
-			},
+			CloudProfileName: "baz",
+			SeedName:         &seedName,
 		},
 	}
 }

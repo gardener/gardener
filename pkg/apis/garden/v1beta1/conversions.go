@@ -136,7 +136,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	return scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace", garden.ShootSeedName:
+			case "metadata.name", "metadata.namespace", garden.ShootSeedNameDeprecated:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
