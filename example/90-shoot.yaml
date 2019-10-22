@@ -229,6 +229,10 @@ spec:
     autoUpdate:
       kubernetesVersion: true
       machineImageVersion: true
+  monitoring:
+    alerting:
+      emailReceivers:
+      - john.doe@example.com
 # hibernation:
 #   enabled: false
 #   schedules:

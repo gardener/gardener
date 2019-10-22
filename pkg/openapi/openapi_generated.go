@@ -37,6 +37,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addon":                                 schema_pkg_apis_core_v1alpha1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons":                                schema_pkg_apis_core_v1alpha1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin":                       schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Alerting":                              schema_pkg_apis_core_v1alpha1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig":                           schema_pkg_apis_core_v1alpha1_AuditConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditPolicy":                           schema_pkg_apis_core_v1alpha1_AuditPolicy(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone":                      schema_pkg_apis_core_v1alpha1_AvailabilityZone(ref),
@@ -98,6 +99,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance":                           schema_pkg_apis_core_v1alpha1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceAutoUpdate":                 schema_pkg_apis_core_v1alpha1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceTimeWindow":                 schema_pkg_apis_core_v1alpha1_MaintenanceTimeWindow(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring":                            schema_pkg_apis_core_v1alpha1_Monitoring(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking":                            schema_pkg_apis_core_v1alpha1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NginxIngress":                          schema_pkg_apis_core_v1alpha1_NginxIngress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig":                            schema_pkg_apis_core_v1alpha1_OIDCConfig(ref),
@@ -151,6 +153,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AddonClusterAutoscaler":               schema_pkg_apis_garden_v1beta1_AddonClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons":                               schema_pkg_apis_garden_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin":                      schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alerting":                             schema_pkg_apis_garden_v1beta1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud":                             schema_pkg_apis_garden_v1beta1_Alicloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudConstraints":                  schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineType":                  schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref),
@@ -216,6 +219,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance":                          schema_pkg_apis_garden_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate":                schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow":                schema_pkg_apis_garden_v1beta1_MaintenanceTimeWindow(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monitoring":                           schema_pkg_apis_garden_v1beta1_Monitoring(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular":                            schema_pkg_apis_garden_v1beta1_Monocular(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking":                           schema_pkg_apis_garden_v1beta1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress":                         schema_pkg_apis_garden_v1beta1_NginxIngress(ref),
@@ -603,6 +607,33 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Alerting(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"emailReceivers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MonitoringEmailReceivers is a list of recipients for alerts",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -3079,6 +3110,27 @@ func schema_pkg_apis_core_v1alpha1_MaintenanceTimeWindow(ref common.ReferenceCal
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_Monitoring(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Monitoring contains information about the monitoring configuration for the shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"alerting": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Alerting contains information about the alerting configuration for the shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Alerting"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Alerting"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4716,6 +4768,12 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance"),
 						},
 					},
+					"monitoring": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Monitoring contains information about custom monitoring configurations for the shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring"),
+						},
+					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains all provider-specific and provider-relevant information.",
@@ -4748,7 +4806,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider"},
 	}
 }
 
@@ -5594,6 +5652,33 @@ func schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_Alerting(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"emailReceivers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MonitoringEmailReceivers is a list of recipients for alerts",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -8688,6 +8773,27 @@ func schema_pkg_apis_garden_v1beta1_MaintenanceTimeWindow(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_Monitoring(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Monitoring contains information about the monitoring configuration for the shoot.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"alerting": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Alerting contains information about the alerting configuration for the shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alerting"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alerting"},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_Monocular(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10833,12 +10939,18 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
 						},
 					},
+					"monitoring": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Monitoring contains information about custom monitoring configurations for the shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monitoring"),
+						},
+					},
 				},
 				Required: []string{"cloud", "dns", "kubernetes"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking"},
 	}
 }
 

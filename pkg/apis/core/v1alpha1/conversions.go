@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/utils"
 
 	alicloudinstall "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/install"
 	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
@@ -1548,6 +1550,31 @@ func Convert_garden_Shoot_To_v1alpha1_Shoot(in *garden.Shoot, out *Shoot, s conv
 	out.Spec.Region = in.Spec.Cloud.Region
 	out.Spec.SecretBindingName = in.Spec.Cloud.SecretBindingRef.Name
 	out.Spec.SeedName = in.Spec.Cloud.Seed
+
+	if email, ok := in.Annotations[constants.AnnotationShootOperatedBy]; ok && utils.TestEmail(email) {
+		exists := false
+		if in.Spec.Monitoring == nil {
+			out.Spec.Monitoring = &Monitoring{
+				Alerting: &Alerting{},
+			}
+		}
+		if in.Spec.Monitoring != nil && in.Spec.Monitoring.Alerting == nil {
+			out.Spec.Monitoring.Alerting = &Alerting{}
+		}
+		if in.Spec.Monitoring != nil && in.Spec.Monitoring.Alerting != nil {
+			for _, receiver := range in.Spec.Monitoring.Alerting.EmailReceivers {
+				if receiver == email {
+					exists = true
+					break
+				}
+			}
+		}
+		if !exists {
+			out.Spec.Monitoring.Alerting.EmailReceivers = append(out.Spec.Monitoring.Alerting.EmailReceivers, email)
+		}
+		// Always delete annotation (Either email gets appended to emailReceivers or email already exists).
+		delete(out.Annotations, constants.AnnotationShootOperatedBy)
+	}
 
 	switch in.Spec.Provider.Type {
 	case "aws":
