@@ -2880,6 +2880,7 @@ func Convert_garden_MachineType_To_v1alpha1_MachineType(in *garden.MachineType, 
 }
 
 func autoConvert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(in *MachineTypeStorage, out *garden.MachineTypeStorage, s conversion.Scope) error {
+	out.Class = in.Class
 	out.Size = in.Size
 	out.Type = in.Type
 	return nil
@@ -2891,6 +2892,7 @@ func Convert_v1alpha1_MachineTypeStorage_To_garden_MachineTypeStorage(in *Machin
 }
 
 func autoConvert_garden_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in *garden.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
+	out.Class = in.Class
 	out.Size = in.Size
 	out.Type = in.Type
 	return nil

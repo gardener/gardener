@@ -392,11 +392,19 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 			return nil, fmt.Errorf("MachineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
 		}
 
-		// Get the proper VolumeType
-		for _, element := range volumeTypes {
-			if worker.Volume != nil && worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
-				volumeType = &element
-				break
+		if worker.Volume != nil {
+			if machineType.Storage != nil {
+				volumeType = &garden.VolumeType{
+					Class: machineType.Storage.Class,
+				}
+			} else {
+				// Get the proper VolumeType
+				for _, element := range volumeTypes {
+					if worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
+						volumeType = &element
+						break
+					}
+				}
 			}
 		}
 		if volumeType == nil {
