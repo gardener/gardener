@@ -40,6 +40,7 @@ go install -mod=vendor ./vendor/golang.org/x/lint/golint
 
 # Install Helm (see https://docs.helm.sh/using_helm/#from-script).
 if ! which helm 1>/dev/null; then
+  export DESIRED_VERSION=v2.14.3
   echo -n "Installing helm... "
   install_helm_path="./get_helm.sh"
   curl https://raw.githubusercontent.com/helm/helm/master/scripts/get > "${install_helm_path}"
