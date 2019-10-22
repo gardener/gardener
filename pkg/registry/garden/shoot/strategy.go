@@ -196,8 +196,10 @@ func ToSelectableFields(shoot *garden.Shoot) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	shootSpecificFieldsSet := make(fields.Set, 3)
+	shootSpecificFieldsSet := make(fields.Set, 4)
+	shootSpecificFieldsSet[garden.ShootSeedNameDeprecated] = getSeedName(shoot)
 	shootSpecificFieldsSet[garden.ShootSeedName] = getSeedName(shoot)
+	shootSpecificFieldsSet[garden.ShootCloudProfileName] = shoot.Spec.CloudProfileName
 	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &shoot.ObjectMeta, true)
 }
 
@@ -210,12 +212,14 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), nil
 }
 
-// SeedTriggerFunc matches correct seed when watching.
-func SeedTriggerFunc(obj runtime.Object) []storage.MatchValue {
+// TriggerFunc matches correct seed when watching.
+func TriggerFunc(obj runtime.Object) []storage.MatchValue {
 	shoot := obj.(*garden.Shoot)
 
-	result := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getSeedName(shoot)}
-	return []storage.MatchValue{result}
+	seedResultDeprecated := storage.MatchValue{IndexName: garden.ShootSeedNameDeprecated, Value: getSeedName(shoot)}
+	seedResult := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getSeedName(shoot)}
+	cloudProfileResult := storage.MatchValue{IndexName: garden.ShootCloudProfileName, Value: shoot.Spec.CloudProfileName}
+	return []storage.MatchValue{seedResultDeprecated, seedResult, cloudProfileResult}
 }
 
 // MatchShoot returns a generic matcher for a given label and field selector.
@@ -224,13 +228,13 @@ func MatchShoot(label labels.Selector, field fields.Selector) storage.SelectionP
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{garden.ShootSeedName},
+		IndexFields: []string{garden.ShootSeedNameDeprecated, garden.ShootSeedName, garden.ShootCloudProfileName},
 	}
 }
 
 func getSeedName(shoot *garden.Shoot) string {
-	if shoot.Spec.Cloud.Seed == nil {
+	if shoot.Spec.SeedName == nil {
 		return ""
 	}
-	return *shoot.Spec.Cloud.Seed
+	return *shoot.Spec.SeedName
 }

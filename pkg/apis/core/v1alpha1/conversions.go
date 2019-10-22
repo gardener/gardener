@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -41,6 +42,19 @@ import (
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
+	if err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", garden.ShootSeedName, garden.ShootCloudProfileName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
 	// Add non-generated conversion functions
 	return scheme.AddConversionFuncs(
 		Convert_v1alpha1_Seed_To_garden_Seed,

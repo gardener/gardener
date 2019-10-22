@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -62,7 +63,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: shoot.GetAttrs, TriggerFunc: shoot.SeedTriggerFunc}
+	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: shoot.GetAttrs, TriggerFunc: shoot.TriggerFunc}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
