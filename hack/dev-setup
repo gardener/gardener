@@ -213,4 +213,4 @@ OaMnRwirobPupceHD5zvuGPjjDaPhc1yeRMYo+xXgLL+mYyXR1ZYGuI=
 -----END RSA PRIVATE KEY-----
 EOF
 
-$(dirname "${0}")/dev-setup-register-gardener
+$(dirname "${0}")/dev-setup-register-gardener "$@"
