@@ -17,11 +17,9 @@ package plant
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	corev1 "k8s.io/api/core/v1"
@@ -74,30 +72,4 @@ func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, nodeL
 		}
 	}
 	return condition, nil
-}
-
-func (h *HealthChecker) makePlantNodeLister(ctx context.Context, options *client.ListOptions) kutil.NodeLister {
-	var (
-		once  sync.Once
-		items []*corev1.Node
-		err   error
-
-		onceBody = func() {
-			nodeList := &corev1.NodeList{}
-			err = h.plantClient.List(ctx, nodeList, client.UseListOptions(options))
-			if err != nil {
-				return
-			}
-
-			for _, item := range nodeList.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewNodeLister(func() ([]*corev1.Node, error) {
-		once.Do(onceBody)
-		return items, err
-	})
 }

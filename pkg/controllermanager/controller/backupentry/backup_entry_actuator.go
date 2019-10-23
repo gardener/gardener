@@ -212,7 +212,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	})
 }
 
-// waitUntilBackupEntryExtensionReconciled waits until BackupEntry Extention resource reconciled from seed.
+// waitUntilBackupEntryExtensionReconciled waits until BackupEntry Extension resource reconciled from seed.
 func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) error {
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
 		be := &extensionsv1alpha1.BackupEntry{}
