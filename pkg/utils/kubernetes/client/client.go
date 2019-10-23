@@ -452,43 +452,6 @@ func (o *cleaner) cleanCollection(
 	return flow.Parallel(tasks...)(ctx)
 }
 
-func (o *cleanerOps) cleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, cleanOptions *CleanOptions) error {
-	if err := o.Clean(ctx, c, obj, UseCleanOptions(cleanOptions)); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Get(ctx, key, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return NewObjectsRemaining(obj)
-}
-
-func (o *cleanerOps) cleanCollectionAndEnsureGone(ctx context.Context, c client.Client, list runtime.Object, cleanOptions *CleanOptions) error {
-	if err := o.Clean(ctx, c, list, UseCleanOptions(cleanOptions)); err != nil {
-		return err
-	}
-
-	if err := c.List(ctx, list, useListOptionsIfNotNil(cleanOptions.CollectionOptions)); err != nil {
-		return err
-	}
-
-	if meta.LenList(list) > 0 {
-		return NewObjectsRemaining(list)
-	}
-	return nil
-}
-
 type cleanerOps struct {
 	Cleaner
 	GoneEnsurer

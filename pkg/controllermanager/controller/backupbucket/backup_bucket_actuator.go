@@ -178,7 +178,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	})
 }
 
-// waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extention resource reconciled from seed.
+// waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extension resource reconciled from seed.
 // It also copies the generatedSecret from seed to garden.
 func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context) error {
 	var backupBucket *extensionsv1alpha1.BackupBucket
