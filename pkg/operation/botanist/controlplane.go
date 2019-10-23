@@ -791,13 +791,13 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	minReplicas, ok := defaultValues["minReplicas"].(int)
+	minReplicas, ok := defaultValues["minReplicas"].(int32)
 	if !ok {
-		return fmt.Errorf("Error converting minReplicas '%v' to int", defaultValues["minReplicas"])
+		return fmt.Errorf("Error converting minReplicas '%v' to int32", defaultValues["minReplicas"])
 	}
-	maxReplicas, ok := defaultValues["maxReplicas"].(int)
+	maxReplicas, ok := defaultValues["maxReplicas"].(int32)
 	if !ok {
-		return fmt.Errorf("Error converting maxReplicas '%v' to int", defaultValues["maxReplicas"])
+		return fmt.Errorf("Error converting maxReplicas '%v' to int32", defaultValues["maxReplicas"])
 	}
 	// APIserver will be horizontally scaled until last but one replicas,
 	// after which there will be vertical scaling
