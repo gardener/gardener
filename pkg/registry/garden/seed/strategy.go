@@ -20,7 +20,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -61,11 +60,7 @@ func (s Strategy) Migrate(ctx context.Context, obj runtime.Object) error {
 			}
 			cloudProfile := cloudProfileObj.(*garden.CloudProfile)
 
-			providerType, err := helper.DetermineCloudProviderInProfile(cloudProfile.Spec)
-			if err != nil {
-				return err
-			}
-			seed.Spec.Provider.Type = string(providerType)
+			seed.Spec.Provider.Type = cloudProfile.Spec.Type
 
 		case len(seed.Spec.Provider.Type) > 0:
 			cloudProfileListObj, err := s.CloudProfiles.List(ctx, &metainternalversion.ListOptions{})
@@ -75,12 +70,7 @@ func (s Strategy) Migrate(ctx context.Context, obj runtime.Object) error {
 			cloudProfileList := cloudProfileListObj.(*garden.CloudProfileList)
 
 			for _, cloudProfile := range cloudProfileList.Items {
-				providerType, err := helper.DetermineCloudProviderInProfile(cloudProfile.Spec)
-				if err != nil {
-					return err
-				}
-
-				if string(providerType) == seed.Spec.Provider.Type {
+				if cloudProfile.Spec.Type == seed.Spec.Provider.Type {
 					seed.Spec.Cloud.Profile = cloudProfile.Name
 					return nil
 				}
