@@ -188,6 +188,9 @@ webhooks:
     resources:
     - secrets
   failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      garden.sapcloud.io/role: project
   clientConfig:
     service:
       namespace: garden
