@@ -1630,7 +1630,6 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			}
 			workerNames[worker.Name] = true
 		}
-
 	}
 
 	packet := cloud.Packet
@@ -1667,11 +1666,13 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 
 	}
 
-	if maxPod == 0 {
-		// default maxPod setting on kubelet
-		maxPod = 110
+	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
+		if maxPod == 0 {
+			// default maxPod setting on kubelet
+			maxPod = 110
+		}
+		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize)...)
 	}
-	allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize)...)
 
 	return allErrs
 }

@@ -33,7 +33,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,6 +75,7 @@ var _ = Describe("validator", func() {
 			validMachineImageName         = "some-machineimage"
 			validMachineImageVersions     = []garden.ExpirableVersion{{Version: "0.0.1"}}
 			validShootMachineImageVersion = "0.0.1"
+			volumeType                    = "volume-type-1"
 
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
@@ -201,7 +202,7 @@ var _ = Describe("validator", func() {
 								Maximum: 1,
 								Volume: &garden.Volume{
 									Size: "40Gi",
-									Type: "volume-type-1",
+									Type: &volumeType,
 								},
 								Zones: []string{"europe-a"},
 							},
@@ -612,7 +613,7 @@ var _ = Describe("validator", func() {
 						Maximum: 1,
 						Volume: &garden.Volume{
 							Size: "10Gi",
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -945,13 +946,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}
@@ -1023,7 +1025,7 @@ var _ = Describe("validator", func() {
 						Maximum: 1,
 						Volume: &garden.Volume{
 							Size: "10Gi",
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -1220,13 +1222,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Cloud.Azure.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}
@@ -1292,7 +1295,7 @@ var _ = Describe("validator", func() {
 						Maximum: 1,
 						Volume: &garden.Volume{
 							Size: "10Gi",
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -1491,13 +1494,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Cloud.GCP.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}
@@ -1549,7 +1553,7 @@ var _ = Describe("validator", func() {
 						Maximum: 1,
 						Volume: &garden.Volume{
 							Size: "10Gi",
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -1734,13 +1738,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Cloud.Packet.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}
@@ -2075,7 +2080,7 @@ var _ = Describe("validator", func() {
 						Maximum: 1,
 						Volume: &garden.Volume{
 							Size: "10Gi",
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -2274,13 +2279,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}
@@ -2336,7 +2342,7 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.Worker{
 					{
 						Volume: &garden.Volume{
-							Type: "volume-type-1",
+							Type: &volumeType,
 						},
 					},
 				}
@@ -2366,7 +2372,7 @@ var _ = Describe("validator", func() {
 					Maximum: 1,
 					Volume: &garden.Volume{
 						Size: "10Gi",
-						Type: "volume-type-1",
+						Type: &volumeType,
 					},
 					Zones: []string{"europe-a"},
 				},
@@ -2686,13 +2692,14 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid volume type", func() {
+				notAllowed := "not-allowed"
 				shoot.Spec.Provider.Workers = []garden.Worker{
 					{
 						Machine: garden.Machine{
 							Type: "machine-type-1",
 						},
 						Volume: &garden.Volume{
-							Type: "not-allowed",
+							Type: &notAllowed,
 						},
 					},
 				}

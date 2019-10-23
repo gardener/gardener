@@ -4092,7 +4092,7 @@ func autoConvert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStat
 }
 
 func autoConvert_v1alpha1_Volume_To_garden_Volume(in *Volume, out *garden.Volume, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
 	return nil
 }
@@ -4103,7 +4103,7 @@ func Convert_v1alpha1_Volume_To_garden_Volume(in *Volume, out *garden.Volume, s 
 }
 
 func autoConvert_garden_Volume_To_v1alpha1_Volume(in *garden.Volume, out *Volume, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
 	return nil
 }

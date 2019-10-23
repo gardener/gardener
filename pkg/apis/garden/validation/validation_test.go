@@ -3745,6 +3745,7 @@ var _ = Describe("validation", func() {
 				Pods:     &invalidCIDR,
 				Services: &invalidCIDR,
 			}
+			volumeType     = "default"
 			maxSurge       = intstr.FromInt(1)
 			maxUnavailable = intstr.FromInt(0)
 			worker         = garden.Worker{
@@ -3758,7 +3759,7 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "40Gi",
-					Type: "default",
+					Type: &volumeType,
 				},
 			}
 			invalidWorker = garden.Worker{
@@ -3772,7 +3773,6 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "",
-					Type: "",
 				},
 			}
 			invalidWorkerName = garden.Worker{
@@ -3786,7 +3786,7 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "40Gi",
-					Type: "default",
+					Type: &volumeType,
 				},
 			}
 			invalidWorkerTooLongName = garden.Worker{
@@ -3800,7 +3800,7 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "40Gi",
-					Type: "default",
+					Type: &volumeType,
 				},
 			}
 			workerAutoScalingInvalid = garden.Worker{
@@ -3814,7 +3814,7 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "40Gi",
-					Type: "default",
+					Type: &volumeType,
 				},
 			}
 			workerAutoScalingMinMaxZero = garden.Worker{
@@ -3828,7 +3828,7 @@ var _ = Describe("validation", func() {
 				MaxUnavailable: &maxUnavailable,
 				Volume: &garden.Volume{
 					Size: "40Gi",
-					Type: "default",
+					Type: &volumeType,
 				},
 			}
 		)
@@ -3995,19 +3995,56 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(HaveLen(3))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.profile"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloud.secretBindingRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.version"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.networking.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.maintenance"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.provider.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.cloudProfileName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.region"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.secretBindingName"),
+				})),
+			))
 		})
 
 		It("should forbid unsupported addon configuration", func() {
@@ -4517,7 +4554,6 @@ var _ = Describe("validation", func() {
 			It("should forbid invalid worker configuration", func() {
 				w := invalidWorker.DeepCopy()
 				w.Volume.Size = "hugo"
-				w.Volume.Type = ""
 				shoot.Spec.Cloud.AWS.Workers = []garden.Worker{*w}
 
 				errorList := ValidateShoot(shoot)
@@ -4644,15 +4680,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {
@@ -5108,15 +5141,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {
@@ -5520,15 +5550,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {
@@ -5950,15 +5977,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {
@@ -6238,13 +6262,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {
@@ -6633,15 +6656,12 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+					})),
+				))
 			})
 
 			Context("NodeCIDRMask validation", func() {

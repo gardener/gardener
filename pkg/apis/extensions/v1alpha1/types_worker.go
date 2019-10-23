@@ -135,7 +135,8 @@ type MachineImage struct {
 // Volume contains information about the root disks that should be used for worker pools.
 type Volume struct {
 	// Type is the type of the volume.
-	Type string `json:"type"`
+	// +optional
+	Type *string `json:"type,omitempty"`
 	// Size is the size of the volume.
 	Size string `json:"size"`
 }

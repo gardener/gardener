@@ -1123,13 +1123,13 @@ top:
 }
 
 func validateVolumeTypes(constraints []garden.VolumeType, volume, oldVolume *garden.Volume, regions []garden.Region, region string, zones []string) (bool, []string) {
-	if (volume == nil && oldVolume == nil) || (volume != nil && oldVolume != nil && volume.Type == oldVolume.Type) {
+	if (volume == nil && oldVolume == nil) || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
 		return true, nil
 	}
 
 	var volumeType string
-	if volume != nil {
-		volumeType = volume.Type
+	if volume != nil && volume.Type != nil {
+		volumeType = *volume.Type
 	}
 
 	validValues := []string{}

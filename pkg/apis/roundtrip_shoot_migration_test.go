@@ -777,7 +777,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -893,9 +893,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 					},
 				}
 				controlPlaneConfigJSON, _ = json.Marshal(controlPlaneConfig)
-				worker1VolumeSize = "20Gi"
-				worker1VolumeType = "voltype"
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}}"
+				worker1VolumeSize         = "20Gi"
+				worker1VolumeType         = "voltype"
+				workerMigrationJSON       = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}}"
 
 				in          *gardencorev1alpha1.Shoot
 				expectedOut *gardenv1beta1.Shoot
@@ -943,7 +943,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 							Taints: worker1Taints,
 							Volume: &gardencorev1alpha1.Volume{
 								Size: worker1VolumeSize,
-								Type: worker1VolumeType,
+								Type: &worker1VolumeType,
 							},
 						},
 					},
@@ -1159,7 +1159,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -1506,7 +1506,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -1652,7 +1652,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -1774,7 +1774,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -1971,7 +1971,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -2136,7 +2136,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -2301,7 +2301,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -2656,7 +2656,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -2804,7 +2804,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						Taints: worker1Taints,
 						Volume: &gardencorev1alpha1.Volume{
 							Size: worker1VolumeSize,
-							Type: worker1VolumeType,
+							Type: &worker1VolumeType,
 						},
 						Zones: worker1Zones,
 					},
@@ -2918,7 +2918,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 							Taints: worker1Taints,
 							Volume: &gardencorev1alpha1.Volume{
 								Size: worker1VolumeSize,
-								Type: worker1VolumeType,
+								Type: &worker1VolumeType,
 							},
 							Zones: worker1Zones,
 						},

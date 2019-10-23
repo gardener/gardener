@@ -16,23 +16,21 @@ package framework
 
 import (
 	"fmt"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 
+	"github.com/ghodss/yaml"
 	apimachineryRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var (
@@ -243,7 +241,7 @@ func AddWorker(shoot *gardencorev1alpha1.Shoot, cloudProfile *gardencorev1alpha1
 			Image: &shootMachineImage,
 		},
 		Volume: &gardencorev1alpha1.Volume{
-			Type: cloudProfile.Spec.VolumeTypes[0].Name,
+			Type: &cloudProfile.Spec.VolumeTypes[0].Name,
 			Size: "35Gi",
 		},
 	})

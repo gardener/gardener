@@ -843,7 +843,8 @@ type ShootMachineImage struct {
 // Volume contains information about the volume type and size.
 type Volume struct {
 	// Type is the machine type of the worker group.
-	Type string `json:"type"`
+	// +optional
+	Type *string `json:"type,omitempty"`
 	// Size is the size of the root volume.
 	Size string `json:"size"`
 }

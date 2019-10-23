@@ -142,7 +142,7 @@ var _ = Describe("quotavalidator", func() {
 					Minimum: 1,
 					Volume: &garden.Volume{
 						Size: "30Gi",
-						Type: volumeTypeName,
+						Type: &volumeTypeName,
 					},
 				},
 			}
@@ -157,7 +157,7 @@ var _ = Describe("quotavalidator", func() {
 					Minimum: 1,
 					Volume: &garden.Volume{
 						Size: "30Gi",
-						Type: volumeTypeName,
+						Type: &volumeTypeName,
 					},
 				},
 				{
@@ -169,7 +169,7 @@ var _ = Describe("quotavalidator", func() {
 					Minimum: 1,
 					Volume: &garden.Volume{
 						Size: "30Gi",
-						Type: volumeTypeName,
+						Type: &volumeTypeName,
 					},
 				},
 			}

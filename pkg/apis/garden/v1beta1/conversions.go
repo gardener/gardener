@@ -1437,7 +1437,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: worker.VolumeType,
+					Type: &worker.VolumeType,
 				},
 			}
 
@@ -1575,7 +1575,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: worker.VolumeType,
+					Type: &worker.VolumeType,
 				},
 			}
 
@@ -1710,7 +1710,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: worker.VolumeType,
+					Type: &worker.VolumeType,
 				},
 			}
 
@@ -1986,7 +1986,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: worker.VolumeType,
+					Type: &worker.VolumeType,
 				},
 			}
 
@@ -2087,7 +2087,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: worker.VolumeType,
+					Type: &worker.VolumeType,
 				},
 			}
 
@@ -2299,7 +2299,9 @@ func Convert_garden_Worker_To_v1beta1_AWSWorker(in *garden.Worker, out *AWSWorke
 
 	if in.Volume != nil {
 		out.VolumeSize = in.Volume.Size
-		out.VolumeType = in.Volume.Type
+		if in.Volume.Type != nil {
+			out.VolumeType = *in.Volume.Type
+		}
 	}
 
 	var kubeletConfig *KubeletConfig
@@ -2341,7 +2343,9 @@ func Convert_garden_Worker_To_v1beta1_AzureWorker(in *garden.Worker, out *AzureW
 
 	if in.Volume != nil {
 		out.VolumeSize = in.Volume.Size
-		out.VolumeType = in.Volume.Type
+		if in.Volume.Type != nil {
+			out.VolumeType = *in.Volume.Type
+		}
 	}
 
 	var kubeletConfig *KubeletConfig
@@ -2383,7 +2387,9 @@ func Convert_garden_Worker_To_v1beta1_GCPWorker(in *garden.Worker, out *GCPWorke
 
 	if in.Volume != nil {
 		out.VolumeSize = in.Volume.Size
-		out.VolumeType = in.Volume.Type
+		if in.Volume.Type != nil {
+			out.VolumeType = *in.Volume.Type
+		}
 	}
 
 	var kubeletConfig *KubeletConfig
@@ -2462,7 +2468,9 @@ func Convert_garden_Worker_To_v1beta1_AlicloudWorker(in *garden.Worker, out *Ali
 
 	if in.Volume != nil {
 		out.VolumeSize = in.Volume.Size
-		out.VolumeType = in.Volume.Type
+		if in.Volume.Type != nil {
+			out.VolumeType = *in.Volume.Type
+		}
 	}
 
 	var kubeletConfig *KubeletConfig
@@ -2504,7 +2512,9 @@ func Convert_garden_Worker_To_v1beta1_PacketWorker(in *garden.Worker, out *Packe
 
 	if in.Volume != nil {
 		out.VolumeSize = in.Volume.Size
-		out.VolumeType = in.Volume.Type
+		if in.Volume.Type != nil {
+			out.VolumeType = *in.Volume.Type
+		}
 	}
 
 	var kubeletConfig *KubeletConfig

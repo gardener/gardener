@@ -1708,7 +1708,7 @@ type ShootMachineImage struct {
 // Volume contains information about the volume type and size.
 type Volume struct {
 	// Type is the machine type of the worker group.
-	Type string
+	Type *string
 	// Size is the size of the root volume.
 	Size string
 }

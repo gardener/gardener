@@ -4920,7 +4920,7 @@ func schema_pkg_apis_core_v1alpha1_Volume(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
-				Required: []string{"type", "size"},
+				Required: []string{"size"},
 			},
 		},
 	}

@@ -394,7 +394,7 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 
 		// Get the proper VolumeType
 		for _, element := range volumeTypes {
-			if worker.Volume != nil && element.Name == worker.Volume.Type {
+			if worker.Volume != nil && worker.Volume.Type != nil && element.Name == *worker.Volume.Type {
 				volumeType = &element
 				break
 			}
@@ -444,7 +444,7 @@ func getShootWorkerResources(shoot *garden.Shoot, cloudProfile *garden.CloudProf
 			for _, machineType := range cloudProfile.Spec.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil {
 					workerCopy.Volume = &garden.Volume{
-						Type: machineType.Storage.Type,
+						Type: &machineType.Storage.Type,
 						Size: machineType.Storage.Size.String(),
 					}
 				}
