@@ -1143,12 +1143,6 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	cloudPath := fldPath.Child("cloud")
-	if _, err := helper.DetermineCloudProviderInShoot(spec.Cloud); err != nil {
-		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/alicloud/openstack/packet"), "cloud section must only contain exactly one field of aws/azure/gcp/alicloud/openstack/packet"))
-		return allErrs
-	}
-
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateCloud(spec.Cloud, spec.Kubernetes, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
