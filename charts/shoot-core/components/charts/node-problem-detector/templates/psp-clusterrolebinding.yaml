@@ -1,0 +1,18 @@
+{{- if .Values.rbac.pspEnabled }}
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: node-problem-detector-psp
+  labels:
+    app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}
+    helm.sh/chart: {{ include "node-problem-detector.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-problem-detector-psp
+subjects:
+- kind: ServiceAccount
+  name: node-problem-detector
+  namespace: kube-system
+{{- end }}

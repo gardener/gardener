@@ -84,6 +84,10 @@ images:
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
   tag: "1.6.3"
+- name: node-problem-detector
+  sourceRepository: github.com/kubernetes/node-problem-detector
+  repository: k8s.gcr.io/node-problem-detector
+  tag: "v0.7.1"
 
 # Shoot optional addons
 - name: kubernetes-dashboard
