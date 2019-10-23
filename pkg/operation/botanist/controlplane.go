@@ -656,43 +656,45 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer() error {
-	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	var (
+		hvpaEnabled       = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+		minReplicas int32 = 1
+		maxReplicas int32 = 4
 
-	defaultValues := map[string]interface{}{
-		"etcdServicePort":   2379,
-		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"shootNetworks": map[string]interface{}{
-			"service": b.Shoot.GetServiceNetwork(),
-			"pod":     b.Shoot.GetPodNetwork(),
-			"node":    b.Shoot.Info.Spec.Networking.Nodes,
-		},
-		"seedNetworks": map[string]interface{}{
-			"service": b.Seed.Info.Spec.Networks.Services,
-			"pod":     b.Seed.Info.Spec.Networks.Pods,
-			"node":    b.Seed.Info.Spec.Networks.Nodes,
-		},
-		"minReplicas":               1,
-		"maxReplicas":               4,
-		"enableBasicAuthentication": gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
-		"probeCredentials":          b.APIServerHealthCheckToken,
-		"securePort":                443,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                     b.CheckSums[v1alpha1constants.SecretNameCACluster],
-			"checksum/secret-ca-front-proxy":         b.CheckSums[v1alpha1constants.SecretNameCAFrontProxy],
-			"checksum/secret-kube-apiserver":         b.CheckSums[v1alpha1constants.DeploymentNameKubeAPIServer],
-			"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
-			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
-			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
-			"checksum/secret-vpn-seed":               b.CheckSums["vpn-seed"],
-			"checksum/secret-vpn-seed-tlsauth":       b.CheckSums["vpn-seed-tlsauth"],
-			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
-			"checksum/secret-etcd-ca":                b.CheckSums[v1alpha1constants.SecretNameCAETCD],
-			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
-		},
-		"hvpa": map[string]interface{}{
-			"enabled": hvpaEnabled,
-		},
-	}
+		defaultValues = map[string]interface{}{
+			"etcdServicePort":   2379,
+			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"shootNetworks": map[string]interface{}{
+				"service": b.Shoot.GetServiceNetwork(),
+				"pod":     b.Shoot.GetPodNetwork(),
+				"node":    b.Shoot.Info.Spec.Networking.Nodes,
+			},
+			"seedNetworks": map[string]interface{}{
+				"service": b.Seed.Info.Spec.Networks.Services,
+				"pod":     b.Seed.Info.Spec.Networks.Pods,
+				"node":    b.Seed.Info.Spec.Networks.Nodes,
+			},
+			"enableBasicAuthentication": gardencorev1alpha1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
+			"probeCredentials":          b.APIServerHealthCheckToken,
+			"securePort":                443,
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-ca":                     b.CheckSums[v1alpha1constants.SecretNameCACluster],
+				"checksum/secret-ca-front-proxy":         b.CheckSums[v1alpha1constants.SecretNameCAFrontProxy],
+				"checksum/secret-kube-apiserver":         b.CheckSums[v1alpha1constants.DeploymentNameKubeAPIServer],
+				"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
+				"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
+				"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
+				"checksum/secret-vpn-seed":               b.CheckSums["vpn-seed"],
+				"checksum/secret-vpn-seed-tlsauth":       b.CheckSums["vpn-seed-tlsauth"],
+				"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
+				"checksum/secret-etcd-ca":                b.CheckSums[v1alpha1constants.SecretNameCAETCD],
+				"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+			},
+			"hvpa": map[string]interface{}{
+				"enabled": hvpaEnabled,
+			},
+		}
+	)
 
 	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {
@@ -721,8 +723,8 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			autoscaler = apiServer.Autoscaler
 		)
 		defaultValues["replicas"] = *apiServer.Replicas
-		defaultValues["minReplicas"] = *autoscaler.MinReplicas
-		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
+		minReplicas = *autoscaler.MinReplicas
+		maxReplicas = autoscaler.MaxReplicas
 
 		if hvpaEnabled {
 			// If HVPA is enabled, we can keep the limits very high
@@ -791,14 +793,6 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	minReplicas, ok := defaultValues["minReplicas"].(int32)
-	if !ok {
-		return fmt.Errorf("Error converting minReplicas '%v' to int32", defaultValues["minReplicas"])
-	}
-	maxReplicas, ok := defaultValues["maxReplicas"].(int32)
-	if !ok {
-		return fmt.Errorf("Error converting maxReplicas '%v' to int32", defaultValues["maxReplicas"])
-	}
 	// APIserver will be horizontally scaled until last but one replicas,
 	// after which there will be vertical scaling
 	if maxReplicas > minReplicas {
@@ -806,6 +800,9 @@ func (b *Botanist) DeployKubeAPIServer() error {
 	} else {
 		defaultValues["lastReplicaCountForHpa"] = minReplicas
 	}
+
+	defaultValues["minReplicas"] = minReplicas
+	defaultValues["maxReplicas"] = maxReplicas
 
 	var (
 		apiServerConfig  = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
