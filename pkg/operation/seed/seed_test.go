@@ -17,6 +17,7 @@ package seed_test
 import (
 	"context"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/seed"
@@ -26,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,6 +74,61 @@ var _ = Describe("seed", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(replicas).To(Equal(expectedReplicas))
+		})
+	})
+
+	Describe("#GetValidVolumeSize", func() {
+		It("should return the size because no minimum size was set", func() {
+			var (
+				size = "20Gi"
+				seed = &Seed{
+					Info: &gardencorev1alpha1.Seed{
+						Spec: gardencorev1alpha1.SeedSpec{
+							Volume: nil,
+						},
+					},
+				}
+			)
+
+			Expect(seed.GetValidVolumeSize(size)).To(Equal(size))
+		})
+
+		It("should return the minimum size because the given value is smaller", func() {
+			var (
+				size                = "20Gi"
+				minimumSize         = "25Gi"
+				minimumSizeQuantity = resource.MustParse(minimumSize)
+				seed                = &Seed{
+					Info: &gardencorev1alpha1.Seed{
+						Spec: gardencorev1alpha1.SeedSpec{
+							Volume: &gardencorev1alpha1.SeedVolume{
+								MinimumSize: &minimumSizeQuantity,
+							},
+						},
+					},
+				}
+			)
+
+			Expect(seed.GetValidVolumeSize(size)).To(Equal(minimumSize))
+		})
+
+		It("should return the given value size because the minimum size is smaller", func() {
+			var (
+				size                = "30Gi"
+				minimumSize         = "25Gi"
+				minimumSizeQuantity = resource.MustParse(minimumSize)
+				seed                = &Seed{
+					Info: &gardencorev1alpha1.Seed{
+						Spec: gardencorev1alpha1.SeedSpec{
+							Volume: &gardencorev1alpha1.SeedVolume{
+								MinimumSize: &minimumSizeQuantity,
+							},
+						},
+					},
+				}
+			)
+
+			Expect(seed.GetValidVolumeSize(size)).To(Equal(size))
 		})
 	})
 })

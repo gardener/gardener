@@ -41,6 +41,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -631,5 +632,11 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 	if s.Info.Spec.Volume == nil || s.Info.Spec.Volume.MinimumSize == nil {
 		return size
 	}
-	return s.Info.Spec.Volume.MinimumSize.String()
+
+	qs, err := resource.ParseQuantity(size)
+	if err == nil && qs.Cmp(*s.Info.Spec.Volume.MinimumSize) < 0 {
+		return s.Info.Spec.Volume.MinimumSize.String()
+	}
+
+	return size
 }
