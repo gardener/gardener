@@ -41,6 +41,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metaerrors "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -878,6 +879,36 @@ func (b *Botanist) DeployKubeAPIServer() error {
 	)
 	if err != nil {
 		return err
+	}
+
+	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
+	// the HVPA controller will create its own for the kube-apiserver deployment.
+	if hvpaEnabled {
+		for _, obj := range []struct {
+			name      string
+			namespace string
+			apiGroup  string
+			version   string
+			kind      string
+		}{
+			{v1alpha1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace, "autoscaling", "v2beta1", "HorizontalPodAutoscaler"},
+			{v1alpha1constants.DeploymentNameKubeAPIServer + "-vpa", b.Shoot.SeedNamespace, "autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler"},
+		} {
+			u := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"name":      obj.name,
+					"namespace": obj.namespace,
+				},
+			}
+			u.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   obj.apiGroup,
+				Version: obj.version,
+				Kind:    obj.kind,
+			})
+			if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, values, nil)
