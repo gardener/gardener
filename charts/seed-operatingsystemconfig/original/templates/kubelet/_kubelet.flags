@@ -26,6 +26,8 @@
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
 --rotate-certificates=true
 {{- end }}
---volume-plugin-dir=/var/lib/kubelet/volumeplugins
+{{- if .Values.worker.kubelet.volumePluginDir }}
+--volume-plugin-dir={{ .Values.worker.kubelet.volumePluginDir }}
+{{- end }}
 --v=2 $KUBELET_EXTRA_ARGS
 {{- end -}}

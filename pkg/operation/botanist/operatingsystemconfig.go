@@ -289,6 +289,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
 			kubelet["podPIDsLimit"] = *podPIDsLimit
 		}
+		if volumePluginDir := kubeletConfig.VolumePluginDir; volumePluginDir != nil {
+			kubelet["volumePluginDir"] = *volumePluginDir
+		}
 		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
 			kubelet["cpuCFSQuota"] = *cpuCFSQuota
 		}

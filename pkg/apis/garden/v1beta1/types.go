@@ -1637,6 +1637,9 @@ const (
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig `json:",inline"`
+	// VolumePluginDir is the full path of the directory in which to search for additional third party volume plugins.
+	// +optional
+	VolumePluginDir *string `json:"volumePluginDir,omitempty"`
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	// +optional
 	PodPIDsLimit *int64 `json:"podPidsLimit,omitempty"`

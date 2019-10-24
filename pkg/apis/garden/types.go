@@ -1492,6 +1492,8 @@ const (
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig
+	// VolumePluginDir is the full path of the directory in which to search for additional third party volume plugins.
+	VolumePluginDir *string
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	PodPIDsLimit *int64
 	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.

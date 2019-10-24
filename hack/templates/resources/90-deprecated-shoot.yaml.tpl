@@ -97,6 +97,7 @@ spec:
         # cpuManagerPolicy: none
         # podPidsLimit: 10
         # maxPods: 110
+        # volumePluginDir: null
         # evictionPressureTransitionPeriod: 4m0s
         # evictionMaxPodGracePeriod: 90
         # evictionHard:
