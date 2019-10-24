@@ -15,6 +15,7 @@ data:
         }{{ end }}
       {{- end }}
     }
+    import custom/*.server
     {{ end }}
   {{- range .Values.configmap.zoneFiles }}
   {{ .filename }}: {{ toYaml .contents | indent 4 }}
