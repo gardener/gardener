@@ -33,6 +33,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,12 +84,16 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		ownerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(b.Shoot.Info, controllerKind),
 		}
-		annotations map[string]string
+		volume *gardencorev1alpha1.SeedVolume
 	)
 
 	if minimumVolumeSize != nil {
-		annotations = map[string]string{
-			common.AnnotatePersistentVolumeMinimumSize: *minimumVolumeSize,
+		minimumSize, err := resource.ParseQuantity(*minimumVolumeSize)
+		if err != nil {
+			return err
+		}
+		volume = &gardencorev1alpha1.SeedVolume{
+			MinimumSize: &minimumSize,
 		}
 	}
 
@@ -168,7 +173,6 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		}
 		seed.OwnerReferences = ownerRefs
 
-		seed.Annotations = annotations
 		seed.Labels = map[string]string{
 			v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleSeed,
 			v1alpha1constants.GardenRole:           v1alpha1constants.GardenRoleSeed,
@@ -195,6 +199,7 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 			BlockCIDRs: blockCIDRs,
 			Taints:     taints,
 			Backup:     backupProfile,
+			Volume:     volume,
 		}
 		return nil
 	})
