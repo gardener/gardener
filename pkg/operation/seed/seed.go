@@ -41,7 +41,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -629,19 +628,8 @@ func (s *Seed) MustReserveExcessCapacity(must bool) {
 // GetValidVolumeSize is to get a valid volume size.
 // If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
 func (s *Seed) GetValidVolumeSize(size string) string {
-	if s.Info.Annotations == nil {
+	if s.Info.Spec.Volume == nil || s.Info.Spec.Volume.MinimumSize == nil {
 		return size
 	}
-
-	smv, ok := s.Info.Annotations[common.AnnotatePersistentVolumeMinimumSize]
-	if ok {
-		if qmv, err := resource.ParseQuantity(smv); err == nil {
-			qs, err := resource.ParseQuantity(size)
-			if err == nil && qs.Cmp(qmv) < 0 {
-				return smv
-			}
-		}
-	}
-
-	return size
+	return s.Info.Spec.Volume.MinimumSize.String()
 }

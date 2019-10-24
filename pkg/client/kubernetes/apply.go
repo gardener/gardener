@@ -150,7 +150,7 @@ var DefaultApplierOptions = ApplierOptions{
 			newObj.Object["secrets"] = oldObj.Object["secrets"]
 			newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
 		},
-		schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
+		{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
 			// Never override the status of VPA resources
 			newObj.Object["status"] = oldObj.Object["status"]
 		},
