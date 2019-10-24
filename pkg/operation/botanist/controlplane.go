@@ -885,21 +885,17 @@ func (b *Botanist) DeployKubeAPIServer() error {
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
 		for _, obj := range []struct {
-			name      string
-			namespace string
-			apiGroup  string
-			version   string
-			kind      string
+			apiGroup string
+			version  string
+			kind     string
+			name     string
 		}{
-			{v1alpha1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace, "autoscaling", "v2beta1", "HorizontalPodAutoscaler"},
-			{v1alpha1constants.DeploymentNameKubeAPIServer + "-vpa", b.Shoot.SeedNamespace, "autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler"},
+			{"autoscaling", "v2beta1", "HorizontalPodAutoscaler", v1alpha1constants.DeploymentNameKubeAPIServer},
+			{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1alpha1constants.DeploymentNameKubeAPIServer + "-vpa"},
 		} {
-			u := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"name":      obj.name,
-					"namespace": obj.namespace,
-				},
-			}
+			u := &unstructured.Unstructured{}
+			u.SetName(obj.name)
+			u.SetNamespace(b.Shoot.SeedNamespace)
 			u.SetGroupVersionKind(schema.GroupVersionKind{
 				Group:   obj.apiGroup,
 				Version: obj.version,
