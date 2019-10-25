@@ -116,6 +116,30 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Providers = nil
 			})
 
+			It("should pass because no default domain was generated for the shoot (with domain)", func() {
+				var (
+					shootDomain  = "my-shoot.my-private-domain.com"
+					providerType = "provider"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []garden.DNSProvider{
+					{
+						Type: &providerType,
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.DNS.Providers).NotTo(BeNil())
+				Expect(shoot.Spec.DNS.Providers[0].Type).NotTo(BeNil())
+				Expect(*shoot.Spec.DNS.Providers[0].Type).To(Equal(providerType))
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+			})
+
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -128,8 +152,8 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 			})
 
-			It("should pass because a default domain was generated for the shoot (with domain)", func() {
-				shootDomain := fmt.Sprintf("my-shoot.%s", domain)
+			It("should pass because the default domain was allowed for the shoot (with domain)", func() {
+				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
@@ -143,13 +167,26 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 			})
 
+			It("should reject because a default domain was already used for the shoot but is invalid (with domain)", func() {
+				shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
+				shoot.Spec.DNS.Domain = &shootDomain
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("should reject because no domain was configured for the shoot and project is missing", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs, nil)
 
-				Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")))
+				Expect(err).To(MatchError(apierrors.NewInternalError(fmt.Errorf("no project found for namespace %q", shoot.Namespace))))
 			})
 
 			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {
