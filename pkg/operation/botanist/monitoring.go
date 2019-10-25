@@ -112,6 +112,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"shoot": map[string]interface{}{
 				"apiserver": fmt.Sprintf("https://%s", common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
 				"provider":  b.Shoot.Info.Spec.Provider.Type,
+				"name":      b.Shoot.Info.Name,
+				"project":   b.Garden.Project.Name,
 			},
 			"ignoreAlerts": b.Shoot.IgnoreAlerts,
 			"extensions": map[string]interface{}{
