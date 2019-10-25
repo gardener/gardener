@@ -25,7 +25,7 @@ images:
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener-resource-manager
   repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
-  tag: "0.6.0"
+  tag: "0.7.0"
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
