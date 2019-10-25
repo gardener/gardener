@@ -12,7 +12,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/gardener/external-dns-management v0.0.0-20190220100540-eb4bbb5832a03
+	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
 	github.com/gardener/gardener-extensions v0.0.0-20191007140606-8fe857e58f6f
 	github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
 	github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d
@@ -66,11 +66,10 @@ require (
 	k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
 	sigs.k8s.io/controller-runtime v0.2.0-beta.4
-	sigs.k8s.io/structured-merge-diff v0.0.0-00010101000000-000000000000 // indirect
+	sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2 // indirect
 )
 
 replace (
-	github.com/gardener/external-dns-management => github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03 // 0.1.0
 	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20191007140606-8fe857e58f6f
 	github.com/gardener/gardener-resource-manager => github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
 	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a // 0.14.0
