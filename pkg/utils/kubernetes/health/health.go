@@ -410,5 +410,5 @@ func CheckAPIServerAvailability(condition gardencorev1alpha1.Condition, restClie
 	}
 
 	message := fmt.Sprintf("API server /healthz endpoint responded with success status code. %s", responseDurationText)
-	return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "HealthzRequestFailed", message)
+	return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "HealthzRequestSucceeded", message)
 }

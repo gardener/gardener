@@ -11,9 +11,10 @@ A bucket will be provisioned per `Seed`. So, backup of every `Shoot` created on 
 For the backup of the `Shoot` rescheduled on different `Seed` it will continue to use the same bucket.
 
 ## What is the lifespan of `BackupBucket`?
+
 The bucket associated with `BackupBucket` will be created at creation of `Seed`. And as per current implementation, it will be deleted on deletion of `Seed` and there isn't any `BackupEntry` resource associated with it.
 
-In the future, we plan to introduce schedule for `BackupBucket` the deletion logic for `BackupBucket` resource, which will reschedule the it on different available `seed`, on deletion or failure of health check for current associated `seed`. In that case, `BackupBucket` will be deleted only if there isn't any schedulable `Seed` available and there isn't any associated `BackupEntry` resource.
+In the future, we plan to introduce schedule for `BackupBucket` the deletion logic for `BackupBucket` resource, which will reschedule the it on different available `Seed`, on deletion or failure of health check for current associated `seed`. In that case, `BackupBucket` will be deleted only if there isn't any schedulable `Seed` available and there isn't any associated `BackupEntry` resource.
 
 ## What needs to be implemented to support a new infrastructure provider?
 
@@ -34,7 +35,7 @@ spec:
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed resources. This provider secret will be configured
-by Gardener operator in the `seed` resource and propagated over there by seed controller.
+by Gardener operator in the `Seed` resource and propagated over there by seed controller.
 
 After your controller has created the required bucket, if required it generates the secret to access the objects in buckets and put reference to it in `status`. This secret is
 supposed to be used by Gardener or eventually `BackupEntry` resource and etcd-backup-restore component to backup the etcd.

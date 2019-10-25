@@ -44,6 +44,11 @@ type DefaultStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+// GetConditions implements Status.
+func (d *DefaultStatus) GetConditions() []gardencorev1alpha1.Condition {
+	return d.Conditions
+}
+
 // GetLastOperation implements Status.
 func (d *DefaultStatus) GetLastOperation() LastOperation {
 	if d.LastOperation == nil {

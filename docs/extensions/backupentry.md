@@ -6,6 +6,7 @@ Before introducing the `BackupEntry` extension resource Gardener was using Terra
 Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to backupInfra proposal documentation to get idea about how the transition was done and understand the resource in broader scope.
 
 ## What is the lifespan of `BackupEntry`?
+
 The bucket associated with `BackupEntry` will be created at using `BackupBucket` resource. The `BackupEntry` resource will be created as a part of a `Shoot` creation. But resource continue to exists post deletion of a `Shoot`. The  `deletionGracePeriod` of a `BackupEntry` resource i.e. time after the shoot deletion
 is configurable globally for Gardener via gardener-controller-manager component config. You can find the configuration option in reference.
 

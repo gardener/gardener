@@ -21,6 +21,9 @@ import (
 
 // Status is the status of an Object.
 type Status interface {
+	// GetConditions retrieves the Conditions of a status.
+	// Conditions may be nil.
+	GetConditions() []gardencorev1alpha1.Condition
 	// GetLastOperation retrieves the LastOperation of a status.
 	// LastOperation may be nil.
 	GetLastOperation() LastOperation

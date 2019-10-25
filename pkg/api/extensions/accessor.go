@@ -17,11 +17,10 @@ package extensions
 import (
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -141,6 +140,21 @@ func (u unstructuredLastOperationAccessor) GetType() gardencorev1alpha1.LastOper
 // GetExtensionType implements Spec.
 func (u unstructuredSpecAccessor) GetExtensionType() string {
 	return nestedString(u.UnstructuredContent(), "spec", "type")
+}
+
+// GetConditions implements Status.
+func (u unstructuredStatusAccessor) GetConditions() []gardencorev1alpha1.Condition {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "conditions")
+	if err != nil || !ok {
+		return nil
+	}
+
+	conditions, ok2 := val.([]gardencorev1alpha1.Condition)
+	if !ok2 {
+		return nil
+	}
+
+	return conditions
 }
 
 // GetLastOperation implements Status.
