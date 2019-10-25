@@ -90,10 +90,10 @@ func AbbreviateFull(str string, offset int, maxWidth int) (string, error) {
 		return "", err
 	}
 	if (offset + maxWidth - 3) < len(str) { // 5 + (10-3) < 15 = 12 < 15
-		abrevStr, _ := Abbreviate(str[offset:len(str)], (maxWidth - 3))
+		abrevStr, _ := Abbreviate(str[offset:], (maxWidth - 3))
 		return abrevMarker + abrevStr, nil // abrevMarker + abbreviate(str.substring(offset), maxWidth - 3);
 	}
-	return abrevMarker + str[(len(str)-(maxWidth-3)):len(str)], nil // abrevMarker + str.substring(str.length() - (maxWidth - 3));
+	return abrevMarker + str[(len(str)-(maxWidth-3)):], nil // abrevMarker + str.substring(str.length() - (maxWidth - 3));
 }
 
 /*
@@ -211,7 +211,7 @@ func IndexOf(str string, sub string, start int) int {
 		return INDEX_NOT_FOUND
 	}
 
-	partialIndex := strings.Index(str[start:len(str)], sub)
+	partialIndex := strings.Index(str[start:], sub)
 	if partialIndex == -1 {
 		return INDEX_NOT_FOUND
 	}

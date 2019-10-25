@@ -76,7 +76,7 @@ func validationAssertions(p provider) {
 		It("invalid selector", func() {
 			p.preset().GetPresetSpec().ShootSelector = &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
-					metav1.LabelSelectorRequirement{
+					{
 						Key:      "foo",
 						Operator: metav1.LabelSelectorOpExists,
 						Values:   []string{"bar"},

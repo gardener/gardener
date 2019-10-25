@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"testing"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,11 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func TestTerraformer(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Kubernetes Suite")
-}
 
 var (
 	configMapGroupResource = schema.GroupResource{Resource: "ConfigMaps"}

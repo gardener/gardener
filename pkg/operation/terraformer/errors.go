@@ -53,7 +53,7 @@ func retrieveTerraformErrors(logList map[string]string) []string {
 // errors (which will be returned). If no errors occurred, an empty string will be returned.
 func findTerraformErrors(output string) string {
 	var (
-		regexTerraformError = regexp.MustCompile(`(?:Error *[^:]*|Errors): *([\s\S]*)`)
+		regexTerraformError = regexp.MustCompile(`(?:Error): *([\s\S]*)`)
 		regexUUID           = regexp.MustCompile(`(?i)[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}`)
 		regexMultiNewline   = regexp.MustCompile(`\n{2,}`)
 
@@ -65,26 +65,30 @@ func findTerraformErrors(output string) string {
 	if suffixIndex := strings.Index(errorMessage, "\n\nTerraform does not automatically rollback"); suffixIndex != -1 {
 		errorMessage = errorMessage[:suffixIndex]
 	}
+	// Strip optional explanation that nothing will happen.
+	if suffixIndex := strings.Index(errorMessage, "\n\nNothing to do."); suffixIndex != -1 {
+		errorMessage = errorMessage[:suffixIndex]
+	}
 
 	// Search for errors in Terraform output.
 	if terraformErrorMatch := regexTerraformError.FindStringSubmatch(errorMessage); len(terraformErrorMatch) > 1 {
 		// Remove leading and tailing spaces and newlines.
-		errorMessage = strings.TrimSpace(terraformErrorMatch[1])
+		errorMessage = strings.TrimSpace(terraformErrorMatch[0])
 
 		// Omit (request) uuid's to allow easy determination of duplicates.
 		errorMessage = regexUUID.ReplaceAllString(errorMessage, "<omitted>")
 
 		// Sort the occurred errors alphabetically
-		lines := strings.Split(errorMessage, "*")
+		lines := strings.Split(errorMessage, "Error: ")
 		sort.Strings(lines)
 
 		// Only keep the lines beginning with ' ' (actual errors)
 		for _, line := range lines {
-			if strings.HasPrefix(line, " ") {
+			if strings.HasPrefix(line, "Error") {
 				valid = append(valid, line)
 			}
 		}
-		errorMessage = "*" + strings.Join(valid, "\n*")
+		errorMessage = "* " + strings.Join(valid, "\n* ")
 
 		// Strip multiple newlines to one newline
 		errorMessage = regexMultiNewline.ReplaceAllString(errorMessage, "\n")

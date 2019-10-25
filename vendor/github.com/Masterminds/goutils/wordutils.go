@@ -129,9 +129,9 @@ func WrapCustom(str string, wrapLength int, newLineStr string, wrapLongWords boo
 			} else {
 				// long words aren't wrapped, just extended beyond limit
 				end := wrapLength + offset
-				index := strings.IndexRune(str[end:len(str)], ' ')
+				index := strings.IndexRune(str[end:], ' ')
 				if index == -1 {
-					wrappedLine.WriteString(str[offset:len(str)])
+					wrappedLine.WriteString(str[offset:])
 					offset = inputLineLength
 				} else {
 					spaceToWrapAt = index + end
@@ -143,7 +143,7 @@ func WrapCustom(str string, wrapLength int, newLineStr string, wrapLongWords boo
 		}
 	}
 
-	wrappedLine.WriteString(str[offset:len(str)])
+	wrappedLine.WriteString(str[offset:])
 
 	return wrappedLine.String()
 

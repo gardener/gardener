@@ -103,7 +103,7 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 			It("invalid selector", func() {
 				provider.new.Spec.ProjectSelector = &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
-						metav1.LabelSelectorRequirement{
+						{
 							Key:      "foo",
 							Operator: metav1.LabelSelectorOpExists,
 							Values:   []string{"bar"},
