@@ -538,6 +538,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 			var (
 				machineType1VolumeSize, _ = resource.ParseQuantity("20Gi")
 				machineType1VolumeType    = "hdd"
+				machineType1StorageClass  = "premium"
 
 				floatingPool1Name                      = "fip1"
 				floatingPool1LBClass1Name              = "fip1classname"
@@ -612,8 +613,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 								Name:   machineType1Name,
 								Usable: &machineType1Usable,
 								Storage: &gardencorev1alpha1.MachineTypeStorage{
-									Size: machineType1VolumeSize,
-									Type: machineType1VolumeType,
+									Class: machineType1StorageClass,
+									Size:  machineType1VolumeSize,
+									Type:  machineType1VolumeType,
 								},
 							},
 						},
@@ -630,18 +632,6 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						SeedSelector: &seedSelector,
 						Type:         providerType,
-						VolumeTypes: []gardencorev1alpha1.VolumeType{
-							{
-								Class:  volumeType1Class,
-								Name:   volumeType1Name,
-								Usable: &volumeType1Usable,
-							},
-							{
-								Class:  machineType1VolumeType,
-								Name:   machineType1Name,
-								Usable: &machineType1Usable,
-							},
-						},
 					},
 				}
 
@@ -702,8 +692,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 											Name:   machineType1Name,
 											Usable: &machineType1Usable,
 											Storage: &gardenv1beta1.MachineTypeStorage{
-												Size: machineType1VolumeSize,
-												Type: machineType1VolumeType,
+												Class: machineType1StorageClass,
+												Size:  machineType1VolumeSize,
+												Type:  machineType1VolumeType,
 											},
 										},
 										VolumeSize: machineType1VolumeSize,
@@ -730,8 +721,6 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				out1 := &garden.CloudProfile{}
 				Expect(scheme.Convert(in, out1, nil)).To(BeNil())
 
-				volumeTypesJSON, _ := json.Marshal(out1.Spec.VolumeTypes)
-				expectedOut.Annotations[garden.MigrationCloudProfileVolumeTypes] = string(volumeTypesJSON)
 				out2 := &gardenv1beta1.CloudProfile{}
 				Expect(scheme.Convert(out1, out2, nil)).To(BeNil())
 				Expect(out2).To(Equal(expectedOut))
@@ -1806,18 +1795,6 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						SeedSelector: &seedSelector,
 						Type:         providerType,
-						VolumeTypes: []gardencorev1alpha1.VolumeType{
-							{
-								Class:  volumeType1Class,
-								Name:   volumeType1Name,
-								Usable: &volumeType1Usable,
-							},
-							{
-								Class:  machineType1VolumeType,
-								Name:   machineType1Name,
-								Usable: &machineType1Usable,
-							},
-						},
 					},
 				}
 			)

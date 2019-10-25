@@ -45,6 +45,7 @@ var _ = Describe("quotavalidator", func() {
 			namespace             string = "test"
 			trialNamespace        string = "trial"
 			machineTypeName       string = "n1-standard-2"
+			machineTypeName2      string = "machtype2"
 			volumeTypeName        string = "pd-standard"
 
 			cloudProfileBase = garden.CloudProfile{
@@ -58,6 +59,15 @@ var _ = Describe("quotavalidator", func() {
 							CPU:    resource.MustParse("2"),
 							GPU:    resource.MustParse("0"),
 							Memory: resource.MustParse("5Gi"),
+						},
+						{
+							Name:   machineTypeName2,
+							CPU:    resource.MustParse("2"),
+							GPU:    resource.MustParse("0"),
+							Memory: resource.MustParse("5Gi"),
+							Storage: &garden.MachineTypeStorage{
+								Class: garden.VolumeClassStandard,
+							},
 						},
 					},
 					VolumeTypes: []garden.VolumeType{
@@ -265,6 +275,35 @@ var _ = Describe("quotavalidator", func() {
 
 				err := admissionHandler.Validate(attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("machine type in cloud profile defines storage", func() {
+				It("should pass because quota is large enough", func() {
+					shoot2 := *shoot.DeepCopy()
+					shoot2.Spec.Provider.Workers[0].Machine.Type = machineTypeName2
+					shoot2.Spec.Provider.Workers[0].Volume.Size = "19Gi"
+
+					quotaProject.Spec.Metrics[garden.QuotaMetricStorageStandard] = resource.MustParse("20Gi")
+
+					attrs := admission.NewAttributesRecord(&shoot2, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+					err := admissionHandler.Validate(attrs, nil)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should fail because quota is not large enough", func() {
+					shoot2 := *shoot.DeepCopy()
+					shoot2.Spec.Provider.Workers[0].Machine.Type = machineTypeName2
+					shoot2.Spec.Provider.Workers[0].Volume.Size = "21Gi"
+
+					quotaProject.Spec.Metrics[garden.QuotaMetricStorageStandard] = resource.MustParse("20Gi")
+
+					attrs := admission.NewAttributesRecord(&shoot2, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+					err := admissionHandler.Validate(attrs, nil)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Quota limits exceeded"))
+				})
 			})
 		})
 

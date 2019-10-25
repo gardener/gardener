@@ -3005,6 +3005,13 @@ func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallba
 				Description: "MachineTypeStorage is the amount of storage associated with the root volume of this machine type.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class is the class of the storage type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Size is the storage size.",
@@ -3019,7 +3026,7 @@ func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"size", "type"},
+				Required: []string{"class", "size", "type"},
 			},
 		},
 		Dependencies: []string{
@@ -8668,6 +8675,13 @@ func schema_pkg_apis_garden_v1beta1_MachineTypeStorage(ref common.ReferenceCallb
 				Description: "MachineTypeStorage is the amount of storage associated with the root volume of this machine type.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class is the class of the storage type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Size is the storage size.",
@@ -8682,7 +8696,7 @@ func schema_pkg_apis_garden_v1beta1_MachineTypeStorage(ref common.ReferenceCallb
 						},
 					},
 				},
-				Required: []string{"size", "type"},
+				Required: []string{"class", "size", "type"},
 			},
 		},
 		Dependencies: []string{

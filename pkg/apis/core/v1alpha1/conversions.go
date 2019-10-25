@@ -431,8 +431,9 @@ func Convert_v1alpha1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out 
 				t := garden.OpenStackMachineType{MachineType: o}
 				if machineType.Storage != nil {
 					t.Storage = &garden.MachineTypeStorage{
-						Size: machineType.Storage.Size,
-						Type: machineType.Storage.Type,
+						Class: machineType.Storage.Class,
+						Size:  machineType.Storage.Size,
+						Type:  machineType.Storage.Type,
 					}
 					t.VolumeSize = machineType.Storage.Size
 					t.VolumeType = machineType.Storage.Type
@@ -724,6 +725,7 @@ func Convert_garden_CloudProfile_To_v1alpha1_CloudProfile(in *garden.CloudProfil
 		} else {
 			delete(out.Annotations, garden.MigrationCloudProfileDNSProviders)
 		}
+		out.Spec.VolumeTypes = nil
 
 	case in.Spec.Alicloud != nil:
 		out.Spec.Type = "alicloud"

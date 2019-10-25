@@ -737,19 +737,12 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 			if err := autoConvert_v1beta1_MachineType_To_garden_MachineType(&machineType.MachineType, &o, s); err != nil {
 				return err
 			}
-			o.Storage = &garden.MachineTypeStorage{
-				Size: machineType.VolumeSize,
-				Type: machineType.VolumeType,
+			if o.Storage == nil {
+				o.Storage = &garden.MachineTypeStorage{}
 			}
+			o.Storage.Size = machineType.VolumeSize
+			o.Storage.Type = machineType.VolumeType
 			out.Spec.MachineTypes = append(out.Spec.MachineTypes, o)
-
-			if !volumeTypesHaveName(out.Spec.VolumeTypes, machineType.Name) {
-				out.Spec.VolumeTypes = append(out.Spec.VolumeTypes, garden.VolumeType{
-					Name:   machineType.Name,
-					Class:  machineType.VolumeType,
-					Usable: machineType.Usable,
-				})
-			}
 		}
 
 		for _, zone := range in.Spec.OpenStack.Constraints.Zones {

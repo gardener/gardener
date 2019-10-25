@@ -119,6 +119,8 @@ type MachineType struct {
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
 type MachineTypeStorage struct {
+	// Class is the class of the storage type.
+	Class string `json:"class"`
 	// Size is the storage size.
 	Size resource.Quantity `json:"size"`
 	// Type is the type of the storage.
