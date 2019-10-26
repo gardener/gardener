@@ -256,6 +256,27 @@ func (f *finalizer) HasFinalizers(obj runtime.Object) (bool, error) {
 	return len(acc.GetFinalizers()) > 0, nil
 }
 
+type crdFinalizer struct {
+	finalizer
+}
+
+// NewCRDFinalizer instantiates a CustomResourceDefinition finalizer.
+func NewCRDFinalizer() Finalizer {
+	return &crdFinalizer{finalizer: finalizer{}}
+}
+
+// Finalize removes given CustomResourceDefinition from the Kubernetes store.
+// For Kubernetes < v1.15 it is required to file a DELETE request after
+// patching .meta.finalizers of the CustomResourceDefinition.
+// Ref: https://github.com/kubernetes/kubernetes/issues/84354
+func (f *crdFinalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
+	if err := f.finalizer.Finalize(ctx, c, obj); err != nil {
+		return err
+	}
+
+	return client.IgnoreNotFound(c.Delete(ctx, obj))
+}
+
 type namespaceFinalizer struct {
 	namespaceInterface typedcorev1.NamespaceInterface
 }
@@ -309,6 +330,11 @@ var defaultCleaner = NewCleaner(utiltime.DefaultOps(), defaultFinalizer)
 // DefaultCleaner is the default Cleaner.
 func DefaultCleaner() Cleaner {
 	return defaultCleaner
+}
+
+// NewCRDCleaner instantiates a new Cleaner with ability to clean CustomResourceDefinitions.
+func NewCRDCleaner() Cleaner {
+	return NewCleaner(utiltime.DefaultOps(), NewCRDFinalizer())
 }
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
