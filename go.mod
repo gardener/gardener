@@ -12,7 +12,7 @@ require (
 	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
 	github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
 	github.com/gardener/gardener-resource-manager v0.0.0-20191025075317-09173887c1a7
-	github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d
+	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 	github.com/gardener/machine-controller-manager v0.0.0-20190606071036-119056ee3fdd
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
@@ -52,7 +52,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
 	k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
-	sigs.k8s.io/controller-runtime v0.2.0-beta.4
+	sigs.k8s.io/controller-runtime v0.2.0-beta.5
 )
 
 replace (
@@ -72,6 +72,6 @@ replace (
 	k8s.io/klog => k8s.io/klog v0.1.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532 // kubernetes-1.14.8
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.4
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.5
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2
 )

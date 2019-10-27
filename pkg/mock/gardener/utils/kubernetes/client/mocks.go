@@ -37,7 +37,7 @@ func (m *MockCleaner) EXPECT() *MockCleanerMockRecorder {
 }
 
 // Clean mocks base method
-func (m *MockCleaner) Clean(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client.CleanOptionFunc) error {
+func (m *MockCleaner) Clean(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client.CleanOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2}
 	for _, a := range arg3 {
@@ -79,7 +79,7 @@ func (m *MockGoneEnsurer) EXPECT() *MockGoneEnsurerMockRecorder {
 }
 
 // EnsureGone mocks base method
-func (m *MockGoneEnsurer) EnsureGone(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client0.ListOptionFunc) error {
+func (m *MockGoneEnsurer) EnsureGone(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client0.ListOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2}
 	for _, a := range arg3 {

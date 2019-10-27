@@ -16,9 +16,7 @@ package kubernetes
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
 
-	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
@@ -27,9 +25,10 @@ import (
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	machinescheme "github.com/gardener/gardener/pkg/client/machine/clientset/versioned/scheme"
 
+	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -57,13 +56,13 @@ var (
 	// PlantScheme is the scheme used in the Plant cluster
 	PlantScheme = runtime.NewScheme()
 
-	// DefaultDeleteOptionFuncs use foreground propagation policy and grace period of 60 seconds.
-	DefaultDeleteOptionFuncs = []client.DeleteOptionFunc{
+	// DefaultDeleteOptions use foreground propagation policy and grace period of 60 seconds.
+	DefaultDeleteOptions = []client.DeleteOption{
 		client.PropagationPolicy(metav1.DeletePropagationForeground),
 		client.GracePeriodSeconds(60),
 	}
-	// ForceDeleteOptionFuncs use background propagation policy and grace period of 0 seconds.
-	ForceDeleteOptionFuncs = []client.DeleteOptionFunc{
+	// ForceDeleteOptions use background propagation policy and grace period of 0 seconds.
+	ForceDeleteOptions = []client.DeleteOption{
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
 		client.GracePeriodSeconds(0),
 	}

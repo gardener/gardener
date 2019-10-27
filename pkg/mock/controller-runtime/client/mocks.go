@@ -37,7 +37,7 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockClient) Create(arg0 context.Context, arg1 runtime.Object, arg2 ...client.CreateOptionFunc) error {
+func (m *MockClient) Create(arg0 context.Context, arg1 runtime.Object, arg2 ...client.CreateOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -56,7 +56,7 @@ func (mr *MockClientMockRecorder) Create(arg0, arg1 interface{}, arg2 ...interfa
 }
 
 // Delete mocks base method
-func (m *MockClient) Delete(arg0 context.Context, arg1 runtime.Object, arg2 ...client.DeleteOptionFunc) error {
+func (m *MockClient) Delete(arg0 context.Context, arg1 runtime.Object, arg2 ...client.DeleteOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -74,6 +74,25 @@ func (mr *MockClientMockRecorder) Delete(arg0, arg1 interface{}, arg2 ...interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClient)(nil).Delete), varargs...)
 }
 
+// DeleteAllOf mocks base method
+func (m *MockClient) DeleteAllOf(arg0 context.Context, arg1 runtime.Object, arg2 ...client.DeleteAllOfOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteAllOf", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllOf indicates an expected call of DeleteAllOf
+func (mr *MockClientMockRecorder) DeleteAllOf(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOf", reflect.TypeOf((*MockClient)(nil).DeleteAllOf), varargs...)
+}
+
 // Get mocks base method
 func (m *MockClient) Get(arg0 context.Context, arg1 types.NamespacedName, arg2 runtime.Object) error {
 	m.ctrl.T.Helper()
@@ -89,7 +108,7 @@ func (mr *MockClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call
 }
 
 // List mocks base method
-func (m *MockClient) List(arg0 context.Context, arg1 runtime.Object, arg2 ...client.ListOptionFunc) error {
+func (m *MockClient) List(arg0 context.Context, arg1 runtime.Object, arg2 ...client.ListOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -108,7 +127,7 @@ func (mr *MockClientMockRecorder) List(arg0, arg1 interface{}, arg2 ...interface
 }
 
 // Patch mocks base method
-func (m *MockClient) Patch(arg0 context.Context, arg1 runtime.Object, arg2 client.Patch, arg3 ...client.PatchOptionFunc) error {
+func (m *MockClient) Patch(arg0 context.Context, arg1 runtime.Object, arg2 client.Patch, arg3 ...client.PatchOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2}
 	for _, a := range arg3 {
@@ -141,7 +160,7 @@ func (mr *MockClientMockRecorder) Status() *gomock.Call {
 }
 
 // Update mocks base method
-func (m *MockClient) Update(arg0 context.Context, arg1 runtime.Object, arg2 ...client.UpdateOptionFunc) error {
+func (m *MockClient) Update(arg0 context.Context, arg1 runtime.Object, arg2 ...client.UpdateOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

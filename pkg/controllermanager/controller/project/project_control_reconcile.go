@@ -84,7 +84,7 @@ func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectL
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
 			if err := utilretry.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
-				if err := c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptionFuncs...); err != nil {
+				if err := c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptions...); err != nil {
 					if apierrors.IsNotFound(err) {
 						return utilretry.Ok()
 					}

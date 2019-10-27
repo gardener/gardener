@@ -53,7 +53,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels(map[string]string{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelMonitoring})); err != nil {
+		client.MatchingLabels{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelMonitoring}); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
-	if err := b.K8sSeedClient.Client().Delete(ctx, alertManagerStatefulSet, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+	if err := b.K8sSeedClient.Client().Delete(ctx, alertManagerStatefulSet, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -254,5 +254,5 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, prometheusStatefulSet, kubernetes.DefaultDeleteOptionFuncs...))
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, prometheusStatefulSet, kubernetes.DefaultDeleteOptions...))
 }

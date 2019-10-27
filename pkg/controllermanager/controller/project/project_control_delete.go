@@ -74,6 +74,6 @@ func (c *defaultControl) deleteNamespace(project *gardencorev1alpha1.Project, na
 		return true, nil
 	}
 
-	err = c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptionFuncs...)
+	err = c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptions...)
 	return false, client.IgnoreNotFound(err)
 }

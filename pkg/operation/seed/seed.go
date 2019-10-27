@@ -332,7 +332,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
 			client.InNamespace(v1alpha1constants.GardenNamespace),
-			client.MatchingLabels(map[string]string{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelLogging})); err != nil {
+			client.MatchingLabels{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelLogging}); err != nil {
 			return err
 		}
 
@@ -388,7 +388,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller-tls", Namespace: v1alpha1constants.GardenNamespace}},
 	}
 	for _, object := range objects {
-		if err = k8sSeedClient.Client().Delete(context.TODO(), object, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
+		if err = k8sSeedClient.Client().Delete(context.TODO(), object, kubernetes.DefaultDeleteOptions...); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}

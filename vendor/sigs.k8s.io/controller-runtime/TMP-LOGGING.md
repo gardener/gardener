@@ -30,7 +30,7 @@ or even write
 func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Response, error) {
     logger := logger.WithValues("pod", req.NamespacedName)
     // do some stuff
-    logger.Info("starting reconcilation")
+    logger.Info("starting reconciliation")
 }
 ```
 
@@ -49,7 +49,7 @@ provides some helpers to make it easy to use
 
 You can configure the logging implementation using
 `"sigs.k8s.io/controller-runtime/pkg/log".SetLogger`.  That
-package also contains the convinience functions for setting up Zap.
+package also contains the convenience functions for setting up Zap.
 
 You can get a handle to the the "root" logger using
 `"sigs.k8s.io/controller-runtime/pkg/log".Log`, and can then call
@@ -58,7 +58,7 @@ repeatedly to chain names together:
 
 ```go
 logger := log.Log.WithName("controller").WithName("replicaset")
-// in reconile...
+// in reconcile...
 logger = logger.WithValues("replicaset", req.NamespacedName)
 // later on in reconcile...
 logger.Info("doing things with pods", "pod", newPod)
@@ -86,7 +86,7 @@ Errors should *always* be logged with `log.Error`, which allows logr
 implementations to provide special handling of errors (for instance,
 providing stack traces in debug mode).
 
-It's acceptible to log call `log.Error` with a nil error object.  This
+It's acceptable to log call `log.Error` with a nil error object.  This
 conveys that an error occurred in some capacity, but that no actual
 `error` object was involved.
 
@@ -125,12 +125,12 @@ logic.
 
 ### Groups, Versions, and Kinds
 
-- Kinds should not be logged alone (they're meanless alone).  Use
+- Kinds should not be logged alone (they're meaningless alone).  Use
   a `GroupKind` object to log them instead, or a `GroupVersionKind` when
   version is relevant.
 
 - If you need to log an API version string, use `api version` as the key
-  (formatted as with a `GroupVersion`, or as recieved directly from API
+  (formatted as with a `GroupVersion`, or as received directly from API
   discovery).
 
 ### Objects and Types

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -70,12 +71,11 @@ func (o *GardenerTestOperation) GetFirstRunningPodWithLabels(ctx context.Context
 }
 
 // GetPodsByLabels fetches all pods with the desired set of labels <labelsMap>
-func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsMap labels.Selector, c kubernetes.Interface, namespace string) (*corev1.PodList, error) {
+func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsSelector labels.Selector, c kubernetes.Interface, namespace string) (*corev1.PodList, error) {
 	podList := &corev1.PodList{}
-	err := c.Client().List(ctx, podList, client.UseListOptions(&client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labelsMap,
-	}))
+	err := c.Client().List(ctx, podList,
+		client.InNamespace(namespace),
+		utilclient.MatchingLabelsSelector{Selector: labelsSelector})
 	if err != nil {
 		return nil, err
 	}
@@ -167,12 +167,13 @@ func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *
 	return err
 }
 
-func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, namespace string, c kubernetes.Interface) (*appsv1.DeploymentList, error) {
+func getDeploymentListByLabels(ctx context.Context, labelsSelector labels.Selector, namespace string, c kubernetes.Interface) (*appsv1.DeploymentList, error) {
 	deploymentList := &appsv1.DeploymentList{}
-	err := c.Client().List(ctx, deploymentList, client.UseListOptions(&client.ListOptions{LabelSelector: labelsMap}))
-	if err != nil {
+	if err := c.Client().List(ctx, deploymentList,
+		utilclient.MatchingLabelsSelector{Selector: labelsSelector}); err != nil {
 		return nil, err
 	}
+
 	return deploymentList, nil
 }
 

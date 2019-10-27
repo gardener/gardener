@@ -226,7 +226,7 @@ func (b *Botanist) UnregisterAsSeed() error {
 			Namespace: seed.Spec.SecretRef.Namespace,
 		},
 	}
-	if err := b.K8sGardenClient.Client().Delete(context.TODO(), secret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+	if err := b.K8sGardenClient.Client().Delete(context.TODO(), secret, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -237,7 +237,7 @@ func (b *Botanist) UnregisterAsSeed() error {
 				Namespace: seed.Spec.Backup.SecretRef.Namespace,
 			},
 		}
-		if err := b.K8sGardenClient.Client().Delete(context.TODO(), backupSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+		if err := b.K8sGardenClient.Client().Delete(context.TODO(), backupSecret, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

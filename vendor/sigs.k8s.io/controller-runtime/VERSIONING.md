@@ -66,7 +66,7 @@ greatest code, including breaking changes, happens on master.
 The *release-X* branches contain stable, backwards compatible code.  Every
 major (X) release, a new such branch is created.  It is from these
 branches that minor and patch releases are tagged.  If some cases, it may
-be neccessary open PRs for bugfixes directly against stable branches, but
+be necessary open PRs for bugfixes directly against stable branches, but
 this should generally not be the case.
 
 The maintainers are responsible for updating the contents of this branch;
@@ -131,7 +131,7 @@ branch, except in exceptional circumstances.  Patches will be backported
 to maintained stable versions, as needed.
 
 Major releases are done shortly after a breaking change is merged -- once
-a breaking change is merged, the next release *must* be a major revison.
+a breaking change is merged, the next release *must* be a major revision.
 We don't intend to have a lot of these, so we may put off merging breaking
 PRs until a later date.
 
@@ -172,9 +172,9 @@ have to rewrite their code when they eventually upgrade, and for
 maintainers/contributors, who have to deal with differences between master
 and stable branches.
 
-That being said, we'll occaisonally want to make breaking changes. They'll
+That being said, we'll occasionally want to make breaking changes. They'll
 be merged onto master, and will then trigger a major release (see [Release
-Proccess](#release-process)).  Because breaking changes induce a major
+Process](#release-process)).  Because breaking changes induce a major
 revision, the maintainers may delay a particular breaking change until
 a later date when they are ready to make a major revision with a few
 breaking changes.
@@ -187,7 +187,7 @@ Maintainers should treat breaking changes with caution, and evaluate
 potential non-breaking solutions (see below).
 
 Note that API breakage in public APIs due to dependencies will trigger
-a major revision, so you may occaisonally need to have a major release
+a major revision, so you may occasionally need to have a major release
 anyway, due to changes in libraries like `k8s.io/client-go` or
 `k8s.io/apimachinery`.
 

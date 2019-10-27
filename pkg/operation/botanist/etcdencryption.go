@@ -25,6 +25,7 @@ import (
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -185,7 +186,7 @@ func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx conte
 
 func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, labelRequirement *labels.Requirement, mutateLabelsFunc func(m metav1.Object)) []error {
 	secretList := &corev1.SecretList{}
-	if err := b.K8sShootClient.Client().List(ctx, secretList, client.UseListOptions(&client.ListOptions{LabelSelector: labels.NewSelector().Add(*labelRequirement)})); err != nil {
+	if err := b.K8sShootClient.Client().List(ctx, secretList, utilclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*labelRequirement)}); err != nil {
 		return []error{err}
 	}
 
