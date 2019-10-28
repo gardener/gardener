@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,7 +28,8 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -138,7 +140,9 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1alpha1.Seed) error {
 
 		for _, controllerInstallation := range controllerInstallationList {
 			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
-				return fmt.Errorf("ControllerInstallations for seed %q still pending, cannot release seed", seed.Name)
+				message := fmt.Sprintf("ControllerInstallations for seed %q still pending, cannot release seed", seed.Name)
+				c.recorder.Event(seed, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+				return fmt.Errorf(message)
 			}
 		}
 

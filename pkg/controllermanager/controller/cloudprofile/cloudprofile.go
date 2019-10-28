@@ -28,6 +28,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -50,7 +51,7 @@ type Controller struct {
 
 // NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenCoreInformers> for the Garden clusters.
 // It creates and return a new Garden controller to control CloudProfiles.
-func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory) *Controller {
+func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
 		cloudProfileInformer       = gardenCoreV1alpha1Informer.CloudProfiles()
@@ -63,7 +64,7 @@ func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCo
 		cloudProfileLister:     cloudProfileInformer.Lister(),
 		cloudProfileQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
 		shootLister:            shootLister,
-		control:                NewDefaultControl(k8sGardenClient, shootLister),
+		control:                NewDefaultControl(k8sGardenClient, shootLister, recorder),
 		workerCh:               make(chan int),
 	}
 
