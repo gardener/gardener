@@ -57,6 +57,8 @@ configmap:
     - name: reload
     - name: loadbalance
       parameters: round_robin
+    - name: import
+      parameters: custom/*.override
   zoneFiles: []  # configure custom zone files as per https://coredns.io/2017/05/08/custom-dns-entries-for-kubernetes/
   #  - filename: example.db
   #    domain: example.com

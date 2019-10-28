@@ -47,6 +47,9 @@ spec:
         - name: config-volume
           mountPath: /etc/coredns
           readOnly: true
+        - mountPath: /etc/coredns/custom
+          name: custom-config-volume
+          readOnly: true
         ports:
         - containerPort: {{ .Values.deployment.spec.containers.ports.dns }}
           name: dns-udp
@@ -85,3 +88,8 @@ spec:
             items:
             - key: Corefile
               path: Corefile
+        - name: custom-config-volume
+          configMap:
+            defaultMode: 420
+            name: coredns-custom
+            optional: true
