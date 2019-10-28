@@ -90,7 +90,7 @@ var (
 	// CleanupSelector is a selector that excludes system components and all resources not considered for auto cleanup.
 	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
 
-	// NoCleanupPreventionListOptions are CollectionMatching that exclude system components or non-auto clean upped resource.
+	// NoCleanupPreventionListOptions are CollectionMatching that exclude system components or non-auto cleaned up resource.
 	NoCleanupPreventionListOptions = client.ListOptions{
 		LabelSelector: CleanupSelector,
 	}
@@ -189,13 +189,15 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 // CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
-		c   = b.K8sShootClient.Client()
-		ops = utilclient.DefaultCleanOps()
+		c           = b.K8sShootClient.Client()
+		defaultOps  = utilclient.DefaultCleanOps()
+		crdCleaner  = utilclient.NewCRDCleaner()
+		crdCleanOps = utilclient.NewCleanOps(crdCleaner, utilclient.DefaultGoneEnsurer())
 	)
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
-		cleanResourceFn(ops, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
+		cleanResourceFn(defaultOps, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
+		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, GracePeriodFiveMinutes, FinalizeAfterOneHour),
 	)(ctx)
 }
 
