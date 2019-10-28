@@ -57,6 +57,11 @@ import (
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
 
+const (
+	schedulerDefaultProvider           = "DefaultProvider"
+	schedulerClusterAutoscalerProvider = "ClusterAutoscalerProvider"
+)
+
 // DeployNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
 // components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
@@ -1001,6 +1006,11 @@ func (b *Botanist) DeployKubeScheduler() error {
 	defaultValues := map[string]interface{}{
 		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"config": map[string]interface{}{
+			"algorithmSource": map[string]interface{}{
+				"provider": b.schedulerProvider(),
+			},
+		},
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-scheduler":        b.CheckSums[v1alpha1constants.DeploymentNameKubeScheduler],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
@@ -1099,4 +1109,11 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) schedulerProvider() string {
+	if b.Shoot.WantsClusterAutoscaler {
+		return schedulerClusterAutoscalerProvider
+	}
+	return schedulerDefaultProvider
 }
