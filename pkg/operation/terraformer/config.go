@@ -138,11 +138,16 @@ func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, 
 	})
 }
 
-// CreateOrUpdateStateConfigMap creates or updates the Terraformer state ConfigMap with the given state.
-func CreateOrUpdateStateConfigMap(ctx context.Context, c client.Client, namespace, name, state string) (*corev1.ConfigMap, error) {
-	return createOrUpdateConfigMap(ctx, c, namespace, name, map[string]string{
-		StateKey: state,
-	})
+// CreateStateConfigMap creates the Terraformer state ConfigMap with the given state.
+func CreateStateConfigMap(ctx context.Context, c client.Client, namespace, name, state string) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		Data: map[string]string{
+			StateKey: state,
+		},
+	}
+
+	return c.Create(ctx, configMap)
 }
 
 // CreateOrUpdateTFVarsSecret creates or updates the Terraformer variables Secret with the given tfvars.
@@ -171,7 +176,7 @@ func DefaultInitializer(c client.Client, main, variables string, tfvars []byte) 
 		}
 
 		if config.InitializeState {
-			if _, err := CreateOrUpdateStateConfigMap(ctx, c, config.Namespace, config.StateName, ""); err != nil {
+			if err := CreateStateConfigMap(ctx, c, config.Namespace, config.StateName, ""); err != nil && !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 		}

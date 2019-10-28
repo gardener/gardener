@@ -89,7 +89,7 @@ var _ = Describe("terraformer", func() {
 		})
 	})
 
-	Describe("#CreateOrUpdateStateConfigMap", func() {
+	Describe("#CreateStateConfigMap", func() {
 		It("Should create the config map", func() {
 			const (
 				namespace = "namespace"
@@ -108,17 +108,10 @@ var _ = Describe("terraformer", func() {
 				}
 			)
 
-			gomock.InOrder(
-				client.EXPECT().
-					Get(gomock.Any(), kutil.Key(namespace, name), &corev1.ConfigMap{ObjectMeta: ObjectMeta}).
-					Return(apierrors.NewNotFound(configMapGroupResource, name)),
-				client.EXPECT().
-					Create(gomock.Any(), expected.DeepCopy()),
-			)
+			client.EXPECT().Create(gomock.Any(), expected.DeepCopy())
 
-			actual, err := CreateOrUpdateStateConfigMap(context.TODO(), client, namespace, name, state)
+			err := CreateStateConfigMap(context.TODO(), client, namespace, name, state)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(actual).To(Equal(expected))
 		})
 	})
 
@@ -170,7 +163,6 @@ var _ = Describe("terraformer", func() {
 
 			configurationKey = kutil.Key(namespace, configurationName)
 			variablesKey     = kutil.Key(namespace, variablesName)
-			stateKey         = kutil.Key(namespace, stateName)
 
 			configurationObjectMeta = kutil.ObjectMeta(namespace, configurationName)
 			variablesObjectMeta     = kutil.ObjectMeta(namespace, variablesName)
@@ -178,7 +170,6 @@ var _ = Describe("terraformer", func() {
 
 			getConfiguration = &corev1.ConfigMap{ObjectMeta: configurationObjectMeta}
 			getVariables     = &corev1.Secret{ObjectMeta: variablesObjectMeta}
-			getState         = &corev1.ConfigMap{ObjectMeta: stateObjectMeta}
 
 			createConfiguration = &corev1.ConfigMap{
 				ObjectMeta: configurationObjectMeta,
@@ -202,7 +193,6 @@ var _ = Describe("terraformer", func() {
 
 			configurationNotFound = apierrors.NewNotFound(configMapGroupResource, configurationName)
 			variablesNotFound     = apierrors.NewNotFound(secretGroupResource, variablesName)
-			stateNotFound         = apierrors.NewNotFound(configMapGroupResource, stateName)
 		)
 
 		runInitializer := func(initializeState bool) error {
@@ -229,9 +219,6 @@ var _ = Describe("terraformer", func() {
 				client.EXPECT().
 					Create(gomock.Any(), createVariables.DeepCopy()),
 
-				client.EXPECT().
-					Get(gomock.Any(), stateKey, getState.DeepCopy()).
-					Return(stateNotFound),
 				client.EXPECT().
 					Create(gomock.Any(), createState.DeepCopy()),
 			)
