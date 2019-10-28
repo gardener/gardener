@@ -34,6 +34,9 @@ spec:
         command:
         - ./updater
         args:
+        - --min-replicas=1
+        - --eviction-tolerance=1
+        - --evict-after-oom-treshold=48h
         - --v=2
         - --stderrthreshold=info
         resources:

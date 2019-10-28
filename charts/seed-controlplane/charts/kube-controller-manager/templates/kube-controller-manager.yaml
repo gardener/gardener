@@ -122,8 +122,10 @@ spec:
           protocol: TCP
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        {{- if .Values.resources }}
         resources:
-{{- include "util-templates.resource-quantity" .Values | indent 10 }}
+{{ toYaml .Values.resources | indent 10 }}
+        {{- end }}
         volumeMounts:
         - name: ca
           mountPath: /srv/kubernetes/ca
