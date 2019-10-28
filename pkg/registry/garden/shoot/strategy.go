@@ -65,36 +65,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
-
-	// TODO: (mvladev) there was a bug in the validation of GCP & openstack
-	// and clusters with more than one Worker network were allowed to
-	// be created.
-	// This is used to fix the broken Shoots on update.
-	// Remove those 2 checks after several releases.
-	if gcp := newShoot.Spec.Cloud.GCP; gcp != nil {
-		if len(gcp.Networks.Workers) > 1 {
-			gcp.Networks.Workers = []string{gcp.Networks.Workers[0]}
-		}
-	}
-
-	if gcp := oldShoot.Spec.Cloud.GCP; gcp != nil {
-		if len(gcp.Networks.Workers) > 1 {
-			gcp.Networks.Workers = []string{gcp.Networks.Workers[0]}
-		}
-	}
-
-	if openstack := newShoot.Spec.Cloud.OpenStack; openstack != nil {
-		if len(openstack.Networks.Workers) > 1 {
-			openstack.Networks.Workers = []string{openstack.Networks.Workers[0]}
-		}
-	}
-
-	if openstack := oldShoot.Spec.Cloud.OpenStack; openstack != nil {
-		if len(openstack.Networks.Workers) > 1 {
-			openstack.Networks.Workers = []string{openstack.Networks.Workers[0]}
-		}
-	}
-
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
