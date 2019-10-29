@@ -61,4 +61,24 @@ type Terraformer struct {
 	deadlineJob      time.Duration
 }
 
-const numberOfConfigResources = 3
+const (
+	numberOfConfigResources = 3
+
+	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
+	TerraformerConfigSuffix = ".tf-config"
+
+	// TerraformerVariablesSuffix is the suffix used for the Secret which stores the Terraform variables definition.
+	TerraformerVariablesSuffix = ".tf-vars"
+
+	// TerraformerStateSuffix is the suffix used for the ConfigMap which stores the Terraform state.
+	TerraformerStateSuffix = ".tf-state"
+
+	// TerraformerPodSuffix is the suffix used for the name of the Pod which validates the Terraform configuration.
+	TerraformerPodSuffix = ".tf-pod"
+
+	// TerraformerJobSuffix is the suffix used for the name of the Job which executes the Terraform configuration.
+	TerraformerJobSuffix = ".tf-job"
+
+	// TerraformerPurposeBackup is a constant for the complete Terraform setup with purpose 'etcd backup'.
+	TerraformerPurposeBackup = "backup"
+)

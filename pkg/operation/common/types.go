@@ -244,36 +244,6 @@ const (
 	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
 	SecretRefChecksumAnnotation = "checksum/secret.data"
 
-	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
-	TerraformerConfigSuffix = ".tf-config"
-
-	// TerraformerVariablesSuffix is the suffix used for the Secret which stores the Terraform variables definition.
-	TerraformerVariablesSuffix = ".tf-vars"
-
-	// TerraformerStateSuffix is the suffix used for the ConfigMap which stores the Terraform state.
-	TerraformerStateSuffix = ".tf-state"
-
-	// TerraformerPodSuffix is the suffix used for the name of the Pod which validates the Terraform configuration.
-	TerraformerPodSuffix = ".tf-pod"
-
-	// TerraformerJobSuffix is the suffix used for the name of the Job which executes the Terraform configuration.
-	TerraformerJobSuffix = ".tf-job"
-
-	// TerraformerPurposeInternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'internal cluster domain'
-	// deprecated
-	TerraformerPurposeInternalDNSDeprecated = "internal-dns"
-
-	// TerraformerPurposeExternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'external cluster domain'.
-	// deprecated
-	TerraformerPurposeExternalDNSDeprecated = "external-dns"
-
-	// TerraformerPurposeIngressDNSDeprecated is a constant for the complete Terraform setup with purpose 'ingress domain'.
-	// deprecated
-	TerraformerPurposeIngressDNSDeprecated = "ingress"
-
-	// TerraformerPurposeBackup is a constant for the complete Terraform setup with purpose 'etcd backup'.
-	TerraformerPurposeBackup = "backup"
-
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -406,9 +376,6 @@ const (
 
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
-
-	// TerraformerImageName is the name of the Terraformer image.
-	TerraformerImageName = "terraformer"
 
 	// ElasticsearchImageName is the name of the Elastic-Search image used for logging
 	ElasticsearchImageName = "elasticsearch-oss"

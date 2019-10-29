@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -356,20 +355,6 @@ func (o *Operation) InjectSeedShootImages(values map[string]interface{}, names .
 // InjectShootShootImages injects images that shall run on the Shoot and target the Shoot's Kubernetes version.
 func (o *Operation) InjectShootShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
 	return o.injectImages(values, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
-}
-
-func (o *Operation) newTerraformer(purpose, namespace, name string) (*terraformer.Terraformer, error) {
-	image, err := o.ImageVector.FindImage(common.TerraformerImageName, imagevector.RuntimeVersion(o.K8sSeedClient.Version()), imagevector.TargetVersion(o.K8sSeedClient.Version()))
-	if err != nil {
-		return nil, err
-	}
-
-	return terraformer.NewForConfig(o.Logger, o.K8sSeedClient.RESTConfig(), purpose, namespace, name, image.String())
-}
-
-// NewShootTerraformer creates a new Terraformer for the current shoot with the given purpose.
-func (o *Operation) NewShootTerraformer(purpose string) (*terraformer.Terraformer, error) {
-	return o.newTerraformer(purpose, o.Shoot.SeedNamespace, o.Shoot.Info.Name)
 }
 
 // SyncClusterResourceToSeed creates or updates the `Cluster` extension resource for the shoot in the seed cluster.

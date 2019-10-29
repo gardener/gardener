@@ -104,10 +104,6 @@ images:
   tag: "0.7.0"
 
 # Miscellaenous
-- name: terraformer
-  sourceRepository: github.com/gardener/terraformer
-  repository: eu.gcr.io/gardener-project/gardener/terraformer
-  tag: "0.15.0"
 - name: busybox
   sourceRepository: github.com/mirror/busybox
   repository: busybox

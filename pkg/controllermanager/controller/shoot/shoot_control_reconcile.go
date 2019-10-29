@@ -25,7 +25,6 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -289,11 +288,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Waiting until stale extension resources are deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DestroyKube2IAMResources(o) }).DoIf(o.Shoot.Info.Spec.Provider.Type == "aws"),
-			Dependencies: flow.NewTaskIDs(waitUntilVPNConnectionExists),
 		})
 		f = g.Compile()
 	)

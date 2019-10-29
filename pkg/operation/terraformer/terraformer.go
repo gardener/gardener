@@ -24,7 +24,6 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -93,11 +92,11 @@ func New(
 		purpose:   purpose,
 		image:     image,
 
-		configName:    prefix + common.TerraformerConfigSuffix,
-		variablesName: prefix + common.TerraformerVariablesSuffix,
-		stateName:     prefix + common.TerraformerStateSuffix,
-		podName:       fmt.Sprintf("%s-%s", prefix+common.TerraformerPodSuffix, podSuffix),
-		jobName:       prefix + common.TerraformerJobSuffix,
+		configName:    prefix + TerraformerConfigSuffix,
+		variablesName: prefix + TerraformerVariablesSuffix,
+		stateName:     prefix + TerraformerStateSuffix,
+		podName:       fmt.Sprintf("%s-%s", prefix+TerraformerPodSuffix, podSuffix),
+		jobName:       prefix + TerraformerJobSuffix,
 
 		activeDeadlineSeconds: int64(3600),
 		jobBackoffLimit:       int32(3),
