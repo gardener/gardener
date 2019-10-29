@@ -137,6 +137,10 @@ spec:
         # we mount the Shoot cluster's CA and certs
         - mountPath: /etc/prometheus/seed
           name: prometheus-kubeconfig
+{{- if hasKey .Values.alerting.auth_type "certificate" }}
+        - mountPath: /etc/prometheus/operator
+          name: prometheus-remote-am-tls
+{{- end }}
       - image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         name: vpn-seed
@@ -259,6 +263,11 @@ spec:
       - name: blackbox-exporter-config-prometheus
         configMap:
           name: blackbox-exporter-config-prometheus
+{{- if hasKey .Values.alerting.auth_type "certificate" }}
+      - name: prometheus-remote-am-tls
+        secret:
+          secretName: prometheus-remote-am-tls
+{{- end }}
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db

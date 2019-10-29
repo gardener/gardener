@@ -117,8 +117,6 @@ const (
 	GardenRole = "gardener.cloud/role"
 	// GardenRoleExtension is a constant for a label that describes the 'extensions' role.
 	GardenRoleExtension = "extension"
-	// GardenRoleAlertingSMTP is the value of the GardenRole key indicating type 'alerting-smtp'.
-	GardenRoleAlertingSMTP = "alerting-smtp"
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
 	// GardenRoleShoot is the value of the GardenRole key indicating type 'shoot'.

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -63,6 +64,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.PrometheusConfigMapScrapeConfig]))
 		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapOperatorDashboard]))
 		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapUserDashboard]))
+	}
+
+	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(common.GardenRoleAlerting))
+	if err != nil {
+		return err
 	}
 
 	var (
@@ -116,6 +122,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"project":   b.Garden.Project.Name,
 			},
 			"ignoreAlerts": b.Shoot.IgnoreAlerts,
+			"alerting":     alerting,
 			"extensions": map[string]interface{}{
 				"rules":         alertingRules.String(),
 				"scrapeConfigs": scrapeConfigs.String(),
@@ -174,13 +181,18 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	// Check if we want to deploy an alertmanager into the shoot namespace.
 	if b.Shoot.WantsAlertmanager {
 		var (
-			alertingSMTPKeys = b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
+			alertingSMTPKeys = b.GetSecretKeysOfRole(common.GardenRoleAlerting)
 			emailConfigs     = []map[string]interface{}{}
 		)
+
 		if b.Shoot.Info.Spec.Monitoring != nil && b.Shoot.Info.Spec.Monitoring.Alerting != nil {
 			for _, email := range b.Shoot.Info.Spec.Monitoring.Alerting.EmailReceivers {
 				for _, key := range alertingSMTPKeys {
 					secret := b.Secrets[key]
+
+					if string(secret.Data["auth_type"]) != "smtp" {
+						continue
+					}
 					emailConfigs = append(emailConfigs, map[string]interface{}{
 						"to":            email,
 						"from":          string(secret.Data["from"]),
@@ -214,6 +226,83 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
+	configs := map[string]interface{}{
+		"auth_type": map[string]interface{}{},
+	}
+
+	for _, key := range alertingSecretKeys {
+		secret := b.Secrets[key]
+
+		if string(secret.Data["auth_type"]) == "none" {
+
+			if url, ok := secret.Data["url"]; ok {
+				configs["auth_type"] = map[string]interface{}{
+					"none": map[string]interface{}{
+						"url": string(url),
+					},
+				}
+			}
+			break
+		}
+
+		if string(secret.Data["auth_type"]) == "basic" {
+			url, urlOk := secret.Data["url"]
+			username, usernameOk := secret.Data["username"]
+			password, passwordOk := secret.Data["password"]
+
+			if urlOk && usernameOk && passwordOk {
+				configs["auth_type"] = map[string]interface{}{
+					"basic": map[string]interface{}{
+						"url":      string(url),
+						"username": string(username),
+						"password": string(password),
+					},
+				}
+			}
+			break
+		}
+
+		if string(secret.Data["auth_type"]) == "certificate" {
+			data := map[string][]byte{}
+			url, urlOk := secret.Data["url"]
+			ca, caOk := secret.Data["ca.crt"]
+			cert, certOk := secret.Data["tls.crt"]
+			key, keyOk := secret.Data["tls.key"]
+			insecure, insecureOk := secret.Data["insecure_skip_verify"]
+
+			if urlOk && caOk && certOk && keyOk && insecureOk {
+				configs["auth_type"] = map[string]interface{}{
+					"certificate": map[string]interface{}{
+						"url":                  string(url),
+						"insecure_skip_verify": string(insecure),
+					},
+				}
+				data["ca.crt"] = ca
+				data["tls.crt"] = cert
+				data["tls.key"] = key
+				amSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "prometheus-remote-am-tls",
+						Namespace: b.Shoot.SeedNamespace,
+					},
+				}
+
+				if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), amSecret, func() error {
+					amSecret.Data = data
+					amSecret.Type = corev1.SecretTypeOpaque
+					return nil
+				}); err != nil {
+					return nil, err
+				}
+			}
+			break
+		}
+	}
+
+	return configs, nil
 }
 
 func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain string) error {

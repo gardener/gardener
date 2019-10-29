@@ -115,6 +115,7 @@ fluentd-es:
 
 alertmanager:
   emailConfigs: []
+  enabled: true
   storage: 1Gi
 
 hvpa:
