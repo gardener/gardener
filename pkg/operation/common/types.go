@@ -204,6 +204,9 @@ const (
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
 
+	// NodeProblemDetectorDaemonSetName is the name of the node-problem-detector daemon set.
+	NodeProblemDetectorDaemonSetName = "node-problem-detector"
+
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
 
@@ -337,6 +340,9 @@ const (
 
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"
+
+	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
+	NodeProblemDetectorImageName = "node-problem-detector"
 
 	// HyperkubeImageName is the name of the Hyperkube image.
 	HyperkubeImageName = "hyperkube"
@@ -491,6 +497,7 @@ var (
 	RequiredSystemComponentDaemonSets = sets.NewString(
 		CalicoNodeDaemonSetName,
 		KubeProxyDaemonSetName,
+		NodeProblemDetectorDaemonSetName,
 	)
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.

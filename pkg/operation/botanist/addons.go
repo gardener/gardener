@@ -233,8 +233,9 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},
 		}
-		nodeExporterConfig     = map[string]interface{}{}
-		blackboxExporterConfig = map[string]interface{}{}
+		nodeExporterConfig        = map[string]interface{}{}
+		blackboxExporterConfig    = map[string]interface{}{}
+		nodeProblemDetectorConfig = map[string]interface{}{}
 	)
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
@@ -247,6 +248,11 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeProblemDetector, err := b.InjectShootShootImages(nodeProblemDetectorConfig, common.NodeProblemDetectorImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -301,6 +307,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		},
+		"node-problem-detector": nodeProblemDetector,
 	})
 }
 
