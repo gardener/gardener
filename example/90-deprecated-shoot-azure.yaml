@@ -17,8 +17,9 @@ spec:
     #   name: coreos
     #   version: 2023.5.0
       networks:
-        vnet: # specify either 'name' or 'cidr'
+        vnet: # specify either 'name' and 'resourceGroup' or 'cidr'
         # name: my-vnet
+        # resourceGroup: my-vnet-resource-group
           cidr: 10.250.0.0/16
         workers: 10.250.0.0/19
       workers:

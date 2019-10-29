@@ -93,6 +93,7 @@ func (this *SlaveCache) UpdateSlave(obj Object) error {
 	return this.cache.UpdateSubObject(obj)
 }
 
+// Get is replaced by GetByOwner
 // Deprecated: Please use GetByOwner
 func (this *SlaveCache) Get(obj Object) []Object {
 	return this.cache.GetByOwner(obj)
@@ -101,6 +102,7 @@ func (this *SlaveCache) GetByOwner(obj Object) []Object {
 	return this.cache.GetByOwner(obj)
 }
 
+// GetByKey is replaced by GetByOwnerKey
 // Deprecated: Please use GetByOwnerKey
 func (this *SlaveCache) GetByKey(key ClusterObjectKey) []Object {
 	return this.cache.GetByOwnerKey(key)

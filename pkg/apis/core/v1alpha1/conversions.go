@@ -1083,6 +1083,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.Azure.Networks.Workers = infrastructureConfig.Networks.Workers
 		out.Spec.Cloud.Azure.Networks.VNet.CIDR = infrastructureConfig.Networks.VNet.CIDR
 		out.Spec.Cloud.Azure.Networks.VNet.Name = infrastructureConfig.Networks.VNet.Name
+		out.Spec.Cloud.Azure.Networks.VNet.ResourceGroup = infrastructureConfig.Networks.VNet.ResourceGroup
 		out.Spec.Cloud.Azure.Networks.ServiceEndpoints = infrastructureConfig.Networks.ServiceEndpoints
 		out.Spec.Cloud.Azure.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.Azure.Networks.Services = in.Spec.Networking.Services

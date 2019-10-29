@@ -4820,18 +4820,60 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid specifying a vnet name", func() {
-				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
-					Name: makeStringPointer("existing-vnet"),
-				}
+			Context("VNet", func() {
+				It("should forbid specifying a vnet name without resource group", func() {
+					vnetName := "existing-vnet"
+					shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
+						Name: &vnetName,
+					}
+					errorList := ValidateShoot(shoot)
 
-				errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet", fldPath)),
+						"Detail": Equal("specifying an existing vnet require a vnet name and vnet resource group"),
+					}))
+				})
 
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.name", fldPath)),
-				}))
+				It("should forbid specifying a vnet resource group without name", func() {
+					vnetGroup := "existing-vnet-rg"
+					shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
+						ResourceGroup: &vnetGroup,
+					}
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet", fldPath)),
+						"Detail": Equal("specifying an existing vnet require a vnet name and vnet resource group"),
+					}))
+				})
+
+				It("should forbid specifying existing vnet plus a vnet cidr", func() {
+					vnetName := "existing-vnet"
+					vnetGroup := "existing-vnet-rg"
+					shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
+						Name:          &vnetName,
+						ResourceGroup: &vnetGroup,
+						CIDR:          &vpcCIDR,
+					}
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
+						"Detail": Equal("specifying a cidr for an existing vnet is not possible"),
+					}))
+				})
+
+				It("should pass if no vnet cidr is specified and default is applied", func() {
+					shoot.Spec.Networking.Nodes = "10.250.3.0/24"
+					shoot.Spec.Cloud.Azure.Networks = garden.AzureNetworks{
+						Workers: "10.250.3.0/24",
+					}
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(HaveLen(0))
+				})
 			})
 
 			Context("Zoned", func() {

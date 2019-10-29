@@ -620,6 +620,7 @@ func Convert_azure_Subnet_To_v1alpha1_Subnet(in *azure.Subnet, out *Subnet, s co
 
 func autoConvert_v1alpha1_VNet_To_azure_VNet(in *VNet, out *azure.VNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	out.CIDR = (*string)(unsafe.Pointer(in.CIDR))
 	return nil
 }
@@ -631,6 +632,7 @@ func Convert_v1alpha1_VNet_To_azure_VNet(in *VNet, out *azure.VNet, s conversion
 
 func autoConvert_azure_VNet_To_v1alpha1_VNet(in *azure.VNet, out *VNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	out.CIDR = (*string)(unsafe.Pointer(in.CIDR))
 	return nil
 }
@@ -642,6 +644,7 @@ func Convert_azure_VNet_To_v1alpha1_VNet(in *azure.VNet, out *VNet, s conversion
 
 func autoConvert_v1alpha1_VNetStatus_To_azure_VNetStatus(in *VNetStatus, out *azure.VNetStatus, s conversion.Scope) error {
 	out.Name = in.Name
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	return nil
 }
 
@@ -652,6 +655,7 @@ func Convert_v1alpha1_VNetStatus_To_azure_VNetStatus(in *VNetStatus, out *azure.
 
 func autoConvert_azure_VNetStatus_To_v1alpha1_VNetStatus(in *azure.VNetStatus, out *VNetStatus, s conversion.Scope) error {
 	out.Name = in.Name
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	return nil
 }
 

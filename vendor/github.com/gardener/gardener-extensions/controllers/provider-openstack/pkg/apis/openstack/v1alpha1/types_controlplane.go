@@ -18,25 +18,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ControlPlaneConfig contains configuration settings for the control plane.
 type ControlPlaneConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
-	LoadBalancerProvider string `json:"loadBalancerProvider"`
-
-	// Zone is the OpenStack zone.
-	Zone string `json:"zone"`
+	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
+	// +optional
+	CloudControllerManager *CloudControllerManagerConfig `json:"cloudControllerManager,omitempty"`
 
 	// LoadBalancerClasses available for a dedicated Shoot.
 	// +optional
 	LoadBalancerClasses []LoadBalancerClass `json:"loadBalancerClasses,omitempty"`
 
-	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
-	// +optional
-	CloudControllerManager *CloudControllerManagerConfig `json:"cloudControllerManager,omitempty"`
+	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
+	LoadBalancerProvider string `json:"loadBalancerProvider"`
+
+	// Zone is the OpenStack zone.
+	Zone string `json:"zone"`
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.

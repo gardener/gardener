@@ -325,10 +325,10 @@ func Convert_openstack_Constraints_To_v1alpha1_Constraints(in *openstack.Constra
 }
 
 func autoConvert_v1alpha1_ControlPlaneConfig_To_openstack_ControlPlaneConfig(in *ControlPlaneConfig, out *openstack.ControlPlaneConfig, s conversion.Scope) error {
+	out.CloudControllerManager = (*openstack.CloudControllerManagerConfig)(unsafe.Pointer(in.CloudControllerManager))
+	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.LoadBalancerProvider = in.LoadBalancerProvider
 	out.Zone = in.Zone
-	out.LoadBalancerClasses = *(*[]openstack.LoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
-	out.CloudControllerManager = (*openstack.CloudControllerManagerConfig)(unsafe.Pointer(in.CloudControllerManager))
 	return nil
 }
 

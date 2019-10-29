@@ -127,17 +127,17 @@ func (in *Constraints) DeepCopy() *Constraints {
 func (in *ControlPlaneConfig) DeepCopyInto(out *ControlPlaneConfig) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	if in.CloudControllerManager != nil {
+		in, out := &in.CloudControllerManager, &out.CloudControllerManager
+		*out = new(CloudControllerManagerConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.LoadBalancerClasses != nil {
 		in, out := &in.LoadBalancerClasses, &out.LoadBalancerClasses
 		*out = make([]LoadBalancerClass, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.CloudControllerManager != nil {
-		in, out := &in.CloudControllerManager, &out.CloudControllerManager
-		*out = new(CloudControllerManagerConfig)
-		(*in).DeepCopyInto(*out)
 	}
 	return
 }

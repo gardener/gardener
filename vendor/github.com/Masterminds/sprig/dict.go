@@ -1,6 +1,9 @@
 package sprig
 
-import "github.com/imdario/mergo"
+import (
+	"github.com/imdario/mergo"
+	"github.com/mitchellh/copystructure"
+)
 
 func set(d map[string]interface{}, key string, value interface{}) map[string]interface{} {
 	d[key] = value
@@ -104,4 +107,13 @@ func values(dict map[string]interface{}) []interface{} {
 	}
 
 	return values
+}
+
+func deepCopy(i interface{}) interface{} {
+	c, err := copystructure.Copy(i)
+	if err != nil {
+		panic("deepCopy error: " + err.Error())
+	}
+
+	return c
 }

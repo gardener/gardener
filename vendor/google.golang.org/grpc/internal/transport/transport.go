@@ -22,7 +22,6 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -40,32 +39,10 @@ import (
 	"google.golang.org/grpc/tap"
 )
 
-type bufferPool struct {
-	pool sync.Pool
-}
-
-func newBufferPool() *bufferPool {
-	return &bufferPool{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return new(bytes.Buffer)
-			},
-		},
-	}
-}
-
-func (p *bufferPool) get() *bytes.Buffer {
-	return p.pool.Get().(*bytes.Buffer)
-}
-
-func (p *bufferPool) put(b *bytes.Buffer) {
-	p.pool.Put(b)
-}
-
 // recvMsg represents the received msg from the transport. All transport
 // protocol specific info has been removed.
 type recvMsg struct {
-	buffer *bytes.Buffer
+	data []byte
 	// nil: received some data
 	// io.EOF: stream is completed. data is nil.
 	// other non-nil error: transport failure. data is nil.
@@ -140,9 +117,8 @@ type recvBufferReader struct {
 	ctx         context.Context
 	ctxDone     <-chan struct{} // cache of ctx.Done() (for performance).
 	recv        *recvBuffer
-	last        *bytes.Buffer // Stores the remaining data in the previous calls.
+	last        []byte // Stores the remaining data in the previous calls.
 	err         error
-	freeBuffer  func(*bytes.Buffer)
 }
 
 // Read reads the next len(p) bytes from last. If last is drained, it tries to
@@ -152,13 +128,10 @@ func (r *recvBufferReader) Read(p []byte) (n int, err error) {
 	if r.err != nil {
 		return 0, r.err
 	}
-	if r.last != nil {
+	if r.last != nil && len(r.last) > 0 {
 		// Read remaining data left in last call.
-		copied, _ := r.last.Read(p)
-		if r.last.Len() == 0 {
-			r.freeBuffer(r.last)
-			r.last = nil
-		}
+		copied := copy(p, r.last)
+		r.last = r.last[copied:]
 		return copied, nil
 	}
 	if r.closeStream != nil {
@@ -197,13 +170,8 @@ func (r *recvBufferReader) readAdditional(m recvMsg, p []byte) (n int, err error
 	if m.err != nil {
 		return 0, m.err
 	}
-	copied, _ := m.buffer.Read(p)
-	if m.buffer.Len() == 0 {
-		r.freeBuffer(m.buffer)
-		r.last = nil
-	} else {
-		r.last = m.buffer
-	}
+	copied := copy(p, m.data)
+	r.last = m.data[copied:]
 	return copied, nil
 }
 

@@ -1506,6 +1506,9 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		if in.Spec.Cloud.Azure.Networks.VNet.Name != nil {
 			vnet.Name = in.Spec.Cloud.Azure.Networks.VNet.Name
 		}
+		if in.Spec.Cloud.Azure.Networks.VNet.ResourceGroup != nil {
+			vnet.ResourceGroup = in.Spec.Cloud.Azure.Networks.VNet.ResourceGroup
+		}
 
 		infrastructureConfig.ResourceGroup = resourceGroup
 		infrastructureConfig.Networks = azurev1alpha1.NetworkConfig{
