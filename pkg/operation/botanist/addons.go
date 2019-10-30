@@ -53,11 +53,7 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.deployDNSEntry(ctx, DNSPurposeIngress, b.Shoot.GetIngressFQDN("*"), loadBalancerIngress); err != nil {
-		return err
-	}
-
-	return b.deleteLegacyTerraformDNSResources(ctx, common.TerraformerPurposeIngressDNSDeprecated)
+	return b.deployDNSEntry(ctx, DNSPurposeIngress, b.Shoot.GetIngressFQDN("*"), loadBalancerIngress)
 }
 
 // DestroyIngressDNSRecord destroys the nginx-ingress resources created by Terraform.

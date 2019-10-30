@@ -47,10 +47,7 @@ func (b *Botanist) DeployInternalDomainDNSRecord(ctx context.Context) error {
 	if err := b.deployDNSProvider(ctx, DNSPurposeInternal, b.Garden.InternalDomain.Provider, b.Garden.InternalDomain.SecretData, []string{b.Shoot.InternalClusterDomain}, nil, b.Garden.InternalDomain.IncludeZones, b.Garden.InternalDomain.ExcludeZones); err != nil {
 		return err
 	}
-	if err := b.deployDNSEntry(ctx, DNSPurposeInternal, common.GetAPIServerDomain(b.Shoot.InternalClusterDomain), b.APIServerAddress); err != nil {
-		return err
-	}
-	return b.deleteLegacyTerraformDNSResources(ctx, common.TerraformerPurposeInternalDNSDeprecated)
+	return b.deployDNSEntry(ctx, DNSPurposeInternal, common.GetAPIServerDomain(b.Shoot.InternalClusterDomain), b.APIServerAddress)
 }
 
 // DestroyInternalDomainDNSRecord destroys the DNS record for the internal cluster domain.
@@ -70,10 +67,7 @@ func (b *Botanist) DeployExternalDomainDNSRecord(ctx context.Context) error {
 	if err := b.deployDNSProvider(ctx, DNSPurposeExternal, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, sets.NewString(append(b.Shoot.ExternalDomain.IncludeDomains, *b.Shoot.ExternalClusterDomain)...).List(), b.Shoot.ExternalDomain.ExcludeDomains, b.Shoot.ExternalDomain.IncludeZones, b.Shoot.ExternalDomain.ExcludeZones); err != nil {
 		return err
 	}
-	if err := b.deployDNSEntry(ctx, DNSPurposeExternal, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)); err != nil {
-		return err
-	}
-	return b.deleteLegacyTerraformDNSResources(ctx, common.TerraformerPurposeExternalDNSDeprecated)
+	return b.deployDNSEntry(ctx, DNSPurposeExternal, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), common.GetAPIServerDomain(b.Shoot.InternalClusterDomain))
 }
 
 // DestroyExternalDomainDNSRecord destroys the DNS record for the external cluster domain.
@@ -201,13 +195,4 @@ func (b *Botanist) deleteDNSEntry(ctx context.Context, name string) error {
 	defer cancel()
 
 	return kutil.WaitUntilResourceDeleted(ctx, b.K8sSeedClient.Client(), &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}, 5*time.Second)
-}
-
-func (b *Botanist) deleteLegacyTerraformDNSResources(ctx context.Context, purpose string) error {
-	tf, err := b.NewShootTerraformer(purpose)
-	if err != nil {
-		return err
-	}
-
-	return tf.CleanupConfiguration(ctx)
 }

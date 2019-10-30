@@ -87,17 +87,6 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 	return v
 }
 
-// GenerateTerraformVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
-// can be injected into the Terraformer job/pod manifest. The keys of the <keyValueMap> will be prefixed with
-// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
-func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
-	out := make(map[string]string)
-	for key, value := range keyValueMap {
-		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
-	}
-	return out
-}
-
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
 func GenerateBackupEntryName(seedNamespace string, shootUID types.UID) string {
 	return fmt.Sprintf("%s--%s", seedNamespace, shootUID)
