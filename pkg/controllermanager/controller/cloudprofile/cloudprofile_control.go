@@ -21,14 +21,17 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -88,13 +91,14 @@ type ControlInterface interface {
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for CloudProfiles.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, shootLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{k8sGardenClient, shootLister, recorder}
 }
 
 type defaultControl struct {
 	k8sGardenClient kubernetes.Interface
 	shootLister     gardencorelisters.ShootLister
+	recorder        record.EventRecorder
 }
 
 func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1alpha1.CloudProfile, key string) error {
@@ -135,11 +139,11 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1alpha1.CloudProf
 			}
 			return nil
 		}
-		message := "Can't delete CloudProfile, because Shoots are still referencing it."
-		if len(associatedShoots) != 0 {
-			message += fmt.Sprintf(" Shoots: %+v", associatedShoots)
-		}
+
+		message := fmt.Sprintf("Can't delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
 		cloudProfileLogger.Info(message)
+		c.recorder.Event(cloudProfile, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+
 		return errors.New("CloudProfile still has references")
 	}
 

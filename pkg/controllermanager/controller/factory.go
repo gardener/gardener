@@ -128,7 +128,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	var (
 		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.gardenNamespace, f.recorder)
-		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenCoreInformers)
+		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)

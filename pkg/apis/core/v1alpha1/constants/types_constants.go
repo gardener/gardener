@@ -252,4 +252,8 @@ const (
 
 	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+
+	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
+	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
+	EventResourceReferenced = "ResourceReferenced"
 )

@@ -21,12 +21,14 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -158,7 +160,11 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 			}
 			return nil
 		}
-		secretBindingLogger.Infof("Can't delete SecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
+
+		message := fmt.Sprintf("Can't delete SecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
+		secretBindingLogger.Infof(message)
+		c.recorder.Event(secretBinding, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+
 		return errors.New("SecretBinding still has references")
 	}
 

@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
@@ -161,9 +162,10 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1alpha1.BackupB
 	}
 
 	if len(associatedBackupEntries) != 0 {
-		message := "Can't delete BackupBucket, because BackupEntries are still referencing it."
-		message += fmt.Sprintf(" BackupEntries: %+v", associatedBackupEntries)
+		message := fmt.Sprintf("Can't delete BackupBucket, because the following BackupEntries are still referencing it: %+v", associatedBackupEntries)
 		backupBucketLogger.Info(message)
+		r.recorder.Event(backupBucket, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+
 		return reconcile.Result{}, fmt.Errorf("BackupBucket %s still has references", backupBucket.Name)
 	}
 

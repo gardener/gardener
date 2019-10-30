@@ -22,6 +22,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
@@ -227,13 +228,18 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1alpha1.Seed, key string)
 			return nil
 		}
 
-		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it: "
+		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 		if len(associatedShoots) != 0 {
-			seedLogger.Infof("%s Shoots=%v", parentLogMessage, associatedShoots)
+			message := fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots)
+			seedLogger.Info(message)
+			c.recorder.Event(seed, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
 		}
 		if len(associatedBackupBuckets) != 0 {
-			seedLogger.Infof("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
+			message := fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
+			seedLogger.Info(message)
+			c.recorder.Event(seed, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
 		}
+
 		return errors.New("seed still has references")
 	}
 

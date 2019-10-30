@@ -21,12 +21,14 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
@@ -140,7 +142,11 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key strin
 			}
 			return nil
 		}
-		quotaLogger.Infof("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
+
+		message := fmt.Sprintf("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
+		quotaLogger.Info(message)
+		c.recorder.Event(quota, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+
 		return errors.New("Quota still has references")
 	}
 
