@@ -2207,6 +2207,7 @@ func Convert_garden_AzureResourceGroup_To_v1beta1_AzureResourceGroup(in *garden.
 
 func autoConvert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.AzureVNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	out.CIDR = (*string)(unsafe.Pointer(in.CIDR))
 	return nil
 }
@@ -2218,6 +2219,7 @@ func Convert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.Az
 
 func autoConvert_garden_AzureVNet_To_v1beta1_AzureVNet(in *garden.AzureVNet, out *AzureVNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.ResourceGroup = (*string)(unsafe.Pointer(in.ResourceGroup))
 	out.CIDR = (*string)(unsafe.Pointer(in.CIDR))
 	return nil
 }

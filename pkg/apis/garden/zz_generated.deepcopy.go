@@ -755,6 +755,11 @@ func (in *AzureVNet) DeepCopyInto(out *AzureVNet) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ResourceGroup != nil {
+		in, out := &in.ResourceGroup, &out.ResourceGroup
+		*out = new(string)
+		**out = **in
+	}
 	if in.CIDR != nil {
 		in, out := &in.CIDR, &out.CIDR
 		*out = new(string)

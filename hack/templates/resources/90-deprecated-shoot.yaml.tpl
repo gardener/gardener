@@ -153,12 +153,14 @@ spec:
     #   name: coreos
     #   version: 2023.5.0
       networks:
-        vnet:<% vnetName = value("spec.cloud.azure.networks.vnet.name", ""); vnetCIDR = value("spec.cloud.azure.networks.vnet.cidr", "10.250.0.0/16") %> # specify either 'name' or 'cidr'
+        vnet:<% vnetName = value("spec.cloud.azure.networks.vnet.name", ""); vnetResourceGroup = value("spec.cloud.azure.networks.vnet.resourceGroup", ""); vnetCIDR = value("spec.cloud.azure.networks.vnet.cidr", "10.250.0.0/16") %> # specify either 'name' and 'resourceGroup' or 'cidr'
           % if vnetName != "":
           name: ${vnetName}
+          resourceGroup: ${vnetResourceGroup}
         # cidr: 10.250.0.0/16
           % else:
         # name: my-vnet
+        # resourceGroup: my-vnet-resource-group
           cidr: ${vnetCIDR}
           % endif
         workers: ${value("spec.cloud.azure.networks.workers", "10.250.0.0/19")}

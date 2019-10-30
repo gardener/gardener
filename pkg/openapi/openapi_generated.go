@@ -6564,6 +6564,13 @@ func schema_pkg_apis_garden_v1beta1_AzureVNet(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"resourceGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ResourceGroup is the resourceGroup where the VNet is located.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"cidr": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CIDR is a CIDR range for a new VNet.",

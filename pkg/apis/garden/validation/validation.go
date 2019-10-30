@@ -1380,30 +1380,28 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 			allErrs = append(allErrs, nodes.ValidateSubset(workerCIDR)...)
 		}
 
-		if azure.Networks.VNet.Name != nil {
-			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet", "name"), *(azure.Networks.VNet.Name), "specifying an existing vnet is not supported yet"))
+		if (azure.Networks.VNet.Name != nil && azure.Networks.VNet.ResourceGroup == nil) || (azure.Networks.VNet.Name == nil && azure.Networks.VNet.ResourceGroup != nil) {
+			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet"), azure.Networks.VNet, "specifying an existing vnet require a vnet name and vnet resource group"))
+		} else if azure.Networks.VNet.Name != nil && azure.Networks.VNet.ResourceGroup != nil {
+			if azure.Networks.VNet.CIDR != nil {
+				allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet", "cidr"), *(azure.Networks.VNet.CIDR), "specifying a cidr for an existing vnet is not possible"))
+			}
 		} else {
 			if azure.Networks.VNet.CIDR == nil {
-				allErrs = append(allErrs, field.Required(azurePath.Child("networks", "vnet", "cidr"), "must specify a vnet cidr"))
+				allErrs = append(allErrs, workerCIDR.ValidateSubset(nodes)...)
+				allErrs = append(allErrs, workerCIDR.ValidateNotSubset(pods, services)...)
 			} else {
-				vpcCIDR := cidrvalidation.NewCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))
-				allErrs = append(allErrs, vpcCIDR.ValidateParse()...)
-				allErrs = append(allErrs, vpcCIDR.ValidateSubset(nodes)...)
-				allErrs = append(allErrs, vpcCIDR.ValidateSubset(workerCIDR)...)
-				allErrs = append(allErrs, vpcCIDR.ValidateNotSubset(pods, services)...)
+				vnetCidr := cidrvalidation.NewCIDR(*azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))
+				allErrs = append(allErrs, vnetCidr.ValidateParse()...)
+				allErrs = append(allErrs, vnetCidr.ValidateSubset(nodes)...)
+				allErrs = append(allErrs, vnetCidr.ValidateSubset(workerCIDR)...)
+				allErrs = append(allErrs, vnetCidr.ValidateNotSubset(pods, services)...)
 			}
 		}
 
 		// TODO: re-enable once deployment into existing resource group works properly.
 		// if azure.ResourceGroup != nil && len(azure.ResourceGroup.Name) == 0 {
 		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "resource group name must not be empty when resource group key is provided"))
-		// }
-
-		// TODO: re-enable once deployment into existing vnet works properly.
-		// if (azure.Networks.VNet.Name == nil && azure.Networks.VNet.CIDR == nil) || (azure.Networks.VNet.Name != nil && azure.Networks.VNet.CIDR != nil) {
-		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet"), azure.Networks.VNet, "must specify either a vnet name or a cidr"))
-		// } else if azure.Networks.VNet.CIDR != nil && azure.Networks.VNet.Name == nil {
-		// 	allErrs = append(allErrs, validateCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))...)
 		// }
 
 		// make sure all CIDRs are canonical

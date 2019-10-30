@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	ttemplate "text/template"
@@ -84,6 +85,9 @@ var nonhermeticFunctions = []string{
 	// OS
 	"env",
 	"expandenv",
+
+	// Network
+	"getHostByName",
 }
 
 var genericMap = map[string]interface{}{
@@ -150,10 +154,11 @@ var genericMap = map[string]interface{}{
 	"toString":   strval,
 
 	// Wrap Atoi to stop errors.
-	"atoi":    func(a string) int { i, _ := strconv.Atoi(a); return i },
-	"int64":   toInt64,
-	"int":     toInt,
-	"float64": toFloat64,
+	"atoi":      func(a string) int { i, _ := strconv.Atoi(a); return i },
+	"int64":     toInt64,
+	"int":       toInt,
+	"float64":   toFloat64,
+	"toDecimal": toDecimal,
 
 	//"gt": func(a, b int) bool {return a > b},
 	//"gte": func(a, b int) bool {return a >= b},
@@ -206,6 +211,7 @@ var genericMap = map[string]interface{}{
 	"empty":        empty,
 	"coalesce":     coalesce,
 	"compact":      compact,
+	"deepCopy":     deepCopy,
 	"toJson":       toJson,
 	"toPrettyJson": toPrettyJson,
 	"ternary":      ternary,
@@ -216,10 +222,14 @@ var genericMap = map[string]interface{}{
 	"typeIsLike": typeIsLike,
 	"kindOf":     kindOf,
 	"kindIs":     kindIs,
+	"deepEqual":  reflect.DeepEqual,
 
 	// OS:
 	"env":       func(s string) string { return os.Getenv(s) },
 	"expandenv": func(s string) string { return os.ExpandEnv(s) },
+
+	// Network:
+	"getHostByName": getHostByName,
 
 	// File Paths:
 	"base":  path.Base,
@@ -260,6 +270,7 @@ var genericMap = map[string]interface{}{
 	"without": without,
 	"has":     has,
 	"slice":   slice,
+	"concat":  concat,
 
 	// Crypto:
 	"genPrivateKey":     generatePrivateKey,
@@ -268,6 +279,8 @@ var genericMap = map[string]interface{}{
 	"genCA":             generateCertificateAuthority,
 	"genSelfSignedCert": generateSelfSignedCertificate,
 	"genSignedCert":     generateSignedCertificate,
+	"encryptAES":        encryptAES,
+	"decryptAES":        decryptAES,
 
 	// UUIDs:
 	"uuidv4": uuidv4,
@@ -286,4 +299,8 @@ var genericMap = map[string]interface{}{
 	"regexReplaceAll":        regexReplaceAll,
 	"regexReplaceAllLiteral": regexReplaceAllLiteral,
 	"regexSplit":             regexSplit,
+
+	// URLs:
+	"urlParse": urlParse,
+	"urlJoin":  urlJoin,
 }

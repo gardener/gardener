@@ -18,6 +18,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// WorkerConfig contains configuration settings for the worker nodes.
+type WorkerConfig struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Volume contains configuration for the root disks attached to VMs.
+	// +optional
+	Volume *Volume `json:"volume,omitempty"`
+}
+
+// Volume contains configuration for the root disks attached to VMs.
+type Volume struct {
+	// IOPS is the number of I/O operations per second (IOPS) that the volume supports.
+	// For io1 volume type, this represents the number of IOPS that are provisioned for the
+	// volume. For gp2 volume type, this represents the baseline performance of the volume and
+	// the rate at which the volume accumulates I/O credits for bursting. For more
+	// information about General Purpose SSD baseline performance, I/O credits,
+	// and bursting, see Amazon EBS Volume Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
+	// in the Amazon Elastic Compute Cloud User Guide.
+	//
+	// Constraint: Range is 100-20000 IOPS for io1 volumes and 100-10000 IOPS for
+	// gp2 volumes.
+	//
+	// Condition: This parameter is required for requests to create io1 volumes;
+	// it is not used in requests to create gp2, st1, sc1, or standard volumes.
+	// +optional
+	IOPS *int64 `json:"iops,omitempty"`
+}
+
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // WorkerStatus contains information about created worker resources.

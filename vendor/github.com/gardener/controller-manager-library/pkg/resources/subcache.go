@@ -204,6 +204,7 @@ func (this *SubObjectCache) renewSubObject(obj Object) bool {
 	return true
 }
 
+// Get is replaced by GetByOwner
 // Deprecated: Please use GetByOwner
 func (this *SubObjectCache) Get(obj Object) []Object {
 	return this.GetByOwner(obj)
@@ -212,6 +213,7 @@ func (this *SubObjectCache) GetByOwner(obj Object) []Object {
 	return this.GetByOwnerKey(obj.ClusterKey())
 }
 
+// GetByKey is replaced by GetByOwnerKey
 // Deprecated: Please use GetByOwnerKey
 func (this *SubObjectCache) GetByKey(key ClusterObjectKey) []Object {
 	return this.GetByOwnerKey(key)

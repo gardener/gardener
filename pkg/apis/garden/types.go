@@ -1031,8 +1031,10 @@ type AzureNetworks struct {
 
 // AzureVNet indicates whether to use an existing VNet or create a new one.
 type AzureVNet struct {
-	// Name is the AWS VNet name of an existing VNet.
+	// Name is the Azure VNet name of an existing VNet.
 	Name *string
+	// ResourceGroup is the resourceGroup where the VNet is located.
+	ResourceGroup *string
 	// CIDR is a CIDR range for a new VNet.
 	CIDR *string
 }

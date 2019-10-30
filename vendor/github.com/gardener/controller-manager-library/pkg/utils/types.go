@@ -16,7 +16,36 @@
 
 package utils
 
-import "strings"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+	"unsafe"
+)
+
+func IsNil(o interface{}) bool {
+	if o == nil {
+		return true
+	}
+	v := reflect.ValueOf(o)
+	return v.Kind() == reflect.Ptr && v.IsNil()
+}
+
+func SetValue(f reflect.Value, v interface{}) error {
+	vv := reflect.ValueOf(v)
+	if f.Type() != vv.Type() {
+		if vv.Type().ConvertibleTo(f.Type()) {
+			vv = vv.Convert(f.Type())
+		} else {
+			return fmt.Errorf("type %s cannot be converted to %s", vv.Type(), f.Type())
+		}
+	}
+	if !f.CanSet() {
+		f = reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem() // yepp, access unexported fields
+	}
+	f.Set(vv)
+	return nil
+}
 
 func IsEmptyString(s *string) bool {
 	return s == nil || *s == ""

@@ -980,6 +980,9 @@ type AzureVNet struct {
 	// Name is the AWS VNet name of an existing VNet.
 	// +optional
 	Name *string `json:"name,omitempty"`
+	// ResourceGroup is the resourceGroup where the VNet is located.
+	// +optional
+	ResourceGroup *string `json:"resourceGroup,omitempty"`
 	// CIDR is a CIDR range for a new VNet.
 	// +optional
 	CIDR *string `json:"cidr,omitempty"`

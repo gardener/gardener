@@ -138,19 +138,57 @@ func parseField(s *scanner, last Node) (Node, error) {
 }
 
 func parseEntry(s *scanner, last Node) (Node, error) {
-	name := ""
+	index := ""
 
 	for unicode.IsDigit(s.Next()) {
-		name = name + string(s.Current())
+		index = index + string(s.Current())
 	}
-	if name == "" {
-		return parseSelect(s, last)
+	if index == "" {
+		if s.Current() == ':' {
+			for unicode.IsDigit(s.Next()) {
+				index = index + string(s.Current())
+			}
+			if s.Current() != ']' {
+				return unexpected(s, "expected ']'")
+			}
+			if index != "" {
+				v, _ := strconv.ParseInt(index, 10, 32)
+				return parseProjection(s, NewSlice(0, int(v), last))
+			} else {
+				return parseProjection(s, NewSlice(0, -1, last))
+			}
+		}
+
+		if s.Current() != ']' {
+			return parseSelect(s, last)
+		} else {
+			return parseProjection(s, last)
+		}
 	}
 	if s.Current() != ']' {
+		if s.Current() == ':' {
+			end := ""
+			for unicode.IsDigit(s.Next()) {
+				end = end + string(s.Current())
+			}
+			if s.Current() != ']' {
+				return unexpected(s, "expected ']'")
+			}
+			start, _ := strconv.ParseInt(index, 10, 32)
+			if end != "" {
+				v, _ := strconv.ParseInt(end, 10, 32)
+				if start > v {
+					return nil, fmt.Errorf("start index (%d) larger than end index (%d)", start, v)
+				}
+				return parseProjection(s, NewSlice(int(start), int(v), last))
+			} else {
+				return parseProjection(s, NewSlice(int(start), -1, last))
+			}
+		}
 		return unexpected(s, "expected ']'")
 	}
 	s.Next()
-	v, _ := strconv.ParseInt(name, 10, 32)
+	v, _ := strconv.ParseInt(index, 10, 32)
 	return NewEntry(int(v), last), nil
 }
 
@@ -176,6 +214,23 @@ func parseSelect(s *scanner, last Node) (Node, error) {
 	}
 	s.Next()
 	return NewSelection(n, v, last), nil
+}
+
+func parseProjection(s *scanner, last Node) (Node, error) {
+	if s.Current() != ']' {
+		return unexpected(s, "expected ']'")
+	}
+	if s.Next() == EOI {
+		return last, nil
+	}
+	n, err := parseSequence(s)
+	if err != nil {
+		return nil, err
+	}
+	if n == nil {
+		return unexpected(s, "index or path")
+	}
+	return NewProjection(n, last), nil
 }
 
 func parseValue(s *scanner) (interface{}, error) {

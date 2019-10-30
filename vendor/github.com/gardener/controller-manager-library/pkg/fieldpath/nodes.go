@@ -19,6 +19,7 @@ package fieldpath
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 type Node interface {
@@ -66,6 +67,10 @@ func (this *node) Type(src interface{}) (reflect.Type, error) {
 	v, ok := src.(reflect.Value)
 	if ok {
 		return this._type(v)
+	}
+	t, ok := src.(reflect.Type)
+	if ok {
+		return this._type(reflect.New(t))
 	}
 	return this._type(reflect.ValueOf(src))
 }
@@ -271,6 +276,61 @@ func (this *SliceEntryNode) value(v reflect.Value, addMissing bool) (reflect.Val
 
 ////////////////////////////////////////////////////////////////////////////////
 
+type SliceNode struct {
+	node
+	start int
+	end   int
+}
+
+var _ Node = &SliceNode{}
+
+func NewSlice(start, end int, next Node) Node {
+	e := &SliceNode{start: start, end: end}
+	return e.new(e, next)
+}
+
+func (this *SliceNode) String() string {
+	start := ""
+	if this.start > 0 {
+		start = strconv.Itoa(this.start)
+	}
+	end := ""
+	if this.end >= 0 {
+		end = strconv.Itoa(this.end)
+	}
+	return fmt.Sprintf("%s[%s:%s]", this.node.String(), start, end)
+}
+
+func (this *SliceNode) value(v reflect.Value, addMissing bool) (reflect.Value, error) {
+	v = toValue(v, addMissing)
+	if v.Kind() != reflect.Array && v.Kind() != reflect.Slice {
+		return reflect.Value{}, fmt.Errorf("%s is no slice or array(%s) ", this.node.String(), v.Type())
+	}
+	end := this.end
+	if end < 0 {
+		end = v.Len()
+		if end < this.start {
+			if addMissing {
+				end = this.start
+			} else {
+				return reflect.Value{}, fmt.Errorf("%s has size %d, but expected at least %d", this.node.String(), v.Len(), this.start)
+			}
+		}
+	}
+	if v.Len() < end {
+		if !addMissing || v.Kind() == reflect.Array {
+			return reflect.Value{}, fmt.Errorf("%s has size %d, but expected at least %d", this.node.String(), v.Len(), end)
+		}
+		e := reflect.New(v.Type().Elem())
+		for v.Len() < end {
+			v.Set(reflect.Append(v, e.Elem()))
+		}
+	}
+	return v.Slice(this.start, end), nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 type SelectionNode struct {
 	node
 	path  Node
@@ -328,4 +388,47 @@ func (this *SelectionNode) value(v reflect.Value, addMissing bool) (reflect.Valu
 		}
 	}
 	return v.Index(index), nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type ProjectionNode struct {
+	node
+	path Node
+}
+
+var _ Node = &ProjectionNode{}
+
+func NewProjection(path Node, next Node) Node {
+	e := &ProjectionNode{path: path}
+	return e.new(e, next)
+}
+
+func (this *ProjectionNode) String() string {
+	return fmt.Sprintf("%s[]%s", this.node.String(), this.path)
+}
+
+func (this *ProjectionNode) value(v reflect.Value, addMissing bool) (reflect.Value, error) {
+	v = toValue(v, addMissing)
+	if v.Kind() != reflect.Array && v.Kind() != reflect.Slice {
+		return reflect.Value{}, fmt.Errorf("%s is no slice or array(%s) ", this.node.String(), v.Type())
+	}
+	et, err := this.path.Type(v.Type().Elem())
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	a := reflect.New(reflect.SliceOf(et)).Elem()
+	for i := 0; i < v.Len(); i++ {
+		e := toValue(v.Index(i), false)
+
+		if e.Kind() != reflect.Invalid {
+			sub, err := this.path._value(e, false)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			a = reflect.Append(a, sub)
+		}
+
+	}
+	return a, nil
 }

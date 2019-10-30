@@ -122,6 +122,8 @@ type SecurityGroup struct {
 type VNet struct {
 	// Name is the VNet name.
 	Name *string
+	// ResourceGroup is the resource group where the existing vNet belongs to.
+	ResourceGroup *string
 	// CIDR is the VNet CIDR
 	CIDR *string
 }
@@ -130,4 +132,6 @@ type VNet struct {
 type VNetStatus struct {
 	// Name is the VNet name.
 	Name string
+	// ResourceGroup is the resource group where the existing vNet belongs to.
+	ResourceGroup *string
 }

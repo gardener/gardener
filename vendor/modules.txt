@@ -4,7 +4,7 @@ github.com/BurntSushi/toml
 github.com/Masterminds/goutils
 # github.com/Masterminds/semver v1.4.2
 github.com/Masterminds/semver
-# github.com/Masterminds/sprig v2.20.0+incompatible
+# github.com/Masterminds/sprig v2.22.0+incompatible
 github.com/Masterminds/sprig
 # github.com/NYTimes/gziphandler v1.1.1
 github.com/NYTimes/gziphandler
@@ -16,7 +16,7 @@ github.com/PuerkitoBio/urlesc
 github.com/ahmetb/gen-crd-api-reference-docs
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
-# github.com/coreos/etcd v3.3.13+incompatible
+# github.com/coreos/etcd v3.3.10+incompatible
 github.com/coreos/etcd/auth/authpb
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes
@@ -46,7 +46,8 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.5.0+incompatible
 github.com/evanphx/json-patch
-# github.com/gardener/controller-manager-library v0.0.0-20190830161011-2626c078acef
+# github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc
+github.com/gardener/controller-manager-library/pkg/controllermanager/controller/reconcile/conditions
 github.com/gardener/controller-manager-library/pkg/ctxutil
 github.com/gardener/controller-manager-library/pkg/fieldpath
 github.com/gardener/controller-manager-library/pkg/informerfactories
@@ -58,7 +59,7 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener-extensions v0.0.0-20191007140606-8fe857e58f6f => github.com/gardener/gardener-extensions v0.0.0-20191007140606-8fe857e58f6f
+# github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca => github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/install
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1
@@ -76,7 +77,7 @@ github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/
 github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1
-# github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993 => github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
+# github.com/gardener/gardener-resource-manager v0.0.0-20191025075317-09173887c1a7 => github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/manager
@@ -113,7 +114,7 @@ github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
+# github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 github.com/golang/groupcache/lru
 # github.com/golang/mock v1.3.1
 github.com/golang/mock/gomock
@@ -144,7 +145,7 @@ github.com/grpc-ecosystem/go-grpc-prometheus
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v0.0.0-20180717150148-3d5d8f294aa0
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/golang-lru v0.5.3
+# github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hpcloud/tail v1.0.0
@@ -171,6 +172,10 @@ github.com/mailru/easyjson/jwriter
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
 github.com/mholt/archiver
+# github.com/mitchellh/copystructure v1.0.0
+github.com/mitchellh/copystructure
+# github.com/mitchellh/reflectwalk v1.0.0
+github.com/mitchellh/reflectwalk
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -301,7 +306,7 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
+# golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -317,7 +322,7 @@ golang.org/x/net/websocket
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
+# golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -369,7 +374,7 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.22.1
+# google.golang.org/grpc v1.21.1
 google.golang.org/grpc
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
@@ -400,7 +405,6 @@ google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
-google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
