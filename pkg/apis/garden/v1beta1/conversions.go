@@ -95,13 +95,15 @@ func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage
 func Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(in *KubernetesConstraints, out *garden.KubernetesConstraints, s conversion.Scope) error {
 	out.OfferedVersions = []garden.KubernetesVersion{}
 	duplicates := map[string]int{}
-	for index, externalVersion := range in.Versions {
+	index := 0
+	for _, externalVersion := range in.Versions {
 		internalVersion := &garden.KubernetesVersion{Version: externalVersion}
 		if _, exists := duplicates[externalVersion]; exists {
 			continue
 		}
 		out.OfferedVersions = append(out.OfferedVersions, *internalVersion)
 		duplicates[externalVersion] = index
+		index++
 	}
 	for _, externalVersion := range in.OfferedVersions {
 		internalVersion := &garden.KubernetesVersion{}

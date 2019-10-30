@@ -304,11 +304,16 @@ func validateKubernetesConstraints(kubernetes garden.KubernetesConstraints, fldP
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("offeredVersions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
+	versionsFound := sets.NewString()
 	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
 	for i, version := range kubernetes.OfferedVersions {
 		idxPath := fldPath.Child("offeredVersions").Index(i)
 		if !r.MatchString(version.Version) {
 			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
+		} else if versionsFound.Has(version.Version) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
+		} else {
+			versionsFound.Insert(version.Version)
 		}
 	}
 
@@ -331,11 +336,16 @@ func validateKubernetesSettings(kubernetes garden.KubernetesSettings, fldPath *f
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
+	versionsFound := sets.NewString()
 	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
 	for i, version := range kubernetes.Versions {
 		idxPath := fldPath.Child("versions").Index(i)
 		if !r.MatchString(version.Version) {
 			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
+		} else if versionsFound.Has(version.Version) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
+		} else {
+			versionsFound.Insert(version.Version)
 		}
 	}
 
@@ -604,6 +614,7 @@ func validateRegions(regions []garden.Region, fldPath *field.Path) field.ErrorLi
 	// 	allErrs = append(allErrs, field.Required(fldPath, "must provide at least one region"))
 	// }
 
+	regionsFound := sets.NewString()
 	for i, region := range regions {
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
@@ -611,12 +622,21 @@ func validateRegions(regions []garden.Region, fldPath *field.Path) field.ErrorLi
 
 		if len(region.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a region name"))
+		} else if regionsFound.Has(region.Name) {
+			allErrs = append(allErrs, field.Duplicate(namePath, region.Name))
+		} else {
+			regionsFound.Insert(region.Name)
 		}
 
+		zonesFound := sets.NewString()
 		for j, zone := range region.Zones {
 			namePath := zonesPath.Index(j).Child("name")
 			if len(zone.Name) == 0 {
 				allErrs = append(allErrs, field.Required(namePath, "zone name cannot be empty"))
+			} else if zonesFound.Has(zone.Name) {
+				allErrs = append(allErrs, field.Duplicate(namePath, zone.Name))
+			} else {
+				zonesFound.Insert(zone.Name)
 			}
 		}
 	}
@@ -637,6 +657,8 @@ func validateZones(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 
 func validateZonesOnly(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	regionsFound := sets.NewString()
 	for i, zone := range zones {
 		idxPath := fldPath.Index(i)
 		regionPath := idxPath.Child("region")
@@ -644,16 +666,25 @@ func validateZonesOnly(zones []garden.Zone, fldPath *field.Path) field.ErrorList
 
 		if len(zone.Region) == 0 {
 			allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
+		} else if regionsFound.Has(zone.Region) {
+			allErrs = append(allErrs, field.Duplicate(regionPath, zone.Region))
+		} else {
+			regionsFound.Insert(zone.Region)
 		}
 
 		if len(zone.Names) == 0 {
 			allErrs = append(allErrs, field.Required(namesPath, "must provide at least one zone for this region"))
 		}
 
+		zonesFound := sets.NewString()
 		for j, name := range zone.Names {
 			namePath := namesPath.Index(j)
 			if len(name) == 0 {
 				allErrs = append(allErrs, field.Required(namePath, "zone name cannot be empty"))
+			} else if zonesFound.Has(name) {
+				allErrs = append(allErrs, field.Duplicate(namePath, name))
+			} else {
+				zonesFound.Insert(name)
 			}
 		}
 	}
