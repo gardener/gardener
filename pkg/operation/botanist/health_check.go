@@ -30,6 +30,7 @@ import (
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -269,6 +270,7 @@ func (b *HealthChecker) CheckControlPlane(
 
 // CheckSystemComponents checks whether the system components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckSystemComponents(
+	gardenerVersion string,
 	namespace string,
 	condition gardencorev1alpha1.Condition,
 	deploymentLister kutil.DeploymentLister,
@@ -292,7 +294,19 @@ func (b *HealthChecker) CheckSystemComponents(
 		return nil, err
 	}
 
-	if exitCondition := b.checkRequiredDaemonSets(condition, common.RequiredSystemComponentDaemonSets, daemonSetList); exitCondition != nil {
+	// node-problem-detector was introduced with gardener 0.31.0, so we should only check it if the shoot
+	// was already reconciled by this version (otherwise it does not exist yet)
+	// TODO: This code can be removed in a future version.
+	requiredSystemComponentDaemonSets := common.RequiredSystemComponentDaemonSets.Union(nil)
+	gardenerVersionLessThan0310, err := utils.CompareVersions(gardenerVersion, "<", "0.31")
+	if err != nil {
+		return nil, err
+	}
+	if gardenerVersionLessThan0310 {
+		requiredSystemComponentDaemonSets.Delete(common.NodeProblemDetectorDaemonSetName)
+	}
+
+	if exitCondition := b.checkRequiredDaemonSets(condition, requiredSystemComponentDaemonSets, daemonSetList); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkDaemonSets(condition, daemonSetList); exitCondition != nil {
@@ -607,7 +621,7 @@ func (b *Botanist) checkSystemComponents(
 	extensionConditions []extensionCondition,
 ) (*gardencorev1alpha1.Condition, error) {
 
-	if exitCondition, err := checker.CheckSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckSystemComponents(b.Shoot.Info.Status.Gardener.Version, metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckMonitoringSystemComponents(metav1.NamespaceSystem, condition, shootDaemonSetLister); err != nil || exitCondition != nil {
