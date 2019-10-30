@@ -3216,6 +3216,21 @@ func schema_pkg_apis_core_v1alpha1_NginxIngress(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"config": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config contains custom configuration for the nginx-ingress-controller configuration. See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
@@ -8898,6 +8913,21 @@ func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) c
 							Description: "LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"config": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config contains custom configuration for the nginx-ingress-controller configuration. See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},

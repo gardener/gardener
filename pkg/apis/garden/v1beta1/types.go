@@ -1225,6 +1225,10 @@ type NginxIngress struct {
 	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
+	// Config contains custom configuration for the nginx-ingress-controller configuration.
+	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options
+	// +optional
+	Config map[string]string `json:"config,omitempty"`
 }
 
 // Monocular describes configuration values for the monocular addon.

@@ -15,6 +15,9 @@ controller:
     use-proxy-protocol: "false"
     worker-processes: "2"
 
+  customConfig: {}
+  # large-client-header-buffers: "4 32k"
+
   # Required for use with CNI based kubernetes installations (such as ones set up by kubeadm),
   # since CNI and hostport don't mix yet. Can be deprecated once https://github.com/kubernetes/kubernetes/issues/23920
   # is merged
