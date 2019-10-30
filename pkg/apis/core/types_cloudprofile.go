@@ -62,7 +62,7 @@ type CloudProfileSpec struct {
 	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
 	// An empty list means that all seeds of the same provider type are supported.
 	// This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
-	SeedSelector *metav1.LabelSelector
+	SeedSelector *SeedSelector
 	// Type is the name of the provider.
 	Type string
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -71,6 +71,16 @@ type CloudProfileSpec struct {
 
 func (c *CloudProfile) GetProviderType() string {
 	return c.Spec.Type
+}
+
+// SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
+type SeedSelector struct {
+	// LabelSelector is optional and can be used to select seeds by their label settings
+	// +optional
+	*metav1.LabelSelector
+	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
+	// +optional
+	Providers []string
 }
 
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.

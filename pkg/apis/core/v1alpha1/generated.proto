@@ -292,7 +292,7 @@ message CloudProfileSpec {
   // An empty list means that all seeds of the same provider type are supported.
   // This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 7;
+  optional SeedSelector seedSelector = 7;
 
   // Type is the name of the provider.
   optional string type = 8;
@@ -1648,6 +1648,17 @@ message SeedProvider {
   optional string region = 3;
 }
 
+// SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
+message SeedSelector {
+  // LabelSelector is optional and can be used to select seeds by their label settings
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
+
+  // Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
+  // +optional
+  repeated string providers = 1;
+}
+
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
 // seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
 // or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
@@ -1933,7 +1944,7 @@ message ShootSpec {
 
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 15;
+  optional SeedSelector seedSelector = 15;
 
   // Resources holds a list of named resource references that can be referred to in extension configs by their names.
   // +optional

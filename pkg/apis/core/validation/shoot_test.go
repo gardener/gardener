@@ -409,7 +409,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.Region = ""
 			shoot.Spec.SecretBindingName = ""
 			shoot.Spec.SeedName = pointer.StringPtr("")
-			shoot.Spec.SeedSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}}
+			shoot.Spec.SeedSelector = &core.SeedSelector{
+				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+			}
 			shoot.Spec.Provider.Type = ""
 
 			errorList := ValidateShoot(shoot)

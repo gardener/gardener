@@ -74,7 +74,7 @@ type CloudProfileSpec struct {
 	// An empty list means that all seeds of the same provider type are supported.
 	// This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
 	// +optional
-	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty" protobuf:"bytes,7,opt,name=seedSelector"`
+	SeedSelector *SeedSelector `json:"seedSelector,omitempty" protobuf:"bytes,7,opt,name=seedSelector"`
 	// Type is the name of the provider.
 	Type string `json:"type" protobuf:"bytes,8,opt,name=type"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -82,6 +82,16 @@ type CloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=volumeTypes"`
+}
+
+// SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
+type SeedSelector struct {
+	// LabelSelector is optional and can be used to select seeds by their label settings
+	// +optional
+	*metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,2,opt,name=labelSelector"`
+	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
+	// +optional
+	Providers []string `json:"providers,omitempty" protobuf:"bytes,1,rep,name=providers"`
 }
 
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
