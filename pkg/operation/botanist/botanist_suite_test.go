@@ -409,22 +409,24 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckSystemComponents",
-		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
+		func(gardenerVersion string, deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
 				checker          = botanist.NewHealthChecker(map[gardencorev1alpha1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
+			exitCondition, err := checker.CheckSystemComponents(gardenerVersion, shootNamespace, condition, deploymentLister, daemonSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
+			"0.100.200",
 			requiredSystemComponentDeployments,
 			requiredSystemComponentDaemonSets,
 			BeNil()),
 		Entry("missing required deployment",
+			"0.100.200",
 			[]*appsv1.Deployment{
 				calicoKubeControllersDeployment,
 				calicoTyphaDeployment,
@@ -434,12 +436,14 @@ var _ = Describe("health check", func() {
 			requiredSystemComponentDaemonSets,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("missing required daemon set",
+			"0.100.200",
 			requiredSystemComponentDeployments,
 			[]*appsv1.DaemonSet{
 				calicoNodeDaemonSet,
 			},
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required deployment not healthy",
+			"0.100.200",
 			[]*appsv1.Deployment{
 				calicoKubeControllersDeployment,
 				newDeployment(calicoTyphaDeployment.Namespace, calicoTyphaDeployment.Name, roleOf(calicoTyphaDeployment), false),
@@ -450,11 +454,22 @@ var _ = Describe("health check", func() {
 			requiredSystemComponentDaemonSets,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required daemon set not healthy",
+			"0.100.200",
 			requiredSystemComponentDeployments,
 			[]*appsv1.DaemonSet{
 				newDaemonSet(kubeProxyDaemonSet.Namespace, kubeProxyDaemonSet.Name, roleOf(kubeProxyDaemonSet), false),
 				calicoNodeDaemonSet,
 			},
+			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
+		Entry("node-problem-detector missing but still all healthy (gardener < 0.31)",
+			"0.30.5",
+			requiredSystemComponentDeployments,
+			[]*appsv1.DaemonSet{calicoNodeDaemonSet, kubeProxyDaemonSet},
+			BeNil()),
+		Entry("node-problem-detector missing and condition fails (gardener >= 0.31)",
+			"0.31.2",
+			requiredSystemComponentDeployments,
+			[]*appsv1.DaemonSet{calicoNodeDaemonSet, kubeProxyDaemonSet},
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 	)
 
