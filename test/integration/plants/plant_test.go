@@ -44,21 +44,19 @@ package plants_test
 
 import (
 	"context"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"time"
 
-	"k8s.io/api/core/v1"
-
-	. "github.com/gardener/gardener/test/integration/shoots"
-
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/shoots"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -108,7 +106,7 @@ func validateFlags() {
 	}
 }
 
-func cleanPlant(ctx context.Context, plantTest *PlantTest, secret *v1.Secret) error {
+func cleanPlant(ctx context.Context, plantTest *PlantTest, secret *corev1.Secret) error {
 	if err := plantTest.GardenClient.Client().Delete(ctx, secret); err != nil {
 		return err
 	}
@@ -116,7 +114,7 @@ func cleanPlant(ctx context.Context, plantTest *PlantTest, secret *v1.Secret) er
 
 }
 
-func createPlant(ctx context.Context, plantNamespace string, plantTest *PlantTest, kubeConfigContent []byte) (*v1.Secret, error) {
+func createPlant(ctx context.Context, plantNamespace string, plantTest *PlantTest, kubeConfigContent []byte) (*corev1.Secret, error) {
 	plantTest.Plant.Namespace = plantNamespace
 	secret, err := plantTest.CreatePlantSecret(ctx, kubeConfigContent)
 	if err != nil {
@@ -135,6 +133,24 @@ var _ = Describe("Plant testing", func() {
 		plantTest              *PlantTest
 		plantTestLogger        *logrus.Logger
 		validKubeConfigContent []byte
+		dummyKubeConfigContent = []byte(`---
+apiVersion: v1
+kind: Config
+clusters:
+- name: dummy
+  cluster:
+    server: https://some-endpoint-that-does-not-exist
+    insecure-skip-tls-verify: true
+contexts:
+  - name: dummy
+    context:
+      cluster: dummy
+      user: dummy
+current-context: dummy
+users:
+  - name: dummy
+    user:
+      token: AAAA`)
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -156,7 +172,6 @@ var _ = Describe("Plant testing", func() {
 		var err error
 		validKubeConfigContent, err = ioutil.ReadFile(*kubeconfigPathExternalCluster)
 		Expect(err).NotTo(HaveOccurred())
-
 	}, InitializationTimeout)
 
 	CAfterEach(func(ctx context.Context) {
@@ -185,9 +200,7 @@ var _ = Describe("Plant testing", func() {
 		}()
 
 		// modify data.kubeconfigpath to update the secret with false information
-		source := []byte("Here is a string....")
-		base64DummyKubeconfig := base64.StdEncoding.EncodeToString(source)
-		secret.Data[KubeConfigKey] = []byte(base64DummyKubeconfig)
+		secret.Data[KubeConfigKey] = dummyKubeConfigContent
 
 		By(fmt.Sprintf("Update Plant secret with invalid kubeconfig"))
 
@@ -198,11 +211,10 @@ var _ = Describe("Plant testing", func() {
 
 		err = plantTest.WaitForPlantToBeReconciledWithUnknownStatus(ctx)
 		Expect(err).NotTo(HaveOccurred())
-
 	}, PlantUpdateSecretTimeout)
+
 	CIt("Should reconcile Plant Status to be successful after Plant Secret update", func(ctx context.Context) {
-		dummyKubeconfigContent := []byte("Here is a string....")
-		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, dummyKubeconfigContent)
+		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, dummyKubeConfigContent)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(plantTest.WaitForPlantToBeReconciledWithUnknownStatus(ctx)).NotTo(HaveOccurred())
@@ -220,8 +232,8 @@ var _ = Describe("Plant testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Plant reconciled successfully")
-
 	}, PlantUpdateSecretTimeout)
+
 	CIt("Should update Plant Status to 'unknown' due to updated and invalid Plant Secret (kubeconfig not provided)", func(ctx context.Context) {
 		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, validKubeConfigContent)
 		Expect(err).NotTo(HaveOccurred())
