@@ -181,6 +181,8 @@ spec:
     nginx-ingress:
       enabled: false
       loadBalancerSourceRanges: []
+    # config:
+    #   enable-access-log-for-default-backend: "false"
     kubernetes-dashboard:
       enabled: true
     # authenticationMode: basic # allowed values: basic,token

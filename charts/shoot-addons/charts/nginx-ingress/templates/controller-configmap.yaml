@@ -11,6 +11,8 @@ metadata:
   namespace: kube-system
 data:
   enable-vts-status: "{{ .Values.controller.stats.enabled }}"
-{{- if .Values.controller.config }}
+{{- if .Values.controller.customConfig }}
+{{ toYaml (merge .Values.controller.customConfig .Values.controller.config) | indent 2 }}
+{{- else }}
 {{ toYaml .Values.controller.config | indent 2 }}
 {{- end }}

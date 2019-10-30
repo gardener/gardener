@@ -893,6 +893,20 @@ Maintenance
 operations should be performed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>monitoring</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.Monitoring">
+Monitoring
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Monitoring contains information about custom monitoring configurations for the shoot.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1527,6 +1541,37 @@ github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig
 <td>
 <em>(Optional)</em>
 <p>Config is the configuration of the plugin.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="garden.sapcloud.io/v1beta1.Alerting">Alerting
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#garden.sapcloud.io/v1beta1.Monitoring">Monitoring</a>)
+</p>
+<p>
+<p>Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>emailReceivers</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MonitoringEmailReceivers is a list of recipients for alerts</p>
 </td>
 </tr>
 </tbody>
@@ -5382,6 +5427,17 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <tbody>
 <tr>
 <td>
+<code>class</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Class is the class of the storage type.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>size</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
@@ -5539,6 +5595,39 @@ If not present, the value will be computed based on the &ldquo;Begin&rdquo; valu
 </tr>
 </tbody>
 </table>
+<h3 id="garden.sapcloud.io/v1beta1.Monitoring">Monitoring
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#garden.sapcloud.io/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>Monitoring contains information about the monitoring configuration for the shoot.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>alerting</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.Alerting">
+Alerting
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Alerting contains information about the alerting configuration for the shoot cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="garden.sapcloud.io/v1beta1.Monocular">Monocular
 </h3>
 <p>
@@ -5674,6 +5763,19 @@ Addon
 <td>
 <em>(Optional)</em>
 <p>LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>config</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Config contains custom configuration for the nginx-ingress-controller configuration.
+See <a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options">https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options</a></p>
 </td>
 </tr>
 </tbody>
@@ -7598,6 +7700,20 @@ Maintenance
 operations should be performed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>monitoring</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.Monitoring">
+Monitoring
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Monitoring contains information about custom monitoring configurations for the shoot.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="garden.sapcloud.io/v1beta1.ShootStatus">ShootStatus
@@ -8034,5 +8150,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>77713c395</code>.
+on git commit <code>e8637b838</code>.
 </em></p>

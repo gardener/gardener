@@ -1129,7 +1129,6 @@ type Addons struct {
 	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
 	KubernetesDashboard *KubernetesDashboard
 	// NginxIngress holds configuration settings for the nginx-ingress addon.
-	// DEPRECATED: This field will be removed in a future version.
 	NginxIngress *NginxIngress
 
 	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
@@ -1189,6 +1188,9 @@ type NginxIngress struct {
 	Addon
 	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
 	LoadBalancerSourceRanges []string
+	// Config contains custom configuration for the nginx-ingress-controller configuration.
+	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options
+	Config map[string]string
 }
 
 // Monocular describes configuration values for the monocular addon.

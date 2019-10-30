@@ -664,6 +664,8 @@ spec:
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "false")}
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
+    # config:
+    #   enable-access-log-for-default-backend: "false"
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
     # authenticationMode: basic # allowed values: basic,token

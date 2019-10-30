@@ -93,6 +93,7 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 	if enabled {
 		values = map[string]interface{}{
 			"controller": map[string]interface{}{
+				"customConfig": b.Shoot.Info.Spec.Addons.NginxIngress.Config,
 				"service": map[string]interface{}{
 					"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
 				},
