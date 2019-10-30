@@ -13,3 +13,7 @@ data:
       kubeconfig: /var/lib/kube-scheduler/kubeconfig
     leaderElection:
       leaderElect: true
+{{- if .Values.config.algorithmSource.provider }}
+    algorithmSource:
+      provider: {{ .Values.config.algorithmSource.provider }}
+{{- end }}
