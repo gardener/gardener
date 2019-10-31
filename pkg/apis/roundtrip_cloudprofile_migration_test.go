@@ -233,6 +233,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				countFaultDomain        = 8
 
 				providerConfig = &azurev1alpha1.CloudProfileConfig{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "azure.provider.extensions.gardener.cloud/v1alpha1",
+						Kind:       "CloudProfileConfig",
+					},
 					MachineImages: []azurev1alpha1.MachineImages{
 						{Name: "foo"},
 					},
@@ -243,6 +247,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						{Region: countFaultDomainRegion, Count: countFaultDomain},
 					},
 				}
+
 				providerConfigJSON, _ = json.Marshal(providerConfig)
 				providerType          = "azure"
 
@@ -553,6 +558,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				requestTimeout = "30s"
 
 				providerConfig = &openstackv1alpha1.CloudProfileConfig{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "openstack.provider.extensions.gardener.cloud/v1alpha1",
+						Kind:       "CloudProfileConfig",
+					},
 					Constraints: openstackv1alpha1.Constraints{
 						FloatingPools: []openstackv1alpha1.FloatingPool{
 							{
@@ -1312,6 +1321,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				countFaultDomain        = 8
 
 				providerConfig = &azurev1alpha1.CloudProfileConfig{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "azure.provider.extensions.gardener.cloud/v1alpha1",
+						Kind:       "CloudProfileConfig",
+					},
 					MachineImages: []azurev1alpha1.MachineImages{
 						{Name: "foo"},
 					},
@@ -1631,6 +1644,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				requestTimeout = "30s"
 
 				providerConfig = &openstackv1alpha1.CloudProfileConfig{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "openstack.provider.extensions.gardener.cloud/v1alpha1",
+						Kind:       "CloudProfileConfig",
+					},
 					Constraints: openstackv1alpha1.Constraints{
 						FloatingPools: []openstackv1alpha1.FloatingPool{
 							{
