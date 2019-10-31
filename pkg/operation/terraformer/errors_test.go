@@ -103,6 +103,38 @@ Error: ` + errorLog3error2 + `
 Error: ` + errorLog3error3 + `
 `
 
+			errorLog4error1 = `Unable to list provider registration status, it is possible that this is due to invalid credentials or the service principal does not have permission to use the Resource Manager API, Azure error: azure.BearerAuthorizer#WithAuthorization: Failed to refresh the Token for request to https://management.azure.com/subscriptions/7021843c-b121-46f3-91a3-9cdd0e0f415b/providers?api-version=2016-02-01: StatusCode=401 -- Original Error: adal: Refresh request failed. Status Code = '401'. Response body: {"error":"invalid_client","error_description":"AADSTS7000222: The provided client secret keys are expired.\r\nTrace ID: a586af20-bd59-4bd7-8c85-443558347400\r\nCorrelation ID: a4b83fcf-5fd9-44ea-9dbc-43abb1d59a75\r\nTimestamp: 2019-10-31 12:37:32Z","error_codes":[7000222],"timestamp":"2019-10-31 12:37:32Z","trace_id":"a586af20-bd59-4bd7-8c85-443558347400","correlation_id":"a4b83fcf-5fd9-44ea-9dbc-43abb1d59a75"}
+
+on tf/main.tf line 1, in provider "azurerm":
+ 1: provider "azurerm" {`
+
+			errorLog4 = `
+
+Error: ` + errorLog4error1 + `
+
+Error: ` + errorLog4error1 + `
+`
+
+			errorLog5error1 = `Error creating VPC: VpcLimitExceeded: The maximum number of VPCs has been reached.
+status code: 400, request id: bc36adce-333c-4ddc-a336-12494ac8cca4
+
+on tf/main.tf line 21, in resource "aws_vpc" "vpc":
+21: resource "aws_vpc" "vpc" {`
+
+			errorLog5error2 = `Error creating EIP: AddressLimitExceeded: The maximum number of addresses has been reached.
+status code: 400, request id: f6a78181-00ad-4a62-911f-dda604041548
+
+on tf/main.tf line 226, in resource "aws_eip" "eip_natgw_z0":
+226: resource "aws_eip" "eip_natgw_z0" {`
+
+			errorLog5 = `aws_eip.eip_natgw_z0: Creating...
+
+Error: ` + errorLog5error1 + `
+
+
+
+Error: ` + errorLog5error2
+
 			regexUUID         = regexp.MustCompile(`(?i)[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}`)
 			regexMultiNewline = regexp.MustCompile(`\n{2,}`)
 		)
@@ -112,10 +144,14 @@ Error: ` + errorLog3error3 + `
 				"pod1": errorLog1,
 				"pod2": errorLog2,
 				"pod3": errorLog3,
+				"pod4": errorLog4,
+				"pod5": errorLog5,
 			})).To(ConsistOf(
 				"-> Pod 'pod1' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog1error1, "\n"), "<omitted>"),
 				"-> Pod 'pod2' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog2error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog2error1, "\n"), "<omitted>"),
 				"-> Pod 'pod3' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog3error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error3, "\n"), "<omitted>"),
+				"-> Pod 'pod4' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog4error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog4error1, "\n"), "<omitted>"),
+				"-> Pod 'pod5' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog5error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog5error1, "\n"), "<omitted>"),
 			))
 		})
 	})
