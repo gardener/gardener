@@ -78,16 +78,25 @@ func findTerraformErrors(output string) string {
 		// Omit (request) uuid's to allow easy determination of duplicates.
 		errorMessage = regexUUID.ReplaceAllString(errorMessage, "<omitted>")
 
-		// Sort the occurred errors alphabetically
-		lines := strings.Split(errorMessage, "Error: ")
-		sort.Strings(lines)
-
-		// Only keep the lines beginning with ' ' (actual errors)
-		for _, line := range lines {
-			if strings.HasPrefix(line, "Error") {
-				valid = append(valid, line)
+		// Get all errors
+		var currentError string
+		for _, line := range strings.Split(errorMessage, "\n") {
+			if strings.HasPrefix(line, "Error: ") {
+				if len(currentError) > 0 {
+					valid = append(valid, currentError)
+					currentError = ""
+				}
+				line = strings.TrimPrefix(line, "Error: ")
 			}
+			currentError += line + "\n"
 		}
+		if len(currentError) > 0 {
+			valid = append(valid, currentError)
+		}
+
+		// Sort the occurred errors alphabetically
+		sort.Strings(valid)
+
 		errorMessage = "* " + strings.Join(valid, "\n* ")
 
 		// Strip multiple newlines to one newline
