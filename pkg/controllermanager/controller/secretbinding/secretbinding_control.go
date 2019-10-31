@@ -181,7 +181,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 		return err
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardencorev1alpha1.ExternalGardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1alpha1.ExternalGardenerName); err != nil {
 		secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
 		return err
 	}
