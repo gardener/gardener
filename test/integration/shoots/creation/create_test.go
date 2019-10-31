@@ -71,6 +71,7 @@ var (
 	infrastructureProviderConfig = flag.String("infrastructure-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
 	controlPlaneProviderConfig   = flag.String("controlplane-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
 	networkingProviderConfig     = flag.String("networking-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
+	workersConfig                = flag.String("workers-config-filepath", "", "filepath to the worker config.")
 
 	// other
 	shootGardenerTest     *ShootGardenerTest
@@ -135,6 +136,12 @@ func validateFlags() {
 			Fail("path to the networkingProviderConfig of the Shoot is invalid")
 		}
 	}
+
+	if StringSet(*workersConfig) {
+		if !FileExists(*workersConfig) {
+			Fail("path to the worker config of the Shoot is invalid")
+		}
+	}
 }
 
 var _ = Describe("Shoot Creation testing", func() {
@@ -145,8 +152,10 @@ var _ = Describe("Shoot Creation testing", func() {
 		shoot := prepareShoot()
 		shootGardenerTest, err = NewShootGardenerTest(*gardenerKubeconfigPath, shoot, testLogger)
 		Expect(err).To(BeNil())
-		err := shootGardenerTest.SetupShootWorker(workerZone)
-		Expect(err).To(BeNil())
+		if len(*workersConfig) == 0 {
+			err := shootGardenerTest.SetupShootWorker(workerZone)
+			Expect(err).To(BeNil())
+		}
 		Expect(len(shootGardenerTest.Shoot.Spec.Provider.Workers)).Should(BeNumerically("==", 1))
 
 		// override default worker settings with flags
@@ -235,7 +244,7 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 	}
 
 	// set ProviderConfigs
-	err = SetProviderConfigsFromFilepath(shootObject, infrastructureProviderConfig, controlPlaneProviderConfig, networkingProviderConfig)
+	err = SetProviderConfigsFromFilepath(shootObject, infrastructureProviderConfig, controlPlaneProviderConfig, networkingProviderConfig, workersConfig)
 	Expect(err).To(BeNil())
 	return shootObject
 }
