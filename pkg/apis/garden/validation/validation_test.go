@@ -78,8 +78,9 @@ var _ = Describe("validation", func() {
 				},
 			}
 
-			invalidKubernetes  = []garden.KubernetesVersion{{Version: "1.11"}}
-			invalidMachineType = garden.MachineType{
+			invalidKubernetes    = []garden.KubernetesVersion{{Version: "1.11"}}
+			duplicatedKubernetes = []garden.KubernetesVersion{{Version: "1.11.4"}, {Version: "1.11.4"}}
+			invalidMachineType   = garden.MachineType{
 				Name:   "",
 				CPU:    resource.MustParse("-1"),
 				GPU:    resource.MustParse("-1"),
@@ -105,6 +106,22 @@ var _ = Describe("validation", func() {
 				{
 					Region: "",
 					Names:  []string{""},
+				},
+			}
+			duplicatedRegionsConstraint = []garden.Zone{
+				{
+					Region: "my-region-",
+					Names:  []string{"my-region-a"},
+				},
+				{
+					Region: "my-region-",
+					Names:  []string{"my-region-a"},
+				},
+			}
+			duplicatedZonesConstraint = []garden.Zone{
+				{
+					Region: "my-region-",
+					Names:  []string{"my-region-a", "my-region-a"},
 				},
 			}
 		)
@@ -242,6 +259,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					awsCloudProfile.Spec.AWS.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
 				})
 			})
 
@@ -485,6 +514,30 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated region names", func() {
+					awsCloudProfile.Spec.AWS.Constraints.Zones = duplicatedRegionsConstraint
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[%d].region", fldPath, len(duplicatedRegionsConstraint)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					awsCloudProfile.Spec.AWS.Constraints.Zones = duplicatedZonesConstraint
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[%d]", fldPath, len(duplicatedZonesConstraint[0].Names)-1)),
+						}))))
+				})
 			})
 		})
 
@@ -584,6 +637,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					azureCloudProfile.Spec.Azure.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
 				})
 			})
 
@@ -884,6 +949,18 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
+				})
 			})
 
 			Context("machine image validation", func() {
@@ -1126,6 +1203,30 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated region names", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.Zones = duplicatedRegionsConstraint
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[%d].region", fldPath, len(duplicatedRegionsConstraint)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.Zones = duplicatedZonesConstraint
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[%d]", fldPath, len(duplicatedZonesConstraint[0].Names)-1)),
+						}))))
+				})
 			})
 		})
 
@@ -1255,6 +1356,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
 				})
 			})
 
@@ -1505,6 +1618,30 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated region names", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.Zones = duplicatedRegionsConstraint
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[%d].region", fldPath, len(duplicatedRegionsConstraint)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.Zones = duplicatedZonesConstraint
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[%d]", fldPath, len(duplicatedZonesConstraint[0].Names)-1)),
+						}))))
+				})
 			})
 
 			Context("keystone url validation", func() {
@@ -1674,6 +1811,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
 				})
 			})
 
@@ -1949,6 +2098,30 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated region names", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones = duplicatedRegionsConstraint
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[%d].region", fldPath, len(duplicatedRegionsConstraint)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones = duplicatedZonesConstraint
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[%d]", fldPath, len(duplicatedZonesConstraint[0].Names)-1)),
+						}))))
+				})
 			})
 		})
 
@@ -2054,6 +2227,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[].expirationDate", fldPath)),
 					}))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					packetProfile.Spec.Packet.Constraints.Kubernetes.OfferedVersions = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.offeredVersions[%d].version", fldPath, len(duplicatedKubernetes)-1)),
+						}))))
 				})
 			})
 
@@ -2261,6 +2446,30 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
+
+				It("should forbid duplicated region names", func() {
+					packetProfile.Spec.Packet.Constraints.Zones = duplicatedRegionsConstraint
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[%d].region", fldPath, len(duplicatedRegionsConstraint)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					packetProfile.Spec.Packet.Constraints.Zones = duplicatedZonesConstraint
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[%d]", fldPath, len(duplicatedZonesConstraint[0].Names)-1)),
+						}))))
+				})
 			})
 		})
 		// END PACKET
@@ -2271,6 +2480,33 @@ var _ = Describe("validation", func() {
 				zoneName   = "zone1"
 
 				unknownCloudProfile *garden.CloudProfile
+
+				duplicatedKubernetes = garden.KubernetesSettings{
+					Versions: []garden.ExpirableVersion{{Version: "1.11.4"}, {Version: "1.11.4"}},
+				}
+				duplicatedRegions = []garden.Region{
+					{
+						Name: regionName,
+						Zones: []garden.AvailabilityZone{
+							{Name: zoneName},
+						},
+					},
+					{
+						Name: regionName,
+						Zones: []garden.AvailabilityZone{
+							{Name: zoneName},
+						},
+					},
+				}
+				duplicatedZones = []garden.Region{
+					{
+						Name: regionName,
+						Zones: []garden.AvailabilityZone{
+							{Name: zoneName},
+							{Name: zoneName},
+						},
+					},
+				}
 			)
 
 			BeforeEach(func() {
@@ -2375,6 +2611,18 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.versions[].expirationDate"),
 					}))))
+				})
+
+				It("should forbid duplicated kubernetes versions", func() {
+					unknownCloudProfile.Spec.Kubernetes = duplicatedKubernetes
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.kubernetes.versions[%d].version", len(duplicatedKubernetes.Versions)-1)),
+						}))))
 				})
 			})
 
@@ -2562,6 +2810,30 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.regions[0].zones[0].name"),
 					}))))
+				})
+
+				It("should forbid duplicated region names", func() {
+					unknownCloudProfile.Spec.Regions = duplicatedRegions
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.regions[%d].name", len(duplicatedRegions)-1)),
+						}))))
+				})
+
+				It("should forbid duplicated zone names", func() {
+					unknownCloudProfile.Spec.Regions = duplicatedZones
+
+					errorList := ValidateCloudProfile(unknownCloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal(fmt.Sprintf("spec.regions[0].zones[%d].name", len(duplicatedZones[0].Zones)-1)),
+						}))))
 				})
 			})
 
