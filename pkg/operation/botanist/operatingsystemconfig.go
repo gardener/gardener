@@ -140,10 +140,14 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 			},
 		}
 	)
-
-	if caBundle := b.Shoot.CloudProfile.Spec.CABundle; caBundle != nil {
-		originalConfig["caBundle"] = *caBundle
+	caBundle := ""
+	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
+		caBundle = fmt.Sprintf("%s", *cloudProfileCaBundle)
 	}
+	if caCert, ok := b.Secrets[v1alpha1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
+		caBundle = fmt.Sprintf("%s\n%s", caBundle, caCert)
+	}
+	originalConfig["caBundle"] = caBundle
 
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }

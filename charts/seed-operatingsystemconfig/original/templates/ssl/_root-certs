@@ -6,5 +6,11 @@
     inline:
       encoding: b64
       data: {{ .Values.caBundle | b64enc }}
+- path: /etc/pki/trust/anchors/ROOTcerts.pem
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ .Values.caBundle | b64enc }}
 {{- end -}}
 {{- end -}}
