@@ -1,9 +1,26 @@
-package errors
+// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package errors_test
 
 import (
 	"fmt"
 	"testing"
 
+	errorsmock "github.com/gardener/gardener/pkg/mock/gardener/utils/errors"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 
 	. "github.com/onsi/ginkgo"
@@ -26,43 +43,179 @@ var _ = Describe("Errors", func() {
 
 	Describe("#WithSuppressed", func() {
 		It("should return nil if the error is nil", func() {
-			Expect(WithSuppressed(nil, err2)).To(BeNil())
+			Expect(utilerrors.WithSuppressed(nil, err2)).To(BeNil())
 		})
 
 		It("should return the error if the suppressed error is nil", func() {
-			Expect(WithSuppressed(err1, nil)).To(BeIdenticalTo(err1))
+			Expect(utilerrors.WithSuppressed(err1, nil)).To(BeIdenticalTo(err1))
 		})
 
 		It("should return an error with cause and suppressed equal to the given errors", func() {
-			err := WithSuppressed(err1, err2)
+			err := utilerrors.WithSuppressed(err1, err2)
 
 			Expect(errors.Cause(err)).To(BeIdenticalTo(err1))
-			Expect(Suppressed(err)).To(BeIdenticalTo(err2))
+			Expect(utilerrors.Suppressed(err)).To(BeIdenticalTo(err2))
 		})
 	})
 
 	Describe("#Suppressed", func() {
 		It("should retrieve the suppressed error", func() {
-			Expect(Suppressed(WithSuppressed(err1, err2))).To(BeIdenticalTo(err2))
+			Expect(utilerrors.Suppressed(utilerrors.WithSuppressed(err1, err2))).To(BeIdenticalTo(err2))
 		})
 
 		It("should retrieve nil if the error doesn't have a suppressed error", func() {
-			Expect(Suppressed(err1)).To(BeNil())
+			Expect(utilerrors.Suppressed(err1)).To(BeNil())
 		})
 	})
 
 	Context("withSuppressed", func() {
 		Describe("#Error", func() {
 			It("should return an error message consisting of the two errors", func() {
-				Expect(WithSuppressed(err1, err2).Error()).To(Equal("error 1, suppressed: error 2"))
+				Expect(utilerrors.WithSuppressed(err1, err2).Error()).To(Equal("error 1, suppressed: error 2"))
 			})
 		})
 
 		Describe("#Format", func() {
 			It("should correctly format the error in verbose mode", func() {
-				Expect(fmt.Sprintf("%+v", WithSuppressed(err1, err2))).
+				Expect(fmt.Sprintf("%+v", utilerrors.WithSuppressed(err1, err2))).
 					To(Equal("error 1\nsuppressed: error 2"))
 			})
+		})
+	})
+
+	Describe("Error context", func() {
+		It("Should panic with duplicate error IDs", func() {
+			defer func() {
+				recover()
+			}()
+			errorContext := utilerrors.NewErrorContext("Test context", nil)
+			errorContext.AddErrorID("ID1")
+			errorContext.AddErrorID("ID1")
+			Fail("Panic should have occurred")
+		})
+	})
+
+	Describe("Error handling", func() {
+		var (
+			errorContext *utilerrors.ErrorContext
+			ctrl         *gomock.Controller
+		)
+
+		BeforeEach(func() {
+			errorContext = utilerrors.NewErrorContext("Test context", nil)
+			ctrl = gomock.NewController(GinkgoT())
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("Should update the error context", func() {
+			errID := "x1"
+			utilerrors.HandleErrors(errorContext,
+				nil,
+				nil,
+				utilerrors.ToExecute(errID, func() error {
+					return nil
+				}),
+			)
+			Expect(errorContext.HasErrorWithID(errID)).To(BeTrue())
+		})
+
+		It("Should call default failure handler", func() {
+			errorID := "x1"
+			errorText := fmt.Sprintf("Error in %s", errorID)
+			expectedErr := utilerrors.WithID(errorID, fmt.Errorf("%s failed (%s)", errorID, errorText))
+			err := utilerrors.HandleErrors(errorContext,
+				nil,
+				nil,
+				utilerrors.ToExecute(errorID, func() error {
+					return fmt.Errorf(errorText)
+				}),
+			)
+
+			Expect(err).To(Equal(expectedErr))
+		})
+
+		It("Should call failure handler on fail", func() {
+			errID := "x1"
+			errorText := "Error from task"
+			expectedErr := fmt.Errorf("Got %s %s", errID, errorText)
+			err := utilerrors.HandleErrors(errorContext,
+				nil,
+				func(errorID string, err error) error {
+					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
+				},
+				utilerrors.ToExecute(errID, func() error {
+					return fmt.Errorf(errorText)
+				}),
+			)
+
+			Expect(err).To(Equal(expectedErr))
+		})
+
+		It("Should stop execution on error", func() {
+			expectedErr := fmt.Errorf("Err1")
+			f1 := errorsmock.NewMockTaskFunc(ctrl)
+			f2 := errorsmock.NewMockTaskFunc(ctrl)
+			f3 := errorsmock.NewMockTaskFunc(ctrl)
+
+			f1.EXPECT().Do(errorContext).Return("x1", nil)
+			f2.EXPECT().Do(errorContext).Return("x2", expectedErr)
+			f3.EXPECT().Do(errorContext).Times(0)
+
+			err := utilerrors.HandleErrors(errorContext,
+				nil,
+				func(errorID string, err error) error {
+					return err
+				},
+				f1,
+				f2,
+				f3,
+			)
+
+			Expect(err).To(Equal(expectedErr))
+		})
+
+		It("Should call success handler on error resolution", func() {
+			errID := "x2"
+			errorContext := utilerrors.NewErrorContext("Check success handler", []string{errID})
+			utilerrors.HandleErrors(errorContext,
+				func(errorID string) error {
+					return nil
+				},
+				nil,
+				utilerrors.ToExecute("x1", func() error {
+					return nil
+				}),
+				utilerrors.ToExecute(errID, func() error {
+					return nil
+				}),
+			)
+		})
+
+		It("Should execute methods sequentially in the specified order", func() {
+			f1 := errorsmock.NewMockTaskFunc(ctrl)
+			f2 := errorsmock.NewMockTaskFunc(ctrl)
+			f3 := errorsmock.NewMockTaskFunc(ctrl)
+
+			gomock.InOrder(
+				f1.EXPECT().Do(errorContext).Return("x1", nil),
+				f2.EXPECT().Do(errorContext).Return("x2", nil),
+				f3.EXPECT().Do(errorContext).Return("x3", nil),
+			)
+
+			err := utilerrors.HandleErrors(errorContext,
+				nil,
+				func(errorID string, err error) error {
+					return err
+				},
+				f1,
+				f2,
+				f3,
+			)
+
+			Expect(err).To(Succeed())
 		})
 	})
 })

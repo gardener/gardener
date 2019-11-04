@@ -3425,6 +3425,13 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		*out = new(v1alpha1.LastError)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.LastErrors != nil {
+		in, out := &in.LastErrors, &out.LastErrors
+		*out = make([]v1alpha1.LastError, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.RetryCycleStartTime != nil {
 		in, out := &in.RetryCycleStartTime, &out.RetryCycleStartTime
 		*out = (*in).DeepCopy()

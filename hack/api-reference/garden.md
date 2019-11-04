@@ -7802,6 +7802,20 @@ github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
 </tr>
 <tr>
 <td>
+<code>lastErrors</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.LastError">
+[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastErrors holds information about the last occurred error(s) during an operation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>observedGeneration</code></br>
 <em>
 int64
@@ -8162,5 +8176,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>4aea89b25</code>.
+on git commit <code>486dac1fc</code>.
 </em></p>

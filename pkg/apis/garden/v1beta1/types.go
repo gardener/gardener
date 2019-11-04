@@ -748,6 +748,9 @@ type ShootStatus struct {
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
 	LastError *gardencorev1alpha1.LastError `json:"lastError,omitempty"`
+	// LastErrors holds information about the last occurred error(s) during an operation.
+	// +optional
+	LastErrors []gardencorev1alpha1.LastError `json:"lastErrors,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	// +optional

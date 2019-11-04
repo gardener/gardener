@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unsafe"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -1687,6 +1688,16 @@ func Convert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStatus, 
 		return err
 	}
 
+	if len(in.LastErrors) != 0 {
+		out.LastError = (*LastError)(unsafe.Pointer(&in.LastErrors[0]))
+		if len(in.LastErrors) > 1 {
+			lastErrors := in.LastErrors[1:]
+			out.LastErrors = *(*[]LastError)(unsafe.Pointer(&lastErrors))
+		} else {
+			out.LastErrors = nil
+		}
+	}
+
 	if in.IsHibernated == nil {
 		out.IsHibernated = false
 	} else {
@@ -1699,6 +1710,19 @@ func Convert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStatus, 
 func Convert_v1alpha1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
 	if err := autoConvert_v1alpha1_ShootStatus_To_garden_ShootStatus(in, out, s); err != nil {
 		return err
+	}
+
+	if in.LastError != nil {
+		outLastErrors := []garden.LastError{
+			{
+				Description:    in.LastError.Description,
+				Codes:          *(*[]garden.ErrorCode)(unsafe.Pointer(&in.LastError.Codes)),
+				LastUpdateTime: in.LastError.LastUpdateTime,
+			},
+		}
+		out.LastErrors = append(outLastErrors, *(*[]garden.LastError)(unsafe.Pointer(&in.LastErrors))...)
+	} else {
+		out.LastErrors = nil
 	}
 
 	out.IsHibernated = &in.IsHibernated

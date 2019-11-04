@@ -180,6 +180,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		StatusLabelTransform(
 			ComputeStatus(
 				shoot.Status.LastOperation,
+				shoot.Status.LastErrors,
 				shoot.Status.LastError,
 				conditionAPIServerAvailable,
 				conditionControlPlaneHealthy,

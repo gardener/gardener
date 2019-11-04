@@ -328,6 +328,31 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 	o.Shoot.Info = newShoot
 }
 
+// CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
+// If the status.LastErrors array is empty then status.LastError is also removed.
+func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
+	var remainingErrors []gardencorev1alpha1.LastError
+	for _, lastErr := range o.Shoot.Info.Status.LastErrors {
+		if lastErr.TaskID == nil || taskID != *lastErr.TaskID {
+			remainingErrors = append(remainingErrors, lastErr)
+		}
+	}
+
+	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+			if remainingErrors == nil {
+				shoot.Status.LastError = nil
+			}
+			shoot.Status.LastErrors = remainingErrors
+			return shoot, nil
+		})
+	if err != nil {
+		o.Logger.Errorf("Could not report shoot progress: %v", err)
+		return
+	}
+	o.Shoot.Info = newShoot
+}
+
 // SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
 func (o *Operation) SeedVersion() string {
 	return o.K8sSeedClient.Version()

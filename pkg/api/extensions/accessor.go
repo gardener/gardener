@@ -175,6 +175,16 @@ func (u unstructuredLastErrorAccessor) GetDescription() string {
 	return nestedString(u.Object, "status", "lastError", "description")
 }
 
+// GetTaskID implements LastError
+func (u unstructuredLastErrorAccessor) GetTaskID() *string {
+	s, ok, err := unstructured.NestedString(u.Object, "status", "lastError", "taskID")
+	if err != nil || !ok {
+		return nil
+	}
+
+	return &s
+}
+
 // GetCodes implements LastError.
 func (u unstructuredLastErrorAccessor) GetCodes() []gardencorev1alpha1.ErrorCode {
 	codeStrings := nestedStringSlice(u.Object, "status", "lastError", "codes")

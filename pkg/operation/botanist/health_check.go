@@ -903,7 +903,7 @@ func isUnstableOperationType(lastOperationType gardencorev1alpha1.LastOperationT
 // in create or delete state.
 func (b *Botanist) pardonCondition(condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
 	shoot := b.Shoot.Info
-	if shoot.Status.LastError != nil {
+	if len(shoot.Status.LastErrors) > 0 || shoot.Status.LastError != nil {
 		return condition
 	}
 	if lastOp := shoot.Status.LastOperation; (lastOp == nil || (lastOp != nil && isUnstableOperationType(lastOp.Type))) && condition.Status == gardencorev1alpha1.ConditionFalse {

@@ -842,9 +842,10 @@ type ShootStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener
 	// LastOperation holds information about the last operation on the Shoot.
+	// +optional
 	LastOperation *LastOperation
-	// LastError holds information about the last occurred error during an operation.
-	LastError *LastError
+	// LastErrors holds information about the last occurred error(s) during an operation.
+	LastErrors []LastError
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64

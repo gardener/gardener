@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unsafe"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/utils"
@@ -2235,6 +2237,16 @@ func Convert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, o
 		return err
 	}
 
+	if len(in.LastErrors) != 0 {
+		out.LastError = (*gardencorev1alpha1.LastError)(unsafe.Pointer(&in.LastErrors[0]))
+		if len(in.LastErrors) > 1 {
+			lastErrors := in.LastErrors[1:]
+			out.LastErrors = *(*[]gardencorev1alpha1.LastError)(unsafe.Pointer(&lastErrors))
+		} else {
+			out.LastErrors = nil
+		}
+	}
+
 	if in.Seed != nil {
 		out.Seed = *in.Seed
 	} else {
@@ -2247,6 +2259,19 @@ func Convert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, o
 func Convert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
 	if err := autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in, out, s); err != nil {
 		return err
+	}
+
+	if in.LastError != nil {
+		outLastErrors := []garden.LastError{
+			{
+				Description:    in.LastError.Description,
+				Codes:          *(*[]garden.ErrorCode)(unsafe.Pointer(&in.LastError.Codes)),
+				LastUpdateTime: in.LastError.LastUpdateTime,
+			},
+		}
+		out.LastErrors = append(outLastErrors, *(*[]garden.LastError)(unsafe.Pointer(&in.LastErrors))...)
+	} else {
+		out.LastErrors = nil
 	}
 
 	if len(in.Seed) > 0 {

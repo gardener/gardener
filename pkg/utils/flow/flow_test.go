@@ -18,6 +18,7 @@ import (
 	"context"
 
 	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
@@ -137,6 +138,25 @@ var _ = Describe("Flow", func() {
 			err := f.Run(flow.Opts{Context: canceledCtx})
 			Expect(err).To(HaveOccurred())
 			Expect(flow.WasCanceled(err)).To(BeTrue())
+		})
+
+		It("should call cleanError callback when an error in the ErrorContext is resolved", func() {
+			var (
+				errorContext = utilerrors.NewErrorContext("foo", []string{"x"})
+				g            = flow.NewGraph("foo")
+				_            = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+					return nil
+				}})
+				ctx     = context.TODO()
+				f       = g.Compile()
+				cleaned bool
+			)
+
+			f.Run(flow.Opts{Context: ctx, ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
+				cleaned = true
+			}})
+
+			Expect(cleaned).To(BeTrue())
 		})
 
 		It("should stop the execution after the context has been canceled in between tasks", func() {
