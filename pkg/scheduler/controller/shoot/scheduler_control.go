@@ -205,19 +205,23 @@ func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *g
 	// Filter out candidates
 	old := candidates
 	candidates = nil
+	candidateErrors := make(map[string]error)
 
 	for _, seed := range old {
-		if !networksAreDisjunct(seed, shoot) {
+		disj, err := networksAreDisjunct(seed, shoot)
+		if !disj {
+			candidateErrors[seed.Name] = err
 			continue
 		}
 		if !seedSelector.Matches(labels.Set(seed.Labels)) {
+			candidateErrors[seed.Name] = fmt.Errorf("seed labels don't match seed selector")
 			continue
 		}
 		candidates = append(candidates, seed)
 	}
 
 	if candidates == nil {
-		return nil, fmt.Errorf("found %d possible seed cluster(s), however none have a disjoint network", len(old))
+		return nil, fmt.Errorf("found %d potential seed cluster(s), but none is possible: %v", len(old), errorMapToString(candidateErrors))
 	}
 
 	// Find the best candidate (i.e. the one managing the smallest number of shoots right now).
@@ -289,8 +293,13 @@ func generateSeedUsageMap(shootList []*gardencorev1alpha1.Shoot) map[string]int 
 	return m
 }
 
-func networksAreDisjunct(seed *gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot) bool {
-	return len(schedulerutils.ValidateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Networking.Nodes, shoot.Spec.Networking.Pods, shoot.Spec.Networking.Services, field.NewPath(""))) == 0
+func networksAreDisjunct(seed *gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot) (bool, error) {
+	errs := schedulerutils.ValidateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Networking.Nodes, shoot.Spec.Networking.Pods, shoot.Spec.Networking.Services, field.NewPath(""))
+	var errMsgs []string
+	for _, e := range errs {
+		errMsgs = append(errMsgs, e.ErrorBody())
+	}
+	return len(errs) == 0, fmt.Errorf("invalid networks: %s", errMsgs)
 }
 
 func verifySeedAvailability(seed *gardencorev1alpha1.Seed) bool {
@@ -316,4 +325,13 @@ func (c *defaultControl) reportSuccessfulScheduling(shoot *gardencorev1alpha1.Sh
 
 func (c *defaultControl) reportEvent(project *gardencorev1alpha1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
 	c.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
+}
+
+func errorMapToString(errs map[string]error) string {
+	res := "{"
+	for k, v := range errs {
+		res += fmt.Sprintf("%s => %s, ", k, v.Error())
+	}
+	res = strings.TrimSuffix(res, ", ") + "}"
+	return res
 }
