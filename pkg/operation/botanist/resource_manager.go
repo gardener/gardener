@@ -21,7 +21,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,10 +53,9 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		}
 	}
 
-	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, utilclient.CollectionMatching(
+	return b.K8sSeedClient.Client().DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels(map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener})),
-	)
+		client.MatchingLabels{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener})
 }
 
 // WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.

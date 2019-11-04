@@ -59,7 +59,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 		statefulSetList := &appsv1.StatefulSetList{}
 		err = b.K8sSeedClient.Client().List(ctx, statefulSetList,
 			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels(map[string]string{"app": "etcd-statefulset"}))
+			client.MatchingLabels{"app": "etcd-statefulset"})
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -147,7 +147,7 @@ func (b *Botanist) WaitUntilVPNConnectionExists(ctx context.Context) error {
 		podList := &corev1.PodList{}
 		err = b.K8sShootClient.Client().List(ctx, podList,
 			client.InNamespace(metav1.NamespaceSystem),
-			client.MatchingLabels(map[string]string{"app": "vpn-shoot"}))
+			client.MatchingLabels{"app": "vpn-shoot"})
 		if err != nil {
 			return retry.SevereError(err)
 		}

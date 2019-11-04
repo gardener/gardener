@@ -5,7 +5,7 @@
 **A**: Each controller should only reconcile one object type.  Other
 affected objects should be mapped to a single type of root object, using
 the `EnqueueRequestForOwner` or `EnqueueRequestsFromMapFunc` event
-handlers, and potentially indicies. Then, your Reconcile method should
+handlers, and potentially indices. Then, your Reconcile method should
 attempt to reconcile *all* state for that given root objects.
 
 ### Q: How do I have different logic in my reconciler for different types of events (e.g. create, update, delete)?

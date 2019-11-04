@@ -1,6 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
+cloud.google.com/go v0.43.0 h1:banaiRPAM8kUVYneOSkhgcDsLzEvL25FinuiSZaH/2w=
 cloud.google.com/go v0.43.0/go.mod h1:BOSR3VbTLkk6FDC/TcffxP4NF/FFBGA5ku+jvKOP7pg=
 github.com/Azure/azure-pipeline-go v0.2.1/go.mod h1:UGSo8XybXnIGZ3epmeBw7Jdz+HiUVpqIlpz/HKHylF4=
 github.com/Azure/azure-sdk-for-go v32.6.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
@@ -100,6 +101,8 @@ github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993
 github.com/gardener/gardener-resource-manager v0.0.0-20190828115855-7ceeb3021993/go.mod h1:l18ykpXeMDrrrtiA99YTdvZPW2TOaHIR/LrtbVELIiU=
 github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d h1:PbaSklo24t3741UtA3R6z7TEY3WdhcMaOy/I0VFVHj4=
 github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d/go.mod h1:YUvzinEboe8b9FTflj+wGvXaZBHHhQTd+R9Vk581wIE=
+github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25 h1:nOFITmV7vt4fcYPEXgj66Qs83FdDEMvL/LQcR0diRRE=
+github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25/go.mod h1:yj7YJ6ijo4adcpXQKutPFZfQuKLdM5UMZZUlpbM3vig=
 github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a h1:+0fVirUXhxTUvjrbBFoP4itZ0EAp9g2gRzYEC5ZfAiM=
 github.com/gardener/machine-controller-manager v0.0.0-20190228095106-36a42c48af0a/go.mod h1:/ZDmMugbfkBfOO6/nrdnqV+OMSEuF75wrF9KFIuqndM=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
@@ -541,8 +544,8 @@ k8s.io/utils v0.0.0-20190506122338-8fab8cb257d5/go.mod h1:sZAwmy6armz5eXlNoLmJcl
 k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a h1:2jUDc9gJja832Ftp+QbDV0tVhQHMISFn01els+2ZAcw=
 k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
-sigs.k8s.io/controller-runtime v0.2.0-beta.4 h1:S1XVfRWR1MuIXZdkYx3jN8JDw+bbQxmWZroy0i87z/A=
-sigs.k8s.io/controller-runtime v0.2.0-beta.4/go.mod h1:HweyYKQ8fBuzdu2bdaeBJvsFgAi/OqBBnrVGXcqKhME=
+sigs.k8s.io/controller-runtime v0.2.0-beta.5 h1:W2jTb239QEwQ+HejhTCF9GriFPy2zmo1I6pPmJTeEy8=
+sigs.k8s.io/controller-runtime v0.2.0-beta.5/go.mod h1:HweyYKQ8fBuzdu2bdaeBJvsFgAi/OqBBnrVGXcqKhME=
 sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2 h1:9r5DY45ef9LtcA6BnkhW8MPV7OKAfbf2AUwUhq3LeRk=
 sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2/go.mod h1:wWxsB5ozmmv/SG7nM11ayaAW51xMvak/t1r0CSlcokI=
 sigs.k8s.io/testing_frameworks v0.1.1 h1:cP2l8fkA3O9vekpy5Ks8mmA0NW/F7yBdXf8brkWhVrs=

@@ -37,7 +37,7 @@ func TryUpdateStatus(ctx context.Context, backoff wait.Backoff, c client.Client,
 	return tryUpdate(ctx, backoff, c, obj, c.Status().Update, transform)
 }
 
-func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, updateFunc func(context.Context, runtime.Object, ...client.UpdateOptionFunc) error, transform func() error) error {
+func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, updateFunc func(context.Context, runtime.Object, ...client.UpdateOption) error, transform func() error) error {
 	key, err := client.ObjectKeyFromObject(obj)
 	if err != nil {
 		return err

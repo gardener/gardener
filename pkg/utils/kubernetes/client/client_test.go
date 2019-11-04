@@ -16,8 +16,6 @@ package client_test
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -46,78 +44,6 @@ func TestClient(t *testing.T) {
 	RunSpecs(t, "Client Suite")
 }
 
-type clientDeleteOptionFuncMatcher struct {
-	options client.DeleteOptions
-}
-
-func (d *clientDeleteOptionFuncMatcher) String() string {
-	return fmt.Sprintf("changes delete options to %#v", d.options)
-}
-
-func (d *clientDeleteOptionFuncMatcher) Matches(x interface{}) bool {
-	f, ok := x.(client.DeleteOptionFunc)
-	if !ok {
-		return false
-	}
-
-	actual := client.DeleteOptions{}
-	f(&actual)
-
-	return reflect.DeepEqual(d.options, actual)
-}
-
-func ClientDeleteOptionFuncProduces(o client.DeleteOptions) gomock.Matcher {
-	return &clientDeleteOptionFuncMatcher{o}
-}
-
-type clientListOptionFuncMatcher struct {
-	options client.ListOptions
-}
-
-func (d *clientListOptionFuncMatcher) String() string {
-	return fmt.Sprintf("changes list options to %#v", d.options)
-}
-
-func (d *clientListOptionFuncMatcher) Matches(x interface{}) bool {
-	f, ok := x.(client.ListOptionFunc)
-	if !ok {
-		return false
-	}
-
-	actual := client.ListOptions{}
-	f(&actual)
-
-	return reflect.DeepEqual(d.options, actual)
-}
-
-func ClientListOptionFuncProduces(o client.ListOptions) gomock.Matcher {
-	return &clientListOptionFuncMatcher{o}
-}
-
-type cleanOptionFuncMatcher struct {
-	options CleanOptions
-}
-
-func (d *cleanOptionFuncMatcher) String() string {
-	return fmt.Sprintf("changes list options to %#v", d.options)
-}
-
-func (d *cleanOptionFuncMatcher) Matches(x interface{}) bool {
-	f, ok := x.(CleanOptionFunc)
-	if !ok {
-		return false
-	}
-
-	actual := CleanOptions{}
-	f(&actual)
-
-	return reflect.DeepEqual(d.options, actual)
-}
-
-func CleanOptionFuncProduces(o CleanOptions) gomock.Matcher {
-	return &cleanOptionFuncMatcher{o}
-}
-
 var _ = Describe("Cleaner", func() {
 	var (
 		ctrl *gomock.Controller
@@ -138,7 +64,6 @@ var _ = Describe("Cleaner", func() {
 		//cmListWithFinalizer corev1.ConfigMapList
 	)
 	BeforeEach(func() {
-		var err error
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
@@ -150,43 +75,14 @@ var _ = Describe("Cleaner", func() {
 		cm2 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}
 		cmList = corev1.ConfigMapList{Items: []corev1.ConfigMap{cm1, cm2}}
 		ns = corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "baz"}}
-		//cmObjects, err = meta.ExtractList(&cmList)
-		Expect(err).NotTo(HaveOccurred())
 
 		cm2.DeepCopyInto(&cm2WithFinalizer)
 		cm2WithFinalizer.Finalizers = []string{"finalize.me"}
 		ns.DeepCopyInto(&nsWithFinalizer)
 		nsWithFinalizer.Spec.Finalizers = []corev1.FinalizerName{"kubernetes"}
-		//cmListWithFinalizer = corev1.ConfigMapList{Items: []corev1.ConfigMap{cm1, cm2WithFinalizer}}
-
 	})
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#Delete", func() {
-		It("should delete the target object", func() {
-			ctx := context.TODO()
-
-			c.EXPECT().Delete(ctx, &cm1, ClientDeleteOptionFuncProduces(client.DeleteOptions{}))
-
-			Expect(Delete(ctx, c, &cm1)).To(Succeed())
-		})
-
-		It("should delete all objects matching the selector", func() {
-			var (
-				ctx  = context.TODO()
-				list = &corev1.ConfigMapList{}
-			)
-
-			gomock.InOrder(
-				c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, cmList),
-				c.EXPECT().Delete(ctx, &cm1, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
-				c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
-			)
-
-			Expect(Delete(ctx, c, list)).To(Succeed())
-		})
 	})
 
 	Context("Cleaner", func() {
@@ -206,7 +102,7 @@ var _ = Describe("Cleaner", func() {
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm1Key, &cm1),
-					c.EXPECT().Delete(ctx, &cm1, ClientDeleteOptionFuncProduces(client.DeleteOptions{})),
+					c.EXPECT().Delete(ctx, &cm1),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
@@ -219,9 +115,9 @@ var _ = Describe("Cleaner", func() {
 					cleaner = NewCleaner(timeOps, NewFinalizer())
 				)
 
-				listCall := c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, cmList)
-				c.EXPECT().Delete(ctx, &cm1, ClientDeleteOptionFuncProduces(client.DeleteOptions{})).After(listCall)
-				c.EXPECT().Delete(ctx, &cm2, ClientDeleteOptionFuncProduces(client.DeleteOptions{})).After(listCall)
+				listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
+				c.EXPECT().Delete(ctx, &cm1).After(listCall)
+				c.EXPECT().Delete(ctx, &cm2).After(listCall)
 
 				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
 			})
@@ -319,7 +215,7 @@ var _ = Describe("Cleaner", func() {
 				cm2.DeletionTimestamp = &deletionTimestamp
 
 				gomock.InOrder(
-					c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
+					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
 					timeOps.EXPECT().Now().Return(now),
 					c.EXPECT().Patch(ctx, &cm2, client.MergeFrom(&cm2WithFinalizer)),
 				)
@@ -340,7 +236,7 @@ var _ = Describe("Cleaner", func() {
 				cm2.DeletionTimestamp = &deletionTimestamp
 
 				gomock.InOrder(
-					c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
+					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
 					timeOps.EXPECT().Now().Return(now),
 				)
 
@@ -360,7 +256,7 @@ var _ = Describe("Cleaner", func() {
 				cm2.DeletionTimestamp = &deletionTimestamp
 
 				gomock.InOrder(
-					c.EXPECT().List(ctx, list, ClientListOptionFuncProduces(client.ListOptions{})).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2}}),
+					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2}}),
 					timeOps.EXPECT().Now().Return(now),
 				)
 
@@ -426,8 +322,8 @@ var _ = Describe("Cleaner", func() {
 				ctx := context.TODO()
 
 				gomock.InOrder(
-					cleaner.EXPECT().Clean(ctx, c, &cm1, CleanOptionFuncProduces(CleanOptions{})),
-					ensurer.EXPECT().EnsureGone(ctx, c, &cm1, ClientListOptionFuncProduces(client.ListOptions{})),
+					cleaner.EXPECT().Clean(ctx, c, &cm1),
+					ensurer.EXPECT().EnsureGone(ctx, c, &cm1),
 				)
 
 				Expect(o.CleanAndEnsureGone(ctx, c, &cm1))

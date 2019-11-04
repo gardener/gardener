@@ -20,13 +20,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/flow"
 	utiltime "github.com/gardener/gardener/pkg/utils/time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"github.com/gardener/gardener/pkg/utils/flow"
-
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -87,142 +85,8 @@ func RemainingObjects(err error) []runtime.Object {
 	return nil
 }
 
-// Delete deletes the target with the given options. If CollectionOptions is set, the collection
-// matching the options is deleted with the given options.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-func Delete(ctx context.Context, c client.Client, obj runtime.Object, opts ...DeleteOptionFunc) error {
-	o := &DeleteOptions{}
-	o.ApplyOptions(opts)
-
-	if meta.IsListType(obj) {
-		return deleteCollection(ctx, c, obj, o)
-	}
-	return delete(ctx, c, obj, o)
-}
-
-func delete(ctx context.Context, c client.Client, obj runtime.Object, o *DeleteOptions) error {
-	return c.Delete(ctx, obj, func(options *client.DeleteOptions) {
-		*options = o.DeleteOptions
-	})
-}
-
-func deleteCollection(ctx context.Context, c client.Client, list runtime.Object, o *DeleteOptions) error {
-	if err := c.List(ctx, list, useListOptionsIfNotNil(o.CollectionOptions)); err != nil {
-		return err
-	}
-
-	n := meta.LenList(list)
-	if n == 0 {
-		return nil
-	}
-
-	tasks := make([]flow.TaskFn, 0, n)
-	if err := meta.EachListItem(list, func(obj runtime.Object) error {
-		return client.IgnoreNotFound(delete(ctx, c, obj, o))
-	}); err != nil {
-		return err
-	}
-
-	return flow.Parallel(tasks...)(ctx)
-}
-
-// DeleteOptions are enhanced client.DeleteOptions that allow to delete a collection.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-type DeleteOptions struct {
-	client.DeleteOptions
-	CollectionOptions *client.ListOptions
-}
-
-// DeleteOptionFunc is a function that modifies DeleteOptions.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-type DeleteOptionFunc func(*DeleteOptions)
-
-// ApplyOptions applies the DeleteOptionFuncs to the DeleteOptions.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-func (o *DeleteOptions) ApplyOptions(optFuncs []DeleteOptionFunc) {
-	for _, optFunc := range optFuncs {
-		optFunc(o)
-	}
-}
-
-// CollectionMatching modifies the CollectionOptions of the DeleteOptions with the listOpts.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-func CollectionMatching(listOpts ...client.ListOptionFunc) DeleteOptionFunc {
-	return func(opts *DeleteOptions) {
-		if opts.CollectionOptions == nil {
-			opts.CollectionOptions = &client.ListOptions{}
-		}
-		opts.CollectionOptions.ApplyOptions(listOpts)
-	}
-}
-
-// GracePeriodSeconds sets the GracePeriodSeconds on DeleteOptions to the given amount.
-// TODO: Delete this as soon as the controller-runtime has delete collection support:
-// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-func GracePeriodSeconds(gp int64) DeleteOptionFunc {
-	return func(opts *DeleteOptions) {
-		client.GracePeriodSeconds(gp)(&opts.DeleteOptions)
-	}
-}
-
-// TolerateErrorFunc is a function for tolerating errors.
-type TolerateErrorFunc func(err error) bool
-
-// CleanOptions are options to clean certain resources.
-// If FinalizeGracePeriodSeconds is set, the finalizers of the resources are removed if the resources still
-// exist after their targeted termination date plus the FinalizeGracePeriodSeconds amount.
-type CleanOptions struct {
-	DeleteOptions
-	FinalizeGracePeriodSeconds *int64
-	ErrorToleration            []TolerateErrorFunc
-}
-
-// ApplyOptions applies the OptFuncs to the CleanOptions.
-func (o *CleanOptions) ApplyOptions(optFuncs []CleanOptionFunc) {
-	for _, optFunc := range optFuncs {
-		optFunc(o)
-	}
-}
-
-// CleanOptionFunc is a function that modifies CleanOptions.
-type CleanOptionFunc func(*CleanOptions)
-
-// FinalizeGracePeriodSeconds specifies that a resource shall be finalized if it's been deleting
-// without being gone beyond the deletion timestamp for the given seconds.
-func FinalizeGracePeriodSeconds(s int64) CleanOptionFunc {
-	return func(opts *CleanOptions) {
-		opts.FinalizeGracePeriodSeconds = &s
-	}
-}
-
-// TolerateErrors returns a CleanOptionFunc that adds the given functions
-// to tolerate certain errors to the CleanOptions.
-func TolerateErrors(fns ...TolerateErrorFunc) CleanOptionFunc {
-	return func(opts *CleanOptions) {
-		for _, fn := range fns {
-			opts.ErrorToleration = append(opts.ErrorToleration, fn)
-		}
-	}
-}
-
-// DeleteWith specifies how to delete resources for cleaning them.
-func DeleteWith(optFuncs ...DeleteOptionFunc) CleanOptionFunc {
-	return func(opts *CleanOptions) {
-		opts.DeleteOptions.ApplyOptions(optFuncs)
-	}
-}
-
-func useListOptionsIfNotNil(newOpts *client.ListOptions) client.ListOptionFunc {
-	return func(options *client.ListOptions) {
-		if newOpts != nil {
-			client.UseListOptions(newOpts)(options)
-		}
-	}
+func delete(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.DeleteOption) error {
+	return c.Delete(ctx, obj, opts...)
 }
 
 type finalizer struct{}
@@ -343,7 +207,7 @@ func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Clea
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
-func (o *cleaner) Clean(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOptionFunc) error {
+func (o *cleaner) Clean(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
@@ -377,7 +241,7 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 
 	// Ref: https://github.com/kubernetes/kubernetes/issues/83771
 	if acc.GetDeletionTimestamp().IsZero() {
-		if err := delete(ctx, c, obj, &cleanOptions.DeleteOptions); err != nil {
+		if err := delete(ctx, c, obj, cleanOptions.DeleteOptions...); err != nil {
 			for _, tolerate := range cleanOptions.ErrorToleration {
 				if tolerate(err) {
 					return nil
@@ -392,7 +256,7 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)
 
 // EnsureGone implements GoneEnsurer.
-func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOptionFunc) error {
+func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
 	return f(ctx, c, obj, opts...)
 }
 
@@ -402,7 +266,7 @@ func DefaultGoneEnsurer() GoneEnsurer {
 }
 
 // EnsureGone ensures that the given object or list is gone.
-func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOptionFunc) error {
+func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
 	if meta.IsListType(obj) {
 		return ensureCollectionGone(ctx, c, obj, opts...)
 	}
@@ -424,7 +288,7 @@ func ensureGone(ctx context.Context, c client.Client, obj runtime.Object) error 
 	return NewObjectsRemaining(obj)
 }
 
-func ensureCollectionGone(ctx context.Context, c client.Client, list runtime.Object, opts ...client.ListOptionFunc) error {
+func ensureCollectionGone(ctx context.Context, c client.Client, list runtime.Object, opts ...client.ListOption) error {
 	if err := c.List(ctx, list, opts...); err != nil {
 		return err
 	}
@@ -433,13 +297,6 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list runtime.Obj
 		return NewObjectsRemaining(list)
 	}
 	return nil
-}
-
-// UseCleanOptions uses the CleanOptions, if they are non-nil.
-func UseCleanOptions(newOpts *CleanOptions) CleanOptionFunc {
-	return func(opts *CleanOptions) {
-		*opts = *newOpts
-	}
 }
 
 func (o *cleaner) clean(ctx context.Context, c client.Client, obj runtime.Object, cleanOptions *CleanOptions) error {
@@ -461,7 +318,7 @@ func (o *cleaner) cleanCollection(
 	list runtime.Object,
 	cleanOptions *CleanOptions,
 ) error {
-	if err := c.List(ctx, list, useListOptionsIfNotNil(cleanOptions.CollectionOptions)); err != nil {
+	if err := c.List(ctx, list, cleanOptions.ListOptions...); err != nil {
 		return err
 	}
 
@@ -485,15 +342,15 @@ type cleanerOps struct {
 
 // CleanAndEnsureGone cleans the target resources. Afterwards, it checks, whether the target resource is still
 // present. If yes, it errors with a NewObjectsRemaining error.
-func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOptionFunc) error {
+func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
-	if err := o.Clean(ctx, c, obj, UseCleanOptions(cleanOptions)); err != nil {
+	if err := o.Clean(ctx, c, obj, opts...); err != nil {
 		return err
 	}
 
-	return o.EnsureGone(ctx, c, obj, useListOptionsIfNotNil(cleanOptions.CollectionOptions))
+	return o.EnsureGone(ctx, c, obj, cleanOptions.ListOptions...)
 }
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.

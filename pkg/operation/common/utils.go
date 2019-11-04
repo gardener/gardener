@@ -319,7 +319,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		}
 
 		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptionFuncs...))
+			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...))
 		}); err != nil {
 			return err
 		}
@@ -376,7 +376,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 	}
 
 	for _, obj := range objs {
-		if err := k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+		if err := k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

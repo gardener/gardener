@@ -60,7 +60,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			)
 
 			k8sSeedClient.EXPECT().Client().Return(k8sSeedRuntimeClient)
-			k8sSeedRuntimeClient.EXPECT().List(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, list *extensionsv1alpha1.OperatingSystemConfigList, _ ...client.ListOptionFunc) error {
+			k8sSeedRuntimeClient.EXPECT().List(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, list *extensionsv1alpha1.OperatingSystemConfigList, _ ...client.ListOption) error {
 				list.Items = []extensionsv1alpha1.OperatingSystemConfig{newDownloaderOsc, newOriginalOsc, oldDownloaderOsc, oldOriginalOsc}
 				return nil
 			})

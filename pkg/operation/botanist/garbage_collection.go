@@ -88,7 +88,7 @@ func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodL
 	for _, pod := range podList.Items {
 		if strings.Contains(pod.Status.Reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
-			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 			continue
@@ -96,7 +96,7 @@ func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodL
 
 		if common.ShouldObjectBeRemoved(&pod, common.GardenerDeletionGracePeriod) {
 			b.Logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
-			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.ForceDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 		}

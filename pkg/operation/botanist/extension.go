@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -90,7 +89,7 @@ func (b *Botanist) DeleteStaleExtensionResources(ctx context.Context) error {
 				},
 			}
 			fns = append(fns, func(ctx context.Context) error {
-				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptionFuncs...))
+				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
 			})
 		}
 	}
@@ -133,7 +132,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 
 // DeleteExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
-	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &extensionsv1alpha1.ExtensionList{}, utilclient.CollectionMatching(client.InNamespace(b.Shoot.SeedNamespace)))
+	return b.K8sSeedClient.Client().DeleteAllOf(ctx, &extensionsv1alpha1.Extension{}, client.InNamespace(b.Shoot.SeedNamespace))
 }
 
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.
