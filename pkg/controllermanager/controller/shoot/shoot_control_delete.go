@@ -26,9 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/errors"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/version"
 
@@ -43,7 +43,7 @@ import (
 )
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
-// It receives an Operation object <o> which stores the Shoot object.
+// It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
 func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *errors.ErrorContext) *gardencorev1alpha1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
@@ -74,12 +74,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		errors.ToExecute("Check required extensions exist", func() error {
 			return botanist.RequiredExtensionsExist()
 		}),
+		// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
+		// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
 			err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
-					return nil
+					return errors.Cancel()
 				}
 			}
 			return err
@@ -160,6 +162,9 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 	)
 
 	if err != nil {
+		if errors.WasCanceled(err) {
+			return nil
+		}
 		return gardencorev1alpha1helper.NewWrappedLastErrors(gardencorev1alpha1helper.FormatLastErrDescription(err), err)
 	}
 
