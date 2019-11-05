@@ -75,6 +75,7 @@ var (
 	infrastructureProviderConfig = flag.String("infrastructure-provider-config-filepath", "", "filepath to the provider specific infrastructure config")
 	controlPlaneProviderConfig   = flag.String("controlplane-provider-config-filepath", "", "filepath to the provider specific infrastructure config")
 	networkingProviderConfig     = flag.String("networking-provider-config-filepath", "", "filepath to the provider specific infrastructure config")
+	workersConfig                = flag.String("workers-config-filepath", "", "filepath to the workers config.")
 
 	// other
 	shootYamlPath       = "/example/90-shoot.yaml"
@@ -140,8 +141,10 @@ var _ = Describe("Worker Suite", func() {
 		workerGardenerTest, err = NewWorkerGardenerTest(shootGardenerTest)
 		Expect(err).NotTo(HaveOccurred())
 
-		workerGardenerTest.SetupShootWorkers(shootMachineImageName, shootMachineImageName2, workerZone)
-		Expect(err).NotTo(HaveOccurred())
+		if len(*workersConfig) == 0 {
+			err := workerGardenerTest.SetupShootWorkers(shootMachineImageName, shootMachineImageName2, workerZone)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		shootObject, err := shootGardenerTest.CreateShoot(ctx)
 		if err != nil {
@@ -225,7 +228,7 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 	}
 
 	// set ProviderConfigs
-	err = SetProviderConfigsFromFilepath(shootObject, infrastructureProviderConfig, controlPlaneProviderConfig, networkingProviderConfig)
+	err = SetProviderConfigsFromFilepath(shootObject, infrastructureProviderConfig, controlPlaneProviderConfig, networkingProviderConfig, workersConfig)
 	Expect(err).To(BeNil())
 	return shootObject
 }

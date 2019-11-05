@@ -109,34 +109,42 @@ func CreateShootTestArtifacts(shootTestYamlPath string, prefix *string, projectN
 }
 
 // SetProviderConfigsFromFilepath parses the infrastructure, controlPlane and networking provider-configs and sets them on the shoot
-func SetProviderConfigsFromFilepath(shoot *gardencorev1alpha1.Shoot, infrastructure, controlPlane, networking *string) error {
+func SetProviderConfigsFromFilepath(shoot *gardencorev1alpha1.Shoot, infrastructureConfigPath, controlPlaneConfigPath, networkingConfigPath, workersConfigPath *string) error {
 	// clear provider configs first
 	shoot.Spec.Provider.InfrastructureConfig = nil
 	shoot.Spec.Provider.ControlPlaneConfig = nil
 	shoot.Spec.Networking.ProviderConfig = nil
 
-	if infrastructure != nil && len(*infrastructure) != 0 {
-		infrastructureProviderConfig, err := ParseFileAsProviderConfig(*infrastructure)
+	if infrastructureConfigPath != nil && len(*infrastructureConfigPath) != 0 {
+		infrastructureProviderConfig, err := ParseFileAsProviderConfig(*infrastructureConfigPath)
 		if err != nil {
 			return err
 		}
 		shoot.Spec.Provider.InfrastructureConfig = infrastructureProviderConfig
 	}
 
-	if len(*controlPlane) != 0 {
-		controlPlaneProviderConfig, err := ParseFileAsProviderConfig(*controlPlane)
+	if len(*controlPlaneConfigPath) != 0 {
+		controlPlaneProviderConfig, err := ParseFileAsProviderConfig(*controlPlaneConfigPath)
 		if err != nil {
 			return err
 		}
 		shoot.Spec.Provider.ControlPlaneConfig = controlPlaneProviderConfig
 	}
 
-	if len(*networking) != 0 {
-		networkingProviderConfig, err := ParseFileAsProviderConfig(*networking)
+	if len(*networkingConfigPath) != 0 {
+		networkingProviderConfig, err := ParseFileAsProviderConfig(*networkingConfigPath)
 		if err != nil {
 			return err
 		}
 		shoot.Spec.Networking.ProviderConfig = networkingProviderConfig
+	}
+
+	if len(*workersConfigPath) != 0 {
+		workers, err := ParseFileAsWorkers(*workersConfigPath)
+		if err != nil {
+			return err
+		}
+		shoot.Spec.Provider.Workers = workers
 	}
 
 	return nil
@@ -190,6 +198,20 @@ func ParseFileAsProviderConfig(filepath string) (*gardencorev1alpha1.ProviderCon
 		return nil, fmt.Errorf("unable to decode ProviderConfig: %v", err)
 	}
 	return &gardencorev1alpha1.ProviderConfig{RawExtension: apimachineryRuntime.RawExtension{Raw: jsonData}}, nil
+}
+
+// ParseFileAsWorkers parses a file as a Worker configuration
+func ParseFileAsWorkers(filepath string) ([]gardencorev1alpha1.Worker, error) {
+	data, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	workers := []gardencorev1alpha1.Worker{}
+	if err := yaml.Unmarshal(data, &workers); err != nil {
+		return nil, fmt.Errorf("unable to decode workers: %v", err)
+	}
+	return workers, nil
 }
 
 // GetProjectRootPath gets the root path of the project relative to the integration test folder
