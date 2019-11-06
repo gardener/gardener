@@ -154,6 +154,19 @@ var _ = Describe("Errors", func() {
 			Expect(err).To(Equal(expectedErr))
 		})
 
+		It("Should return a cancelError when manually canceled", func() {
+			errID := "x1"
+			err := utilerrors.HandleErrors(errorContext,
+				nil,
+				nil,
+				utilerrors.ToExecute(errID, func() error {
+					return utilerrors.Cancel()
+				}),
+			)
+
+			Expect(utilerrors.WasCanceled(errors.Cause(err))).To(BeTrue())
+		})
+
 		It("Should stop execution on error", func() {
 			expectedErr := fmt.Errorf("Err1")
 			f1 := errorsmock.NewMockTaskFunc(ctrl)
