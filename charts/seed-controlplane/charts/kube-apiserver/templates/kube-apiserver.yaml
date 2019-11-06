@@ -58,6 +58,9 @@ spec:
             add:
             - NET_ADMIN
           privileged: true
+        volumeMounts:
+        - name: modules
+          mountPath: /lib/modules
       containers:
       - name: kube-apiserver
         image: {{ index .Values.images "hyperkube" }}
@@ -211,12 +214,6 @@ spec:
         {{- end }}
         - name: kube-apiserver-admission-config
           mountPath: {{ include "kube-apiserver.admissionPluginConfigFileDir" . }}
-        - name: etcssl
-          mountPath: /etc/ssl
-          readOnly: true
-        - name: ssl-certs-hosts
-          mountPath: /usr/share/ca-certificates
-          readOnly: true
         {{- if .Values.enableEtcdEncryption }}
         - name: etcd-encryption-secret
           mountPath: /etc/kubernetes/etcd-encryption-secret
@@ -285,6 +282,9 @@ spec:
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       volumes:
+      - name: modules
+        hostPath:
+          path: /lib/modules
       - name: audit-policy-config
         configMap:
           name: audit-policy-config
@@ -341,12 +341,6 @@ spec:
       - name: vpn-seed-tlsauth
         secret:
           secretName: vpn-seed-tlsauth
-      - name: etcssl
-        hostPath:
-          path: /etc/ssl
-      - name: ssl-certs-hosts
-        hostPath:
-          path: /usr/share/ca-certificates
       - name: blackbox-exporter-config-apiserver
         configMap:
           name: blackbox-exporter-config-apiserver
