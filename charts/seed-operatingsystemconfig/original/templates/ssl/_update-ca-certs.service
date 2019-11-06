@@ -11,11 +11,12 @@
     After=systemd-tmpfiles-setup.service clean-ca-certificates.service
     Before=sysinit.target
     ConditionPathIsReadWrite=/etc/ssl/certs
-    ConditionPathExists=/etc/ssl/certs/ROOTcerts.pem
-    # Do nothing if update-ca-certificates has never been run before
+    ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
     [Service]
     Type=oneshot
     ExecStart=/usr/sbin/update-ca-certificates
-    ExecStartPost=/usr/bin/systemctl restart docker
+    ExecStartPost=/bin/systemctl restart docker
+    [Install]
+    WantedBy=kubelet.service
 {{- end -}}
 {{- end -}}
