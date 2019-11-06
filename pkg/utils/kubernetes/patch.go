@@ -15,13 +15,17 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var json = jsoniter.ConfigFastest
@@ -66,4 +70,9 @@ func IsEmptyPatch(patch []byte) bool {
 	}
 
 	return len(m) == 0
+}
+
+// SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
+func SubmitEmptyPatch(ctx context.Context, c client.Client, obj runtime.Object) error {
+	return c.Patch(ctx, obj, client.ConstantPatch(types.StrategicMergePatchType, []byte("{}")))
 }

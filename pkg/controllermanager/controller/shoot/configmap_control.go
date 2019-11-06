@@ -18,13 +18,13 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *Controller) configMapAdd(obj interface{}) {
@@ -87,12 +87,12 @@ func (c *Controller) reconcileShootsReferringConfigMap(configMap *corev1.ConfigM
 				continue
 			}
 
-			logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
-			if _, err := controllerutil.CreateOrUpdate(context.TODO(), c.k8sGardenClient.Client(), shoot, func() error {
-				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = configMap.ResourceVersion
-				return nil
-			}); err != nil {
-				return err
+			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
+				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
+				// send empty patch to let the admission plugin add the config map resource version
+				if err := kubernetes.SubmitEmptyPatch(context.TODO(), c.k8sGardenClient.Client(), shoot); err != nil {
+					return err
+				}
 			}
 		}
 	}
