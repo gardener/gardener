@@ -370,10 +370,13 @@ func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
 		return err
 	}
 
-	if hasAuditPolicy(shoot.Spec.Kubernetes.KubeAPIServer) {
-		if _, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name); err != nil {
+	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
+	if hasAuditPolicy(kubeAPIServer) {
+		auditPolicy, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
+		if err != nil {
 			return err
 		}
+		kubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = auditPolicy.ResourceVersion
 	}
 
 	return nil
