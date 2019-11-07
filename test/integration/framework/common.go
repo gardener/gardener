@@ -219,13 +219,10 @@ func AddWorker(shoot *gardencorev1alpha1.Shoot, cloudProfile *gardencorev1alpha1
 		return err
 	}
 
-	if len(cloudProfile.Spec.VolumeTypes) == 0 {
-		return fmt.Errorf("no VolumeTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
-	}
-
 	if len(cloudProfile.Spec.MachineTypes) == 0 {
 		return fmt.Errorf("no MachineTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
+	machineType := cloudProfile.Spec.MachineTypes[0]
 
 	workerName, err := generateRandomWorkerName(fmt.Sprintf("%s-", shootMachineImage.Name))
 	if err != nil {
@@ -237,14 +234,20 @@ func AddWorker(shoot *gardencorev1alpha1.Shoot, cloudProfile *gardencorev1alpha1
 		Maximum: 2,
 		Minimum: 2,
 		Machine: gardencorev1alpha1.Machine{
-			Type:  cloudProfile.Spec.MachineTypes[0].Name,
+			Type:  machineType.Name,
 			Image: &shootMachineImage,
 		},
-		Volume: &gardencorev1alpha1.Volume{
+	})
+
+	if machineType.Storage == nil {
+		if len(cloudProfile.Spec.VolumeTypes) != 0 {
+			return fmt.Errorf("no VolumeTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
+		}
+		shoot.Spec.Provider.Workers[0].Volume = &gardencorev1alpha1.Volume{
 			Type: &cloudProfile.Spec.VolumeTypes[0].Name,
 			Size: "35Gi",
-		},
-	})
+		}
+	}
 
 	if workerZone != nil && len(*workerZone) > 0 {
 		// using one zone as default
