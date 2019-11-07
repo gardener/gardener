@@ -48,6 +48,10 @@ type DefaultStatus struct {
 func (d *DefaultStatus) GetConditions() []gardencorev1alpha1.Condition {
 	return d.Conditions
 }
+// SetConditions implements Status.
+func (d *DefaultStatus) SetConditions(c []gardencorev1alpha1.Condition) {
+	d.Conditions = c
+}
 
 // GetLastOperation implements Status.
 func (d *DefaultStatus) GetLastOperation() LastOperation {

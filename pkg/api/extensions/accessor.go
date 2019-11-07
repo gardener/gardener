@@ -143,18 +143,40 @@ func (u unstructuredSpecAccessor) GetExtensionType() string {
 }
 
 // GetConditions implements Status.
+// Known issue: Will change the v1.time type fields in condition.
 func (u unstructuredStatusAccessor) GetConditions() []gardencorev1alpha1.Condition {
 	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "conditions")
 	if err != nil || !ok {
 		return nil
 	}
-
-	conditions, ok2 := val.([]gardencorev1alpha1.Condition)
-	if !ok2 {
-		return nil
+	var conditions []gardencorev1alpha1.Condition
+	interfaceConditionSlice := val.([]interface{})
+	for _, interfaceCondition := range interfaceConditionSlice {
+		new := interfaceCondition.(map[string]interface{})
+		condition := &gardencorev1alpha1.Condition{}
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(new, condition)
+		if err != nil {
+			return nil
+		}
+		conditions = append(conditions, *condition)
 	}
-
 	return conditions
+}
+
+// SetConditions implements Status.
+func (u unstructuredStatusAccessor) SetConditions(conditions []gardencorev1alpha1.Condition) {
+	var interfaceSlice = make([]interface{}, len(conditions))
+	for i, d := range conditions {
+		unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&d)
+		if err != nil {
+			return
+		}
+		interfaceSlice[i] = unstrc
+	}
+	err := unstructured.SetNestedSlice(u.UnstructuredContent(), interfaceSlice, "status", "conditions")
+	if err != nil {
+		return
+	}
 }
 
 // GetLastOperation implements Status.
