@@ -44,9 +44,9 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) err
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer)
 		if err != nil {
-			b.Logger.Info("Waiting until the kube-apiserver service is ready...")
+			b.Logger.Info("Waiting until the kube-apiserver service deployed in the Seed cluster is ready...")
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("kube-apiserver service is not ready: %v", err))
+			return retry.MinorError(fmt.Errorf("kube-apiserver service deployed in the Seed cluster is not ready: %v", err))
 		}
 		b.Operation.APIServerAddress = loadBalancerIngress
 		return retry.Ok()

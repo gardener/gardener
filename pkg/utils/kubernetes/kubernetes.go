@@ -188,7 +188,7 @@ func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace
 
 	switch {
 	case length == 0:
-		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
+		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created")
 	case serviceStatusIngress[length-1].IP != "":
 		return serviceStatusIngress[length-1].IP, nil
 	case serviceStatusIngress[length-1].Hostname != "":

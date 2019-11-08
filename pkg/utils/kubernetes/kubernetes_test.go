@@ -784,7 +784,7 @@ var _ = Describe("kubernetes", func() {
 
 			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
 
-			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)"))
+			Expect(err).To(MatchError("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created"))
 		})
 
 		It("should return an ip address", func() {

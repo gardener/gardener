@@ -110,12 +110,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service",
+			Name:         "Deploying Kubernetes API server service in the Seed cluster",
 			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server service has reported readiness",
+			Name:         "Waiting until Kubernetes API server service in the Seed cluster has reported readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
