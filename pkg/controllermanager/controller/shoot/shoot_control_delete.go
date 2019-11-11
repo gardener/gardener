@@ -23,6 +23,7 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
@@ -507,15 +508,10 @@ func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) erro
 	}
 	o.Shoot.Info = newShoot
 
-	// Remove finalizer
-	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
-	finalizers.Delete(gardencorev1alpha1.GardenerName)
-	o.Shoot.Info.Finalizers = finalizers.List()
-	newShoot, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
-	if err != nil {
-		return err
+	// Remove finalizer with retry on conflict
+	if err = controllerutils.RemoveGardenerFinalizer(context.TODO(), c.k8sGardenClient.Client(), o.Shoot.Info); err != nil {
+		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
 	}
-	o.Shoot.Info = newShoot
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).

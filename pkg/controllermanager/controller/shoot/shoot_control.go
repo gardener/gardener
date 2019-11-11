@@ -101,8 +101,13 @@ func (c *Controller) checkSeedAndSyncClusterResource(shoot *gardencorev1alpha1.S
 		return fmt.Errorf("could not find seed %s: %v", *seedName, err)
 	}
 
-	if err := health.CheckSeed(seed, c.identity); err != nil {
-		return fmt.Errorf("seed is not yet ready: %v", err)
+	// Don't wait for the Seed to be ready if it is already marked for deletion. In this case
+	// it will never get ready because the bootstrap loop is never executed again.
+	// Don't block the Shoot deletion flow in this case to allow proper cleanup.
+	if seed.DeletionTimestamp == nil {
+		if err := health.CheckSeed(seed, c.identity); err != nil {
+			return fmt.Errorf("seed is not yet ready: %v", err)
+		}
 	}
 
 	if err := o.SyncClusterResourceToSeed(context.TODO()); err != nil {
