@@ -69,6 +69,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			shootName        = "shoot-1"
 			projectName      = "project-1"
 			allowedUser      = "allowed-user"
+			resourceVersion  = "123456"
 			finalizers       = []string{garden.GardenerName}
 
 			defaultUserName = "test-user"
@@ -84,9 +85,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			configMap = corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       configMapName,
-					Namespace:  namespace,
-					Finalizers: finalizers,
+					Name:            configMapName,
+					Namespace:       namespace,
+					Finalizers:      finalizers,
+					ResourceVersion: resourceVersion,
 				},
 			}
 
@@ -424,6 +426,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion).To(Equal(resourceVersion))
 			})
 
 			It("should reject because the referenced cloud profile does not exist", func() {
