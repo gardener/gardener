@@ -49,7 +49,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
-	if o.Shoot != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
+	if o.Shoot != nil && o.Shoot.Info.Spec.DNS != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
 		var (
 			prefix            = fmt.Sprintf("%s-", common.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(common.GardenRoleDefaultDomain)
@@ -72,8 +72,8 @@ func New(o *operation.Operation) (*Botanist, error) {
 }
 
 // RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *string, blockCIDRs []string, shootDefaults *gardencorev1alpha1.ShootNetworks, backup *gardencorev1alpha1.SeedBackup) error {
-	if b.Shoot.Info.Spec.DNS.Domain == nil {
+func (b *Botanist) RegisterAsSeed(protected, visible, disableDNS *bool, minimumVolumeSize *string, blockCIDRs []string, shootDefaults *gardencorev1alpha1.ShootNetworks, backup *gardencorev1alpha1.SeedBackup) error {
+	if b.Shoot.Info.Spec.DNS == nil || b.Shoot.Info.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
 
@@ -154,6 +154,9 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 	}
 
 	var taints []gardencorev1alpha1.SeedTaint
+	if disableDNS != nil && *disableDNS {
+		taints = append(taints, gardencorev1alpha1.SeedTaint{Key: gardencorev1alpha1.SeedTaintDisableDNS})
+	}
 	if protected != nil && *protected {
 		taints = append(taints, gardencorev1alpha1.SeedTaint{Key: gardencorev1alpha1.SeedTaintProtected})
 	}
@@ -294,18 +297,20 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 	}
 	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = machineImagesSet
 
-	if b.Garden.InternalDomain.Provider != "unmanaged" {
-		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
-			requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+	if !helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+		if b.Garden.InternalDomain.Provider != "unmanaged" {
+			if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
+				requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+			}
+			requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Garden.InternalDomain.Provider)
 		}
-		requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Garden.InternalDomain.Provider)
-	}
 
-	if b.Shoot.ExternalDomain != nil && b.Shoot.ExternalDomain.Provider != "unmanaged" {
-		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
-			requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+		if b.Shoot.ExternalDomain != nil && b.Shoot.ExternalDomain.Provider != "unmanaged" {
+			if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
+				requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+			}
+			requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Shoot.ExternalDomain.Provider)
 		}
-		requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Shoot.ExternalDomain.Provider)
 	}
 
 	for extensionType := range b.Shoot.Extensions {

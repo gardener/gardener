@@ -396,6 +396,40 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("should reject adding the disable-dns taint because shoots reference the seed", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)
+
+				newSeed := seed.DeepCopy()
+				newSeed.Spec.Taints = append(newSeed.Spec.Taints, garden.SeedTaint{
+					Key: garden.SeedTaintDisableDNS,
+				})
+
+				attrs := admission.NewAttributesRecord(newSeed, &seed, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("may not add/remove \"" + garden.SeedTaintDisableDNS + "\" taint when shoots are still referencing to a seed"))
+			})
+
+			It("should accept adding the disable-dns taint because no shoots reference the seed", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+				newSeed := seed.DeepCopy()
+				newSeed.Spec.Taints = append(newSeed.Spec.Taints, garden.SeedTaint{
+					Key: garden.SeedTaintDisableDNS,
+				})
+
+				attrs := admission.NewAttributesRecord(newSeed, &seed, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("tests for Shoot objects", func() {

@@ -321,7 +321,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -2223,7 +2223,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -7409,5 +7409,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>722e44a70</code>.
+on git commit <code>4a68c44a2</code>.
 </em></p>

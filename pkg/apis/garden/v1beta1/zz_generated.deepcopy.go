@@ -3367,7 +3367,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Cloud.DeepCopyInto(&out.Cloud)
-	in.DNS.DeepCopyInto(&out.DNS)
+	if in.DNS != nil {
+		in, out := &in.DNS, &out.DNS
+		*out = new(DNS)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Extensions != nil {
 		in, out := &in.Extensions, &out.Extensions
 		*out = make([]Extension, len(*in))

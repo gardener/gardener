@@ -788,7 +788,8 @@ type ShootSpec struct {
 	// Cloud contains information about the cloud environment and their specific settings.
 	Cloud Cloud `json:"cloud"`
 	// DNS contains information about the DNS settings of the Shoot.
-	DNS DNS `json:"dns"`
+	// +optional
+	DNS *DNS `json:"dns,omitempty"`
 	// Extensions contain type and provider information for Shoot extensions.
 	// +optional
 	Extensions []Extension `json:"extensions,omitempty"`

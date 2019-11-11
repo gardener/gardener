@@ -16,6 +16,7 @@ package resourcereferencemanager
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
@@ -60,6 +62,7 @@ type ReferenceManager struct {
 	configMapLister     kubecorev1listers.ConfigMapLister
 	cloudProfileLister  gardenlisters.CloudProfileLister
 	seedLister          gardenlisters.SeedLister
+	shootLister         gardenlisters.ShootLister
 	secretBindingLister gardenlisters.SecretBindingLister
 	projectLister       gardenlisters.ProjectLister
 	quotaLister         gardenlisters.QuotaLister
@@ -102,6 +105,9 @@ func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.Sh
 	seedInformer := f.Garden().InternalVersion().Seeds()
 	r.seedLister = seedInformer.Lister()
 
+	shootInformer := f.Garden().InternalVersion().Shoots()
+	r.shootLister = shootInformer.Lister()
+
 	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
 	r.cloudProfileLister = cloudProfileInformer.Lister()
 
@@ -114,7 +120,7 @@ func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.Sh
 	projectInformer := f.Garden().InternalVersion().Projects()
 	r.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
@@ -149,6 +155,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if r.shootLister == nil {
+		return errors.New("missing shoot lister")
 	}
 	if r.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
@@ -204,6 +213,30 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 			return nil
 		}
 		err = r.ensureSeedReferences(seed)
+
+		if operation == admission.Update {
+			oldSeed, ok := a.GetOldObject().(*garden.Seed)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into Seed object")
+			}
+
+			if (helper.TaintsHave(oldSeed.Spec.Taints, garden.SeedTaintDisableDNS) && !helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintDisableDNS)) ||
+				(!helper.TaintsHave(oldSeed.Spec.Taints, garden.SeedTaintDisableDNS) && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintDisableDNS)) {
+
+				shootList, err2 := r.shootLister.List(labels.Everything())
+				if err2 != nil {
+					return err2
+				}
+
+				for _, shoot := range shootList {
+					if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
+						continue
+					}
+
+					err = fmt.Errorf("may not add/remove %q taint when shoots are still referencing to a seed", garden.SeedTaintDisableDNS)
+				}
+			}
+		}
 
 	case garden.Kind("Shoot"), core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*garden.Shoot)
@@ -344,12 +377,10 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
 	// The new core.gardener.cloud/v1alpha1.Seed resource does no longer reference a cloud profile.
 	// We only have to check it a value was given.
-	if len(seed.Spec.Cloud.Profile) == 0 {
-		return nil
-	}
-
-	if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {
-		return err
+	if len(seed.Spec.Cloud.Profile) > 0 {
+		if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {
+			return err
+		}
 	}
 
 	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)

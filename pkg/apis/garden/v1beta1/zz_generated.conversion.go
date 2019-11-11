@@ -4795,7 +4795,15 @@ func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garde
 	if err := Convert_v1beta1_Cloud_To_garden_Cloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err
 	}
-	// WARNING: in.DNS requires manual conversion: inconvertible types (github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS vs *github.com/gardener/gardener/pkg/apis/garden.DNS)
+	if in.DNS != nil {
+		in, out := &in.DNS, &out.DNS
+		*out = new(garden.DNS)
+		if err := Convert_v1beta1_DNS_To_garden_DNS(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.DNS = nil
+	}
 	out.Extensions = *(*[]garden.Extension)(unsafe.Pointer(&in.Extensions))
 	out.Hibernation = (*garden.Hibernation)(unsafe.Pointer(in.Hibernation))
 	if err := Convert_v1beta1_Kubernetes_To_garden_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
@@ -4813,7 +4821,15 @@ func autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out
 		return err
 	}
 	// WARNING: in.CloudProfileName requires manual conversion: does not exist in peer-type
-	// WARNING: in.DNS requires manual conversion: inconvertible types (*github.com/gardener/gardener/pkg/apis/garden.DNS vs github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS)
+	if in.DNS != nil {
+		in, out := &in.DNS, &out.DNS
+		*out = new(DNS)
+		if err := Convert_garden_DNS_To_v1beta1_DNS(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.DNS = nil
+	}
 	out.Extensions = *(*[]Extension)(unsafe.Pointer(&in.Extensions))
 	out.Hibernation = (*Hibernation)(unsafe.Pointer(in.Hibernation))
 	if err := Convert_garden_Kubernetes_To_v1beta1_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {

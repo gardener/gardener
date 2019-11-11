@@ -223,6 +223,11 @@ func ShootWantsBasicAuthentication(kubeAPIServerConfig *garden.KubeAPIServerConf
 	return *kubeAPIServerConfig.EnableBasicAuthentication
 }
 
+// ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
+func ShootUsesUnmanagedDNS(shoot *garden.Shoot) bool {
+	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == garden.DNSUnmanaged
+}
+
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
 // In case the required type could not be found, it returns -1.
 func GetConditionIndex(conditions []garden.Condition, conditionType garden.ConditionType) int {

@@ -5,7 +5,7 @@ cluster-autoscaler:
   enabled: false
 kube-proxy:
   kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
-  featureGates: {}
+# featureGates: {}
   podAnnotations: {}
   images:
     hyperkube: image-repository

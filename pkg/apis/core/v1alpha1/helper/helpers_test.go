@@ -533,6 +533,28 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	var (
+		unmanagedType = "unmanaged"
+		differentType = "foo"
+	)
+
+	DescribeTable("#ShootUsesUnmanagedDNS",
+		func(dns *gardencorev1alpha1.DNS, expectation bool) {
+			shoot := &gardencorev1alpha1.Shoot{
+				Spec: gardencorev1alpha1.ShootSpec{
+					DNS: dns,
+				},
+			}
+			Expect(ShootUsesUnmanagedDNS(shoot)).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no dns providers", &gardencorev1alpha1.DNS{}, false),
+		Entry("dns providers but no type", &gardencorev1alpha1.DNS{Providers: []gardencorev1alpha1.DNSProvider{{}}}, false),
+		Entry("dns providers but different type", &gardencorev1alpha1.DNS{Providers: []gardencorev1alpha1.DNSProvider{{Type: &differentType}}}, false),
+		Entry("dns providers and unmanaged type", &gardencorev1alpha1.DNS{Providers: []gardencorev1alpha1.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
+
 	Describe("#GetShootMachineImageFromLatestMachineImageVersion", func() {
 		It("should return the Machine Image containing only the latest machine image version", func() {
 			latestVersion := "1.0.0"

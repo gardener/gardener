@@ -194,7 +194,7 @@ var _ = Describe("Machine Image Conversion", func() {
 					garden.MigrationSeedVolumeProviders:               `[{"Purpose":"` + volumeProviderPurpose2 + `","Name":"` + volumeProviderName2 + `"}]`,
 					"persistentvolume.garden.sapcloud.io/minimumSize": minimumVolumeSize,
 					"persistentvolume.garden.sapcloud.io/provider":    volumeProviderName1,
-					garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s,%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible, taintKeyOtherOne, taintKeyOtherTwo),
+					garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s,%s,%s,%s", garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible, taintKeyOtherOne, taintKeyOtherTwo),
 				}
 
 				out = &garden.Seed{}
@@ -251,6 +251,7 @@ var _ = Describe("Machine Image Conversion", func() {
 						},
 						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
+							{Key: garden.SeedTaintDisableDNS},
 							{Key: garden.SeedTaintProtected},
 							{Key: garden.SeedTaintInvisible},
 							{Key: taintKeyOtherOne},

@@ -297,4 +297,26 @@ var _ = Describe("helper", func() {
 		Entry("secret", "v1", "Secret", "secret", BeNil()),
 		Entry("unknown", "v2", "Foo", "", HaveOccurred()),
 	)
+
+	var (
+		unmanagedType = garden.DNSUnmanaged
+		differentType = "foo"
+	)
+
+	DescribeTable("#ShootUsesUnmanagedDNS",
+		func(dns *garden.DNS, expectation bool) {
+			shoot := &garden.Shoot{
+				Spec: garden.ShootSpec{
+					DNS: dns,
+				},
+			}
+			Expect(ShootUsesUnmanagedDNS(shoot)).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no dns providers", &garden.DNS{}, false),
+		Entry("dns providers but no type", &garden.DNS{Providers: []garden.DNSProvider{{}}}, false),
+		Entry("dns providers but different type", &garden.DNS{Providers: []garden.DNSProvider{{Type: &differentType}}}, false),
+		Entry("dns providers and unmanaged type", &garden.DNS{Providers: []garden.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
 })

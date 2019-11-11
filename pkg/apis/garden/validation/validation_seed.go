@@ -122,19 +122,23 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
 	}
 
-	taintKeys := sets.NewString()
+	var (
+		supportedTaintKeys = sets.NewString(garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible)
+		foundTaintKeys     = sets.NewString()
+	)
+
 	for i, taint := range seedSpec.Taints {
 		idxPath := fldPath.Child("taints").Index(i)
 		if len(taint.Key) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("key"), "cannot be empty"))
 		}
-		if taintKeys.Has(taint.Key) {
+		if foundTaintKeys.Has(taint.Key) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("key"), taint.Key))
 		}
-		if taint.Key != garden.SeedTaintProtected && taint.Key != garden.SeedTaintInvisible {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("key"), taint.Key, []string{garden.SeedTaintProtected, garden.SeedTaintInvisible}))
+		if !supportedTaintKeys.Has(taint.Key) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("key"), taint.Key, supportedTaintKeys.List()))
 		}
-		taintKeys.Insert(taint.Key)
+		foundTaintKeys.Insert(taint.Key)
 	}
 
 	if seedSpec.Volume != nil {

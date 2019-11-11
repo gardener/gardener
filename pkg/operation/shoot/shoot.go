@@ -39,7 +39,7 @@ import (
 
 // New takes a <k8sGardenClient>, the <k8sGardenCoreInformers> and a <shoot> manifest, and creates a new Shoot representation.
 // It will add the CloudProfile, the cloud provider secret, compute the internal cluster domain and identify the cloud provider.
-func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, shoot *gardencorev1alpha1.Shoot, projectName, internalDomain string, defaultDomains []*garden.Domain) (*Shoot, error) {
+func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, shoot *gardencorev1alpha1.Shoot, projectName string, disableDNS bool, internalDomain *garden.Domain, defaultDomains []*garden.Domain) (*Shoot, error) {
 	var (
 		secret *corev1.Secret
 		err    error
@@ -73,6 +73,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencore
 
 		SeedNamespace: seedNamespace,
 
+		DisableDNS:            disableDNS,
 		InternalClusterDomain: ConstructInternalClusterDomain(shoot.Name, projectName, internalDomain),
 		ExternalClusterDomain: ConstructExternalClusterDomain(shoot),
 
@@ -117,6 +118,9 @@ func calculateExtensions(gardenClient client.Client, shoot *gardencorev1alpha1.S
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
 // end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
 func (s *Shoot) GetIngressFQDN(subDomain string) string {
+	if s.Info.Spec.DNS == nil || s.Info.Spec.DNS.Domain == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
 }
 
@@ -193,12 +197,16 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 // ComputeAPIServerURL takes a boolean value identifying whether the component connecting to the API server
 // runs in the Seed cluster <runsInSeed>, and a boolean value <useInternalClusterDomain> which determines whether the
 // internal or the external cluster domain should be used.
-func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) string {
+func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool, apiServerAddress string) string {
 	if runsInSeed {
 		return v1alpha1constants.DeploymentNameKubeAPIServer
 	}
 
-	if s.Info.Spec.DNS != nil && len(s.Info.Spec.DNS.Providers) > 0 && s.Info.Spec.DNS.Providers[0].Type != nil && *s.Info.Spec.DNS.Providers[0].Type == "unmanaged" {
+	if s.DisableDNS {
+		return apiServerAddress
+	}
+
+	if gardencorev1alpha1helper.ShootUsesUnmanagedDNS(s.Info) {
 		return common.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -236,20 +244,20 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) str
 // already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
 // "<shootName>.<shootProject>.internal.<internalDomain>".
-func ConstructInternalClusterDomain(shootName, shootProject, internalDomain string) string {
-	if strings.Contains(internalDomain, common.InternalDomainKey) {
-		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain)
+func ConstructInternalClusterDomain(shootName, shootProject string, internalDomain *garden.Domain) string {
+	if internalDomain == nil {
+		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
+	if strings.Contains(internalDomain.Domain, common.InternalDomainKey) {
+		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
+	}
+	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain.Domain)
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
 // into the Kubeconfig handed out to the user.
 func ConstructExternalClusterDomain(shoot *gardencorev1alpha1.Shoot) *string {
-	if shoot.Spec.DNS == nil {
-		return nil
-	}
-	if shoot.Spec.DNS.Domain == nil {
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return nil
 	}
 	return shoot.Spec.DNS.Domain

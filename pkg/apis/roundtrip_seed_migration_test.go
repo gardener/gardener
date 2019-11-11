@@ -99,6 +99,9 @@ var _ = Describe("roundtripper seed migration", func() {
 					BlockCIDRs: []string{blockCIDR},
 					Taints: []gardencorev1alpha1.SeedTaint{
 						{
+							Key: gardencorev1alpha1.SeedTaintDisableDNS,
+						},
+						{
 							Key: gardencorev1alpha1.SeedTaintProtected,
 						},
 						{
@@ -131,7 +134,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						garden.MigrationSeedCloudRegion:                   regionName,
 						garden.MigrationSeedProviderType:                  providerName,
 						garden.MigrationSeedProviderRegion:                regionName,
-						garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible),
+						garden.MigrationSeedTaints:                        fmt.Sprintf("%s,%s,%s", garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible),
 					},
 				},
 				Spec: gardenv1beta1.SeedSpec{
@@ -179,7 +182,7 @@ var _ = Describe("roundtripper seed migration", func() {
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedVolumeMinimumSize] = minimumVolumeSize
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedProviderType] = providerName
 			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedProviderRegion] = regionName
-			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedTaints] = fmt.Sprintf("%s,%s", garden.SeedTaintProtected, garden.SeedTaintInvisible)
+			expectedOutAfterRoundTrip.Annotations[garden.MigrationSeedTaints] = fmt.Sprintf("%s,%s,%s", garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible)
 			Expect(out4).To(Equal(expectedOutAfterRoundTrip))
 		})
 	})

@@ -79,12 +79,16 @@ func newOperation(
 		return nil, err
 	}
 
-	var seedObj *seed.Seed
+	var (
+		seedObj    *seed.Seed
+		disableDNS bool
+	)
 	if seedName != nil {
 		seedObj, err = seed.NewFromName(k8sGardenClient, k8sGardenCoreInformers, *seedName)
 		if err != nil {
 			return nil, err
 		}
+		disableDNS = gardencorev1alpha1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS)
 	}
 
 	renderer, err := chartrenderer.NewForConfig(k8sGardenClient.RESTConfig())
@@ -112,7 +116,7 @@ func newOperation(
 	}
 
 	if shoot != nil {
-		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenCoreInformers, shoot, gardenObj.Project.Name, gardenObj.InternalDomain.Domain, gardenObj.DefaultDomains)
+		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenCoreInformers, shoot, gardenObj.Project.Name, disableDNS, gardenObj.InternalDomain, gardenObj.DefaultDomains)
 		if err != nil {
 			return nil, err
 		}

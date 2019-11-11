@@ -174,6 +174,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
+		dnsEnabled              = !gardencorev1alpha1helper.TaintsHave(botanist.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS)
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -389,7 +390,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           botanist.DestroyIngressDNSRecord,
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -404,7 +405,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           botanist.DestroyExternalDomainDNSRecord,
+			Fn:           flow.TaskFn(botanist.DestroyExternalDomainDNSRecord).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
@@ -420,7 +421,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           botanist.DestroyInternalDomainDNSRecord,
+			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteNamespace = g.Add(flow.Task{

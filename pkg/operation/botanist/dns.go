@@ -60,7 +60,7 @@ func (b *Botanist) DestroyInternalDomainDNSRecord(ctx context.Context) error {
 
 // DeployExternalDomainDNSRecord deploys the DNS record for the external cluster domain.
 func (b *Botanist) DeployExternalDomainDNSRecord(ctx context.Context) error {
-	if b.Shoot.Info.Spec.DNS.Domain == nil || b.Shoot.ExternalClusterDomain == nil || strings.HasSuffix(*b.Shoot.ExternalClusterDomain, ".nip.io") {
+	if b.Shoot.Info.Spec.DNS == nil || b.Shoot.Info.Spec.DNS.Domain == nil || b.Shoot.ExternalClusterDomain == nil || strings.HasSuffix(*b.Shoot.ExternalClusterDomain, ".nip.io") {
 		return nil
 	}
 

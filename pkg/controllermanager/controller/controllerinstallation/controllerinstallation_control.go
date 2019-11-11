@@ -250,6 +250,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"blockCIDRs":      seed.Spec.BlockCIDRs,
 				"protected":       gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintProtected),
 				"visible":         !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintInvisible),
+				"taints":          seed.Spec.Taints,
 				"networks":        seed.Spec.Networks,
 			},
 		},

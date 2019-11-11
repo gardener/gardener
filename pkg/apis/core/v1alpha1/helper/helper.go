@@ -16,10 +16,11 @@ package helper
 
 import (
 	"fmt"
-	"github.com/gardener/gardener/pkg/logger"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gardener/gardener/pkg/logger"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -185,6 +186,7 @@ func TaintsHave(taints []gardencorev1alpha1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
+	DisableDNS        *bool
 	Protected         *bool
 	Visible           *bool
 	MinimumVolumeSize *string
@@ -265,6 +267,9 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		shootedSeed.MinimumVolumeSize = &size
 	}
 
+	if _, ok := flags["disable-dns"]; ok {
+		shootedSeed.DisableDNS = &trueVar
+	}
 	if _, ok := flags["protected"]; ok {
 		shootedSeed.Protected = &trueVar
 	}
@@ -543,6 +548,11 @@ func ShootWantsBasicAuthentication(shoot *gardencorev1alpha1.Shoot) bool {
 		return true
 	}
 	return *kubeAPIServerConfig.EnableBasicAuthentication
+}
+
+// ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
+func ShootUsesUnmanagedDNS(shoot *gardencorev1alpha1.Shoot) bool {
+	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and

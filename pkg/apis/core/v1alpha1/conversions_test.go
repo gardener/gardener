@@ -90,6 +90,9 @@ var _ = Describe("Conversion", func() {
 						BlockCIDRs: []string{blockCIDR},
 						Taints: []SeedTaint{
 							{
+								Key: SeedTaintDisableDNS,
+							},
+							{
 								Key: SeedTaintProtected,
 							},
 							{
@@ -140,6 +143,9 @@ var _ = Describe("Conversion", func() {
 						},
 						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
+							{
+								Key: SeedTaintDisableDNS,
+							},
 							{
 								Key: SeedTaintProtected,
 							},
@@ -196,6 +202,9 @@ var _ = Describe("Conversion", func() {
 						},
 						Taints: []garden.SeedTaint{
 							{
+								Key: SeedTaintDisableDNS,
+							},
+							{
 								Key: SeedTaintProtected,
 							},
 							{
@@ -245,6 +254,9 @@ var _ = Describe("Conversion", func() {
 						},
 						BlockCIDRs: []string{blockCIDR},
 						Taints: []SeedTaint{
+							{
+								Key: SeedTaintDisableDNS,
+							},
 							{
 								Key: SeedTaintProtected,
 							},

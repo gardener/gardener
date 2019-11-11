@@ -98,6 +98,14 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		endUserCrtValidity = 730 * 24 * time.Hour // ~2 years
 	)
 
+	if gardencorev1alpha1helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
+			apiServerIPAddresses = append(apiServerIPAddresses, addr)
+		} else {
+			apiServerCertDNSNames = append(apiServerCertDNSNames, b.APIServerAddress)
+		}
+	}
+
 	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
@@ -167,7 +175,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -202,7 +210,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -237,7 +245,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -257,7 +265,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -277,7 +285,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
 			},
 		},
 
@@ -297,7 +305,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -317,7 +325,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
 			},
 		},
 
@@ -352,7 +360,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
 			},
 		},
 
@@ -372,7 +380,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true),
+				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
 			},
 		},
 
@@ -536,7 +544,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeAPIServerURL(false, false),
+			APIServerURL: b.Shoot.ComputeAPIServerURL(false, false, b.APIServerAddress),
 		},
 	})
 
