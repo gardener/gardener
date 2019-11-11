@@ -18,7 +18,15 @@ spec:
           app: aggregate-prometheus
           role: monitoring
     ports:
-    - port: metrics
+    - port: {{ .Values.global.elasticsearchPorts.metricsExporter }}
+      protocol: TCP
+    - port: {{ .Values.fluentd.ports.metrics }}
+      protocol: TCP
+    - port: 9569 #hvpa
+      protocol: TCP
+    - port: 9570 #vpa
+      protocol: TCP
+    - port: 9093 #alert
       protocol: TCP
   policyTypes:
   - Ingress

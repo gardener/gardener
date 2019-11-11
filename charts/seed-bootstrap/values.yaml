@@ -102,6 +102,10 @@ global:
   elasticsearchPorts:
     db: 9200
     transport: 9300
+    metricsExporter: 9114
+  fluentd:
+    ports:
+      metrics: 24231
 
 elastic-kibana-curator:
   enabled: true
