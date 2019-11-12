@@ -230,7 +230,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count(seed:container_cpu_usage_seconds_total:sum_by_pod) by (pod_name))\n",
+          "expr": "count(count(seed:container_cpu_usage_seconds_total:sum_by_pod) by (pod))\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "pods",
@@ -502,7 +502,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot--(.+)\"}) by (pod_name))\n",
+          "expr": "count(count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot--(.+)\"}) by (pod))\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "pods",

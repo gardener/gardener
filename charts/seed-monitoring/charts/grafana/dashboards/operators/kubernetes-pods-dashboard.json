@@ -50,7 +50,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (container_memory_working_set_bytes{pod_name=~\"$pod\", container_name=~\"$container\"})",
+          "expr": "sum (container_memory_working_set_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -161,7 +161,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container_name=~\"$container\",pod_name=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"$container\",pod=~\"$pod\"}[1m]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -271,7 +271,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{pod_name=~\"$pod\"}[1m])) by (pod_name)",
+          "expr": "sum(rate(container_network_receive_bytes_total{pod=~\"$pod\"}[1m])) by (pod)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Received",
@@ -279,7 +279,7 @@
           "step": 20
         },
         {
-          "expr": "- sum(rate(container_network_transmit_bytes_total{pod_name=~\"$pod\"}[1m])) by (pod_name)",
+          "expr": "- sum(rate(container_network_transmit_bytes_total{pod=~\"$pod\"}[1m])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Sent",
@@ -370,7 +370,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_fs_usage_bytes{pod_name=~\"$pod\", container_name=~\"$container\",})",
+          "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", container=~\"$container\",})",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -381,7 +381,7 @@
           "step": 10
         },
         {
-          "expr": "sum(container_fs_usage_bytes{pod_name=~\"$pod\", image!=\"\"})",
+          "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", image!=\"\"})",
           "format": "time_series",
           "hide": false,
           "interval": "10s",

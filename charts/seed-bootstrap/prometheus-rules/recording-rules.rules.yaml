@@ -3,16 +3,16 @@ groups:
   rules:
   # Recording rules for pod usage
   - record: seed:container_cpu_usage_seconds_total:sum_by_pod
-    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod_name, namespace)
+    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod, namespace)
 
   - record: seed:container_memory_working_set_bytes:sum_by_pod
-    expr: sum(container_memory_working_set_bytes) by (pod_name, namespace)
+    expr: sum(container_memory_working_set_bytes) by (pod, namespace)
 
   - record: seed:container_network_receive_bytes_total:sum_by_pod
-    expr: sum(rate(container_network_receive_bytes_total[5m])) by (pod_name, namespace)
+    expr: sum(rate(container_network_receive_bytes_total[5m])) by (pod, namespace)
 
   - record: seed:container_network_transmit_bytes_total:sum_by_pod
-    expr: sum(rate(container_network_transmit_bytes_total[5m])) by (pod_name, namespace)
+    expr: sum(rate(container_network_transmit_bytes_total[5m])) by (pod, namespace)
 
   # Recording rules for the sum of the entire seed usage
   - record: seed:container_cpu_usage_seconds_total:sum
