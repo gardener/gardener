@@ -15,7 +15,6 @@
 package validator
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -31,13 +30,10 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	"github.com/Masterminds/semver"
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,9 +41,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	kubeinformers "k8s.io/client-go/informers"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -65,19 +58,15 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	cloudProfileLister   listers.CloudProfileLister
-	seedLister           listers.SeedLister
-	shootLister          listers.ShootLister
-	projectLister        listers.ProjectLister
-	secretLister         corev1listers.SecretLister
-	runtimeClientFactory kubeclient.RuntimeClientFactory
-	readyFunc            admission.ReadyFunc
+	cloudProfileLister listers.CloudProfileLister
+	seedLister         listers.SeedLister
+	shootLister        listers.ShootLister
+	projectLister      listers.ProjectLister
+	readyFunc          admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ValidateShoot{})
-	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
-	_ = admissioninitializer.WantsRuntimeClientFactory(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -112,19 +101,6 @@ func (v *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInfor
 	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
-// SetKubeInformerFactory gets SecretLister from SharedInformerFactory
-func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
-	secretInformer := f.Core().V1().Secrets()
-	v.secretLister = secretInformer.Lister()
-
-	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
-}
-
-// SetRuntimeClientFactory gets runtimeClientFactory
-func (v *ValidateShoot) SetRuntimeClientFactory(f kubeclient.RuntimeClientFactory) {
-	v.runtimeClientFactory = f
-}
-
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
 	if v.cloudProfileLister == nil {
@@ -138,12 +114,6 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
-	}
-	if v.secretLister == nil {
-		return errors.New("missing secret lister")
-	}
-	if v.runtimeClientFactory == nil {
-		return errors.New("missing runtime client factory")
 	}
 	return nil
 }
@@ -325,34 +295,17 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 	}
 
-	// Prevent removal of `gardener` finalizer if the shoot still has backing assets, e.g. networks, machines, etc.
-	// This is done by checking if the shoot namespace in the seed exists.
-	if seed != nil && len(shoot.Status.TechnicalID) > 0 {
+	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
+	if len(shoot.Status.TechnicalID) > 0 && shoot.Status.LastOperation != nil {
 		oldFinalizers := sets.NewString(oldShoot.Finalizers...)
 		newFinalizers := sets.NewString(shoot.Finalizers...)
 
 		if oldFinalizers.Has(gardencorev1alpha1.GardenerName) && !newFinalizers.Has(gardencorev1alpha1.GardenerName) {
-			seedSecret, err := v.secretLister.Secrets(seed.Spec.SecretRef.Namespace).Get(seed.Spec.SecretRef.Name)
-			if err != nil {
-				return apierrors.NewInternalError(fmt.Errorf("could not get referenced seed secret: %+v", err))
-			}
+			lastOperation := shoot.Status.LastOperation
+			deletionSucceeded := lastOperation.Type == garden.LastOperationTypeDelete && lastOperation.State == garden.LastOperationStateSucceeded && lastOperation.Progress == 100
 
-			seedClient, err := v.runtimeClientFactory.CreateRuntimeClientFromSecret(seedSecret,
-				kubeclient.WithClientOptions(client.Options{
-					Scheme: kubeclient.SeedScheme,
-				}),
-			)
-
-			if err != nil {
-				return apierrors.NewInternalError(fmt.Errorf("could not create seed client to check backing resources: %+v", err))
-			}
-
-			ns := &corev1.Namespace{}
-			if err := seedClient.Get(context.TODO(), kutil.Key(shoot.Status.TechnicalID), ns); err != nil && !apierrors.IsNotFound(err) {
-				return apierrors.NewInternalError(fmt.Errorf("could not get shoot namespace in the seed to check backing resources: %+v", err))
-			} else if err == nil {
-				// if err is nil, the shoot namespace in the seed still exists (otherwise NotFound error would be returned)
-				return admission.NewForbidden(a, fmt.Errorf("finalizer \"%s\" cannot be removed because shoot namespace in the seed exists and may contain backing assets for the shoot", gardencorev1alpha1.GardenerName))
+			if !deletionSucceeded {
+				return admission.NewForbidden(a, fmt.Errorf("finalizer \"%s\" cannot be removed because shoot deletion has not completed successfully yet", gardencorev1alpha1.GardenerName))
 			}
 		}
 	}
