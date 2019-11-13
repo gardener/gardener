@@ -18,6 +18,7 @@
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
+* [Manual cleanup](usage/manual_cleanup.md)
 
 ## Proposals
 
