@@ -31,34 +31,21 @@
 package applications
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
-	"html/template"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"github.com/gardener/gardener/test/integration/framework/applications"
 	"path/filepath"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	. "github.com/gardener/gardener/test/integration/shoots"
-	apiextensions "k8s.io/api/extensions/v1beta1"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	. "github.com/gardener/gardener/test/integration/shoots"
 
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -78,15 +65,6 @@ const (
 	InitializationTimeout     = 600 * time.Second
 	FinalizationTimeout       = 1800 * time.Second
 	DumpStateTimeout          = 5 * time.Minute
-
-	GuestBook             = "guestbook"
-	RedisMaster           = "redis-master"
-	RedisSlave            = "redis-slave"
-	GuestBookTemplateName = "guestbook-app.yaml.tpl"
-
-	helmDeployNamespace = metav1.NamespaceDefault
-	RedisChart          = "stable/redis"
-	RedisChartVersion   = "9.2.0"
 )
 
 func validateFlags() {
@@ -108,9 +86,9 @@ var _ = Describe("Shoot application testing", func() {
 		shootGardenerTest   *ShootGardenerTest
 		shootTestOperations *GardenerTestOperation
 		shootAppTestLogger  *logrus.Logger
-		guestBooktpl        *template.Template
-		resourcesDir        = filepath.Join("..", "..", "resources")
-		chartRepo           = filepath.Join(resourcesDir, "charts")
+		guestBookTest       *applications.GuestBookTest
+
+		resourcesDir = filepath.Join("..", "..", "resources")
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -126,111 +104,12 @@ var _ = Describe("Shoot application testing", func() {
 		shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
 		Expect(err).NotTo(HaveOccurred())
 
-		templateFilepath := filepath.Join(TemplateDir, GuestBookTemplateName)
-
-		if !FileExists(templateFilepath) {
-			Fail(fmt.Sprintf("could not find Guest book template in '%s'", templateFilepath))
-		}
-
-		guestBooktpl = template.Must(template.ParseFiles(templateFilepath))
+		guestBookTest, err = applications.NewGuestBookTest(resourcesDir)
+		Expect(err).ToNot(HaveOccurred())
 	}, InitializationTimeout)
 
 	CAfterSuite(func(ctx context.Context) {
-		// Clean up shoot
-		By("Cleaning up guestbook app resources")
-		deleteResource := func(ctx context.Context, resource runtime.Object) error {
-			err := shootTestOperations.ShootClient.Client().Delete(ctx, resource)
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-
-		cleanupGuestbook := func() {
-			var (
-				guestBookIngressToDelete = &apiextensions.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      GuestBook,
-					}}
-
-				guestBookDeploymentToDelete = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      GuestBook,
-					},
-				}
-
-				guestBookServiceToDelete = &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      GuestBook,
-					},
-				}
-			)
-
-			err := deleteResource(ctx, guestBookIngressToDelete)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = deleteResource(ctx, guestBookDeploymentToDelete)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = deleteResource(ctx, guestBookServiceToDelete)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		cleanupRedis := func() {
-			var (
-				redisMasterServiceToDelete = &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      RedisMaster,
-					},
-				}
-				redisMasterStatefulSetToDelete = &appsv1.StatefulSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      RedisMaster,
-					},
-				}
-
-				redisSlaveServiceToDelete = &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      RedisSlave,
-					},
-				}
-
-				redisSlaveStatefulSetToDelete = &appsv1.StatefulSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: helmDeployNamespace,
-						Name:      RedisSlave,
-					},
-				}
-			)
-
-			err := deleteResource(ctx, redisMasterServiceToDelete)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = deleteResource(ctx, redisMasterStatefulSetToDelete)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = deleteResource(ctx, redisSlaveServiceToDelete)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = deleteResource(ctx, redisSlaveStatefulSetToDelete)
-			Expect(err).NotTo(HaveOccurred())
-		}
-		cleanupGuestbook()
-		cleanupRedis()
-
-		err := os.RemoveAll(filepath.Join(resourcesDir, "charts"))
-		Expect(err).NotTo(HaveOccurred())
-
-		err = os.RemoveAll(filepath.Join(resourcesDir, "repository", "cache"))
-		Expect(err).NotTo(HaveOccurred())
-
-		By("redis and the guestbook app have been cleaned up!")
+		guestBookTest.Cleanup(ctx, shootTestOperations)
 	}, FinalizationTimeout)
 
 	CAfterEach(func(ctx context.Context) {
@@ -245,95 +124,8 @@ var _ = Describe("Shoot application testing", func() {
 	}, DownloadKubeconfigTimeout)
 
 	CIt("should deploy guestbook app successfully", func(ctx context.Context) {
-		shoot := shootTestOperations.Shoot
-		if !shoot.Spec.Addons.NginxIngress.Enabled {
-			Fail("The test requires .spec.kubernetes.addons.nginx-ingress.enabled to be true")
-		} else if shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil || !*shoot.Spec.Kubernetes.AllowPrivilegedContainers {
-			Fail("The test requires .spec.kubernetes.allowPrivilegedContainers to be true")
-		}
-
-		ctx = context.WithValue(ctx, "name", "guestbook app")
-
-		helm := Helm(resourcesDir)
-		err := EnsureDirectories(helm)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Downloading chart artifacts")
-		err = shootTestOperations.DownloadChartArtifacts(ctx, helm, chartRepo, RedisChart, RedisChartVersion)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Applying redis chart")
-		if shoot.Spec.Provider.Type == "alicloud" {
-			// AliCloud requires a minimum of 20 GB for its PVCs
-			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", map[string]interface{}{
-				"master": map[string]interface{}{
-					"persistence": map[string]interface{}{
-						"size": "20Gi",
-					},
-				},
-				"slave": map[string]interface{}{
-					"persistence": map[string]interface{}{
-						"size": "20Gi",
-					},
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-		} else {
-			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", nil)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.ShootClient)
-		Expect(err).NotTo(HaveOccurred())
-
-		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-slave", helmDeployNamespace, shootTestOperations.ShootClient)
-		Expect(err).NotTo(HaveOccurred())
-
-		guestBookParams := struct {
-			HelmDeployNamespace string
-			ShootDNSHost        string
-		}{
-			helmDeployNamespace,
-			fmt.Sprintf("guestbook.ingress.%s", *shoot.Spec.DNS.Domain),
-		}
-
-		By("Deploy the guestbook application")
-		var writer bytes.Buffer
-		err = guestBooktpl.Execute(&writer, guestBookParams)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Apply the guestbook app resources to shoot
-		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultApplierOptions)
-		Expect(err).NotTo(HaveOccurred())
-
-		// define guestbook app urls
-		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shoot.Spec.DNS.Domain)
-		pushString := fmt.Sprintf("foobar-%s", shoot.Name)
-		pushURL := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
-		pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
-
-		// Check availability of the guestbook app
-		err = shootTestOperations.WaitUntilGuestbookAppIsAvailable(ctx, []string{guestBookAppURL, pushURL, pullURL})
-		Expect(err).NotTo(HaveOccurred())
-
-		// Push foobar-<shoot-name> to the guestbook app
-		_, err = shootTestOperations.HTTPGet(ctx, pushURL)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Pull foobar
-		pullResponse, err := shootTestOperations.HTTPGet(ctx, pullURL)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pullResponse.StatusCode).To(Equal(http.StatusOK))
-
-		responseBytes, err := ioutil.ReadAll(pullResponse.Body)
-		Expect(err).NotTo(HaveOccurred())
-
-		// test if foobar-<shoot-name> was pulled successfully
-		bodyString := string(responseBytes)
-		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shoot.Name)))
-		By("Guestbook app was deployed successfully!")
-
+		guestBookTest.DeployGuestBookApp(ctx, shootTestOperations)
+		guestBookTest.Test(ctx, shootTestOperations)
 	}, GuestbookAppTimeout)
 
 	CIt("Dashboard should be available", func(ctx context.Context) {

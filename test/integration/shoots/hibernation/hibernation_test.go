@@ -19,9 +19,11 @@
 	Prerequisites
 		- A Shoot exists.
 
-	Test: Testing if Shoot can be hibernated successfully.
+	Test:
+		Deploys a default application and hibernates the cluster.
+		When the cluster is successfully hibernated it is woken up and the deployed application is tested.
 	Expected Output
-		- Successful reconciliation of the Shoot after hibernation has been triggered.
+		- Shoot and deployed app is fully functional after hibernation and wakeup.
  **/
 
 package hibernation
@@ -30,7 +32,7 @@ import (
 	"context"
 	"flag"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"path/filepath"
 	"time"
 
 	"github.com/gardener/gardener/pkg/logger"
@@ -41,23 +43,32 @@ import (
 	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
+	"github.com/gardener/gardener/test/integration/framework/applications"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 var (
-	shootName        = flag.String("shoot-name", "", "name of the shoot")
-	projectNamespace = flag.String("project-namespace", "", "project namespace of the shoot")
-	kubeconfigPath   = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-	testLogger       *logrus.Logger
+	shootName      = flag.String("shoot-name", "", "name of the shoot")
+	shootNamespace = flag.String("shoot-namespace", "", "project namespace of the shoot")
+	kubeconfigPath = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+	logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+)
+
+const (
+	initializationTimeout  = 1 * time.Minute
+	hibernationTestTimeout = 1 * time.Hour
+	cleanupTimeout         = 10 * time.Minute
+	dumpStateTimeout       = 5 * time.Minute
 )
 
 func validateFlags() {
 	if !StringSet(*shootName) {
 		Fail("flag '--shoot-name' needs to be specified")
 	}
-	if !StringSet(*projectNamespace) {
+	if !StringSet(*shootNamespace) {
 		Fail("flag '--project-namespace' needs to be specified")
 	}
 	if !StringSet(*kubeconfigPath) {
@@ -66,20 +77,57 @@ func validateFlags() {
 }
 
 var _ = Describe("Shoot Hibernation testing", func() {
+
+	var (
+		shootGardenerTest      *ShootGardenerTest
+		gardenerTestOperations *GardenerTestOperation
+		shootAppTestLogger     *logrus.Logger
+		guestBookTest          *applications.GuestBookTest
+
+		resourcesDir = filepath.Join("..", "..", "resources")
+	)
+
 	CBeforeSuite(func(ctx context.Context) {
-		testLogger = logger.NewLogger("debug")
+		shootAppTestLogger = logger.NewLogger(*logLevel)
 		validateFlags()
-	}, 5*time.Second)
+
+		var err error
+		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shootGardenerTest, err = NewShootGardenerTest(*kubeconfigPath, shoot, shootAppTestLogger)
+		Expect(err).NotTo(HaveOccurred())
+
+		gardenerTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
+		Expect(err).NotTo(HaveOccurred())
+
+		guestBookTest, err = applications.NewGuestBookTest(resourcesDir)
+		Expect(err).ToNot(HaveOccurred())
+
+	}, initializationTimeout)
+
+	CAfterSuite(func(ctx context.Context) {
+		guestBookTest.Cleanup(ctx, gardenerTestOperations)
+	}, cleanupTimeout)
+
+	CAfterEach(func(ctx context.Context) {
+		gardenerTestOperations.AfterEach(ctx)
+	}, dumpStateTimeout)
 
 	CIt("Testing if Shoot can be hibernated successfully", func(ctx context.Context) {
-		gardenerConfigPath := *kubeconfigPath
+		By("Deploy guestbook")
+		guestBookTest.DeployGuestBookApp(ctx, gardenerTestOperations)
+		guestBookTest.Test(ctx, gardenerTestOperations)
 
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *projectNamespace, Name: *shootName}}
-		shootGardenerTest, err := NewShootGardenerTest(gardenerConfigPath, shoot, testLogger)
-		Expect(err).To(BeNil())
+		By("Hibernate shoot")
+		err := shootGardenerTest.HibernateShoot(ctx)
+		Expect(err).ToNot(HaveOccurred())
 
-		if err := shootGardenerTest.HibernateShoot(context.TODO()); err != nil && !errors.IsNotFound(err) {
-			Expect(err).To(BeNil())
-		}
-	}, 7000*time.Second)
+		By("wake up shoot")
+		err = shootGardenerTest.WakeUpShoot(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		By("test guestbook")
+		guestBookTest.WaitUntilPrerequisitesAreReady(ctx, gardenerTestOperations)
+		guestBookTest.Test(ctx, gardenerTestOperations)
+
+	}, hibernationTestTimeout)
 })
