@@ -32,6 +32,7 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -184,8 +185,9 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
 		}
-		// do not ignore finalizers updates to detect and prevent removal of the gardener finalizer
-		if reflect.DeepEqual(newShoot.Spec, oldShoot.Spec) && reflect.DeepEqual(newShoot.Finalizers, oldShoot.Finalizers) {
+
+		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
+		if reflect.DeepEqual(newShoot.Spec, oldShoot.Spec) && reflect.DeepEqual(newShoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
 		}
 	}
@@ -240,8 +242,8 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 	}
 
 	// We don't allow shoot to be created on the seed which is already marked to be deleted.
-	if seed != nil && seed.DeletionTimestamp != nil {
-		return admission.NewForbidden(a, fmt.Errorf("cannot create or update shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
+	if seed != nil && seed.DeletionTimestamp != nil && a.GetOperation() == admission.Create {
+		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
 	}
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
@@ -294,6 +296,34 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 		allErrs field.ErrorList
 	)
+
+	if seed != nil && seed.DeletionTimestamp != nil {
+		newMeta := shoot.ObjectMeta
+		oldMeta := *oldShoot.ObjectMeta.DeepCopy()
+
+		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
+		// except changes to the deletion confirmation annotation
+		if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+			newConfirmation, newHasConfirmation := newMeta.Annotations[common.ConfirmationDeletion]
+
+			// copy the new confirmation value to the old annotations to see if
+			// anything else was changed other than the confirmation annotation
+			if newHasConfirmation {
+				if oldMeta.Annotations == nil {
+					oldMeta.Annotations = make(map[string]string)
+				}
+				oldMeta.Annotations[common.ConfirmationDeletion] = newConfirmation
+			}
+
+			if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", shoot.Name, seed.Name, common.ConfirmationDeletion))
+			}
+		}
+
+		if !reflect.DeepEqual(shoot.Spec, oldShoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
+		}
+	}
 
 	// Prevent removal of `gardener` finalizer if the shoot still has backing assets, e.g. networks, machines, etc.
 	// This is done by checking if the shoot namespace in the seed exists.

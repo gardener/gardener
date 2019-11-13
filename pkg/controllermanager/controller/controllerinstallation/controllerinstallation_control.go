@@ -338,7 +338,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	)
 
 	defer func() {
-		if _, err := c.updateConditions(controllerInstallation, conditionValid, conditionInstalled); err != nil {
+		if _, err := c.updateConditions(controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
 			logger.Errorf("Failed to update the conditions when trying to delete: %+v", err)
 		}
 	}()

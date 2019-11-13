@@ -25,6 +25,7 @@ import (
 	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockfactory "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -543,6 +544,80 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Context("checks for shoots referencing a deleted seed", func() {
+			var (
+				oldShoot *garden.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = shootBase.DeepCopy()
+
+				seed = *seedBase.DeepCopy()
+				now := metav1.Now()
+				seed.DeletionTimestamp = &now
+
+				_ = gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				_ = gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				_ = gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			})
+
+			It("should reject creating a shoot on a seed which is marked for deletion", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
+			})
+
+			It("should allow no-op updates", func() {
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should allow modifying the finalizers array", func() {
+				oldShoot.Finalizers = []string{corev1alpha1.GardenerName}
+				shoot.Finalizers = []string{}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should allow adding the deletion confirmation", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[common.ConfirmationDeletion] = "true"
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should reject modifying the shoot spec when seed is marked for deletion", func() {
+				shoot.Spec.Region = "other-region"
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
+			})
+
+			It("should reject modifying other annotations than the deletion confirmation when seed is marked for deletion", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations["foo"] = "bar"
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
 			})
 		})
 
