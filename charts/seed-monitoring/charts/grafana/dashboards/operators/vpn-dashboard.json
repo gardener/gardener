@@ -170,7 +170,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sort_desc(sum by (pod_name) (rate (container_network_receive_bytes_total{pod_name=~\"vpn-shoot-.*\"}[1m]) ))",
+          "expr": "sort_desc(sum by (pod) (rate (container_network_receive_bytes_total{pod=~\"vpn-shoot-.*\"}[1m]) ))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Received",
@@ -178,7 +178,7 @@
           "step": 20
         },
         {
-          "expr": "-sort_desc(sum by (pod_name) (rate (container_network_transmit_bytes_total{pod_name=~\"vpn-shoot-.*\"}[1m]) ))",
+          "expr": "-sort_desc(sum by (pod) (rate (container_network_transmit_bytes_total{pod=~\"vpn-shoot-.*\"}[1m]) ))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Transmitted",
@@ -274,7 +274,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"vpn-shoot-.*\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"vpn-shoot-.*\"}[1m]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -389,7 +389,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (container_memory_working_set_bytes{pod_name=~\"vpn-shoot-.*\"})",
+          "expr": "sum (container_memory_working_set_bytes{pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -518,12 +518,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{pod_name=~\"kube-apiserver-.*|prometheus-.*\", container_name=\"vpn-seed\"}[1m])",
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}[1m])",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
           "intervalFactor": 1,
-          "legendFormat": "Actual ({{pod_name}}/{{container_name}})",
+          "legendFormat": "Actual ({{pod}}/{{container}})",
           "refId": "A",
           "step": 20
         },
@@ -632,11 +632,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes{pod_name=~\"kube-apiserver-.*|prometheus-.*\", container_name=\"vpn-seed\"}",
+          "expr": "container_memory_working_set_bytes{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
-          "legendFormat": "Actual ({{pod_name}}/{{container_name}})",
+          "legendFormat": "Actual ({{pod}}/{{container}})",
           "metric": "container_memory_working_set_bytes",
           "refId": "A",
           "step": 10

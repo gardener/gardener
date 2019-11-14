@@ -45,10 +45,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_memory_working_set_bytes{pod_name=~\"$targetName(.+)\", container_name=~\"$container\"}) by (container_name)",
+          "expr": "sum(container_memory_working_set_bytes{pod=~\"$targetName(.+)\", container=~\"$container\"}) by (container)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ container_name }} actual usage",
+          "legendFormat": "{{ container }} actual usage",
           "refId": "D"
         },
         {
@@ -236,7 +236,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"$targetName-(.+)\"}[5m])) by (container)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$targetName-(.+)\"}[5m])) by (container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }} actual usage",
@@ -553,14 +553,14 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(container_memory_working_set_bytes{pod_name=~\"$targetName-(.+)\"}, container_name)",
+        "definition": "label_values(container_memory_working_set_bytes{pod=~\"$targetName-(.+)\"}, container)",
         "hide": 0,
         "includeAll": true,
         "label": "Container",
         "multi": true,
         "name": "container",
         "options": [],
-        "query": "label_values(container_memory_working_set_bytes{pod_name=~\"$targetName-(.+)\"}, container_name)",
+        "query": "label_values(container_memory_working_set_bytes{pod=~\"$targetName-(.+)\"}, container)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

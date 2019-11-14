@@ -72,7 +72,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"$deployment_name.*\"}[3m])) ",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$deployment_name.*\"}[3m])) ",
           "intervalFactor": 2,
           "refId": "A",
           "step": 600
@@ -154,7 +154,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(container_memory_working_set_bytes{pod_name=~\"$deployment_name.*\"}) / 1024^3",
+          "expr": "sum(container_memory_working_set_bytes{pod=~\"$deployment_name.*\"}) / 1024^3",
           "intervalFactor": 2,
           "refId": "A",
           "step": 600
@@ -236,7 +236,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{pod_name=~\"$deployment_name.*\"}[3m])) + sum(rate(container_network_receive_bytes_total{pod_name=~\"$deployment_name.*\"}[3m])) ",
+          "expr": "sum(rate(container_network_transmit_bytes_total{pod=~\"$deployment_name.*\"}[3m])) + sum(rate(container_network_receive_bytes_total{pod=~\"$deployment_name.*\"}[3m])) ",
           "intervalFactor": 2,
           "refId": "A",
           "step": 600

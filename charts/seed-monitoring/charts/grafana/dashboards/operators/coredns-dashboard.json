@@ -51,7 +51,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$pod\"}[1m]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -165,7 +165,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (container_memory_working_set_bytes{pod_name=~\"$pod\"})",
+          "expr": "sum (container_memory_working_set_bytes{pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,

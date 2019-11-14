@@ -816,10 +816,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod_name=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod_name, container_name)",
+          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod_name}} / {{container_name}}",
+          "legendFormat": "{{pod}} / {{container}}",
           "refId": "A"
         }
       ],
@@ -900,10 +900,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod_name=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod_name, container_name)",
+          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod_name}} / {{container_name}}",
+          "legendFormat": "{{pod}} / {{container}}",
           "refId": "A"
         }
       ],

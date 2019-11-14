@@ -47,20 +47,20 @@ data:
       - source_labels: [ id ]
         action: replace
         regex: ^/system\.slice/(.+)\.service$
-        target_label: container_name
+        target_label: container
         replacement: '${1}'
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
       - source_labels:
-        - container_name
+        - container
         - __name__
         # The system container POD is used for networking
         regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
         action: drop
-      - source_labels: [ container_name ]
+      - source_labels: [ container ]
         regex: ^$
         action: drop
       # drop terraform pods
-      - source_labels: [ pod_name ]
+      - source_labels: [ pod ]
         regex: ^.+\.tf-pod.+$
         action: drop
       # Collect addional filesystem metrics for etcd containers. We have to rename
@@ -69,7 +69,7 @@ data:
       # etcd samples back to the origin name.
       - target_label: __name__
         source_labels:
-        - container_name
+        - container
         - __name__
         regex: etcd;(container_fs_writes_bytes_total|container_fs_reads_bytes_total)
         replacement: 'GARDEN_TMP_${1}'
