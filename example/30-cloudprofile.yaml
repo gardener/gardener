@@ -35,7 +35,10 @@ spec:
     cpu: "2"
     gpu: "0"
     memory: 8Gi
-  # storage: 20Gi # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
+  # storage: # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
+  #   class: standard
+  #   type: default
+  #   size: 20Gi
     usable: true
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
   - name: gp2
