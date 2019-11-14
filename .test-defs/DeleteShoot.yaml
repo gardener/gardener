@@ -4,7 +4,7 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the deletion of a shoot.
-  activeDeadlineSeconds: 1800
+  activeDeadlineSeconds: 3600
 
   command: [bash, -c]
   args:
