@@ -50,6 +50,7 @@ require (
 	k8s.io/klog v0.3.3
 	k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532
 	k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
+	k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398
 	k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
 	sigs.k8s.io/controller-runtime v0.2.0-beta.5
@@ -72,6 +73,7 @@ replace (
 	k8s.io/klog => k8s.io/klog v0.1.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532 // kubernetes-1.14.8
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398 // kubernetes-1.14.8
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.5
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2
 )

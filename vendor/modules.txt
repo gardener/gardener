@@ -896,6 +896,8 @@ k8s.io/kube-openapi/pkg/schemaconv
 k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
+# k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398 => k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398
+k8s.io/kube-scheduler/config/v1alpha1
 # k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 k8s.io/metrics/pkg/apis/metrics
 k8s.io/metrics/pkg/apis/metrics/v1alpha1

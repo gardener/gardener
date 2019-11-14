@@ -537,6 +537,8 @@ k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532 h1:ot65OvVdFFN2I3/EjlA
 k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532/go.mod h1:8sbzT4QQKDEmSCIbfqjV0sd97GpUT7A4W626sBiYJmU=
 k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580 h1:fq0ZXW/BAIFZH+dazlups6JTVdwzRo5d9riFA103yuQ=
 k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580/go.mod h1:BXM9ceUBTj2QnfH2MK1odQs778ajze1RxcmP6S8RVVc=
+k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398 h1:R+2+pvWTnykpvilZ41je/wzlYncQ/gflc8yZS694j9w=
+k8s.io/kube-scheduler v0.0.0-20191015222827-f12213456398/go.mod h1:kVTkNyVeRwdeQ6/wqd8Lb+M1BSGSFTFBMMc6HeMUKWA=
 k8s.io/kubelet v0.0.0-20190314002251-f6da02f58325/go.mod h1:m6JOtVhjgs4GGnzhPpXuNF9VG+IjARwo/dHCNw4+QDA=
 k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c h1:qkfVb8PX30hnQXqRj6rxnMtd9GagB/e8r6E+bS651CU=
 k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c/go.mod h1:a25VAbm3QT3xiVl1jtoF1ueAKQM149UdZ+L93ePfV3M=
