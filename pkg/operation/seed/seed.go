@@ -398,20 +398,31 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		"storage": seed.GetValidVolumeSize("1Gi"),
 	}
 
-	if alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPKeys) > 0 {
+	alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlerting, secrets)
+
+	if seedWantsAlertmanager(alertingSMTPKeys, secrets) {
 		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
 		for _, key := range alertingSMTPKeys {
-			secret := secrets[key]
-			emailConfigs = append(emailConfigs, map[string]interface{}{
-				"to":            string(secret.Data["to"]),
-				"from":          string(secret.Data["from"]),
-				"smarthost":     string(secret.Data["smarthost"]),
-				"auth_username": string(secret.Data["auth_username"]),
-				"auth_identity": string(secret.Data["auth_identity"]),
-				"auth_password": string(secret.Data["auth_password"]),
-			})
+			if string(secrets[key].Data["auth_type"]) == "smtp" {
+				secret := secrets[key]
+				emailConfigs = append(emailConfigs, map[string]interface{}{
+					"to":            string(secret.Data["to"]),
+					"from":          string(secret.Data["from"]),
+					"smarthost":     string(secret.Data["smarthost"]),
+					"auth_username": string(secret.Data["auth_username"]),
+					"auth_identity": string(secret.Data["auth_identity"]),
+					"auth_password": string(secret.Data["auth_password"]),
+				})
+				alertManagerConfig["enabled"] = true
+				alertManagerConfig["emailConfigs"] = emailConfigs
+				break
+			}
 		}
-		alertManagerConfig["emailConfigs"] = emailConfigs
+	} else {
+		alertManagerConfig["enabled"] = false
+		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1alpha1constants.GardenNamespace); err != nil {
+			return err
+		}
 	}
 
 	nodes := &corev1.NodeList{}
@@ -639,4 +650,13 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 	}
 
 	return size
+}
+
+func seedWantsAlertmanager(keys []string, secrets map[string]*corev1.Secret) bool {
+	for _, key := range keys {
+		if string(secrets[key].Data["auth_type"]) == "smtp" {
+			return true
+		}
+	}
+	return false
 }

@@ -48,10 +48,15 @@ When the `gardener-controller-manager` starts it scans the `garden` namespace of
   * Not every end-user/stakeholder/customer has its own domain, however, Gardener needs to create a DNS record for every shoot cluster.
   * As landscape operator you might want to define a default domain owned and controlled by you that is used for all shoot clusters that don't specify their own domain.
 
-* **Alerting SMTP secrets** (optional), contain the SMTP credentials which will be used by the [AlertmMnager](https://prometheus.io/docs/alerting/alertmanager/) to send emails for alerts, please see [this](../../example/10-secret-alerting-smtp.yaml) for an example.
-  * These secrets are used by the AlertManager which is deployed next to the Kubernetes control plane of a shoot cluster in seed clusters.
-  * In case there have been alerting SMTP secrets configured, the Gardener will inject the credentials in the configuration of the AlertManager.
-  * It will use them to send mails to the stated email address in case anything is wrong with the Shoot clusters.
+* **Alerting secrets** (optional), contain the alerting configuration and credentials for the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to send email alerts. It is also possible to configure the monitoring stack to send alerts to an alertmanager not deployed by Gardener to handle alerting. Please see [this](../../example/10-secret-alerting.yaml) for an example.
+  * If email alerting is configured:
+    * An Alertmanager is deployed into each seed cluster that handles the alerting for all shoots on the seed cluster.
+    * Gardener will inject the SMTP credentials into the configuration of the Alertmanager.
+    * The Alertmanager will send emails to the configured email address in case any alerts are firing.
+  * If an external alertmanager is configured:
+    * Each shoot has a [Prometheus](https://prometheus.io/docs/introduction/overview/) responsible for monitoring components and sending out alerts. The alerts will be sent to a URL configured in the alerting secret.
+    * This external alertmanager is not managed by Gardener and can be configured however the operator sees fit.
+    * Supported authentication types are no authentication, basic, or mutual TLS.
 
 * **OpenVPN Diffie-Hellmann Key secret** (optional), contains the self-generated Diffie-Hellmann key used by OpenVPN in your landscape, please see [this](../../example/10-secret-openvpn-diffie-hellman.yaml) for an example.
   * If you don't specify a custom key then a default key is used, but for productive landscapes it's recommend to create a landscape-specific key and define it.

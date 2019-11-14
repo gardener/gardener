@@ -324,6 +324,21 @@ rules:
       enabled: false
       rules: false
 
+alerting:
+  auth_type: {}
+#     none:
+#       url: foo.bar
+#     basic:
+#       url: foo.bar
+#       username: admin
+#       password: password
+#     certificate:
+#       url: foo.bar
+#       ca.crt: ca
+#       tls.crt: certificate
+#       tls.key: key
+#       insecure_skip_verify: false
+
 ignoreAlerts: false
 
 # object can be any object you want to scale Prometheus on:

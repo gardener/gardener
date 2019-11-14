@@ -146,6 +146,9 @@ const (
 	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'
 	GardenRoleGlobalMonitoring = "global-monitoring"
 
+	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
+	GardenRoleAlerting = "alerting"
+
 	// GardenRoleHvpa is the value of GardenRole key indicating type 'hvpa'.
 	GardenRoleHvpa = "hvpa"
 

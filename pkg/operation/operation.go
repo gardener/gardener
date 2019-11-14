@@ -132,12 +132,8 @@ func newOperation(
 }
 
 func shootWantsAlertmanager(shoot *gardencorev1alpha1.Shoot, secrets map[string]*corev1.Secret) bool {
-	if alertingSMTPSecret := common.GetSecretKeysWithPrefix(v1alpha1constants.GardenRoleAlertingSMTP, secrets); len(alertingSMTPSecret) > 0 {
-		if shoot.Spec.Monitoring != nil &&
-			shoot.Spec.Monitoring.Alerting != nil &&
-			len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0 {
-			return true
-		}
+	if shoot.Spec.Monitoring != nil && shoot.Spec.Monitoring.Alerting != nil && len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0 {
+		return true
 	}
 	return false
 }

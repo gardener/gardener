@@ -120,6 +120,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 		secretsMap                          = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets       = 0
 		numberOfOpenVPNDiffieHellmanSecrets = 0
+		numberOfAlertingSecrets             = 0
 	)
 
 	selector, err := labels.Parse(v1alpha1constants.DeprecatedGardenRole)
@@ -159,15 +160,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 			numberOfInternalDomainSecrets++
 		}
 
-		// Retrieving alerting SMTP secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role alerting-smtp.
-		// Only when using the in-cluster config as we do not want to configure alerts in development modus.
-		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleAlertingSMTP {
-			alertingSMTP := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, secret.Name)] = alertingSMTP
-			logger.Logger.Infof("Found alerting SMTP secret %s.", secret.Name)
-		}
-
 		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role openvpn-diffie-hellman.
 		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleOpenVPNDiffieHellman {
@@ -187,8 +179,32 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 			monitoringSecret := secret
 			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
 			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
-		} else {
-			logger.Logger.Info("No monitoring basic auth secret found.")
+		}
+	}
+
+	selectorGardenRole, err := labels.Parse(v1alpha1constants.GardenRole)
+	if err != nil {
+		return nil, err
+	}
+
+	secretsGardenRole, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1alpha1constants.GardenNamespace).List(selectorGardenRole)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secretsGardenRole {
+
+		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
+		// external alertmanager configuration.
+		if secret.Labels[v1alpha1constants.GardenRole] == common.GardenRoleAlerting {
+			authType := string(secret.Data["auth_type"])
+			if authType != "smtp" && authType != "none" && authType != "basic" && authType != "certificate" {
+				return nil, fmt.Errorf("Invalid or missing field 'auth_type' in secret %s", secret.Name)
+			}
+			alertingSecret := secret
+			secretsMap[common.GardenRoleAlerting] = alertingSecret
+			logger.Logger.Infof("Found alerting secret %s.", secret.Name)
+			numberOfAlertingSecrets++
 		}
 	}
 
@@ -211,6 +227,12 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 	// the Gardener cannot determine which to choose).
 	if numberOfOpenVPNDiffieHellmanSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one OpenVPN Diffie Hellman secret, but found %d", numberOfOpenVPNDiffieHellmanSecrets)
+	}
+
+	// Operators can configure gardener to send email alerts or send the alerts to an external alertmanager. If no configuration
+	// is provided then no alerts will be sent.
+	if numberOfAlertingSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
 	return secretsMap, nil

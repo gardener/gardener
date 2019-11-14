@@ -38,25 +38,25 @@ for t in $tools; do
 done
 
 pushd $SOURCE_PATH/charts/seed-monitoring/charts/core/charts/prometheus > /dev/null
-cat <<EOF > $SOURCE_PATH/docs/development/user_alerts.md
+cat <<EOF > $SOURCE_PATH/docs/monitoring/user_alerts.md
 # User Alerts
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
 EOF
-cat <<EOF > $SOURCE_PATH/docs/development/operator_alerts.md
+cat <<EOF > $SOURCE_PATH/docs/monitoring/operator_alerts.md
 # Operator Alerts
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
 EOF
 for file in rules/*.yaml; do
-  cat $file | yaml2json | jq -r '.groups | .[].rules | map(select(.labels.visibility == "owner" or .labels.visibility == "all")) | map(select(has("alert"))) | .[] | "|" + .alert + "|" + .labels.severity + "|" + .labels.type + "|" + "`" + .annotations.description + "`" + "|"' >> $SOURCE_PATH/docs/development/user_alerts.md
-  cat $file | yaml2json | jq -r '.groups | .[].rules | map(select(.labels.visibility == "operator" or .labels.visibility == "all")) | map(select(has("alert"))) | .[] | "|" + .alert + "|" + .labels.severity + "|" + .labels.type + "|" + "`" + .annotations.description + "`" + "|"' >> $SOURCE_PATH/docs/development/operator_alerts.md
+  cat $file | yaml2json | jq -r '.groups | .[].rules | map(select(.labels.visibility == "owner" or .labels.visibility == "all")) | map(select(has("alert"))) | .[] | "|" + .alert + "|" + .labels.severity + "|" + .labels.type + "|" + "`" + .annotations.description + "`" + "|"' >> $SOURCE_PATH/docs/monitoring/user_alerts.md
+  cat $file | yaml2json | jq -r '.groups | .[].rules | map(select(.labels.visibility == "operator" or .labels.visibility == "all")) | map(select(has("alert"))) | .[] | "|" + .alert + "|" + .labels.severity + "|" + .labels.type + "|" + "`" + .annotations.description + "`" + "|"' >> $SOURCE_PATH/docs/monitoring/operator_alerts.md
 done
 popd > /dev/null
 
 if [ -n "$(git status --porcelain)" ]; then
-  git add $SOURCE_PATH/docs/development/user_alerts.md
-  git add $SOURCE_PATH/docs/development/operator_alerts.md
+  git add $SOURCE_PATH/docs/monitoring/user_alerts.md
+  git add $SOURCE_PATH/docs/monitoring/operator_alerts.md
   git commit -m "Update alert documentation"
 else
   echo "no changes";
