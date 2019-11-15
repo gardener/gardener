@@ -1072,6 +1072,10 @@ func Convert_garden_CloudProfile_To_v1beta1_CloudProfile(in *garden.CloudProfile
 		return err
 	}
 
+	if out.Annotations == nil {
+		out.Annotations = make(map[string]string)
+	}
+
 	switch in.Spec.Type {
 	case "aws":
 		if dnsProviders, ok := in.Annotations[garden.MigrationCloudProfileDNSProviders]; ok {
