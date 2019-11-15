@@ -39,6 +39,8 @@ spec:
       type: host-local
       cidr: usePodCIDR
     backend: bird
+    typha:
+      enabled: true
 status:
   observedGeneration: ...
   state: ...

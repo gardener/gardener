@@ -647,6 +647,8 @@ spec:
   #     type: host-local
   #     cidr: usePodCIDR
   #   backend: bird
+  #   typha:
+  #     enabled: true
   # See also: https://github.com/gardener/gardener/blob/master/docs/proposals/03-networking.md
   maintenance:
     timeWindow:
