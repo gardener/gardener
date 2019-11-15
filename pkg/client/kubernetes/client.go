@@ -191,21 +191,6 @@ func ValidateClientConfig(config clientcmdapi.Config) error {
 	return nil
 }
 
-// runtimeClientFactory is the default implementation for the RuntimeClientFactory interface
-type runtimeClientFactory struct {
-}
-
-// NewRuntimeClientFactory creates a new default implementation of the RuntimeClientFactory interface
-func NewRuntimeClientFactory() RuntimeClientFactory {
-	return &runtimeClientFactory{}
-}
-
-// CreateRuntimeClientFromSecret creates a controller-runtime client by passing
-// the given parameters to NewRuntimeClientFromSecret
-func (f *runtimeClientFactory) CreateRuntimeClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (client.Client, error) {
-	return NewRuntimeClientFromSecret(secret, fns...)
-}
-
 var supportedKubernetesVersions = []string{
 	"1.10",
 	"1.11",

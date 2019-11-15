@@ -15,7 +15,6 @@
 package validator_test
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -23,15 +22,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockfactory "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/gardener/gardener/test"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -40,8 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	kubeinformers "k8s.io/client-go/informers"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("validator", func() {
@@ -49,7 +42,6 @@ var _ = Describe("validator", func() {
 		var (
 			admissionHandler      *ValidateShoot
 			gardenInformerFactory gardeninformers.SharedInformerFactory
-			kubeInformerFactory   kubeinformers.SharedInformerFactory
 			cloudProfile          garden.CloudProfile
 			seed                  garden.Seed
 			project               garden.Project
@@ -223,8 +215,6 @@ var _ = Describe("validator", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
-			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 		})
 
 		AfterEach(func() {
@@ -481,20 +471,9 @@ var _ = Describe("validator", func() {
 		Context("finalizer removal checks", func() {
 			var (
 				oldShoot *garden.Shoot
-				ctrl     *gomock.Controller
-				c        *mockclient.MockClient
-				f        *mockfactory.MockRuntimeClientFactory
-				ctx      context.Context
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				c = mockclient.NewMockClient(ctrl)
-				f = mockfactory.NewMockRuntimeClientFactory(ctrl)
-				ctx = context.TODO()
-
-				admissionHandler.SetRuntimeClientFactory(f)
-
 				shoot = *shootBase.DeepCopy()
 
 				// technical ID is used to determine the namespace in the seed
@@ -504,6 +483,12 @@ var _ = Describe("validator", func() {
 					},
 				})
 
+				shoot.Status.LastOperation = &garden.LastOperation{
+					Type:     garden.LastOperationTypeReconcile,
+					State:    garden.LastOperationStateSucceeded,
+					Progress: 100,
+				}
+
 				// set old shoot for update and add gardener finalizer to it
 				oldShoot = shoot.DeepCopy()
 				finalizers := sets.NewString(oldShoot.GetFinalizers()...)
@@ -511,36 +496,29 @@ var _ = Describe("validator", func() {
 				oldShoot.SetFinalizers(finalizers.UnsortedList())
 			})
 
-			It("should reject removing the gardener finalizer if the shoot namespace in the seed still exists", func() {
+			It("should reject removing the gardener finalizer if the shoot has not yet been deleted successfully", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&seedSecret)
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
-
-				gomock.InOrder(
-					f.EXPECT().CreateRuntimeClientFromSecret(&seedSecret, gomock.Any()).Return(c, nil),
-					c.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID), &v1.Namespace{}).Return(nil),
-				)
 
 				err := admissionHandler.Admit(attrs, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("shoot namespace in the seed exists"))
+				Expect(err.Error()).To(ContainSubstring("shoot deletion has not completed successfully yet"))
 			})
 
-			It("should admit removing the gardener finalizer if the shoot namespace in the seed does not exist anymore", func() {
+			It("should admit removing the gardener finalizer if the shoot deletion succeeded ", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&seedSecret)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
 
-				gomock.InOrder(
-					f.EXPECT().CreateRuntimeClientFromSecret(&seedSecret, gomock.Any()).Return(c, nil),
-					c.EXPECT().Get(ctx, kutil.Key(shoot.Status.TechnicalID), &v1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, _ *v1.Namespace) error {
-						return apierrors.NewNotFound(v1.Resource("Namespace"), key.Name)
-					}),
-				)
+				shoot.Status.LastOperation = &garden.LastOperation{
+					Type:     garden.LastOperationTypeDelete,
+					State:    garden.LastOperationStateSucceeded,
+					Progress: 100,
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
 
 				err := admissionHandler.Admit(attrs, nil)
 				Expect(err).ToNot(HaveOccurred())

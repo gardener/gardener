@@ -19,7 +19,6 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
@@ -76,12 +75,6 @@ type WantsAuthorizer interface {
 	admission.InitializationValidator
 }
 
-// WantsRuntimeClientFactory defines a function which sets a RuntimeClientFactory for admission plugins that need it.
-type WantsRuntimeClientFactory interface {
-	SetRuntimeClientFactory(kubeclient.RuntimeClientFactory)
-	admission.InitializationValidator
-}
-
 type pluginInitializer struct {
 	coreInformers coreinformers.SharedInformerFactory
 	coreClient    coreclientset.Interface
@@ -95,8 +88,6 @@ type pluginInitializer struct {
 	kubeClient    kubernetes.Interface
 
 	authorizer authorizer.Authorizer
-
-	runtimeClientFactory kubeclient.RuntimeClientFactory
 }
 
 var _ admission.PluginInitializer = pluginInitializer{}

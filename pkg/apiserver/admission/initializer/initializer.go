@@ -19,7 +19,6 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
@@ -36,8 +35,7 @@ func New(coreInformers coreinformers.SharedInformerFactory,
 	settingsInformers settingsinformer.SharedInformerFactory,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
-	authz authorizer.Authorizer,
-	runtimeClientFactory kubeclient.RuntimeClientFactory) admission.PluginInitializer {
+	authz authorizer.Authorizer) admission.PluginInitializer {
 	return pluginInitializer{
 		coreInformers: coreInformers,
 		coreClient:    coreClient,
@@ -51,8 +49,6 @@ func New(coreInformers coreinformers.SharedInformerFactory,
 		kubeClient:    kubeClient,
 
 		authorizer: authz,
-
-		runtimeClientFactory: runtimeClientFactory,
 	}
 }
 
@@ -86,9 +82,5 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 
 	if wants, ok := plugin.(WantsAuthorizer); ok {
 		wants.SetAuthorizer(i.authorizer)
-	}
-
-	if wants, ok := plugin.(WantsRuntimeClientFactory); ok {
-		wants.SetRuntimeClientFactory(i.runtimeClientFactory)
 	}
 }
