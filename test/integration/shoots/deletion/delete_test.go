@@ -75,15 +75,19 @@ var _ = Describe("Shoot deletion testing", func() {
 		gardenerTestOperations, err := NewGardenTestOperation(shootGardenerTest.GardenClient, testLogger)
 		Expect(err).To(BeNil())
 
-		err = gardenerTestOperations.AddShoot(ctx, shoot)
-		Expect(err).To(BeNil())
-
 		// Dump gardener state if delete shoot is in exit handler
 		if os.Getenv("TM_PHASE") == "Exit" {
+			if err := gardenerTestOperations.AddShoot(ctx, shoot); err != nil {
+				testLogger.Error(err.Error())
+				gardenerTestOperations.Shoot = shoot
+			}
 			gardenerTestOperations.DumpState(ctx)
 		}
 
 		if err := shootGardenerTest.DeleteShootAndWaitForDeletion(ctx); err != nil && !errors.IsNotFound(err) {
+			if err := gardenerTestOperations.AddShoot(ctx, shoot); err != nil {
+				testLogger.Error(err.Error())
+			}
 			gardenerTestOperations.DumpState(ctx)
 			testLogger.Fatalf("Cannot delete shoot %s: %s", *shootName, err.Error())
 		}
