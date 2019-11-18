@@ -20,7 +20,7 @@ spec:
     ports:
     - port: {{ .Values.global.elasticsearchPorts.metricsExporter }}
       protocol: TCP
-    - port: {{ .Values.fluentd.ports.metrics }}
+    - port: {{ .Values.global.fluentd.ports.metrics }}
       protocol: TCP
     - port: 9569 #hvpa
       protocol: TCP
