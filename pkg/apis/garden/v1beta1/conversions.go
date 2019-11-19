@@ -599,7 +599,7 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 		}
 		cloudProfileConfig.CountFaultDomains = nil
 		for _, c := range in.Spec.Azure.CountFaultDomains {
-			if !azureV1alpha1DomainCountsHaveRegion(cloudProfileConfig.CountUpdateDomains, c.Region) {
+			if !azureV1alpha1DomainCountsHaveRegion(cloudProfileConfig.CountFaultDomains, c.Region) {
 				cloudProfileConfig.CountFaultDomains = append(cloudProfileConfig.CountFaultDomains, azurev1alpha1.DomainCount{
 					Region: c.Region,
 					Count:  c.Count,
@@ -1056,12 +1056,14 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 		out.Spec.SeedSelector = nil
 	}
 
-	if providerConfigJSON, ok := in.Annotations[garden.MigrationCloudProfileProviderConfig]; ok {
-		var providerConfig garden.ProviderConfig
-		if err := json.Unmarshal([]byte(providerConfigJSON), &providerConfig); err != nil {
-			return err
+	if out.Spec.ProviderConfig == nil {
+		if providerConfigJSON, ok := in.Annotations[garden.MigrationCloudProfileProviderConfig]; ok {
+			providerConfig := &garden.ProviderConfig{}
+			if err := json.Unmarshal([]byte(providerConfigJSON), providerConfig); err != nil {
+				return err
+			}
+			out.Spec.ProviderConfig = providerConfig
 		}
-		out.Spec.ProviderConfig = &providerConfig
 	}
 
 	return nil
