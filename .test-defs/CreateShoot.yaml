@@ -17,6 +17,7 @@ spec:
     -shoot-kubecfg-path=$TM_KUBECONFIG_PATH/shoot.config
     -shoot-name=$SHOOT_NAME
     -cloud-profile=$CLOUDPROFILE
+    -seed=$SEED
     -secret-binding=$SECRET_BINDING
     -provider-type=$PROVIDER_TYPE
     -k8s-version=$K8S_VERSION

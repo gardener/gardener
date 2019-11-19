@@ -16,44 +16,33 @@ test:
   # will be merged with the default extensions defined in garden setup.
   gardener-extensions:
     value: |
-      {
-        "dns-external": {
-          "repo": "https://github.com/gardener/external-dns-management.git",
-          "version": "0.7.2"
-        },
-        "networking-calico": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "os-coreos": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "os-suse-jeos": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "os-ubuntu": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "provider-aws": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "provider-azure": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "provider-gcp": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        },
-        "provider-openstack": {
-          "repo": "https://github.com/gardener/gardener-extensions.git",
-          "version": "1.0.0"
-        }
-      }
+      dns-external:
+          repo: "https://github.com/gardener/external-dns-management.git"
+          version: "latest"
+      networking-calico:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      os-coreos:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      os-suse-jeos:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      os-ubuntu:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      provider-aws:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      provider-azure:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      provider-gcp:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
+      provider-openstack:
+          repo: "https://github.com/gardener/gardener-extensions.git"
+          version: "latest"
 
   # test a gcp and aws shoot with version 1.15.5 by default with all gardener tests labeled default
   shootFlavors:

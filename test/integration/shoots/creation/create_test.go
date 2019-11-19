@@ -56,6 +56,7 @@ var (
 	shootMachineType         = flag.String("machine-type", "", "the Machine type of the first worker of the test shoot. Needs to match the machine types for that Provider available in the CloudProfile.")
 	shootMachineImageVersion = flag.String("machine-image-version", "", "the Machine Image version of the first worker of the test shoot. Needs to be set when the MachineImageName is set.")
 	cloudProfile             = flag.String("cloud-profile", "", "cloudProfile to use for the shoot.")
+	seedName                 = flag.String("seed", "", "Name of the seed to use for the shoot.")
 	shootRegion              = flag.String("region", "", "region to use for the shoot. Must be compatible with the infrastructureProvider.Zone.")
 	secretBinding            = flag.String("secret-binding", "", "the secretBinding for the provider account of the shoot.")
 	shootProviderType        = flag.String("provider-type", "", "the type of the cloud provider where the shoot is deployed to. e.g gcp, aws,azure,alicloud.")
@@ -169,6 +170,10 @@ var _ = Describe("Shoot Creation testing", func() {
 
 		if shootMachineImageVersion != nil && len(*shootMachineImageVersion) > 0 {
 			shootGardenerTest.Shoot.Spec.Provider.Workers[0].Machine.Image.Version = *shootMachineImageVersion
+		}
+
+		if StringSet(*seedName) {
+			shootGardenerTest.Shoot.Spec.SeedName = seedName
 		}
 
 		gardenerTestOperation, err = NewGardenTestOperation(shootGardenerTest.GardenClient, testLogger)
