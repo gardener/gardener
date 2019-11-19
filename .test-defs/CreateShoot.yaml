@@ -4,7 +4,7 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the creation of a shoot.
-  activeDeadlineSeconds: 3600
+  activeDeadlineSeconds: 7200
 
   command: [bash, -c]
   args:
