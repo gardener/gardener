@@ -1,0 +1,67 @@
+
+# configure default values for pull request tests
+test:
+  hostprovider: gke
+
+  # uses the garden setup master to deploy gardener to the host clusters
+  gardensetup:
+    revision: "master"
+
+  # deploys gardener with the pr's head commit version
+  gardener:
+    commit:
+      prHead: true
+
+  # gardener extensions to be deployed
+  # will be merged with the default extensions defined in garden setup.
+  gardener-extensions:
+    value: |
+      {
+        "dns-external": {
+          "repo": "https://github.com/gardener/external-dns-management.git",
+          "version": "0.7.2"
+        },
+        "networking-calico": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "os-coreos": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "os-suse-jeos": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "os-ubuntu": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "provider-aws": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "provider-azure": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "provider-gcp": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        },
+        "provider-openstack": {
+          "repo": "https://github.com/gardener/gardener-extensions.git",
+          "version": "1.0.0"
+        }
+      }
+
+  # test a gcp and aws shoot with version 1.15.5 by default with all gardener tests labeled default
+  shootFlavors:
+  - provider: gcp
+    kubernetes:
+      versions:
+      - version: 1.15.5
+  - provider: aws
+    kubernetes:
+      versions:
+      - version: 1.15.5
