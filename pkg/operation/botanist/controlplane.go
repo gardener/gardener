@@ -260,13 +260,27 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	c := b.K8sSeedClient.Client()
 
-	// If a shoot is hibernated we only want to scale down the entire control plane if no nodes exist anymore. The node-lifecycle-controller
-	// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs, so let's wait for that before scaling down.
 	if b.K8sShootClient != nil {
 		ctxWithTimeOut, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 
+		// If a shoot is hibernated we only want to scale down the entire control plane if no nodes exist anymore. The node-lifecycle-controller
+		// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs, so let's wait for that before scaling down.
 		if err := b.WaitUntilNodesDeleted(ctxWithTimeOut); err != nil {
+			return err
+		}
+
+		// Also wait for all Pods to reflect the correct state before scaling down the control plane.
+		// KCM should remove all Pods in the cluster that are bound to Nodes that no longer exist and
+		// therefore there should be no Pods with state `Running` anymore.
+		if err := b.WaitUntilNoPodRunning(ctxWithTimeOut); err != nil {
+			return err
+		}
+
+		// Also wait for all Endpoints to not contain any IPs from the Shoot's PodCIDR.
+		// This is to make sure that the Endpoints objects also reflect the correct state of the hibernated cluster.
+		// Otherwise this could cause timeouts in user-defined webhooks for CREATE Pods or Nodes on wakeup.
+		if err := b.WaitUntilEndpointsDoNotContainPodIPs(ctxWithTimeOut); err != nil {
 			return err
 		}
 	}
