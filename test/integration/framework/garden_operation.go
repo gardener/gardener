@@ -278,7 +278,7 @@ func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{}
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: deploymentNamespace, Name: deploymentName}, deployment); err != nil {
-			return retry.SevereError(err)
+			return retry.MinorError(err)
 		}
 
 		if err := health.CheckDeployment(deployment); err != nil {
@@ -295,7 +295,7 @@ func (o *GardenerTestOperation) WaitUntilStatefulSetIsRunning(ctx context.Contex
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		statefulSet := &appsv1.StatefulSet{}
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: statefulSetNamespace, Name: statefulSetName}, statefulSet); err != nil {
-			return retry.SevereError(err)
+			return retry.MinorError(err)
 		}
 
 		if err := health.CheckStatefulSet(statefulSet); err != nil {
@@ -304,6 +304,24 @@ func (o *GardenerTestOperation) WaitUntilStatefulSetIsRunning(ctx context.Contex
 		}
 
 		o.Logger.Infof("%s is now ready!!", statefulSetName)
+		return retry.Ok()
+	})
+}
+
+// WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
+func (o *GardenerTestOperation) WaitUntilDaemonSetIsRunning(ctx context.Context, daemonSetName, daemonSetNamespace string, c kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		daemonSet := &appsv1.DaemonSet{}
+		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: daemonSetNamespace, Name: daemonSetName}, daemonSet); err != nil {
+			return retry.MinorError(err)
+		}
+
+		if err := health.CheckDaemonSet(daemonSet); err != nil {
+			o.Logger.Infof("Waiting for %s to be ready!!", daemonSetName)
+			return retry.MinorError(fmt.Errorf("daemon set %s is not healthy: %v", daemonSetName, err))
+		}
+
+		o.Logger.Infof("%s is now ready!!", daemonSetName)
 		return retry.Ok()
 	})
 }
