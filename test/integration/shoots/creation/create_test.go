@@ -83,7 +83,7 @@ var (
 )
 
 const (
-	CreateAndReconcileTimeout = 7200 * time.Second
+	CreateAndReconcileTimeout = 2 * time.Hour
 	InitializationTimeout     = 20 * time.Second
 )
 

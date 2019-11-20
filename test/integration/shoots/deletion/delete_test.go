@@ -91,5 +91,5 @@ var _ = Describe("Shoot deletion testing", func() {
 			gardenerTestOperations.DumpState(ctx)
 			testLogger.Fatalf("Cannot delete shoot %s: %s", *shootName, err.Error())
 		}
-	}, 1800*time.Second)
+	}, 1*time.Hour)
 })
