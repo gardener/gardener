@@ -110,7 +110,7 @@ images:
   tag: "1.29.2"
 - name: alpine
   repository: alpine
-  tag: "3.8"
+  tag: "3.10.3"
 - name: alpine-iptables
   repository: eu.gcr.io/gardener-project/alpine-iptables
   tag: "3.9"

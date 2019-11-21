@@ -27,4 +27,4 @@ spec:
     -test-machinery-run=true
     -worker-zone=$ZONE
 
-  image: golang:1.13.0
+  image: golang:1.13.4

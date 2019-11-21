@@ -18,4 +18,4 @@ spec:
       -plant-path=$(realpath ./example/100-plant.yaml)
       -plant-test-namespace=$PROJECT_NAMESPACE
 
-  image: golang:1.13.0
+  image: golang:1.13.4
