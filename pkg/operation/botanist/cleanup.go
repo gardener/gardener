@@ -182,8 +182,9 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list runtime
 // CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
-		c   = b.K8sShootClient.Client()
-		ops = utilclient.DefaultCleanOps()
+		c       = b.K8sShootClient.Client()
+		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
 	return flow.Parallel(
@@ -196,9 +197,10 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
 		c           = b.K8sShootClient.Client()
-		defaultOps  = utilclient.DefaultCleanOps()
+		ensurer     = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		defaultOps  = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 		crdCleaner  = utilclient.NewCRDCleaner()
-		crdCleanOps = utilclient.NewCleanOps(crdCleaner, utilclient.DefaultGoneEnsurer())
+		crdCleanOps = utilclient.NewCleanOps(crdCleaner, ensurer)
 	)
 
 	return flow.Parallel(
@@ -212,8 +214,11 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // in the Shoot cluster other than those stored in the exceptions map have been deleted.
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
-	c := b.K8sShootClient.Client()
-	ops := utilclient.DefaultCleanOps()
+	var (
+		c       = b.K8sShootClient.Client()
+		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+	)
 
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
