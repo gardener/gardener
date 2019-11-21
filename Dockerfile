@@ -1,5 +1,5 @@
 #############      builder       #############
-FROM golang:1.13.3 AS builder
+FROM golang:1.13.4 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
   ./...
 
 #############      apiserver     #############
-FROM alpine:3.8 AS apiserver
+FROM alpine:3.10.3 AS apiserver
 
 RUN apk add --update bash curl tzdata
 
@@ -24,7 +24,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
-FROM alpine:3.8 AS controller-manager
+FROM alpine:3.10.3 AS controller-manager
 
 RUN apk add --update bash curl openvpn tzdata
 
@@ -36,7 +36,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-controller-manager"]
 
 ############# scheduler #############
-FROM alpine:3.8 AS scheduler
+FROM alpine:3.10.3 AS scheduler
 
 RUN apk add --update bash curl
 

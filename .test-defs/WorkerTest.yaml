@@ -34,4 +34,4 @@ spec:
     -workers-config-filepath=$WORKERS_CONFIG_FILEPATH
 #    -external-domain=
 
-  image: golang:1.13.0
+  image: golang:1.13.4

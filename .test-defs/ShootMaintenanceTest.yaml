@@ -28,4 +28,4 @@ spec:
     -worker-zone=$ZONE
 #    -machine-image-name=$MACHINE_IMAGE
 #    -machine-type=$MACHINE_TYPE
-  image: golang:1.13.0
+  image: golang:1.13.4
