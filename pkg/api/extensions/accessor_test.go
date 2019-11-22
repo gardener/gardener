@@ -150,6 +150,44 @@ var _ = Describe("Accessor", func() {
 						Expect(acc.GetType()).To(Equal(t))
 					})
 				})
+				Describe("#Get Conditions", func() {
+					It("should get the conditions", func() {
+						var (
+							conditions = []gardencorev1alpha1.Condition{
+								{
+									Type:           "ABC",
+									Status:         gardencorev1alpha1.ConditionTrue,
+									Reason:         "reason",
+									Message:        "message",
+									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
+								},
+							}
+							acc = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{Conditions: conditions})
+						)
+						getConditions := acc.GetConditions()
+						Expect(getConditions).To(Equal(conditions))
+					})
+				})
+
+				Describe("#Set Conditions", func() {
+					It("should set the conditions", func() {
+						var (
+							acc        = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+							conditions = []gardencorev1alpha1.Condition{
+								{
+									Type:           "ABC",
+									Status:         gardencorev1alpha1.ConditionTrue,
+									Reason:         "reason",
+									Message:        "message",
+									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
+								},
+							}
+						)
+						acc.SetConditions(conditions)
+						getConditions := acc.GetConditions()
+						Expect(getConditions).To(Equal(conditions))
+					})
+				})
 			})
 		})
 	})
