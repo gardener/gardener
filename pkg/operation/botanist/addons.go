@@ -150,7 +150,8 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 
 		data := make(map[string][]byte, len(renderedChart.Files()))
 		for fileName, fileContent := range renderedChart.Files() {
-			data[strings.Replace(fileName, "/", "_", -1)] = []byte(fileContent)
+			key := strings.Replace(fileName, "/", "_", -1)
+			data[key] = []byte(fileContent)
 		}
 
 		secretName := "managedresource-" + name

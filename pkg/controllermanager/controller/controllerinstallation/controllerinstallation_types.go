@@ -27,6 +27,8 @@ type HelmDeployment struct {
 }
 
 // DeployedResources is a providerStatus specific type for ControllerInstallation.
+//
+// TODO: Kept for backwards compatibility. Remove after several releases.
 type DeployedResources struct {
 	// Resources is a list of objects that have been created.
 	Resources []corev1.ObjectReference `json:"resources,omitempty"`

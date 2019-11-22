@@ -120,7 +120,7 @@ The `Shoot` resource itself will contain some provider-specific data blobs.
 As a result, some extensions might also want to run in the garden cluster, e.g., to provide `ValidatingWebhookConfiguration`s for validating the correctness of their provider-specific blobs:
 
 ```yaml
-apiVersion: gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1alpha1
 kind: Shoot
 metadata:
   name: johndoe-aws
