@@ -16,6 +16,7 @@ package shoot_test
 
 import (
 	"context"
+	"github.com/gardener/gardener/test/framework"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,8 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/test"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -281,7 +280,7 @@ var _ = Describe("shoot", func() {
 						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
-							GloballyEnabled: test.MakeBoolPointer(true),
+							GloballyEnabled: framework.MakeBoolPointer(true),
 						},
 					},
 				},
