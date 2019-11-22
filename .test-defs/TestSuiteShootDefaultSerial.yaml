@@ -1,0 +1,25 @@
+kind: TestDefinition
+metadata:
+  name: shoot-default-serial-test-suite
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: shoot test suites that includes all serial default tests
+
+  activeDeadlineSeconds: 7200
+  labels: ["shoot", "default"]
+  behavior:
+  - serial
+
+  command: [bash, -c]
+  args:
+    - >-
+      go test -timeout=0 -mod=vendor ./test/suites/shoot
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+      --report-file=$TM_EXPORT_PATH/report.json
+      -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
+      -shoot-name=$SHOOT_NAME
+      -project-namespace=$PROJECT_NAMESPACE
+      -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
+      -ginkgo.skip="\[DISRUPTIVE\]"
+
+  image: golang:1.13.4

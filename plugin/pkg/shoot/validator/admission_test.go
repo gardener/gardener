@@ -25,8 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
-	"github.com/gardener/gardener/test"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -172,7 +170,7 @@ var _ = Describe("validator", func() {
 					SecretBindingName: "my-secret",
 					SeedName:          &seedName,
 					DNS: &garden.DNS{
-						Domain: test.MakeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
+						Domain: pointer.StringPtr(fmt.Sprintf("shoot.%s", baseDomain)),
 						Providers: []garden.DNSProvider{
 							{
 								Type: &unmanagedDNSProvider,
