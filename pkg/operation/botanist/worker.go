@@ -84,10 +84,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Name:    worker.Machine.Image.Name,
 				Version: worker.Machine.Image.Version,
 			},
-			UserData: []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
-			Volume:   volume,
-			Zones:    worker.Zones,
 			ProviderConfig: pConfig,
+			UserData:       []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
+			Volume:         volume,
+			Zones:          worker.Zones,
 		})
 	}
 

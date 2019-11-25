@@ -26,7 +26,6 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	machine "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -761,16 +760,15 @@ func makeNodeLister(clientset kubernetes.Interface, options metav1.ListOptions) 
 	})
 }
 
-func makeMachineDeploymentLister(clientset machine.Interface, namespace string, options metav1.ListOptions) kutil.MachineDeploymentLister {
+func makeMachineDeploymentLister(c client.Client, namespace string) kutil.MachineDeploymentLister {
 	var (
 		once  sync.Once
 		items []*machinev1alpha1.MachineDeployment
 		err   error
 
 		onceBody = func() {
-			var list *machinev1alpha1.MachineDeploymentList
-			list, err = clientset.MachineV1alpha1().MachineDeployments(namespace).List(options)
-			if err != nil {
+			list := &machinev1alpha1.MachineDeploymentList{}
+			if err := c.List(context.TODO(), list, client.InNamespace(namespace)); err != nil {
 				return
 			}
 
@@ -810,9 +808,8 @@ var (
 		v1alpha1constants.GardenRoleMonitoring,
 	)
 
-	seedDeploymentListOptions        = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
-	seedStatefulSetListOptions       = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
-	seedMachineDeploymentListOptions = metav1.ListOptions{}
+	seedDeploymentListOptions  = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
+	seedStatefulSetListOptions = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 
 	shootDeploymentListOptions = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsSelector.String()}
 	shootDaemonSetListOptions  = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsMonitoringSelector.String()}
@@ -834,7 +831,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	var (
 		seedDeploymentLister        = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
 		seedStatefulSetLister       = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
-		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.Machine(), b.Shoot.SeedNamespace, seedMachineDeploymentListOptions)
+		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 
 		checker = NewHealthChecker(thresholdMappings)
 	)

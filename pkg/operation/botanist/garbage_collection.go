@@ -22,9 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,8 +32,10 @@ import (
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
 // i.e., it deletes old machine sets which have a desired=actual=0 replica count.
 func (b *Botanist) PerformGarbageCollectionSeed() error {
+	ctx := context.TODO()
+
 	podList := &corev1.PodList{}
-	if err := b.K8sSeedClient.Client().List(context.TODO(), podList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+	if err := b.K8sSeedClient.Client().List(ctx, podList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
@@ -41,19 +43,15 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 		return err
 	}
 
-	machineSetList, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineSets(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
-	if err != nil {
+	machineSetList := &machinev1alpha1.MachineSetList{}
+	if err := b.K8sSeedClient.Client().List(ctx, machineSetList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
 	for _, machineSet := range machineSetList.Items {
 		if machineSet.Spec.Replicas == 0 && machineSet.Status.Replicas == 0 {
 			b.Logger.Debugf("Deleting MachineSet %s as the number of desired and actual replicas is 0.", machineSet.Name)
-			err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineSets(machineSet.Namespace).Delete(machineSet.Name, nil)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					continue
-				}
+			if err := b.K8sSeedClient.Client().Delete(ctx, machineSet.DeepCopy()); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}

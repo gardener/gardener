@@ -8,7 +8,6 @@ import (
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	versioned0 "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	versioned1 "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -167,20 +166,6 @@ func (m *MockInterface) Kubernetes() kubernetes0.Interface {
 func (mr *MockInterfaceMockRecorder) Kubernetes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kubernetes", reflect.TypeOf((*MockInterface)(nil).Kubernetes))
-}
-
-// Machine mocks base method
-func (m *MockInterface) Machine() versioned1.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Machine")
-	ret0, _ := ret[0].(versioned1.Interface)
-	return ret0
-}
-
-// Machine indicates an expected call of Machine
-func (mr *MockInterfaceMockRecorder) Machine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Machine", reflect.TypeOf((*MockInterface)(nil).Machine))
 }
 
 // RESTClient mocks base method
