@@ -63,6 +63,13 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
+		var pConfig *runtime.RawExtension
+		if worker.ProviderConfig != nil {
+			pConfig = &runtime.RawExtension{
+				Raw: worker.ProviderConfig.Raw,
+			}
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           worker.Name,
 			Minimum:        int(worker.Minimum),
@@ -80,6 +87,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			UserData: []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
 			Volume:   volume,
 			Zones:    worker.Zones,
+			ProviderConfig: pConfig,
 		})
 	}
 
