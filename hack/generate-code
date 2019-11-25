@@ -146,15 +146,6 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   --extra-peer-dirs=github.com/gardener/gardener/pkg/scheduler/apis/config,github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
   -h <(headers)
 
-# Machine API clients
-
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
-  client,lister,informer \
-  github.com/gardener/gardener/pkg/client/machine \
-  github.com/gardener/machine-controller-manager/pkg/apis \
-  machine:v1alpha1 \
-  -h <(headers)
-
 rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
 go install ./${PROJECT_ROOT}/vendor/k8s.io/kube-openapi/cmd/openapi-gen
 

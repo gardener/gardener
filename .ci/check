@@ -52,7 +52,7 @@ fi
 
 ###############################################################################
 
-PACKAGES="$(go list -mod=vendor -e ./... | grep -vE '/pkg/apis|/pkg/controllermanager/apis|/pkg/scheduler/apis|/pkg/client/garden|/pkg/client/machine|/pkg/openapi')"
+PACKAGES="$(go list -mod=vendor -e ./... | grep -vE '/pkg/apis|/pkg/controllermanager/apis|/pkg/scheduler/apis|/pkg/client/garden|/pkg/openapi')"
 PACKAGES_DIRS="$(echo ${PACKAGES} | sed "s|github.com/gardener/gardener|.|g")"
 
 # Execute static code checks.

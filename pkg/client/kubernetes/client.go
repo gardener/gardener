@@ -21,7 +21,6 @@ import (
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -254,11 +253,6 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	machine, err := machineclientset.NewForConfig(conf.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	apiRegistration, err := apiserviceclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
@@ -281,7 +275,6 @@ func new(conf *config) (Interface, error) {
 		kubernetes:      kubernetes,
 		garden:          garden,
 		gardenCore:      gardenCore,
-		machine:         machine,
 		apiregistration: apiRegistration,
 		apiextension:    apiExtension,
 	}

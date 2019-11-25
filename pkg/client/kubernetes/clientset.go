@@ -17,7 +17,6 @@ package kubernetes
 import (
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/kubernetes"
@@ -59,11 +58,6 @@ func (c *Clientset) Garden() gardenclientset.Interface {
 // GardenCore will return the gardenCore attribute of the Client object.
 func (c *Clientset) GardenCore() gardencoreclientset.Interface {
 	return c.gardenCore
-}
-
-// Machine will return the machine attribute of the Client object.
-func (c *Clientset) Machine() machineclientset.Interface {
-	return c.machine
 }
 
 // APIExtension will return the apiextensionsClientset attribute of the Client object.

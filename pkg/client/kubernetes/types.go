@@ -22,12 +22,11 @@ import (
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
-	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
-	machinescheme "github.com/gardener/gardener/pkg/client/machine/clientset/versioned/scheme"
 
 	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -77,7 +76,7 @@ func init() {
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		machinescheme.AddToScheme,
+		machinev1alpha1.AddToScheme,
 		dnsscheme.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 		resourcesscheme.AddToScheme,
@@ -119,7 +118,6 @@ type Clientset struct {
 	kubernetes      kubernetesclientset.Interface
 	garden          gardenclientset.Interface
 	gardenCore      gardencoreclientset.Interface
-	machine         machineclientset.Interface
 	apiextension    apiextensionsclientset.Interface
 	apiregistration apiregistrationclientset.Interface
 
@@ -163,7 +161,6 @@ type Interface interface {
 	Kubernetes() kubernetesclientset.Interface
 	Garden() gardenclientset.Interface
 	GardenCore() gardencoreclientset.Interface
-	Machine() machineclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 

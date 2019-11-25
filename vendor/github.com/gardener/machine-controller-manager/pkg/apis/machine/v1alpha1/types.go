@@ -69,6 +69,20 @@ type MachineSpec struct {
 	// ProviderID represents the provider's unique ID given to a machine
 	// +optional
 	ProviderID string `json:"providerID,omitempty"`
+
+	// NodeTemplateSpec describes the data a node should have when created from a template
+	// +optional
+	NodeTemplateSpec NodeTemplateSpec `json:"nodeTemplate,omitempty"`
+}
+
+// NodeTemplateSpec describes the data a node should have when created from a template
+type NodeTemplateSpec struct {
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// NodeSpec describes the attributes that a node is created with.
+	// +optional
+	Spec corev1.NodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // MachineTemplateSpec describes the data a machine should have when created from a template
@@ -931,7 +945,8 @@ type AzureVirtualMachineProperties struct {
 	StorageProfile  AzureStorageProfile  `json:"storageProfile,omitempty"`
 	OsProfile       AzureOSProfile       `json:"osProfile,omitempty"`
 	NetworkProfile  AzureNetworkProfile  `json:"networkProfile,omitempty"`
-	AvailabilitySet AzureSubResource     `json:"availabilitySet,omitempty"`
+	AvailabilitySet *AzureSubResource    `json:"availabilitySet,omitempty"`
+	Zone            *int                 `json:"zone,omitempty"`
 }
 
 // AzureHardwareProfile is specifies the hardware settings for the virtual machine.
@@ -950,11 +965,9 @@ type AzureStorageProfile struct {
 // marketplace images, or virtual machine images. This element is required when you want to use a platform image,
 // marketplace image, or virtual machine image, but is not used in other creation operations.
 type AzureImageReference struct {
-	ID        string `json:"id,omitempty"`
-	Publisher string `json:"publisher,omitempty"`
-	Offer     string `json:"offer,omitempty"`
-	Sku       string `json:"sku,omitempty"`
-	Version   string `json:"version,omitempty"`
+	ID string `json:"id,omitempty"`
+	// Uniform Resource Name of the OS image to be used , it has the format 'publisher:offer:sku:version'
+	URN *string `json:"urn,omitempty"`
 }
 
 // AzureOSDisk is specifies information about the operating system disk used by the virtual machine. <br><br> For more
@@ -1028,8 +1041,9 @@ type AzureSubResource struct {
 
 // AzureSubnetInfo is the information containing the subnet details
 type AzureSubnetInfo struct {
-	VnetName   string `json:"vnetName,omitempty"`
-	SubnetName string `json:"subnetName,omitempty"`
+	VnetName          string  `json:"vnetName,omitempty"`
+	VnetResourceGroup *string `json:"vnetResourceGroup,omitempty"`
+	SubnetName        string  `json:"subnetName,omitempty"`
 }
 
 /********************** GCPMachineClass APIs ***************/
@@ -1099,8 +1113,9 @@ type GCPMetadata struct {
 
 // GCPNetworkInterface describes network interfaces for GCP
 type GCPNetworkInterface struct {
-	Network    string `json:"network,omitempty"`
-	Subnetwork string `json:"subnetwork,omitempty"`
+	DisableExternalIP bool   `json:"disableExternalIP,omitempty"`
+	Network           string `json:"network,omitempty"`
+	Subnetwork        string `json:"subnetwork,omitempty"`
 }
 
 // GCPScheduling describes scheduling configuration for GCP.
@@ -1142,8 +1157,16 @@ const (
 	OpenStackInsecure string = "insecure"
 	// OpenStackDomainName is a constant for a key name that is part of the OpenStack cloud credentials.
 	OpenStackDomainName string = "domainName"
+	// OpenStackDomainID is a constant for a key name that is part of the OpenStack cloud credentials.
+	OpenStackDomainID string = "domainID"
 	// OpenStackTenantName is a constant for a key name that is part of the OpenStack cloud credentials.
 	OpenStackTenantName string = "tenantName"
+	// OpenStackTenantID is a constant for a key name that is part of the OpenStack cloud credentials.
+	OpenStackTenantID string = "tenantID"
+	// OpenStackUserDomainName is a constant for a key name that is part of the OpenStack cloud credentials.
+	OpenStackUserDomainName string = "userDomainName"
+	// OpenStackUserDomainID is a constant for a key name that is part of the OpenStack cloud credentials.
+	OpenStackUserDomainID string = "userDomainID"
 	// OpenStackUsername is a constant for a key name that is part of the OpenStack cloud credentials.
 	OpenStackUsername string = "username"
 	// OpenStackPassword is a constant for a key name that is part of the OpenStack cloud credentials.
@@ -1159,7 +1182,7 @@ const (
 	AlicloudAccessKeySecret string = "alicloudAccessKeySecret"
 
 	// PacketAPIKey is a constant for a key name that is part of the Packet cloud credentials
-	PacketAPIKey string = "packetAPIKey"
+	PacketAPIKey string = "apiToken"
 )
 
 /********************** AlicloudMachineClass APIs ***************/
@@ -1253,20 +1276,14 @@ type PacketMachineClassList struct {
 
 // PacketMachineClassSpec is the specification of a cluster.
 type PacketMachineClassSpec struct {
-	Facility     []string           `json:"facility"`
-	MachineType  string             `json:"machineType"`
-	BillingCycle string             `json:"billingCycle"`
-	OS           string             `json:"OS"`
-	ProjectID    string             `json:"projectID"`
-	Tags         map[string]string  `json:"tags,omitempty"`
-	SSHKeys      []PacketSSHKeySpec `json:"sshKeys,omitempty"`
-	UserData     string             `json:"userdata,omitempty"`
+	Facility     []string `json:"facility"`
+	MachineType  string   `json:"machineType"`
+	BillingCycle string   `json:"billingCycle"`
+	OS           string   `json:"OS"`
+	ProjectID    string   `json:"projectID"`
+	Tags         []string `json:"tags,omitempty"`
+	SSHKeys      []string `json:"sshKeys,omitempty"`
+	UserData     string   `json:"userdata,omitempty"`
 
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
-}
-
-// PacketSSHKeySpec describes ssh keys for packet
-type PacketSSHKeySpec struct {
-	ID          string `json:"id"`
-	Fingerprint string `json:"fingerprint"`
 }
