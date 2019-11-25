@@ -77,6 +77,11 @@ spec:
           requests:
             cpu: 20m
             memory: 64Mi
+        ports:
+        - containerPort: {{ .Values.ports.metrics }}
+          protocol: TCP
+          hostPort: {{ .Values.ports.metrics }}
+          name: metrics
         volumeMounts:
         - name: kubeconfig
           mountPath: /var/lib/kube-proxy

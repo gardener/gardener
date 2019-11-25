@@ -11,3 +11,6 @@ images:
 podAnnotations: {}
 
 enableIPVS: false
+
+ports:
+  metrics: 10249
