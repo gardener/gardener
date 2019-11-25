@@ -127,6 +127,9 @@ allowedMetrics:
   - etcdbr_validation_duration_seconds_count
   - etcdbr_validation_duration_seconds_sum
   - process_resident_memory_bytes
+  kubeProxy:
+  - kubeproxy_network_programming_duration_seconds_(.+)
+  - kubeproxy_sync_proxy_rules_(.+)
   kubeScheduler:
   - scheduler_binding_latency_microseconds_bucket
   - scheduler_e2e_scheduling_latency_microseconds_bucket
