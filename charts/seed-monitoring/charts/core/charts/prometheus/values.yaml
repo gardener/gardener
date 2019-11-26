@@ -341,31 +341,10 @@ alerting:
 
 ignoreAlerts: false
 
-# object can be any object you want to scale Prometheus on:
-# - number of Pods
-# - number of Nodes
-# - total Foos
-objectCount: 4
 resources:
   requests:
-    cpu:
-      base: 200
-      perObject: 6
-      weight: 5
-      unit: m
-    memory:
-      base: 360
-      perObject: 35
-      weight: 5
-      unit: Mi
+    cpu: 200m
+    memory: 360Mi
   limits:
-    cpu:
-      base: 350
-      perObject: 12
-      weight: 5
-      unit: m
-    memory:
-      base: 760
-      perObject: 60
-      weight: 5
-      unit: Mi
+    cpu: 350m
+    memory: 760Mi
