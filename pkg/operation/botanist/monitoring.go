@@ -86,7 +86,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},
-			"objectCount": b.Shoot.GetNodeCount(),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-prometheus":       b.CheckSums["prometheus"],
 				"checksum/secret-vpn-seed":         b.CheckSums["vpn-seed"],
