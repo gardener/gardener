@@ -14,6 +14,7 @@ type CoreInterface interface {
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	PlantsGetter
+	ShootStatesGetter
 }
 
 // CoreClient is used to interact with features provided by the core.gardener.cloud group.
@@ -39,6 +40,10 @@ func (c *CoreClient) ControllerRegistrations() ControllerRegistrationInterface {
 
 func (c *CoreClient) Plants(namespace string) PlantInterface {
 	return newPlants(c, namespace)
+}
+
+func (c *CoreClient) ShootStates(namespace string) ShootStateInterface {
+	return newShootStates(c, namespace)
 }
 
 // NewForConfig creates a new CoreClient for the given config.

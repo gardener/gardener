@@ -31,6 +31,8 @@ Resource Types:
 <a href="#core.gardener.cloud/v1alpha1.Seed">Seed</a>
 </li><li>
 <a href="#core.gardener.cloud/v1alpha1.Shoot">Shoot</a>
+</li><li>
+<a href="#core.gardener.cloud/v1alpha1.ShootState">ShootState</a>
 </li></ul>
 <h3 id="core.gardener.cloud/v1alpha1.BackupBucket">BackupBucket
 </h3>
@@ -1506,6 +1508,100 @@ ShootStatus
 <td>
 <em>(Optional)</em>
 <p>Most recently observed status of the Shoot cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1alpha1.ShootState">ShootState
+</h3>
+<p>
+<p>ShootState contains a snapshot of the Shoot&rsquo;s state required to migrate the Shoot&rsquo;s control plane to a new Seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ShootState</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">
+ShootStateSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the ShootState.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.GardenerResourceData">
+[]GardenerResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">
+[]ExtensionResourceState
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
+</td>
+</tr>
+</table>
 </td>
 </tr>
 </tbody>
@@ -3064,6 +3160,62 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1alpha1.ExtensionResourceState">ExtensionResourceState
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec</a>)
+</p>
+<p>
+<p>ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot&rsquo;s
+namespace on the Seed cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind (type) of the extension custom resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose of the extension custom resource</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>state</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<p>State of the extension resource</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1alpha1.Gardener">Gardener
 </h3>
 <p>
@@ -3144,6 +3296,47 @@ time.Duration
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1alpha1.GardenerResourceData">GardenerResourceData
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec</a>)
+</p>
+<p>
+<p>GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot&rsquo;s control plane.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the object required to generate resources</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<p>Data contains the payload required to generate resources</p>
 </td>
 </tr>
 </tbody>
@@ -5644,6 +5837,7 @@ definition in the documentation of your provider extension.</p>
 <a href="#core.gardener.cloud/v1alpha1.ControllerDeployment">ControllerDeployment</a>, 
 <a href="#core.gardener.cloud/v1alpha1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
 <a href="#core.gardener.cloud/v1alpha1.Extension">Extension</a>, 
+<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">ExtensionResourceState</a>, 
 <a href="#core.gardener.cloud/v1alpha1.Networking">Networking</a>, 
 <a href="#core.gardener.cloud/v1alpha1.Provider">Provider</a>, 
 <a href="#core.gardener.cloud/v1alpha1.ShootMachineImage">ShootMachineImage</a>, 
@@ -6644,6 +6838,53 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1alpha1.ShootState">ShootState</a>)
+</p>
+<p>
+<p>ShootStateSpec is the specification of the ShootState.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.GardenerResourceData">
+[]GardenerResourceData
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">
+[]ExtensionResourceState
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus
 </h3>
 <p>
@@ -7153,5 +7394,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>6d4b8494</code>.
+on git commit <code>b8e714c8a</code>.
 </em></p>

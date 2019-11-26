@@ -23,3 +23,5 @@ type SecretBindingExpansion interface{}
 type SeedExpansion interface{}
 
 type ShootExpansion interface{}
+
+type ShootStateExpansion interface{}

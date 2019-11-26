@@ -23,6 +23,7 @@ import (
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	plantstore "github.com/gardener/gardener/pkg/registry/core/plant/storage"
+	shootstatestore "github.com/gardener/gardener/pkg/registry/core/shootstate/storage"
 
 	// garden storage for migration
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
@@ -95,6 +96,9 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	shootStorage := shootstore.NewStorage(restOptionsGetter)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
+
+	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
+	storage["shootstates"] = shootStateStorage.ShootState
 
 	return storage
 }
