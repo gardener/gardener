@@ -11308,7 +11308,7 @@ func schema_pkg_apis_garden_v1beta1_Zone(ref common.ReferenceCallback) common.Op
 						},
 					},
 				},
-				Required: []string{"region", "names"},
+				Required: []string{"region"},
 			},
 		},
 	}

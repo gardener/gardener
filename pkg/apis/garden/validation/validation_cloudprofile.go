@@ -16,17 +16,18 @@ package validation
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver"
+	"regexp"
+	"time"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/utils"
+
+	"github.com/Masterminds/semver"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"regexp"
-
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"time"
 )
 
 // ValidateCloudProfile validates a CloudProfile object.
@@ -534,10 +535,6 @@ func validateZonesOnly(zones []garden.Zone, fldPath *field.Path) field.ErrorList
 			allErrs = append(allErrs, field.Duplicate(regionPath, zone.Region))
 		} else {
 			regionsFound.Insert(zone.Region)
-		}
-
-		if len(zone.Names) == 0 {
-			allErrs = append(allErrs, field.Required(namesPath, "must provide at least one zone for this region"))
 		}
 
 		zonesFound := sets.NewString()
