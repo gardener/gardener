@@ -606,7 +606,7 @@ func validateAWS(c *validationContext) field.ErrorList {
 
 	for i, zone := range c.shoot.Spec.Cloud.AWS.Zones {
 		idxPath := path.Child("zones").Index(i)
-		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 			if len(validZones) == 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Region, "this region is not allowed"))
 			} else {
@@ -709,7 +709,7 @@ func validateGCP(c *validationContext) field.ErrorList {
 
 	for i, zone := range c.shoot.Spec.Cloud.GCP.Zones {
 		idxPath := path.Child("zones").Index(i)
-		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 			if len(validZones) == 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Region, "this region is not allowed"))
 			} else {
@@ -763,7 +763,7 @@ func validatePacket(c *validationContext) field.ErrorList {
 
 	for i, zone := range c.shoot.Spec.Cloud.Packet.Zones {
 		idxPath := path.Child("zones").Index(i)
-		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 			if len(validZones) == 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Region, "this region is not allowed"))
 			} else {
@@ -820,7 +820,7 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 
 	for i, zone := range c.shoot.Spec.Cloud.OpenStack.Zones {
 		idxPath := path.Child("zones").Index(i)
-		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 			if len(validZones) == 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Region, "this region is not allowed"))
 			} else {
@@ -874,7 +874,7 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 
 	for i, zone := range c.shoot.Spec.Cloud.Alicloud.Zones {
 		idxPath := path.Child("zones").Index(i)
-		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 			if len(validZones) == 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Region, "this region is not allowed"))
 			} else {
@@ -925,7 +925,7 @@ func validateProvider(c *validationContext) field.ErrorList {
 
 		for j, zone := range worker.Zones {
 			jdxPath := idxPath.Child("zones").Index(j)
-			if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, zone); !ok {
+			if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
 				if len(validZones) == 0 {
 					allErrs = append(allErrs, field.Invalid(jdxPath, c.shoot.Spec.Region, "this region is not allowed"))
 				} else {
@@ -1156,7 +1156,7 @@ top:
 	return false, validValues
 }
 
-func validateZones(constraints []garden.Region, region, zone string) (bool, []string) {
+func validateZones(constraints []garden.Region, region, oldRegion, zone string) (bool, []string) {
 	validValues := []string{}
 
 	for _, r := range constraints {
@@ -1168,6 +1168,10 @@ func validateZones(constraints []garden.Region, region, zone string) (bool, []st
 				}
 			}
 		}
+	}
+
+	if region == oldRegion {
+		return true, nil
 	}
 
 	return false, validValues
