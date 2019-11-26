@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -33,6 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 )
@@ -643,6 +645,41 @@ var _ = Describe("validator", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+		})
+
+		Context("tests for infrastructure update", func() {
+			var (
+				oldShoot *garden.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = shootBase.DeepCopy()
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			})
+
+			It("should add deploy infrastructure task because spec has changed", func() {
+				shoot.Spec.Provider.InfrastructureConfig = &garden.ProviderConfig{
+					RawExtension: runtime.RawExtension{
+						Raw: []byte("infrastructure"),
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
+			})
+
+			It("should not add deploy infrastructure task because spec has not changed", func() {
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).ToNot(BeTrue())
+			})
 		})
 
 		Context("tests for AWS cloud", func() {
