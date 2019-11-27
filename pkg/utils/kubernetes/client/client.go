@@ -265,6 +265,47 @@ func DefaultGoneEnsurer() GoneEnsurer {
 	return defaultGoneEnsurer
 }
 
+// GoneBeforeEnsurer returns an implementation of `GoneEnsurer` which is time aware.
+func GoneBeforeEnsurer(before time.Time) GoneEnsurer {
+	return &beforeGoneEnsurer{
+		time: before,
+	}
+}
+
+type beforeGoneEnsurer struct {
+	time time.Time
+}
+
+// EnsureGoneBefore ensures that no given object or objects in the list exist before the given time.
+func (b *beforeGoneEnsurer) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
+	if err := EnsureGone(ctx, c, obj, opts...); err != nil {
+		if _, ok := err.(*objectsRemaining); !ok {
+			return err
+		}
+		var (
+			relevants  []runtime.Object
+			remainings = err.(*objectsRemaining)
+		)
+
+		for _, remaining := range *remainings {
+			accessor, err := meta.Accessor(remaining)
+			if err != nil {
+				return err
+			}
+
+			if accessor.GetCreationTimestamp().Time.Before(b.time) {
+				relevants = append(relevants, remaining)
+			}
+		}
+
+		if len(relevants) > 0 {
+			err := objectsRemaining(relevants)
+			return &err
+		}
+	}
+	return nil
+}
+
 // EnsureGone ensures that the given object or list is gone.
 func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
 	if meta.IsListType(obj) {
