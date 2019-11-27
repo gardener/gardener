@@ -118,7 +118,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what
                 ever data it needs.
-              type: string
+              type: object
             providerStatus:
               description: Provider-specific output for this control plane
               type: object

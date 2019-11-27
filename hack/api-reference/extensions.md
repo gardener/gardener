@@ -1796,10 +1796,13 @@ int64
 <td>
 <code>state</code></br>
 <em>
-string
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>State can be filled by the operating controller with what ever data it needs.</p>
 </td>
 </tr>
@@ -3187,5 +3190,5 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>486dac1fc</code>.
+on git commit <code>27b4aaf7</code>.
 </em></p>
