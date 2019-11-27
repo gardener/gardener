@@ -30,6 +30,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -516,6 +517,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 
 		allErrs = validateAlicloud(validationContext)
+	}
+
+	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
+		if shoot.ObjectMeta.Annotations == nil {
+			shoot.ObjectMeta.Annotations = make(map[string]string)
+		}
+		controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
 	}
 
 	for idx, worker := range shoot.Spec.Provider.Workers {
