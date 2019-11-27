@@ -68,6 +68,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 		machineType1Name                    = "machtype1"
 		machineType1Usable                  = true
 		region1Name                         = "europe"
+		region2Name                         = "asia"
 		region1Zone1                        = "europe-first"
 		seedSelector                        = metav1.LabelSelector{
 			MatchLabels: map[string]string{"foo": "bar"},
@@ -293,6 +294,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 									{Name: region1Zone1},
 								},
 							},
+							{
+								Name: region2Name,
+							},
 						},
 						SeedSelector: &seedSelector,
 						Type:         providerType,
@@ -358,6 +362,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 									{
 										Region: region1Name,
 										Names:  []string{region1Zone1},
+									},
+									{
+										Region: region2Name,
 									},
 								},
 							},

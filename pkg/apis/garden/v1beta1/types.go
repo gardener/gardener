@@ -380,7 +380,8 @@ type Zone struct {
 	// Region is a region name.
 	Region string `json:"region"`
 	// Names is a list of availability zone names in this region.
-	Names []string `json:"names"`
+	// +optional
+	Names []string `json:"names,omitempty"`
 }
 
 // BackupProfile contains the object store configuration for backups for shoot(currently only etcd).
