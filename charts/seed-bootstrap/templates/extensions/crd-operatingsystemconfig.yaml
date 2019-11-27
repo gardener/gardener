@@ -241,7 +241,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what
                 ever data it needs.
-              type: string
+              type: object
             units:
               description: Units is a list of systemd unit names that are part of
                 the generated Cloud Config and shall be restarted when a new version

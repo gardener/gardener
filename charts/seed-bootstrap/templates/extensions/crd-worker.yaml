@@ -220,7 +220,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what
                 ever data it needs.
-              type: string
+              type: object
           type: object
       required:
         - spec

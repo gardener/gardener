@@ -69,5 +69,9 @@ spec:
               description: ProviderStatus contains plugin-specific output.
               type: object
           type: object
+          state:
+            description: State can be filled by the operating controller with what
+                ever data it needs.
+            type: object
       required:
       - spec
