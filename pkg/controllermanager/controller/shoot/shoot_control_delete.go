@@ -188,7 +188,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources && !shootNamespaceInDeletion),
+			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		deploySecrets = g.Add(flow.Task{
