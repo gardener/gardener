@@ -19,6 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ResourceManagerIgnoreAnnotation is an annotation that dictates whether a resources should be ignored during reconciliation.
+const ResourceManagerIgnoreAnnotation = "resources.gardener.cloud/ignore"
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ManagedResource describes a list of managed resources.
@@ -63,10 +66,14 @@ type ManagedResourceSpec struct {
 	// Defaults to false.
 	// +optional
 	KeepObjects *bool `json:"keepObjects,omitempty"`
+	// Equivalences specifies possible group/kind equivalences for objects.
+	// +optional
+	Equivalences [][]metav1.GroupKind `json:"equivalences,omitempty"`
 }
 
 // ManagedResourceStatus is the status of a managed resource.
 type ManagedResourceStatus struct {
+	Conditions []ManagedResourceCondition `json:"conditions,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Resources is a list of objects that have been created.
@@ -80,4 +87,43 @@ type ObjectReference struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations is a map of annotations that were used during last update of the resource.
 	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// ConditionType is the type of a condition.
+type ConditionType string
+
+const (
+	// ResourcesApplied is a condition type that indicates whether all resources are applied to the target cluster.
+	ResourcesApplied ConditionType = "ResourcesApplied"
+	// ResourcesHealthy is a condition type that indicates whether all resources are present and healthy.
+	ResourcesHealthy ConditionType = "ResourcesHealthy"
+)
+
+// ConditionStatus is the status of a condition.
+type ConditionStatus string
+
+// These are valid condition statuses.
+const (
+	// ConditionTrue means a resource is in the condition.
+	ConditionTrue ConditionStatus = "True"
+	// ConditionFalse means a resource is not in the condition.
+	ConditionFalse ConditionStatus = "False"
+	// ConditionUnknown means that the controller can't decide if a resource is in the condition or not
+	ConditionUnknown ConditionStatus = "Unknown"
+)
+
+// ManagedResourceCondition describes the state of a deployment at a certain period.
+type ManagedResourceCondition struct {
+	// Type of the ManagedResource condition.
+	Type ConditionType `json:"type"`
+	// Status of the ManagedResource condition.
+	Status ConditionStatus `json:"status"`
+	// Last time the condition was updated.
+	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message"`
 }
