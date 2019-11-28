@@ -1127,7 +1127,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				Version: "v1alpha1",
 				Kind:    "Hvpa",
 			})
-			if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
+			if err := b.K8sSeedClient.Client().Delete(ctx, u); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}
