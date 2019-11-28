@@ -311,6 +311,19 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 	}
 
+	// Prevent Shoots from getting hibernated in case they have problematic webhooks.
+	// Otherwise, we can never wake up this shoot cluster again.
+	oldIsHibernated := oldShoot.Spec.Hibernation != nil && oldShoot.Spec.Hibernation.Enabled != nil && *oldShoot.Spec.Hibernation.Enabled
+	newIsHibernated := shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
+
+	if !oldIsHibernated && newIsHibernated {
+		if hibernationConstraint := helper.GetCondition(shoot.Status.Constraints, garden.ShootHibernationPossible); hibernationConstraint != nil {
+			if hibernationConstraint.Status != garden.ConditionTrue {
+				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
+			}
+		}
+	}
+
 	if seed != nil {
 		if shoot.Spec.Networking.Pods == nil && seed.Spec.Networks.ShootDefaults != nil {
 			shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
