@@ -49,13 +49,12 @@ var (
 	kubernetesVersion = flag.String("version", "", "the version to update the shoot")
 	shootName         = flag.String("shoot-name", "", "the name of the shoot we want to test")
 	shootNamespace    = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
 	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 )
 
 const (
-	UpdateKubernetesVersionTimeout = 600 * time.Second
-	InitializationTimeout          = 600 * time.Second
+	UpdateKubernetesVersionTimeout = 45 * time.Minute
+	InitializationTimeout          = time.Minute
 	DumpStateTimeout               = 5 * time.Minute
 )
 
