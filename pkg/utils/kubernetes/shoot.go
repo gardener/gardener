@@ -127,6 +127,18 @@ func TryUpdateShootConditions(g gardencore.Interface, backoff wait.Backoff, meta
 	})
 }
 
+// TryUpdateShootConstraints tries to update the status of the shoot matching the given <meta>.
+// It retries with the given <backoff> characteristics as long as it gets Conflict errors.
+// The transformation function is applied to the current state of the Shoot object. If the transformation
+// yields a semantically equal Shoot (regarding conditions), no update is done and the operation returns normally.
+func TryUpdateShootConstraints(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error)) (*gardencorev1alpha1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		return g.CoreV1alpha1().Shoots(shoot.Namespace).UpdateStatus(shoot)
+	}, func(cur, updated *gardencorev1alpha1.Shoot) bool {
+		return equality.Semantic.DeepEqual(cur.Status.Constraints, updated.Status.Constraints)
+	})
+}
+
 // TryUpdateShootAnnotations tries to update the annotations of the shoot matching the given <meta>.
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation

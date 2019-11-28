@@ -7761,6 +7761,20 @@ Monitoring
 </tr>
 <tr>
 <td>
+<code>constraints</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.Condition">
+[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Constraints represents conditions of a Shoot&rsquo;s current state that constraint some operations on it.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>gardener</code></br>
 <em>
 <a href="#garden.sapcloud.io/v1beta1.Gardener">
@@ -8168,6 +8182,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Names is a list of availability zone names in this region.</p>
 </td>
 </tr>
@@ -8176,5 +8191,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>27b4aaf7</code>.
+on git commit <code>6d4b8494</code>.
 </em></p>

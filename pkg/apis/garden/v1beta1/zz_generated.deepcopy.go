@@ -3414,6 +3414,13 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Constraints != nil {
+		in, out := &in.Constraints, &out.Constraints
+		*out = make([]v1alpha1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	out.Gardener = in.Gardener
 	if in.LastOperation != nil {
 		in, out := &in.LastOperation, &out.LastOperation

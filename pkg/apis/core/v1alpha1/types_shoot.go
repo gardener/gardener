@@ -97,6 +97,9 @@ type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	// +optional
 	Conditions []Condition `json:"conditions,omitempty"`
+	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+	// +optional
+	Constraints []Condition `json:"constraints,omitempty"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener"`
 	// IsHibernated indicates whether the Shoot is currently hibernated.
@@ -888,4 +891,6 @@ const (
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
+	ShootHibernationPossible ConditionType = "HibernationPossible"
 )

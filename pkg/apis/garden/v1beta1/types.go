@@ -741,6 +741,9 @@ type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	// +optional
 	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty"`
+	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+	// +optional
+	Constraints []gardencorev1alpha1.Condition `json:"constraints,omitempty"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener"`
 	// LastOperation holds information about the last operation on the Shoot.
@@ -1891,6 +1894,8 @@ const (
 	ShootSystemComponentsHealthy gardencorev1alpha1.ConditionType = "SystemComponentsHealthy"
 	// ShootAPIServerAvailable is a constant for a condition type indicating that the Shoot clusters API server is available.
 	ShootAPIServerAvailable gardencorev1alpha1.ConditionType = "APIServerAvailable"
+	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
+	ShootHibernationPossible gardencorev1alpha1.ConditionType = "HibernationPossible"
 )
 
 const (

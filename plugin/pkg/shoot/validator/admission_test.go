@@ -29,7 +29,9 @@ import (
 	"github.com/gardener/gardener/test"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -37,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("validator", func() {
@@ -525,6 +528,56 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
+		})
+
+		Context("hibernation checks", func() {
+			var (
+				oldShoot *garden.Shoot
+			)
+
+			BeforeEach(func() {
+				shoot = *shootBase.DeepCopy()
+				oldShoot = shoot.DeepCopy()
+				oldShoot.Spec.Hibernation = &garden.Hibernation{Enabled: pointer.BoolPtr(false)}
+
+				shoot.Spec.Hibernation = &garden.Hibernation{Enabled: pointer.BoolPtr(true)}
+			})
+
+			DescribeTable("should allow/deny hibernating the Shoot according to HibernationPossible constraint",
+				func(constraints []garden.Condition, match types.GomegaMatcher) {
+					_ = gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+					_ = gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+					_ = gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+
+					shoot.Status.Constraints = constraints
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+					err := admissionHandler.Admit(attrs, nil)
+					Expect(err).To(match)
+				},
+				Entry("should allow if set to True", []garden.Condition{
+					{
+						Type:   garden.ShootHibernationPossible,
+						Status: garden.ConditionTrue,
+					},
+				}, Not(HaveOccurred())),
+				Entry("should deny if set to False", []garden.Condition{
+					{
+						Type:    garden.ShootHibernationPossible,
+						Status:  garden.ConditionFalse,
+						Message: "foo",
+					},
+				}, And(HaveOccurred(), MatchError(ContainSubstring("foo")))),
+				Entry("should deny if set to Unknown", []garden.Condition{
+					{
+						Type:    garden.ShootHibernationPossible,
+						Status:  garden.ConditionUnknown,
+						Message: "foo",
+					},
+				}, And(HaveOccurred(), MatchError(ContainSubstring("foo")))),
+				Entry("should allow if unset", []garden.Condition{}, Not(HaveOccurred())),
+			)
 		})
 
 		Context("checks for shoots referencing a deleted seed", func() {

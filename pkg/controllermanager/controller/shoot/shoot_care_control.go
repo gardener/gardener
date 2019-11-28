@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -136,6 +138,8 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		conditionControlPlaneHealthy     = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootControlPlaneHealthy)
 		conditionEveryNodeReady          = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootEveryNodeReady)
 		conditionSystemComponentsHealthy = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1alpha1.ShootSystemComponentsHealthy)
+
+		constraintHibernationPossible = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1alpha1.ShootHibernationPossible)
 	)
 
 	botanist, err := botanistpkg.New(operation)
@@ -145,9 +149,14 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		conditionControlPlaneHealthy = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(conditionControlPlaneHealthy, message)
 		conditionEveryNodeReady = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(conditionEveryNodeReady, message)
 		conditionSystemComponentsHealthy = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(conditionSystemComponentsHealthy, message)
+
+		constraintHibernationPossible = gardencorev1alpha1helper.UpdatedConditionUnknownErrorMessage(constraintHibernationPossible, message)
+
 		operation.Logger.Error(message)
 
-		c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		_, _ = c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		_, _ = c.updateShootConstraints(shoot, constraintHibernationPossible)
+
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -156,39 +165,56 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 	// Trigger garbage collection
 	go garbageCollection(initializeShootClients, botanist)
 
-	// Trigger health check
-	conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
-		initializeShootClients,
-		c.conditionThresholdsToProgressingMapping(),
-		conditionAPIServerAvailable,
-		conditionControlPlaneHealthy,
-		conditionEveryNodeReady,
-		conditionSystemComponentsHealthy,
-	)
+	_ = flow.Parallel(func(ctx context.Context) error {
+		// Trigger health check
+		conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
+			initializeShootClients,
+			c.conditionThresholdsToProgressingMapping(),
+			conditionAPIServerAvailable,
+			conditionControlPlaneHealthy,
+			conditionEveryNodeReady,
+			conditionSystemComponentsHealthy,
+		)
 
-	// Update Shoot status
-	shoot, err = c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
-	if err != nil {
-		botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
+		// Update Shoot status
+		shoot, err = c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		if err != nil {
+			botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
+			return nil // We do not want to run in the exponential backoff for the condition checks.
+		}
 
-	// Mark Shoot as healthy/unhealthy
-	kutil.TryUpdateShootLabels(
-		c.k8sGardenClient.GardenCore(),
-		retry.DefaultBackoff, shoot.ObjectMeta,
-		StatusLabelTransform(
-			ComputeStatus(
-				shoot.Status.LastOperation,
-				shoot.Status.LastErrors,
-				shoot.Status.LastError,
-				conditionAPIServerAvailable,
-				conditionControlPlaneHealthy,
-				conditionEveryNodeReady,
-				conditionSystemComponentsHealthy,
+		// Mark Shoot as healthy/unhealthy
+		_, _ = kutil.TryUpdateShootLabels(
+			c.k8sGardenClient.GardenCore(),
+			retry.DefaultBackoff, shoot.ObjectMeta,
+			StatusLabelTransform(
+				ComputeStatus(
+					shoot.Status.LastOperation,
+					shoot.Status.LastErrors,
+					shoot.Status.LastError,
+					conditionAPIServerAvailable,
+					conditionControlPlaneHealthy,
+					conditionEveryNodeReady,
+					conditionSystemComponentsHealthy,
+				),
 			),
-		),
-	)
+		)
+
+		return nil
+	}, func(ctx context.Context) error {
+		// Trigger constraint checks
+		constraintHibernationPossible = botanist.ConstraintsChecks(ctx, initializeShootClients, constraintHibernationPossible)
+
+		// Update Shoot status
+		shoot, err = c.updateShootConstraints(shoot, constraintHibernationPossible)
+		if err != nil {
+			botanist.Logger.Errorf("Could not update Shoot constraints: %+v", err)
+			return nil
+		}
+
+		return nil
+	})(context.TODO())
+
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 
@@ -196,6 +222,16 @@ func (c *defaultCareControl) updateShootConditions(shoot *gardencorev1alpha1.Sho
 	newShoot, err := kutil.TryUpdateShootConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
 			shoot.Status.Conditions = conditions
+			return shoot, nil
+		})
+
+	return newShoot, err
+}
+
+func (c *defaultCareControl) updateShootConstraints(shoot *gardencorev1alpha1.Shoot, constraints ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootConstraints(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta,
+		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+			shoot.Status.Constraints = constraints
 			return shoot, nil
 		})
 

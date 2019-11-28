@@ -4859,6 +4859,19 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 							},
 						},
 					},
+					"constraints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Constraints represents conditions of a Shoot's current state that constraint some operations on it.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
 					"gardener": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
@@ -11035,6 +11048,19 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a Shoots's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"constraints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Constraints represents conditions of a Shoot's current state that constraint some operations on it.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

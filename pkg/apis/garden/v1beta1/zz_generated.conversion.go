@@ -4829,6 +4829,7 @@ func autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out
 
 func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Constraints = *(*[]garden.Condition)(unsafe.Pointer(&in.Constraints))
 	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
@@ -4848,6 +4849,7 @@ func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out 
 
 func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, out *ShootStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]v1alpha1.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Constraints = *(*[]v1alpha1.Condition)(unsafe.Pointer(&in.Constraints))
 	if err := Convert_garden_Gardener_To_v1beta1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}

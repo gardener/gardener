@@ -839,6 +839,9 @@ const (
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	Conditions []Condition
+	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
+	// +optional
+	Constraints []Condition
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener
 	// LastOperation holds information about the last operation on the Shoot.
@@ -1788,4 +1791,6 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootAPIServerAvailable is a constant for a condition type indicating the api server is available.
 	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
+	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
+	ShootHibernationPossible ConditionType = "HibernationPossible"
 )
