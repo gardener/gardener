@@ -35,4 +35,9 @@ const (
 	// owner @ggaurav10, @amshuman-kr
 	// alpha: v0.1.0
 	HVPA utilfeature.Feature = "HVPA"
+
+	// HVPAForShootedSeed enables simultaneous horizontal and vertical in Soil Clusters.
+	// owner @ggaurav10, @amshuman-kr
+	// alpha: v0.1.0
+	HVPAForShootedSeed utilfeature.Feature = "HVPA-For-ShootedSeed"
 )
