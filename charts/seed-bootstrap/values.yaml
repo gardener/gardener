@@ -26,7 +26,6 @@ allowedMetrics:
   - container_fs_usage_bytes
   - container_last_seen
   - container_memory_working_set_bytes
-  - container_memory_usage_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
 
@@ -34,25 +33,8 @@ allowedMetrics:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
 
-  fluentd:
-  - fluentd_output_status_buffer_queue_length
-  - fluentd_output_status_buffer_total_bytes
-  - fluentd_output_status_retry_count
-  - fluentd_output_status_num_errors
-  - fluentd_output_status_emit_count
-  - fluentd_output_status_retry_wait
-  - fluentd_output_status_emit_records
-  - fluentd_output_status_write_count
-  - fluentd_output_status_rollback_count
-
-  fluentbit:
-  - fluentbit_input_records_total
-  - fluentbit_input_bytes_total
-  - fluentbit_output_proc_records_total
-  - fluentbit_output_proc_bytes_total
-  - fluentbit_output_errors_total
-  - fluentbit_output_retries_total
-  - fluentbit_output_retries_failed_total
+  fluentd: []
+  fluentbit: []
 
   elasticsearch:
   - elasticsearch_cluster_health_active_primary_shards

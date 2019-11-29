@@ -46,6 +46,8 @@ data:
         - '{__name__="ALERTS"}'
         - '{__name__="prometheus_tsdb_lowest_timestamp"}'
         - '{__name__="prometheus_tsdb_storage_blocks_bytes"}'
+        - '{__name__="kubeproxy_network_latency:quantile"}'
+        - '{__name__="kubeproxy_sync_proxy:quantile"}'
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:

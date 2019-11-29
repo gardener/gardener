@@ -45,7 +45,6 @@ allowedMetrics:
   - container_fs_usage_bytes
   - container_last_seen
   - container_memory_working_set_bytes
-  - container_memory_usage_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
   coredns:
@@ -101,9 +100,6 @@ allowedMetrics:
   - etcd_server_proposals_pending
   - grpc_server_handled_total
   - grpc_server_started_total
-  - grpc_server_handling_seconds_count
-  - grpc_server_handling_seconds_sum
-  - grpc_server_handling_seconds_bucket
   - process_max_fds
   - process_open_fds
   - process_resident_memory_bytes
@@ -128,8 +124,12 @@ allowedMetrics:
   - etcdbr_validation_duration_seconds_sum
   - process_resident_memory_bytes
   kubeProxy:
-  - kubeproxy_network_programming_duration_seconds_(.+)
-  - kubeproxy_sync_proxy_rules_(.+)
+  - kubeproxy_network_programming_duration_seconds_bucket
+  - kubeproxy_network_programming_duration_seconds_count
+  - kubeproxy_network_programming_duration_seconds_sum
+  - kubeproxy_sync_proxy_rules_duration_seconds_bucket
+  - kubeproxy_sync_proxy_rules_duration_seconds_count
+  - kubeproxy_sync_proxy_rules_duration_seconds_sum
   kubeScheduler:
   - scheduler_binding_latency_microseconds_bucket
   - scheduler_e2e_scheduling_latency_microseconds_bucket
@@ -179,16 +179,6 @@ allowedMetrics:
   - kube_statefulset_status_replicas_ready
   - kube_statefulset_status_replicas_updated
   machineControllerManager:
-  - mcm_cloud_api_requests_failed_total
-  - mcm_cloud_api_requests_total
-  - mcm_machine_controller_frozen
-  - mcm_machine_current_status_phase
-  - mcm_machine_deployment_failed_machines
-  - mcm_machine_items_total
-  - mcm_machine_set_failed_machines
-  - mcm_machinedeployment_items_total
-  - mcm_machineset_items_total
-  - mcm_scrape_failure_total
   - machine_adds
   - machine_depth
   - machine_queue_latency
@@ -219,18 +209,27 @@ allowedMetrics:
   - machineset_queue_latency
   - machineset_retries
   - machineset_work_duration
+  - mcm_cloud_api_requests_failed_total
+  - mcm_cloud_api_requests_total
+  - mcm_machine_controller_frozen
+  - mcm_machine_deployment_failed_machines
+  - mcm_machine_items_total
+  - mcm_machine_set_failed_machines
+  - mcm_machinedeployment_items_total
+  - mcm_machineset_items_total
+  - mcm_scrape_failure_total
   - node_adds
   - node_depth
   - node_queue_latency
   - node_retries
   - node_work_duration
+  - process_max_fds
+  - process_open_fds
   - secret_adds
   - secret_depth
   - secret_queue_latency
   - secret_retries
   - secret_work_duration
-  - process_max_fds
-  - process_open_fds
   nodeExporter:
   - node_cpu_seconds_total
   - node_filesystem_avail_bytes
