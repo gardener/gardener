@@ -192,6 +192,20 @@ func (mr *MockCoreV1alpha1InterfaceMockRecorder) Seeds() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seeds", reflect.TypeOf((*MockCoreV1alpha1Interface)(nil).Seeds))
 }
 
+// ShootStates mocks base method
+func (m *MockCoreV1alpha1Interface) ShootStates(arg0 string) v1alpha10.ShootStateInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShootStates", arg0)
+	ret0, _ := ret[0].(v1alpha10.ShootStateInterface)
+	return ret0
+}
+
+// ShootStates indicates an expected call of ShootStates
+func (mr *MockCoreV1alpha1InterfaceMockRecorder) ShootStates(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShootStates", reflect.TypeOf((*MockCoreV1alpha1Interface)(nil).ShootStates), arg0)
+}
+
 // Shoots mocks base method
 func (m *MockCoreV1alpha1Interface) Shoots(arg0 string) v1alpha10.ShootInterface {
 	m.ctrl.T.Helper()

@@ -18,6 +18,8 @@ type Interface interface {
 	ControllerRegistrations() ControllerRegistrationInformer
 	// Plants returns a PlantInformer.
 	Plants() PlantInformer
+	// ShootStates returns a ShootStateInformer.
+	ShootStates() ShootStateInformer
 }
 
 type version struct {
@@ -54,4 +56,9 @@ func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 // Plants returns a PlantInformer.
 func (v *version) Plants() PlantInformer {
 	return &plantInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ShootStates returns a ShootStateInformer.
+func (v *version) ShootStates() ShootStateInformer {
+	return &shootStateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

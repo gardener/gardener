@@ -32,6 +32,10 @@ func (c *FakeCore) Plants(namespace string) internalversion.PlantInterface {
 	return &FakePlants{c, namespace}
 }
 
+func (c *FakeCore) ShootStates(namespace string) internalversion.ShootStateInterface {
+	return &FakeShootStates{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCore) RESTClient() rest.Interface {

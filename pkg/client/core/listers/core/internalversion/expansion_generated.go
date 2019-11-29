@@ -29,3 +29,11 @@ type PlantListerExpansion interface{}
 // PlantNamespaceListerExpansion allows custom methods to be added to
 // PlantNamespaceLister.
 type PlantNamespaceListerExpansion interface{}
+
+// ShootStateListerExpansion allows custom methods to be added to
+// ShootStateLister.
+type ShootStateListerExpansion interface{}
+
+// ShootStateNamespaceListerExpansion allows custom methods to be added to
+// ShootStateNamespaceLister.
+type ShootStateNamespaceListerExpansion interface{}
