@@ -86,3 +86,4 @@ shootBackup:
 featureGates:
   Logging: true
   HVPA: true
+  HVPAForShootedSeed: true

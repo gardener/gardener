@@ -671,8 +671,14 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer() error {
+	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+
+	if b.ShootedSeed != nil {
+		// Override for shooted seeds
+		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
 	var (
-		hvpaEnabled       = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
 		minReplicas int32 = 1
 		maxReplicas int32 = 4
 
@@ -732,7 +738,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil {
+	if b.ShootedSeed != nil && !hvpaEnabled {
 		var (
 			apiServer  = b.ShootedSeed.APIServer
 			autoscaler = apiServer.Autoscaler
@@ -741,29 +747,15 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		minReplicas = *autoscaler.MinReplicas
 		maxReplicas = autoscaler.MaxReplicas
 
-		if hvpaEnabled {
-			// If HVPA is enabled, we can keep the limits very high
-			defaultValues["apiServerResources"] = map[string]interface{}{
-				"requests": map[string]interface{}{
-					"cpu":    "1750m",
-					"memory": "2Gi",
-				},
-				"limits": map[string]interface{}{
-					"cpu":    "8",
-					"memory": "16000M",
-				},
-			}
-		} else {
-			defaultValues["apiServerResources"] = map[string]interface{}{
-				"requests": map[string]interface{}{
-					"cpu":    "1750m",
-					"memory": "2Gi",
-				},
-				"limits": map[string]interface{}{
-					"cpu":    "4000m",
-					"memory": "8Gi",
-				},
-			}
+		defaultValues["apiServerResources"] = map[string]interface{}{
+			"requests": map[string]interface{}{
+				"cpu":    "1750m",
+				"memory": "2Gi",
+			},
+			"limits": map[string]interface{}{
+				"cpu":    "4000m",
+				"memory": "8Gi",
+			},
 		}
 	} else {
 		replicas := deployment.Spec.Replicas
@@ -917,6 +909,19 @@ func (b *Botanist) DeployKubeAPIServer() error {
 				return err
 			}
 		}
+	} else {
+		// If HVPA is disabled, delete any HVPA that was already deployed
+		u := &unstructured.Unstructured{}
+		u.SetName(v1alpha1constants.DeploymentNameKubeAPIServer)
+		u.SetNamespace(b.Shoot.SeedNamespace)
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "autoscaling.k8s.io",
+			Version: "v1alpha1",
+			Kind:    "Hvpa",
+		})
+		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer, values, nil)
@@ -1049,6 +1054,11 @@ func (b *Botanist) DeployKubeScheduler() error {
 func (b *Botanist) DeployETCD(ctx context.Context) error {
 	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
 
+	if b.ShootedSeed != nil {
+		// Override for shooted seeds
+		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
 	etcdConfig := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-etcd-ca":         b.CheckSums[v1alpha1constants.SecretNameCAETCD],
@@ -1107,6 +1117,20 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			}
 		}
 
+		if !hvpaEnabled {
+			// If HVPA is disabled, delete any HVPA that was already deployed
+			u := &unstructured.Unstructured{}
+			u.SetName(fmt.Sprintf("etcd-%s", role))
+			u.SetNamespace(b.Shoot.SeedNamespace)
+			u.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   "autoscaling.k8s.io",
+				Version: "v1alpha1",
+				Kind:    "Hvpa",
+			})
+			if err := b.K8sSeedClient.Client().Delete(ctx, u); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
 			return err
 		}
