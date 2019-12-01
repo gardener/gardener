@@ -28,11 +28,9 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	resourcesvalpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DNSPurposeIngress is a constant for a DNS record used for the ingress domain name.
@@ -118,13 +116,6 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 	type managedResourceOptions struct {
 		keepObjects     bool
 		chartRenderFunc func() (*chartrenderer.RenderedChart, error)
-	}
-
-	// Delete legacy storage classes managed resource (no longer needed because the provider extension
-	// controllers are now responsible for deploying the shoot storage classes).
-	// This code can be removed in a future Gardener version.
-	if err := b.K8sSeedClient.Client().Delete(ctx, &resourcesvalpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "storageclasses"}}); client.IgnoreNotFound(err) != nil {
-		return err
 	}
 
 	var (
