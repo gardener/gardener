@@ -919,8 +919,10 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			Version: "v1alpha1",
 			Kind:    "Hvpa",
 		})
-		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
-			return err
+		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); err != nil {
+			if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+				return err
+			}
 		}
 	}
 
@@ -1127,8 +1129,10 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				Version: "v1alpha1",
 				Kind:    "Hvpa",
 			})
-			if err := b.K8sSeedClient.Client().Delete(ctx, u); client.IgnoreNotFound(err) != nil {
-				return err
+			if err := b.K8sSeedClient.Client().Delete(ctx, u); err != nil {
+				if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+					return err
+				}
 			}
 		}
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
