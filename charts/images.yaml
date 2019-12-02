@@ -33,7 +33,7 @@ images:
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
-  tag: "0.2.0"
+  tag: "0.3.0"
 
 # Monitoring
 - name: alertmanager
