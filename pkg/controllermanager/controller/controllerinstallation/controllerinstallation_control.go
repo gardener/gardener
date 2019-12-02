@@ -15,10 +15,11 @@
 package controllerinstallation
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -35,16 +36,16 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -261,50 +262,42 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 	conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
-	var (
-		manifest        = release.Manifest()
-		newResources    DeployedResources
-		newResourcesSet = sets.NewString()
-
-		decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 1024)
-		decodedObj map[string]interface{}
-	)
-
-	for err = decoder.Decode(&decodedObj); err == nil; err = decoder.Decode(&decodedObj) {
-		if decodedObj == nil {
-			continue
-		}
-
-		newObj := unstructured.Unstructured{Object: decodedObj}
-		decodedObj = nil
-
-		objectReference := corev1.ObjectReference{
-			APIVersion: newObj.GetAPIVersion(),
-			Kind:       newObj.GetKind(),
-			Name:       newObj.GetName(),
-			Namespace:  newObj.GetNamespace(),
-		}
-		newResources.Resources = append(newResources.Resources, objectReference)
-		newResourcesSet.Insert(objectReferenceToString(objectReference))
+	// Create secret
+	data := make(map[string][]byte, len(release.Files()))
+	for fileName, fileContent := range release.Files() {
+		key := strings.Replace(fileName, "/", "_", -1)
+		data[key] = []byte(fileContent)
 	}
 
-	if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, newResourcesSet); err != nil {
-		if isDeletionInProgressError(err) {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
-		} else {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
-		}
+	var secretName = controllerInstallation.Name
+	if err := manager.
+		NewSecret(k8sSeedClient.Client()).
+		WithNamespacedName(v1alpha1constants.GardenNamespace, secretName).
+		WithKeyValues(data).
+		Reconcile(ctx); err != nil {
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource secret %q failed: %+v", secretName, err))
 		return err
 	}
 
-	status, err := json.Marshal(newResources)
-	if err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not marshal status for new resources: %+v", err))
+	if err := manager.
+		NewManagedResource(k8sSeedClient.Client()).
+		WithNamespacedName(v1alpha1constants.GardenNamespace, controllerInstallation.Name).
+		WithSecretRef(secretName).
+		WithClass(v1alpha1constants.SeedResourceManagerClass).
+		Reconcile(ctx); err != nil {
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return err
 	}
 
+	// TODO: Remove after several releases.
 	controllerInstallation, err = kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
+			var resources DeployedResources
+			status, err := json.Marshal(resources)
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal status for resources: %+v", err)
+			}
+
 			controllerInstallation.Status.ProviderStatus = &gardencorev1alpha1.ProviderConfig{
 				RawExtension: runtime.RawExtension{
 					Raw: status,
@@ -317,11 +310,6 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	)
 	if err != nil {
 		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not write status for new resources: %+v", err))
-		return err
-	}
-
-	if err := k8sSeedClient.Applier().ApplyManifest(context.TODO(), kubernetes.NewManifestReader(release.Manifest()), kubernetes.DefaultApplierOptions); err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Installation of new resources failed: %+v", err))
 		return err
 	}
 
@@ -382,14 +370,44 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		return err
 	}
 
-	if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
-		if isDeletionInProgressError(err) {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
-		} else {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
-		}
+	mr := &resourcesv1alpha1.ManagedResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      controllerInstallation.Name,
+			Namespace: v1alpha1constants.GardenNamespace,
+		},
+	}
+	err = k8sSeedClient.Client().Delete(ctx, mr)
+	if err == nil {
+		message := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", message)
+		return errors.New(message)
+	} else if !apierrors.IsNotFound(err) {
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return err
 	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      controllerInstallation.Name,
+			Namespace: v1alpha1constants.GardenNamespace,
+		},
+	}
+	if err := k8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
+	}
+
+	// TODO: Kept for backwards compatibility. Remove after several releases.
+	if controllerInstallation.Status.ProviderStatus != nil {
+		if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
+			if isDeletionInProgressError(err) {
+				conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
+			} else {
+				conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
+			}
+			return err
+		}
+	}
+
 	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -488,6 +506,9 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 	return nil
 }
 
+// cleanOldResources cleans ControllerInstallation resources which are not found in the given <newResourcesSet>.
+//
+// TODO: Kept for backwards compatibility. Remove after several releases.
 func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient kubernetes.Interface, controllerInstallation *gardencorev1alpha1.ControllerInstallation, newResourcesSet sets.String) error {
 	providerStatus := controllerInstallation.Status.ProviderStatus
 	if providerStatus == nil {
