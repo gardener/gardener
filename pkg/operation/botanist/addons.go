@@ -233,6 +233,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		nodeExporterConfig        = map[string]interface{}{}
 		blackboxExporterConfig    = map[string]interface{}{}
 		nodeProblemDetectorConfig = map[string]interface{}{}
+		networkPolicyConfig       = map[string]interface{}{}
 	)
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
@@ -304,6 +305,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		},
+		"network-policies":      networkPolicyConfig,
 		"node-problem-detector": nodeProblemDetector,
 	})
 }

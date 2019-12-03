@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for networkpolicies that Gardener deploys into shoots.
+name: network-policies
+version: 0.1.0

@@ -1,0 +1,21 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Egress from pods labeled with 'networking.gardener.cloud/to-public-networks=allowed'
+      to all networks.
+  name: gardener.cloud--allow-to-public-networks
+  namespace: kube-system
+  labels:
+    origin: gardener
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-public-networks: allowed
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
