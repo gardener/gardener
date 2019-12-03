@@ -243,7 +243,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 
 		deleteSeedMonitoring = g.Add(flow.Task{
-			Name:         "Deleting Shoot monitoring stack in Seed",
+			Name:         "Deleting shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -265,7 +265,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
-			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources && !metav1.HasAnnotation(o.Shoot.Info.ObjectMeta, v1alpha1constants.AnnotationShootSkipCleanup)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 
@@ -279,12 +279,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		)
 
 		cleanKubernetesResources = g.Add(flow.Task{
-			Name:         "Cleaning kubernetes resources",
+			Name:         "Cleaning Kubernetes resources",
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
 		cleanShootNamespaces = g.Add(flow.Task{
-			Name:         "Cleaning Shoot namespaces",
+			Name:         "Cleaning shoot namespaces",
 			Fn:           flow.TaskFn(botanist.CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
 		})
@@ -299,7 +299,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Dependencies: flow.NewTaskIDs(destroyNetwork),
 		})
 		destroyWorker = g.Add(flow.Task{
-			Name:         "Destroying Shoot workers",
+			Name:         "Destroying shoot workers",
 			Fn:           flow.TaskFn(botanist.DestroyWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
@@ -360,7 +360,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			waitUntilExtensionResourcesDeleted,
 		)
 		destroyControlPlane = g.Add(flow.Task{
-			Name:         "Destroying Shoot control plane",
+			Name:         "Destroying shoot control plane",
 			Fn:           flow.TaskFn(botanist.DestroyControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
@@ -377,7 +377,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 
 		destroyControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Destroying Shoot control plane exposure",
+			Name:         "Destroying shoot control plane exposure",
 			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure),
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
@@ -393,7 +393,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
-			Name:         "Destroying Shoot infrastructure",
+			Name:         "Destroying shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.DestroyInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
@@ -424,12 +424,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteNamespace = g.Add(flow.Task{
-			Name:         "Deleting Shoot namespace in Seed",
+			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until Shoot namespace in Seed has been deleted",
+			Name:         "Waiting until shoot namespace in Seed has been deleted",
 			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})

@@ -220,6 +220,13 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1alpha1constants.AnnotationShootSkipCleanup) {
+		return flow.Parallel(
+			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		)(ctx)
+	}
+
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
 		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),

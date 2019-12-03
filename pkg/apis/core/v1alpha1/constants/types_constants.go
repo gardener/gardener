@@ -227,6 +227,9 @@ const (
 	// For example, if the shoot is annotated with <AnnotationShootCustom>key=value,
 	// then the namespace in the seed will be annotated with <AnnotationShootCustom>key=value, as well.
 	AnnotationShootCustom = "custom.shoot.sapcloud.io/"
+	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
+	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
+	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
