@@ -76,6 +76,8 @@ type CertificateSecretConfig struct {
 	CertType  certType
 	SigningCA *Certificate
 	PKCS      int
+
+	Validity *time.Duration
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -216,9 +218,14 @@ func LoadCAFromSecret(k8sClient client.Client, namespace, name string) (*corev1.
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
+	now := time.Now()
+	expiration := now.AddDate(10, 0, 0) // + 10 years
+	if s.Validity != nil {
+		expiration = now.Add(*s.Validity)
+	}
+
 	var (
 		serialNumber, _ = rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-		now             = time.Now()
 		isCA            = s.CertType == CACert
 
 		template = &x509.Certificate{
@@ -226,7 +233,7 @@ func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificat
 			IsCA:                  isCA,
 			SerialNumber:          serialNumber,
 			NotBefore:             now,
-			NotAfter:              now.AddDate(10, 0, 0), // + 10 years
+			NotAfter:              expiration,
 			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 			Subject: pkix.Name{
 				CommonName:   s.CommonName,
