@@ -77,7 +77,7 @@ github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/
 github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1
-# github.com/gardener/gardener-resource-manager v0.8.0
+# github.com/gardener/gardener-resource-manager v0.8.1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/manager

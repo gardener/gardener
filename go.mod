@@ -11,7 +11,7 @@ require (
 	github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc // indirect
 	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
 	github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
-	github.com/gardener/gardener-resource-manager v0.8.0
+	github.com/gardener/gardener-resource-manager v0.8.1
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 	github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945
 	github.com/ghodss/yaml v1.0.0
