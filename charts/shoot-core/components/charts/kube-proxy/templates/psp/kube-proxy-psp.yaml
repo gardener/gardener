@@ -9,6 +9,9 @@ spec:
   - secret
   - configMap
   hostNetwork: true
+  hostPorts:
+  - min: {{ .Values.ports.metrics }}
+    max: {{ .Values.ports.metrics }}
   allowedHostPaths:
   - pathPrefix: /usr/share/ca-certificates
   - pathPrefix: /var/run/dbus/system_bus_socket
