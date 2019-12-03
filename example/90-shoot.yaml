@@ -1,4 +1,4 @@
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: crazy-botany
@@ -242,12 +242,12 @@ spec:
 #     end: "0 6 * * *"    # Stop hibernation every day at 6AM
 #     location: "America/Los_Angeles" # Specify a location for the cron to run in
   addons:
-    nginx-ingress:
+    nginxIngress:
       enabled: false
     # loadBalancerSourceRanges: []
     # externalTrafficPolicy: Cluster
     # config:
     #   enable-access-log-for-default-backend: "false"
-    kubernetes-dashboard:
+    kubernetesDashboard:
       enabled: true
     # authenticationMode: basic # allowed values: basic,token

@@ -1,40 +1,38 @@
 <p>Packages:</p>
 <ul>
 <li>
-<a href="#core.gardener.cloud%2fv1alpha1">core.gardener.cloud/v1alpha1</a>
+<a href="#core.gardener.cloud%2fv1beta1">core.gardener.cloud/v1beta1</a>
 </li>
 </ul>
-<h2 id="core.gardener.cloud/v1alpha1">core.gardener.cloud/v1alpha1</h2>
+<h2 id="core.gardener.cloud/v1beta1">core.gardener.cloud/v1beta1</h2>
 <p>
-<p>Package v1alpha1 is a version of the API.</p>
+<p>Package v1beta1 is a version of the API.</p>
 </p>
 Resource Types:
 <ul><li>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>
+<a href="#core.gardener.cloud/v1beta1.BackupBucket">BackupBucket</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>
+<a href="#core.gardener.cloud/v1beta1.BackupEntry">BackupEntry</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfile">CloudProfile</a>
+<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallation">ControllerInstallation</a>
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.ControllerRegistration">ControllerRegistration</a>
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.Plant">Plant</a>
+<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.Project">Project</a>
+<a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.Quota">Quota</a>
+<a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.SecretBinding">SecretBinding</a>
+<a href="#core.gardener.cloud/v1beta1.SecretBinding">SecretBinding</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.Seed">Seed</a>
+<a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>
 </li><li>
-<a href="#core.gardener.cloud/v1alpha1.Shoot">Shoot</a>
-</li><li>
-<a href="#core.gardener.cloud/v1alpha1.ShootState">ShootState</a>
+<a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>
 </li></ul>
-<h3 id="core.gardener.cloud/v1alpha1.BackupBucket">BackupBucket
+<h3 id="core.gardener.cloud/v1beta1.BackupBucket">BackupBucket
 </h3>
 <p>
 <p>BackupBucket holds details about backup bucket</p>
@@ -53,7 +51,7 @@ Resource Types:
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -83,7 +81,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketSpec">
+<a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">
 BackupBucketSpec
 </a>
 </em>
@@ -97,7 +95,7 @@ BackupBucketSpec
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketProvider">
+<a href="#core.gardener.cloud/v1beta1.BackupBucketProvider">
 BackupBucketProvider
 </a>
 </em>
@@ -121,14 +119,14 @@ Kubernetes core/v1.SecretReference
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed holds the name of the seed allocated to BackupBucket for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.</p>
 </td>
 </tr>
 </table>
@@ -138,7 +136,7 @@ string
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketStatus">
+<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">
 BackupBucketStatus
 </a>
 </em>
@@ -149,7 +147,7 @@ BackupBucketStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupEntry">BackupEntry
+<h3 id="core.gardener.cloud/v1beta1.BackupEntry">BackupEntry
 </h3>
 <p>
 <p>BackupEntry holds details about shoot backup.</p>
@@ -168,7 +166,7 @@ BackupBucketStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -198,7 +196,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupEntrySpec">
+<a href="#core.gardener.cloud/v1beta1.BackupEntrySpec">
 BackupEntrySpec
 </a>
 </em>
@@ -222,14 +220,14 @@ string
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed holds the name of the seed allocated to BackupEntry for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupEntry for running controller.</p>
 </td>
 </tr>
 </table>
@@ -239,7 +237,7 @@ string
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupEntryStatus">
+<a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">
 BackupEntryStatus
 </a>
 </em>
@@ -251,7 +249,7 @@ BackupEntryStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.CloudProfile">CloudProfile
+<h3 id="core.gardener.cloud/v1beta1.CloudProfile">CloudProfile
 </h3>
 <p>
 <p>CloudProfile represents certain properties about a provider environment.</p>
@@ -270,7 +268,7 @@ BackupEntryStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -301,7 +299,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">
 CloudProfileSpec
 </a>
 </em>
@@ -321,14 +319,14 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesSettings">
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
 KubernetesSettings
 </a>
 </em>
@@ -341,7 +339,7 @@ KubernetesSettings
 <td>
 <code>machineImages</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MachineImage">
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
 []MachineImage
 </a>
 </em>
@@ -354,7 +352,7 @@ KubernetesSettings
 <td>
 <code>machineTypes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MachineType">
+<a href="#core.gardener.cloud/v1beta1.MachineType">
 []MachineType
 </a>
 </em>
@@ -367,7 +365,7 @@ KubernetesSettings
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -381,7 +379,7 @@ ProviderConfig
 <td>
 <code>regions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Region">
+<a href="#core.gardener.cloud/v1beta1.Region">
 []Region
 </a>
 </em>
@@ -421,7 +419,7 @@ string
 <td>
 <code>volumeTypes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.VolumeType">
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
 []VolumeType
 </a>
 </em>
@@ -436,7 +434,7 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerInstallation">ControllerInstallation
+<h3 id="core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation
 </h3>
 <p>
 <p>ControllerInstallation represents an installation request for an external controller.</p>
@@ -455,7 +453,7 @@ string
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -485,7 +483,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallationSpec">
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallationSpec">
 ControllerInstallationSpec
 </a>
 </em>
@@ -528,7 +526,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallationStatus">
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">
 ControllerInstallationStatus
 </a>
 </em>
@@ -539,7 +537,7 @@ ControllerInstallationStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerRegistration">ControllerRegistration
+<h3 id="core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration
 </h3>
 <p>
 <p>ControllerRegistration represents a registration of an external controller.</p>
@@ -558,7 +556,7 @@ ControllerInstallationStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -588,7 +586,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerRegistrationSpec">
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationSpec">
 ControllerRegistrationSpec
 </a>
 </em>
@@ -602,7 +600,7 @@ ControllerRegistrationSpec
 <td>
 <code>resources</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerResource">
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">
 []ControllerResource
 </a>
 </em>
@@ -616,7 +614,7 @@ ControllerRegistrationSpec
 <td>
 <code>deployment</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerDeployment">
+<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">
 ControllerDeployment
 </a>
 </em>
@@ -631,7 +629,7 @@ ControllerDeployment
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Plant">Plant
+<h3 id="core.gardener.cloud/v1beta1.Plant">Plant
 </h3>
 <p>
 </p>
@@ -649,7 +647,7 @@ ControllerDeployment
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -680,7 +678,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.PlantSpec">
+<a href="#core.gardener.cloud/v1beta1.PlantSpec">
 PlantSpec
 </a>
 </em>
@@ -708,7 +706,7 @@ clusters to be added to Gardener.</p>
 <td>
 <code>endpoints</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Endpoint">
+<a href="#core.gardener.cloud/v1beta1.Endpoint">
 []Endpoint
 </a>
 </em>
@@ -725,7 +723,7 @@ clusters to be added to Gardener.</p>
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.PlantStatus">
+<a href="#core.gardener.cloud/v1beta1.PlantStatus">
 PlantStatus
 </a>
 </em>
@@ -736,7 +734,7 @@ PlantStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Project">Project
+<h3 id="core.gardener.cloud/v1beta1.Project">Project
 </h3>
 <p>
 <p>Project holds certain properties about a Gardener project.</p>
@@ -755,7 +753,7 @@ PlantStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -786,7 +784,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectSpec">
+<a href="#core.gardener.cloud/v1beta1.ProjectSpec">
 ProjectSpec
 </a>
 </em>
@@ -855,7 +853,7 @@ string
 <td>
 <code>members</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectMember">
+<a href="#core.gardener.cloud/v1beta1.ProjectMember">
 []ProjectMember
 </a>
 </em>
@@ -886,7 +884,7 @@ A nil value means that Gardener will determine the name of the namespace.</p>
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectStatus">
+<a href="#core.gardener.cloud/v1beta1.ProjectStatus">
 ProjectStatus
 </a>
 </em>
@@ -898,7 +896,7 @@ ProjectStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Quota">Quota
+<h3 id="core.gardener.cloud/v1beta1.Quota">Quota
 </h3>
 <p>
 </p>
@@ -916,7 +914,7 @@ ProjectStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -947,7 +945,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.QuotaSpec">
+<a href="#core.gardener.cloud/v1beta1.QuotaSpec">
 QuotaSpec
 </a>
 </em>
@@ -1001,7 +999,7 @@ Kubernetes core/v1.ObjectReference
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SecretBinding">SecretBinding
+<h3 id="core.gardener.cloud/v1beta1.SecretBinding">SecretBinding
 </h3>
 <p>
 </p>
@@ -1019,7 +1017,7 @@ Kubernetes core/v1.ObjectReference
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -1075,7 +1073,7 @@ Kubernetes core/v1.SecretReference
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Seed">Seed
+<h3 id="core.gardener.cloud/v1beta1.Seed">Seed
 </h3>
 <p>
 <p>Seed represents an installation request for an external controller.</p>
@@ -1094,7 +1092,7 @@ Kubernetes core/v1.SecretReference
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -1124,7 +1122,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">
 SeedSpec
 </a>
 </em>
@@ -1138,7 +1136,7 @@ SeedSpec
 <td>
 <code>backup</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedBackup">
+<a href="#core.gardener.cloud/v1beta1.SeedBackup">
 SeedBackup
 </a>
 </em>
@@ -1153,22 +1151,9 @@ under the configured object store.</p>
 </tr>
 <tr>
 <td>
-<code>blockCIDRs</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
-in the seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dns</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedDNS">
+<a href="#core.gardener.cloud/v1beta1.SeedDNS">
 SeedDNS
 </a>
 </em>
@@ -1181,7 +1166,7 @@ SeedDNS
 <td>
 <code>networks</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedNetworks">
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">
 SeedNetworks
 </a>
 </em>
@@ -1194,7 +1179,7 @@ SeedNetworks
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedProvider">
+<a href="#core.gardener.cloud/v1beta1.SeedProvider">
 SeedProvider
 </a>
 </em>
@@ -1221,7 +1206,7 @@ the account the Seed cluster has been deployed to.</p>
 <td>
 <code>taints</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedTaint">
+<a href="#core.gardener.cloud/v1beta1.SeedTaint">
 []SeedTaint
 </a>
 </em>
@@ -1235,7 +1220,7 @@ the account the Seed cluster has been deployed to.</p>
 <td>
 <code>volume</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedVolume">
+<a href="#core.gardener.cloud/v1beta1.SeedVolume">
 SeedVolume
 </a>
 </em>
@@ -1252,7 +1237,7 @@ SeedVolume
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedStatus">
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">
 SeedStatus
 </a>
 </em>
@@ -1263,7 +1248,7 @@ SeedStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Shoot">Shoot
+<h3 id="core.gardener.cloud/v1beta1.Shoot">Shoot
 </h3>
 <p>
 </p>
@@ -1281,7 +1266,7 @@ SeedStatus
 string</td>
 <td>
 <code>
-core.gardener.cloud/v1alpha1
+core.gardener.cloud/v1beta1
 </code>
 </td>
 </tr>
@@ -1312,7 +1297,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>spec</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">
 ShootSpec
 </a>
 </em>
@@ -1327,7 +1312,7 @@ ShootSpec
 <td>
 <code>addons</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Addons">
+<a href="#core.gardener.cloud/v1beta1.Addons">
 Addons
 </a>
 </em>
@@ -1352,7 +1337,7 @@ string
 <td>
 <code>dns</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.DNS">
+<a href="#core.gardener.cloud/v1beta1.DNS">
 DNS
 </a>
 </em>
@@ -1366,7 +1351,7 @@ DNS
 <td>
 <code>extensions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Extension">
+<a href="#core.gardener.cloud/v1beta1.Extension">
 []Extension
 </a>
 </em>
@@ -1380,7 +1365,7 @@ DNS
 <td>
 <code>hibernation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Hibernation">
+<a href="#core.gardener.cloud/v1beta1.Hibernation">
 Hibernation
 </a>
 </em>
@@ -1394,7 +1379,7 @@ Hibernation
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">
 Kubernetes
 </a>
 </em>
@@ -1407,7 +1392,7 @@ Kubernetes
 <td>
 <code>networking</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Networking">
+<a href="#core.gardener.cloud/v1beta1.Networking">
 Networking
 </a>
 </em>
@@ -1420,7 +1405,7 @@ Networking
 <td>
 <code>maintenance</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Maintenance">
+<a href="#core.gardener.cloud/v1beta1.Maintenance">
 Maintenance
 </a>
 </em>
@@ -1435,7 +1420,7 @@ operations should be performed.</p>
 <td>
 <code>monitoring</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Monitoring">
+<a href="#core.gardener.cloud/v1beta1.Monitoring">
 Monitoring
 </a>
 </em>
@@ -1449,7 +1434,7 @@ Monitoring
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Provider">
+<a href="#core.gardener.cloud/v1beta1.Provider">
 Provider
 </a>
 </em>
@@ -1500,7 +1485,7 @@ string
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ShootStatus">
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">
 ShootStatus
 </a>
 </em>
@@ -1512,106 +1497,12 @@ ShootStatus
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootState">ShootState
-</h3>
-<p>
-<p>ShootState contains a snapshot of the Shoot&rsquo;s state required to migrate the Shoot&rsquo;s control plane to a new Seed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-core.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>ShootState</code></td>
-</tr>
-<tr>
-<td>
-<code>metadata</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">
-ShootStateSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Specification of the ShootState.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>gardener</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerResourceData">
-[]GardenerResourceData
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>extensions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">
-[]ExtensionResourceState
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1alpha1.Addon">Addon
+<h3 id="core.gardener.cloud/v1beta1.Addon">Addon
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesDashboard">KubernetesDashboard</a>, 
-<a href="#core.gardener.cloud/v1alpha1.NginxIngress">NginxIngress</a>)
+<a href="#core.gardener.cloud/v1beta1.KubernetesDashboard">KubernetesDashboard</a>, 
+<a href="#core.gardener.cloud/v1beta1.NginxIngress">NginxIngress</a>)
 </p>
 <p>
 <p>Addon also enabling or disabling a specific addon and is used to derive from.</p>
@@ -1637,11 +1528,11 @@ bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Addons">Addons
+<h3 id="core.gardener.cloud/v1beta1.Addons">Addons
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Addons is a collection of configuration for specific addons which are managed by the Gardener.</p>
@@ -1656,9 +1547,9 @@ bool
 <tbody>
 <tr>
 <td>
-<code>kubernetes-dashboard</code></br>
+<code>kubernetesDashboard</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesDashboard">
+<a href="#core.gardener.cloud/v1beta1.KubernetesDashboard">
 KubernetesDashboard
 </a>
 </em>
@@ -1670,9 +1561,9 @@ KubernetesDashboard
 </tr>
 <tr>
 <td>
-<code>nginx-ingress</code></br>
+<code>nginxIngress</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.NginxIngress">
+<a href="#core.gardener.cloud/v1beta1.NginxIngress">
 NginxIngress
 </a>
 </em>
@@ -1684,11 +1575,11 @@ NginxIngress
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.AdmissionPlugin">AdmissionPlugin
+<h3 id="core.gardener.cloud/v1beta1.AdmissionPlugin">AdmissionPlugin
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
 <p>AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.</p>
@@ -1716,7 +1607,7 @@ string
 <td>
 <code>config</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -1728,11 +1619,11 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Alerting">Alerting
+<h3 id="core.gardener.cloud/v1beta1.Alerting">Alerting
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Monitoring">Monitoring</a>)
+<a href="#core.gardener.cloud/v1beta1.Monitoring">Monitoring</a>)
 </p>
 <p>
 <p>Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).</p>
@@ -1759,11 +1650,11 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.AuditConfig">AuditConfig
+<h3 id="core.gardener.cloud/v1beta1.AuditConfig">AuditConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
 <p>AuditConfig contains settings for audit of the api server</p>
@@ -1780,7 +1671,7 @@ ProviderConfig
 <td>
 <code>auditPolicy</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.AuditPolicy">
+<a href="#core.gardener.cloud/v1beta1.AuditPolicy">
 AuditPolicy
 </a>
 </em>
@@ -1792,11 +1683,11 @@ AuditPolicy
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.AuditPolicy">AuditPolicy
+<h3 id="core.gardener.cloud/v1beta1.AuditPolicy">AuditPolicy
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.AuditConfig">AuditConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.AuditConfig">AuditConfig</a>)
 </p>
 <p>
 <p>AuditPolicy contains audit policy for kube-apiserver</p>
@@ -1826,11 +1717,11 @@ which contains the audit policy for the kube-apiserver.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.AvailabilityZone">AvailabilityZone
+<h3 id="core.gardener.cloud/v1beta1.AvailabilityZone">AvailabilityZone
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Region">Region</a>)
+<a href="#core.gardener.cloud/v1beta1.Region">Region</a>)
 </p>
 <p>
 <p>AvailabilityZone is an availability zone.</p>
@@ -1880,11 +1771,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupBucketProvider">BackupBucketProvider
+<h3 id="core.gardener.cloud/v1beta1.BackupBucketProvider">BackupBucketProvider
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec</a>)
 </p>
 <p>
 <p>BackupBucketProvider holds the details of cloud provider of the object store.</p>
@@ -1921,11 +1812,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec
+<h3 id="core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupBucket">BackupBucket</a>)
 </p>
 <p>
 <p>BackupBucketSpec is the specification of a Backup Bucket.</p>
@@ -1942,7 +1833,7 @@ string
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketProvider">
+<a href="#core.gardener.cloud/v1beta1.BackupBucketProvider">
 BackupBucketProvider
 </a>
 </em>
@@ -1966,23 +1857,23 @@ Kubernetes core/v1.SecretReference
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed holds the name of the seed allocated to BackupBucket for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.</p>
 </td>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus
+<h3 id="core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucket">BackupBucket</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupBucket">BackupBucket</a>)
 </p>
 <p>
 <p>BackupBucketStatus holds the most recently observed status of the Backup Bucket.</p>
@@ -1999,7 +1890,7 @@ string
 <td>
 <code>lastOperation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperation">
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
 LastOperation
 </a>
 </em>
@@ -2013,7 +1904,7 @@ LastOperation
 <td>
 <code>lastError</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastError">
+<a href="#core.gardener.cloud/v1beta1.LastError">
 LastError
 </a>
 </em>
@@ -2053,11 +1944,11 @@ will have object store specific credentials.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupEntrySpec">BackupEntrySpec
+<h3 id="core.gardener.cloud/v1beta1.BackupEntrySpec">BackupEntrySpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupEntry">BackupEntry</a>)
 </p>
 <p>
 <p>BackupEntrySpec is the specification of a Backup Entry.</p>
@@ -2083,23 +1974,23 @@ string
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed holds the name of the seed allocated to BackupEntry for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupEntry for running controller.</p>
 </td>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus
+<h3 id="core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupEntry">BackupEntry</a>)
 </p>
 <p>
 <p>BackupEntryStatus holds the most recently observed status of the Backup Entry.</p>
@@ -2116,7 +2007,7 @@ string
 <td>
 <code>lastOperation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperation">
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
 LastOperation
 </a>
 </em>
@@ -2130,7 +2021,7 @@ LastOperation
 <td>
 <code>lastError</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastError">
+<a href="#core.gardener.cloud/v1beta1.LastError">
 LastError
 </a>
 </em>
@@ -2155,11 +2046,11 @@ BackupEntry&rsquo;s generation, which is updated on mutation by the API Server.<
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.CloudInfo">CloudInfo
+<h3 id="core.gardener.cloud/v1beta1.CloudInfo">CloudInfo
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ClusterInfo">ClusterInfo</a>)
+<a href="#core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo</a>)
 </p>
 <p>
 <p>CloudInfo contains information about the cloud</p>
@@ -2196,11 +2087,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec
+<h3 id="core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfile">CloudProfile</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>)
 </p>
 <p>
 <p>CloudProfileSpec is the specification of a CloudProfile.
@@ -2223,14 +2114,14 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesSettings">
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
 KubernetesSettings
 </a>
 </em>
@@ -2243,7 +2134,7 @@ KubernetesSettings
 <td>
 <code>machineImages</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MachineImage">
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
 []MachineImage
 </a>
 </em>
@@ -2256,7 +2147,7 @@ KubernetesSettings
 <td>
 <code>machineTypes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MachineType">
+<a href="#core.gardener.cloud/v1beta1.MachineType">
 []MachineType
 </a>
 </em>
@@ -2269,7 +2160,7 @@ KubernetesSettings
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -2283,7 +2174,7 @@ ProviderConfig
 <td>
 <code>regions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Region">
+<a href="#core.gardener.cloud/v1beta1.Region">
 []Region
 </a>
 </em>
@@ -2323,7 +2214,7 @@ string
 <td>
 <code>volumeTypes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.VolumeType">
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
 []VolumeType
 </a>
 </em>
@@ -2335,11 +2226,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ClusterAutoscaler">ClusterAutoscaler
+<h3 id="core.gardener.cloud/v1beta1.ClusterAutoscaler">ClusterAutoscaler
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.</p>
@@ -2436,11 +2327,11 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ClusterInfo">ClusterInfo
+<h3 id="core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.PlantStatus">PlantStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.PlantStatus">PlantStatus</a>)
 </p>
 <p>
 <p>ClusterInfo contains information about the Plant cluster</p>
@@ -2457,7 +2348,7 @@ Kubernetes meta/v1.Duration
 <td>
 <code>cloud</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.CloudInfo">
+<a href="#core.gardener.cloud/v1beta1.CloudInfo">
 CloudInfo
 </a>
 </em>
@@ -2470,7 +2361,7 @@ CloudInfo
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesInfo">
+<a href="#core.gardener.cloud/v1beta1.KubernetesInfo">
 KubernetesInfo
 </a>
 </em>
@@ -2481,14 +2372,14 @@ KubernetesInfo
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Condition">Condition
+<h3 id="core.gardener.cloud/v1beta1.Condition">Condition
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.PlantStatus">PlantStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.SeedStatus">SeedStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.PlantStatus">PlantStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
 <p>Condition holds the information about the state of a resource.</p>
@@ -2505,7 +2396,7 @@ KubernetesInfo
 <td>
 <code>type</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ConditionType">
+<a href="#core.gardener.cloud/v1beta1.ConditionType">
 ConditionType
 </a>
 </em>
@@ -2518,7 +2409,7 @@ ConditionType
 <td>
 <code>status</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ConditionStatus">
+<a href="#core.gardener.cloud/v1beta1.ConditionStatus">
 ConditionStatus
 </a>
 </em>
@@ -2577,29 +2468,29 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ConditionStatus">ConditionStatus
+<h3 id="core.gardener.cloud/v1beta1.ConditionStatus">ConditionStatus
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">Condition</a>)
+<a href="#core.gardener.cloud/v1beta1.Condition">Condition</a>)
 </p>
 <p>
 <p>ConditionStatus is the status of a condition.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.ConditionType">ConditionType
+<h3 id="core.gardener.cloud/v1beta1.ConditionType">ConditionType
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">Condition</a>)
+<a href="#core.gardener.cloud/v1beta1.Condition">Condition</a>)
 </p>
 <p>
 <p>ConditionType is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerDeployment">ControllerDeployment
+<h3 id="core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
 </p>
 <p>
 <p>ControllerDeployment contains information for how this controller is deployed.</p>
@@ -2627,7 +2518,7 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -2639,11 +2530,11 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerInstallationSpec">ControllerInstallationSpec
+<h3 id="core.gardener.cloud/v1beta1.ControllerInstallationSpec">ControllerInstallationSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallation">ControllerInstallation</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation</a>)
 </p>
 <p>
 <p>ControllerInstallationSpec is the specification of a ControllerInstallation.</p>
@@ -2684,11 +2575,11 @@ Kubernetes core/v1.ObjectReference
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerInstallationStatus">ControllerInstallationStatus
+<h3 id="core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallation">ControllerInstallation</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation</a>)
 </p>
 <p>
 <p>ControllerInstallationStatus is the status of a ControllerInstallation.</p>
@@ -2705,7 +2596,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>conditions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">
+<a href="#core.gardener.cloud/v1beta1.Condition">
 []Condition
 </a>
 </em>
@@ -2719,7 +2610,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>providerStatus</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -2731,11 +2622,11 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerRegistrationSpec">ControllerRegistrationSpec
+<h3 id="core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerRegistration">ControllerRegistration</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration</a>)
 </p>
 <p>
 <p>ControllerRegistrationSpec is the specification of a ControllerRegistration.</p>
@@ -2752,7 +2643,7 @@ ProviderConfig
 <td>
 <code>resources</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerResource">
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">
 []ControllerResource
 </a>
 </em>
@@ -2766,7 +2657,7 @@ ProviderConfig
 <td>
 <code>deployment</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerDeployment">
+<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">
 ControllerDeployment
 </a>
 </em>
@@ -2778,11 +2669,11 @@ ControllerDeployment
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ControllerResource">ControllerResource
+<h3 id="core.gardener.cloud/v1beta1.ControllerResource">ControllerResource
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
 </p>
 <p>
 <p>ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, &hellip;) and the actual type for this
@@ -2846,11 +2737,11 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.DNS">DNS
+<h3 id="core.gardener.cloud/v1beta1.DNS">DNS
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>DNS holds information about the provider, the hosted zone id and the domain.</p>
@@ -2880,7 +2771,7 @@ kubeconfig that is handed out to end-users.</p>
 <td>
 <code>providers</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.DNSProvider">
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">
 []DNSProvider
 </a>
 </em>
@@ -2893,11 +2784,11 @@ not a default domain is used.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.DNSIncludeExclude">DNSIncludeExclude
+<h3 id="core.gardener.cloud/v1beta1.DNSIncludeExclude">DNSIncludeExclude
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.DNSProvider">DNSProvider</a>)
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>)
 </p>
 <p>
 </p>
@@ -2935,11 +2826,11 @@ not a default domain is used.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.DNSProvider">DNSProvider
+<h3 id="core.gardener.cloud/v1beta1.DNSProvider">DNSProvider
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.DNS">DNS</a>)
+<a href="#core.gardener.cloud/v1beta1.DNS">DNS</a>)
 </p>
 <p>
 <p>DNSProvider contains information about a DNS provider.</p>
@@ -2956,7 +2847,7 @@ not a default domain is used.</p>
 <td>
 <code>domains</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.DNSIncludeExclude">
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
 DNSIncludeExclude
 </a>
 </em>
@@ -2998,7 +2889,7 @@ this shoot.</p>
 <td>
 <code>zones</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.DNSIncludeExclude">
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
 DNSIncludeExclude
 </a>
 </em>
@@ -3010,11 +2901,11 @@ DNSIncludeExclude
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Endpoint">Endpoint
+<h3 id="core.gardener.cloud/v1beta1.Endpoint">Endpoint
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.PlantSpec">PlantSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.PlantSpec">PlantSpec</a>)
 </p>
 <p>
 <p>Endpoint is an endpoint for monitoring, logging and other services around the plant.</p>
@@ -3062,21 +2953,21 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ErrorCode">ErrorCode
+<h3 id="core.gardener.cloud/v1beta1.ErrorCode">ErrorCode
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.LastError">LastError</a>)
+<a href="#core.gardener.cloud/v1beta1.LastError">LastError</a>)
 </p>
 <p>
 <p>ErrorCode is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.ExpirableVersion">ExpirableVersion
+<h3 id="core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesSettings">KubernetesSettings</a>, 
-<a href="#core.gardener.cloud/v1alpha1.MachineImage">MachineImage</a>)
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">KubernetesSettings</a>, 
+<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
 </p>
 <p>
 <p>ExpirableVersion contains a version and an expiration date.</p>
@@ -3116,11 +3007,11 @@ Kubernetes meta/v1.Time
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Extension">Extension
+<h3 id="core.gardener.cloud/v1beta1.Extension">Extension
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Extension contains type and provider information for Shoot extensions.</p>
@@ -3148,7 +3039,7 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -3160,68 +3051,12 @@ ProviderConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ExtensionResourceState">ExtensionResourceState
+<h3 id="core.gardener.cloud/v1beta1.Gardener">Gardener
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec</a>)
-</p>
-<p>
-<p>ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot&rsquo;s
-namespace on the Seed cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>kind</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Kind (type) of the extension custom resource</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>purpose</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Purpose of the extension custom resource</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
-ProviderConfig
-</a>
-</em>
-</td>
-<td>
-<p>State of the extension resource</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1alpha1.Gardener">Gardener
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedStatus">SeedStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
 <p>Gardener holds the information about the Gardener version that operated a resource.</p>
@@ -3269,11 +3104,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.GardenerDuration">GardenerDuration
+<h3 id="core.gardener.cloud/v1beta1.GardenerDuration">GardenerDuration
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig</a>)
 </p>
 <p>
 <p>GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.</p>
@@ -3300,52 +3135,11 @@ time.Duration
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.GardenerResourceData">GardenerResourceData
+<h3 id="core.gardener.cloud/v1beta1.Hibernation">Hibernation
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec</a>)
-</p>
-<p>
-<p>GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot&rsquo;s control plane.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Name of the object required to generate resources</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>data</code></br>
-<em>
-map[string]string
-</em>
-</td>
-<td>
-<p>Data contains the payload required to generate resources</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1alpha1.Hibernation">Hibernation
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Hibernation contains information whether the Shoot is suspended or not.</p>
@@ -3374,7 +3168,7 @@ bool
 <td>
 <code>schedules</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.HibernationSchedule">
+<a href="#core.gardener.cloud/v1beta1.HibernationSchedule">
 []HibernationSchedule
 </a>
 </em>
@@ -3386,11 +3180,11 @@ bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.HibernationSchedule">HibernationSchedule
+<h3 id="core.gardener.cloud/v1beta1.HibernationSchedule">HibernationSchedule
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Hibernation">Hibernation</a>)
+<a href="#core.gardener.cloud/v1beta1.Hibernation">Hibernation</a>)
 </p>
 <p>
 <p>HibernationSchedule determines the hibernation schedule of a Shoot.
@@ -3443,11 +3237,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig
+<h3 id="core.gardener.cloud/v1beta1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeControllerManagerConfig">KubeControllerManagerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig</a>)
 </p>
 <p>
 <p>HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -3465,7 +3259,7 @@ Note: Descriptions were taken from the Kubernetes documentation.</p>
 <td>
 <code>cpuInitializationPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3479,7 +3273,7 @@ GardenerDuration
 <td>
 <code>downscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3493,7 +3287,7 @@ GardenerDuration
 <td>
 <code>downscaleStabilization</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3507,7 +3301,7 @@ GardenerDuration
 <td>
 <code>initialReadinessDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3521,7 +3315,7 @@ GardenerDuration
 <td>
 <code>syncPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3547,7 +3341,7 @@ float64
 <td>
 <code>upscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerDuration">
+<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
 GardenerDuration
 </a>
 </em>
@@ -3559,11 +3353,11 @@ GardenerDuration
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig
+<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>KubeAPIServerConfig contains configuration settings for the kube-apiserver.</p>
@@ -3580,7 +3374,7 @@ GardenerDuration
 <td>
 <code>KubernetesConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesConfig">
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
 KubernetesConfig
 </a>
 </em>
@@ -3595,7 +3389,7 @@ KubernetesConfig
 <td>
 <code>admissionPlugins</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.AdmissionPlugin">
+<a href="#core.gardener.cloud/v1beta1.AdmissionPlugin">
 []AdmissionPlugin
 </a>
 </em>
@@ -3625,7 +3419,7 @@ element list containing the issuer URL.</p>
 <td>
 <code>auditConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.AuditConfig">
+<a href="#core.gardener.cloud/v1beta1.AuditConfig">
 AuditConfig
 </a>
 </em>
@@ -3651,7 +3445,7 @@ bool
 <td>
 <code>oidcConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.OIDCConfig">
+<a href="#core.gardener.cloud/v1beta1.OIDCConfig">
 OIDCConfig
 </a>
 </em>
@@ -3677,7 +3471,7 @@ map[string]bool
 <td>
 <code>serviceAccountConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ServiceAccountConfig">
+<a href="#core.gardener.cloud/v1beta1.ServiceAccountConfig">
 ServiceAccountConfig
 </a>
 </em>
@@ -3690,11 +3484,11 @@ of the kube-apiserver.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeControllerManagerConfig">KubeControllerManagerConfig
+<h3 id="core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.</p>
@@ -3711,7 +3505,7 @@ of the kube-apiserver.</p>
 <td>
 <code>KubernetesConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesConfig">
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
 KubernetesConfig
 </a>
 </em>
@@ -3726,7 +3520,7 @@ KubernetesConfig
 <td>
 <code>horizontalPodAutoscaler</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.HorizontalPodAutoscalerConfig">
+<a href="#core.gardener.cloud/v1beta1.HorizontalPodAutoscalerConfig">
 HorizontalPodAutoscalerConfig
 </a>
 </em>
@@ -3750,11 +3544,11 @@ int32
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeProxyConfig">KubeProxyConfig
+<h3 id="core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>KubeProxyConfig contains configuration settings for the kube-proxy.</p>
@@ -3771,7 +3565,7 @@ int32
 <td>
 <code>KubernetesConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesConfig">
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
 KubernetesConfig
 </a>
 </em>
@@ -3786,7 +3580,7 @@ KubernetesConfig
 <td>
 <code>mode</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProxyMode">
+<a href="#core.gardener.cloud/v1beta1.ProxyMode">
 ProxyMode
 </a>
 </em>
@@ -3799,11 +3593,11 @@ defaults to IPTables.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeSchedulerConfig">KubeSchedulerConfig
+<h3 id="core.gardener.cloud/v1beta1.KubeSchedulerConfig">KubeSchedulerConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>KubeSchedulerConfig contains configuration settings for the kube-scheduler.</p>
@@ -3820,7 +3614,7 @@ defaults to IPTables.</p>
 <td>
 <code>KubernetesConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesConfig">
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
 KubernetesConfig
 </a>
 </em>
@@ -3833,12 +3627,12 @@ KubernetesConfig
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>, 
-<a href="#core.gardener.cloud/v1alpha1.WorkerKubernetes">WorkerKubernetes</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>, 
+<a href="#core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes</a>)
 </p>
 <p>
 <p>KubeletConfig contains configuration settings for the kubelet.</p>
@@ -3855,7 +3649,7 @@ KubernetesConfig
 <td>
 <code>KubernetesConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubernetesConfig">
+<a href="#core.gardener.cloud/v1beta1.KubernetesConfig">
 KubernetesConfig
 </a>
 </em>
@@ -3894,7 +3688,7 @@ string
 <td>
 <code>evictionHard</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfigEviction">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigEviction">
 KubeletConfigEviction
 </a>
 </em>
@@ -3927,7 +3721,7 @@ Default: 90</p>
 <td>
 <code>evictionMinimumReclaim</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfigEvictionMinimumReclaim">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigEvictionMinimumReclaim">
 KubeletConfigEvictionMinimumReclaim
 </a>
 </em>
@@ -3957,7 +3751,7 @@ Default: 4m0s</p>
 <td>
 <code>evictionSoft</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfigEviction">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigEviction">
 KubeletConfigEviction
 </a>
 </em>
@@ -3977,7 +3771,7 @@ imagefs.inodesFree: &ldquo;10%&rdquo;</p>
 <td>
 <code>evictionSoftGracePeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfigEvictionSoftGracePeriod">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigEvictionSoftGracePeriod">
 KubeletConfigEvictionSoftGracePeriod
 </a>
 </em>
@@ -4020,11 +3814,11 @@ int64
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeletConfigEviction">KubeletConfigEviction
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
 <p>KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.</p>
@@ -4099,11 +3893,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeletConfigEvictionMinimumReclaim">KubeletConfigEvictionMinimumReclaim
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfigEvictionMinimumReclaim">KubeletConfigEvictionMinimumReclaim
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
 <p>KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.</p>
@@ -4188,11 +3982,11 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubeletConfigEvictionSoftGracePeriod">KubeletConfigEvictionSoftGracePeriod
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfigEvictionSoftGracePeriod">KubeletConfigEvictionSoftGracePeriod
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
 <p>KubeletConfigEvictionSoftGracePeriod contains grace periods for kubelet eviction thresholds.</p>
@@ -4277,11 +4071,11 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Kubernetes">Kubernetes
+<h3 id="core.gardener.cloud/v1beta1.Kubernetes">Kubernetes
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Kubernetes contains the version and configuration variables for the Shoot control plane.</p>
@@ -4310,7 +4104,7 @@ bool
 <td>
 <code>clusterAutoscaler</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ClusterAutoscaler">
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">
 ClusterAutoscaler
 </a>
 </em>
@@ -4324,7 +4118,7 @@ ClusterAutoscaler
 <td>
 <code>kubeAPIServer</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">
 KubeAPIServerConfig
 </a>
 </em>
@@ -4338,7 +4132,7 @@ KubeAPIServerConfig
 <td>
 <code>kubeControllerManager</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeControllerManagerConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeControllerManagerConfig">
 KubeControllerManagerConfig
 </a>
 </em>
@@ -4352,7 +4146,7 @@ KubeControllerManagerConfig
 <td>
 <code>kubeScheduler</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeSchedulerConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeSchedulerConfig">
 KubeSchedulerConfig
 </a>
 </em>
@@ -4366,7 +4160,7 @@ KubeSchedulerConfig
 <td>
 <code>kubeProxy</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeProxyConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeProxyConfig">
 KubeProxyConfig
 </a>
 </em>
@@ -4380,7 +4174,7 @@ KubeProxyConfig
 <td>
 <code>kubelet</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">
 KubeletConfig
 </a>
 </em>
@@ -4403,15 +4197,15 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubernetesConfig">KubernetesConfig
+<h3 id="core.gardener.cloud/v1beta1.KubernetesConfig">KubernetesConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>, 
-<a href="#core.gardener.cloud/v1alpha1.KubeControllerManagerConfig">KubeControllerManagerConfig</a>, 
-<a href="#core.gardener.cloud/v1alpha1.KubeProxyConfig">KubeProxyConfig</a>, 
-<a href="#core.gardener.cloud/v1alpha1.KubeSchedulerConfig">KubeSchedulerConfig</a>, 
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeSchedulerConfig">KubeSchedulerConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
 <p>KubernetesConfig contains common configuration fields for the control plane components.</p>
@@ -4438,11 +4232,11 @@ map[string]bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubernetesDashboard">KubernetesDashboard
+<h3 id="core.gardener.cloud/v1beta1.KubernetesDashboard">KubernetesDashboard
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Addons">Addons</a>)
+<a href="#core.gardener.cloud/v1beta1.Addons">Addons</a>)
 </p>
 <p>
 <p>KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.</p>
@@ -4459,7 +4253,7 @@ map[string]bool
 <td>
 <code>Addon</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Addon">
+<a href="#core.gardener.cloud/v1beta1.Addon">
 Addon
 </a>
 </em>
@@ -4484,11 +4278,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubernetesInfo">KubernetesInfo
+<h3 id="core.gardener.cloud/v1beta1.KubernetesInfo">KubernetesInfo
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ClusterInfo">ClusterInfo</a>)
+<a href="#core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo</a>)
 </p>
 <p>
 <p>KubernetesInfo contains the version and configuration variables for the Plant cluster.</p>
@@ -4514,11 +4308,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.KubernetesSettings">KubernetesSettings
+<h3 id="core.gardener.cloud/v1beta1.KubernetesSettings">KubernetesSettings
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>KubernetesSettings contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
@@ -4535,7 +4329,7 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ExpirableVersion">
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
 []ExpirableVersion
 </a>
 </em>
@@ -4547,13 +4341,13 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.LastError">LastError
+<h3 id="core.gardener.cloud/v1beta1.LastError">LastError
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
 <p>LastError indicates the last occurred error for an operation on a resource.</p>
@@ -4593,7 +4387,7 @@ string
 <td>
 <code>codes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ErrorCode">
+<a href="#core.gardener.cloud/v1beta1.ErrorCode">
 []ErrorCode
 </a>
 </em>
@@ -4619,13 +4413,13 @@ Kubernetes meta/v1.Time
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.LastOperation">LastOperation
+<h3 id="core.gardener.cloud/v1beta1.LastOperation">LastOperation
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
 <p>LastOperation indicates the type and the state of the last operation, along with a description
@@ -4678,7 +4472,7 @@ int
 <td>
 <code>state</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperationState">
+<a href="#core.gardener.cloud/v1beta1.LastOperationState">
 LastOperationState
 </a>
 </em>
@@ -4691,7 +4485,7 @@ LastOperationState
 <td>
 <code>type</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperationType">
+<a href="#core.gardener.cloud/v1beta1.LastOperationType">
 LastOperationType
 </a>
 </em>
@@ -4702,29 +4496,29 @@ LastOperationType
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.LastOperationState">LastOperationState
+<h3 id="core.gardener.cloud/v1beta1.LastOperationState">LastOperationState
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperation">LastOperation</a>)
+<a href="#core.gardener.cloud/v1beta1.LastOperation">LastOperation</a>)
 </p>
 <p>
 <p>LastOperationState is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.LastOperationType">LastOperationType
+<h3 id="core.gardener.cloud/v1beta1.LastOperationType">LastOperationType
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperation">LastOperation</a>)
+<a href="#core.gardener.cloud/v1beta1.LastOperation">LastOperation</a>)
 </p>
 <p>
 <p>LastOperationType is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.Machine">Machine
+<h3 id="core.gardener.cloud/v1beta1.Machine">Machine
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Worker">Worker</a>)
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
 <p>Machine contains information about the machine type and image.</p>
@@ -4752,7 +4546,7 @@ string
 <td>
 <code>image</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ShootMachineImage">
+<a href="#core.gardener.cloud/v1beta1.ShootMachineImage">
 ShootMachineImage
 </a>
 </em>
@@ -4765,11 +4559,11 @@ latest version of the first image stated in the referenced CloudProfile if no va
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.MachineImage">MachineImage
+<h3 id="core.gardener.cloud/v1beta1.MachineImage">MachineImage
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineImage defines the name and multiple versions of the machine image in any environment.</p>
@@ -4797,7 +4591,7 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ExpirableVersion">
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
 []ExpirableVersion
 </a>
 </em>
@@ -4808,11 +4602,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.MachineType">MachineType
+<h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineType contains certain properties of a machine type.</p>
@@ -4879,7 +4673,7 @@ string
 <td>
 <code>storage</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MachineTypeStorage">
+<a href="#core.gardener.cloud/v1beta1.MachineTypeStorage">
 MachineTypeStorage
 </a>
 </em>
@@ -4903,11 +4697,11 @@ bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.MachineTypeStorage">MachineTypeStorage
+<h3 id="core.gardener.cloud/v1beta1.MachineTypeStorage">MachineTypeStorage
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.MachineType">MachineType</a>)
+<a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
 </p>
 <p>
 <p>MachineTypeStorage is the amount of storage associated with the root volume of this machine type.</p>
@@ -4957,11 +4751,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Maintenance">Maintenance
+<h3 id="core.gardener.cloud/v1beta1.Maintenance">Maintenance
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Maintenance contains information about the time window for maintenance operations and which
@@ -4979,7 +4773,7 @@ operations should be performed.</p>
 <td>
 <code>autoUpdate</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MaintenanceAutoUpdate">
+<a href="#core.gardener.cloud/v1beta1.MaintenanceAutoUpdate">
 MaintenanceAutoUpdate
 </a>
 </em>
@@ -4993,7 +4787,7 @@ MaintenanceAutoUpdate
 <td>
 <code>timeWindow</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.MaintenanceTimeWindow">
+<a href="#core.gardener.cloud/v1beta1.MaintenanceTimeWindow">
 MaintenanceTimeWindow
 </a>
 </em>
@@ -5005,11 +4799,11 @@ MaintenanceTimeWindow
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.MaintenanceAutoUpdate">MaintenanceAutoUpdate
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoUpdate">MaintenanceAutoUpdate
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Maintenance">Maintenance</a>)
+<a href="#core.gardener.cloud/v1beta1.Maintenance">Maintenance</a>)
 </p>
 <p>
 <p>MaintenanceAutoUpdate contains information about which constraints should be automatically updated.</p>
@@ -5046,11 +4840,11 @@ bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.MaintenanceTimeWindow">MaintenanceTimeWindow
+<h3 id="core.gardener.cloud/v1beta1.MaintenanceTimeWindow">MaintenanceTimeWindow
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Maintenance">Maintenance</a>)
+<a href="#core.gardener.cloud/v1beta1.Maintenance">Maintenance</a>)
 </p>
 <p>
 <p>MaintenanceTimeWindow contains information about the time window for maintenance operations.</p>
@@ -5089,11 +4883,11 @@ If not present, the value will be computed based on the &ldquo;Begin&rdquo; valu
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Monitoring">Monitoring
+<h3 id="core.gardener.cloud/v1beta1.Monitoring">Monitoring
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Monitoring contains information about the monitoring configuration for the shoot.</p>
@@ -5110,7 +4904,7 @@ If not present, the value will be computed based on the &ldquo;Begin&rdquo; valu
 <td>
 <code>alerting</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Alerting">
+<a href="#core.gardener.cloud/v1beta1.Alerting">
 Alerting
 </a>
 </em>
@@ -5122,11 +4916,11 @@ Alerting
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Networking">Networking
+<h3 id="core.gardener.cloud/v1beta1.Networking">Networking
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Networking defines networking parameters for the shoot cluster.</p>
@@ -5154,7 +4948,7 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -5201,11 +4995,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.NginxIngress">NginxIngress
+<h3 id="core.gardener.cloud/v1beta1.NginxIngress">NginxIngress
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Addons">Addons</a>)
+<a href="#core.gardener.cloud/v1beta1.Addons">Addons</a>)
 </p>
 <p>
 <p>NginxIngress describes configuration values for the nginx-ingress addon.</p>
@@ -5222,7 +5016,7 @@ string
 <td>
 <code>Addon</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Addon">
+<a href="#core.gardener.cloud/v1beta1.Addon">
 Addon
 </a>
 </em>
@@ -5258,28 +5052,13 @@ map[string]string
 See <a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options">https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options</a></p>
 </td>
 </tr>
-<tr>
-<td>
-<code>externalTrafficPolicy</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExternalTrafficPolicy controls the <code>.spec.externalTrafficPolicy</code> value of the load balancer <code>Service</code>
-exposing the nginx-ingress. Defaults to <code>Cluster</code>.</p>
-</td>
-</tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.OIDCConfig">OIDCConfig
+<h3 id="core.gardener.cloud/v1beta1.OIDCConfig">OIDCConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
 <p>OIDCConfig contains configuration settings for the OIDC provider.
@@ -5309,7 +5088,7 @@ string
 <td>
 <code>clientAuthentication</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.OpenIDConnectClientAuthentication">
+<a href="#core.gardener.cloud/v1beta1.OpenIDConnectClientAuthentication">
 OpenIDConnectClientAuthentication
 </a>
 </em>
@@ -5418,11 +5197,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.OpenIDConnectClientAuthentication">OpenIDConnectClientAuthentication
+<h3 id="core.gardener.cloud/v1beta1.OpenIDConnectClientAuthentication">OpenIDConnectClientAuthentication
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.OIDCConfig">OIDCConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.OIDCConfig">OIDCConfig</a>)
 </p>
 <p>
 <p>OpenIDConnectClientAuthentication contains configuration for OIDC clients.</p>
@@ -5462,11 +5241,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.PlantSpec">PlantSpec
+<h3 id="core.gardener.cloud/v1beta1.PlantSpec">PlantSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Plant">Plant</a>)
+<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>)
 </p>
 <p>
 <p>PlantSpec is the specification of a Plant.</p>
@@ -5497,7 +5276,7 @@ clusters to be added to Gardener.</p>
 <td>
 <code>endpoints</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Endpoint">
+<a href="#core.gardener.cloud/v1beta1.Endpoint">
 []Endpoint
 </a>
 </em>
@@ -5509,11 +5288,11 @@ clusters to be added to Gardener.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.PlantStatus">PlantStatus
+<h3 id="core.gardener.cloud/v1beta1.PlantStatus">PlantStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Plant">Plant</a>)
+<a href="#core.gardener.cloud/v1beta1.Plant">Plant</a>)
 </p>
 <p>
 <p>PlantStatus is the status of a Plant.</p>
@@ -5530,7 +5309,7 @@ clusters to be added to Gardener.</p>
 <td>
 <code>conditions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">
+<a href="#core.gardener.cloud/v1beta1.Condition">
 []Condition
 </a>
 </em>
@@ -5557,7 +5336,7 @@ Plant&rsquo;s generation, which is updated on mutation by the API Server.</p>
 <td>
 <code>clusterInfo</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ClusterInfo">
+<a href="#core.gardener.cloud/v1beta1.ClusterInfo">
 ClusterInfo
 </a>
 </em>
@@ -5568,11 +5347,11 @@ ClusterInfo
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ProjectMember">ProjectMember
+<h3 id="core.gardener.cloud/v1beta1.ProjectMember">ProjectMember
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectSpec">ProjectSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ProjectSpec">ProjectSpec</a>)
 </p>
 <p>
 <p>ProjectMember is a member of a project.</p>
@@ -5615,20 +5394,20 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ProjectPhase">ProjectPhase
+<h3 id="core.gardener.cloud/v1beta1.ProjectPhase">ProjectPhase
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectStatus">ProjectStatus</a>)
+<a href="#core.gardener.cloud/v1beta1.ProjectStatus">ProjectStatus</a>)
 </p>
 <p>
 <p>ProjectPhase is a label for the condition of a project at the current time.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.ProjectSpec">ProjectSpec
+<h3 id="core.gardener.cloud/v1beta1.ProjectSpec">ProjectSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Project">Project</a>)
+<a href="#core.gardener.cloud/v1beta1.Project">Project</a>)
 </p>
 <p>
 <p>ProjectSpec is the specification of a Project.</p>
@@ -5699,7 +5478,7 @@ string
 <td>
 <code>members</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectMember">
+<a href="#core.gardener.cloud/v1beta1.ProjectMember">
 []ProjectMember
 </a>
 </em>
@@ -5725,11 +5504,11 @@ A nil value means that Gardener will determine the name of the namespace.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ProjectStatus">ProjectStatus
+<h3 id="core.gardener.cloud/v1beta1.ProjectStatus">ProjectStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Project">Project</a>)
+<a href="#core.gardener.cloud/v1beta1.Project">Project</a>)
 </p>
 <p>
 <p>ProjectStatus holds the most recently observed status of the project.</p>
@@ -5758,7 +5537,7 @@ int64
 <td>
 <code>phase</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProjectPhase">
+<a href="#core.gardener.cloud/v1beta1.ProjectPhase">
 ProjectPhase
 </a>
 </em>
@@ -5769,11 +5548,11 @@ ProjectPhase
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Provider">Provider
+<h3 id="core.gardener.cloud/v1beta1.Provider">Provider
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
 <p>Provider contains provider-specific information that are handed-over to the provider-specific
@@ -5802,7 +5581,7 @@ string
 <td>
 <code>controlPlaneConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -5817,7 +5596,7 @@ definition in the documentation of your provider extension.</p>
 <td>
 <code>infrastructureConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -5832,7 +5611,7 @@ definition in the documentation of your provider extension.</p>
 <td>
 <code>workers</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Worker">
+<a href="#core.gardener.cloud/v1beta1.Worker">
 []Worker
 </a>
 </em>
@@ -5843,20 +5622,19 @@ definition in the documentation of your provider extension.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ProviderConfig">ProviderConfig
+<h3 id="core.gardener.cloud/v1beta1.ProviderConfig">ProviderConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.AdmissionPlugin">AdmissionPlugin</a>, 
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ControllerDeployment">ControllerDeployment</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
-<a href="#core.gardener.cloud/v1alpha1.Extension">Extension</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">ExtensionResourceState</a>, 
-<a href="#core.gardener.cloud/v1alpha1.Networking">Networking</a>, 
-<a href="#core.gardener.cloud/v1alpha1.Provider">Provider</a>, 
-<a href="#core.gardener.cloud/v1alpha1.ShootMachineImage">ShootMachineImage</a>, 
-<a href="#core.gardener.cloud/v1alpha1.Worker">Worker</a>)
+<a href="#core.gardener.cloud/v1beta1.AdmissionPlugin">AdmissionPlugin</a>, 
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>, 
+<a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.Extension">Extension</a>, 
+<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
+<a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage</a>, 
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
 <p>ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct.
@@ -5888,11 +5666,11 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ProxyMode">ProxyMode
+<h3 id="core.gardener.cloud/v1beta1.ProxyMode">ProxyMode
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeProxyConfig">KubeProxyConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig</a>)
 </p>
 <p>
 <p>ProxyMode available in Linux platform: &lsquo;userspace&rsquo; (older, going to be EOL), &lsquo;iptables&rsquo;
@@ -5902,11 +5680,11 @@ In Linux platform, if the iptables proxy is selected, regardless of how, but the
 insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to &lsquo;ipvs&rsquo;,
 and the fall back path is firstly iptables and then userspace.</p>
 </p>
-<h3 id="core.gardener.cloud/v1alpha1.QuotaSpec">QuotaSpec
+<h3 id="core.gardener.cloud/v1beta1.QuotaSpec">QuotaSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Quota">Quota</a>)
+<a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>)
 </p>
 <p>
 <p>QuotaSpec is the specification of a Quota.</p>
@@ -5959,11 +5737,11 @@ Kubernetes core/v1.ObjectReference
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Region">Region
+<h3 id="core.gardener.cloud/v1beta1.Region">Region
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>Region contains certain properties of a region.</p>
@@ -5991,7 +5769,7 @@ string
 <td>
 <code>zones</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.AvailabilityZone">
+<a href="#core.gardener.cloud/v1beta1.AvailabilityZone">
 []AvailabilityZone
 </a>
 </em>
@@ -6003,11 +5781,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedBackup">SeedBackup
+<h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedBackup contains the object store configuration for backups for shoot (currently only etcd).</p>
@@ -6039,6 +5817,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Region is a region name.</p>
 </td>
 </tr>
@@ -6059,11 +5838,11 @@ the objects as well as buckets.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedDNS">SeedDNS
+<h3 id="core.gardener.cloud/v1beta1.SeedDNS">SeedDNS
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedDNS contains DNS-relevant information about this seed cluster.</p>
@@ -6090,11 +5869,11 @@ to construct ingress URLs for system applications running in Shoot clusters.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedNetworks">SeedNetworks
+<h3 id="core.gardener.cloud/v1beta1.SeedNetworks">SeedNetworks
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.</p>
@@ -6144,7 +5923,7 @@ string
 <td>
 <code>shootDefaults</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ShootNetworks">
+<a href="#core.gardener.cloud/v1beta1.ShootNetworks">
 ShootNetworks
 </a>
 </em>
@@ -6154,13 +5933,26 @@ ShootNetworks
 <p>ShootDefaults contains the default networks CIDRs for shoots.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>blockCIDRs</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
+in the seed cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedProvider">SeedProvider
+<h3 id="core.gardener.cloud/v1beta1.SeedProvider">SeedProvider
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedProvider defines the provider type and region for this Seed cluster.</p>
@@ -6197,11 +5989,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec
+<h3 id="core.gardener.cloud/v1beta1.SeedSpec">SeedSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Seed">Seed</a>)
+<a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>)
 </p>
 <p>
 <p>SeedSpec is the specification of a Seed.</p>
@@ -6218,7 +6010,7 @@ string
 <td>
 <code>backup</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedBackup">
+<a href="#core.gardener.cloud/v1beta1.SeedBackup">
 SeedBackup
 </a>
 </em>
@@ -6233,22 +6025,9 @@ under the configured object store.</p>
 </tr>
 <tr>
 <td>
-<code>blockCIDRs</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
-in the seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dns</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedDNS">
+<a href="#core.gardener.cloud/v1beta1.SeedDNS">
 SeedDNS
 </a>
 </em>
@@ -6261,7 +6040,7 @@ SeedDNS
 <td>
 <code>networks</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedNetworks">
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">
 SeedNetworks
 </a>
 </em>
@@ -6274,7 +6053,7 @@ SeedNetworks
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedProvider">
+<a href="#core.gardener.cloud/v1beta1.SeedProvider">
 SeedProvider
 </a>
 </em>
@@ -6301,7 +6080,7 @@ the account the Seed cluster has been deployed to.</p>
 <td>
 <code>taints</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedTaint">
+<a href="#core.gardener.cloud/v1beta1.SeedTaint">
 []SeedTaint
 </a>
 </em>
@@ -6315,7 +6094,7 @@ the account the Seed cluster has been deployed to.</p>
 <td>
 <code>volume</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedVolume">
+<a href="#core.gardener.cloud/v1beta1.SeedVolume">
 SeedVolume
 </a>
 </em>
@@ -6327,11 +6106,11 @@ SeedVolume
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedStatus">SeedStatus
+<h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Seed">Seed</a>)
+<a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>)
 </p>
 <p>
 <p>SeedStatus is the status of a Seed.</p>
@@ -6348,7 +6127,7 @@ SeedVolume
 <td>
 <code>gardener</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Gardener">
+<a href="#core.gardener.cloud/v1beta1.Gardener">
 Gardener
 </a>
 </em>
@@ -6362,7 +6141,7 @@ Gardener
 <td>
 <code>conditions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">
+<a href="#core.gardener.cloud/v1beta1.Condition">
 []Condition
 </a>
 </em>
@@ -6387,11 +6166,11 @@ Seed&rsquo;s generation, which is updated on mutation by the API Server.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedTaint">SeedTaint
+<h3 id="core.gardener.cloud/v1beta1.SeedTaint">SeedTaint
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedTaint describes a taint on a seed.</p>
@@ -6429,11 +6208,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedVolume">SeedVolume
+<h3 id="core.gardener.cloud/v1beta1.SeedVolume">SeedVolume
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
 <p>SeedVolume contains settings for persistentvolumes created in the seed cluster.</p>
@@ -6464,7 +6243,7 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <td>
 <code>providers</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.SeedVolumeProvider">
+<a href="#core.gardener.cloud/v1beta1.SeedVolumeProvider">
 []SeedVolumeProvider
 </a>
 </em>
@@ -6476,11 +6255,11 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.SeedVolumeProvider">SeedVolumeProvider
+<h3 id="core.gardener.cloud/v1beta1.SeedVolumeProvider">SeedVolumeProvider
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedVolume">SeedVolume</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedVolume">SeedVolume</a>)
 </p>
 <p>
 <p>SeedVolumeProvider is a storage class provisioner type.</p>
@@ -6517,11 +6296,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ServiceAccountConfig">ServiceAccountConfig
+<h3 id="core.gardener.cloud/v1beta1.ServiceAccountConfig">ServiceAccountConfig
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
 <p>ServiceAccountConfig is the kube-apiserver configuration for service accounts.</p>
@@ -6565,11 +6344,11 @@ service account token issuer. The issuer will sign issued ID tokens with this pr
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootMachineImage">ShootMachineImage
+<h3 id="core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Machine">Machine</a>)
+<a href="#core.gardener.cloud/v1beta1.Machine">Machine</a>)
 </p>
 <p>
 <p>ShootMachineImage defines the name and the version of the shoot&rsquo;s machine image in any environment. Has to be
@@ -6598,7 +6377,7 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -6621,11 +6400,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootNetworks">ShootNetworks
+<h3 id="core.gardener.cloud/v1beta1.ShootNetworks">ShootNetworks
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.SeedNetworks">SeedNetworks</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">SeedNetworks</a>)
 </p>
 <p>
 <p>ShootNetworks contains the default networks CIDRs for shoots.</p>
@@ -6664,11 +6443,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootSpec">ShootSpec
+<h3 id="core.gardener.cloud/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Shoot">Shoot</a>)
+<a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>)
 </p>
 <p>
 <p>ShootSpec is the specification of a Shoot.</p>
@@ -6685,7 +6464,7 @@ string
 <td>
 <code>addons</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Addons">
+<a href="#core.gardener.cloud/v1beta1.Addons">
 Addons
 </a>
 </em>
@@ -6710,7 +6489,7 @@ string
 <td>
 <code>dns</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.DNS">
+<a href="#core.gardener.cloud/v1beta1.DNS">
 DNS
 </a>
 </em>
@@ -6724,7 +6503,7 @@ DNS
 <td>
 <code>extensions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Extension">
+<a href="#core.gardener.cloud/v1beta1.Extension">
 []Extension
 </a>
 </em>
@@ -6738,7 +6517,7 @@ DNS
 <td>
 <code>hibernation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Hibernation">
+<a href="#core.gardener.cloud/v1beta1.Hibernation">
 Hibernation
 </a>
 </em>
@@ -6752,7 +6531,7 @@ Hibernation
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Kubernetes">
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">
 Kubernetes
 </a>
 </em>
@@ -6765,7 +6544,7 @@ Kubernetes
 <td>
 <code>networking</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Networking">
+<a href="#core.gardener.cloud/v1beta1.Networking">
 Networking
 </a>
 </em>
@@ -6778,7 +6557,7 @@ Networking
 <td>
 <code>maintenance</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Maintenance">
+<a href="#core.gardener.cloud/v1beta1.Maintenance">
 Maintenance
 </a>
 </em>
@@ -6793,7 +6572,7 @@ operations should be performed.</p>
 <td>
 <code>monitoring</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Monitoring">
+<a href="#core.gardener.cloud/v1beta1.Monitoring">
 Monitoring
 </a>
 </em>
@@ -6807,7 +6586,7 @@ Monitoring
 <td>
 <code>provider</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Provider">
+<a href="#core.gardener.cloud/v1beta1.Provider">
 Provider
 </a>
 </em>
@@ -6853,58 +6632,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootStateSpec">ShootStateSpec
+<h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.ShootState">ShootState</a>)
-</p>
-<p>
-<p>ShootStateSpec is the specification of the ShootState.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>gardener</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.GardenerResourceData">
-[]GardenerResourceData
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Gardener holds the data required to generate resources deployed by the gardenlet</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>extensions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.ExtensionResourceState">
-[]ExtensionResourceState
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Extensions holds the state of custom resources reconciled by extension controllers in the seed</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1alpha1.ShootStatus">ShootStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Shoot">Shoot</a>)
+<a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>)
 </p>
 <p>
 <p>ShootStatus holds the most recently observed status of the Shoot cluster.</p>
@@ -6921,7 +6653,7 @@ string
 <td>
 <code>conditions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">
+<a href="#core.gardener.cloud/v1beta1.Condition">
 []Condition
 </a>
 </em>
@@ -6935,7 +6667,7 @@ string
 <td>
 <code>constraints</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Condition">
+<a href="#core.gardener.cloud/v1beta1.Condition">
 []Condition
 </a>
 </em>
@@ -6949,7 +6681,7 @@ string
 <td>
 <code>gardener</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Gardener">
+<a href="#core.gardener.cloud/v1beta1.Gardener">
 Gardener
 </a>
 </em>
@@ -6973,7 +6705,7 @@ bool
 <td>
 <code>lastOperation</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastOperation">
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
 LastOperation
 </a>
 </em>
@@ -6985,23 +6717,9 @@ LastOperation
 </tr>
 <tr>
 <td>
-<code>lastError</code></br>
-<em>
-<a href="#core.gardener.cloud/v1alpha1.LastError">
-LastError
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>lastErrors</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.LastError">
+<a href="#core.gardener.cloud/v1beta1.LastError">
 []LastError
 </a>
 </em>
@@ -7041,14 +6759,14 @@ must be retried until we give up).</p>
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
 after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.</p>
 </td>
 </tr>
@@ -7080,11 +6798,11 @@ It is used to compute unique hashes.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Volume">Volume
+<h3 id="core.gardener.cloud/v1beta1.Volume">Volume
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Worker">Worker</a>)
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
 <p>Volume contains information about the volume type and size.</p>
@@ -7122,11 +6840,11 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.VolumeType">VolumeType
+<h3 id="core.gardener.cloud/v1beta1.VolumeType">VolumeType
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>VolumeType contains certain properties of a volume type.</p>
@@ -7175,11 +6893,11 @@ bool
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.Worker">Worker
+<h3 id="core.gardener.cloud/v1beta1.Worker">Worker
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Provider">Provider</a>)
+<a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>)
 </p>
 <p>
 <p>Worker is the base definition of a worker group.</p>
@@ -7220,7 +6938,7 @@ string
 <td>
 <code>kubernetes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.WorkerKubernetes">
+<a href="#core.gardener.cloud/v1beta1.WorkerKubernetes">
 WorkerKubernetes
 </a>
 </em>
@@ -7257,7 +6975,7 @@ string
 <td>
 <code>machine</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Machine">
+<a href="#core.gardener.cloud/v1beta1.Machine">
 Machine
 </a>
 </em>
@@ -7320,7 +7038,7 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.ProviderConfig">
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
 ProviderConfig
 </a>
 </em>
@@ -7348,7 +7066,7 @@ ProviderConfig
 <td>
 <code>volume</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.Volume">
+<a href="#core.gardener.cloud/v1beta1.Volume">
 Volume
 </a>
 </em>
@@ -7373,11 +7091,11 @@ as not every provider may support availability zones.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1alpha1.WorkerKubernetes">WorkerKubernetes
+<h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1alpha1.Worker">Worker</a>)
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
 <p>WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.</p>
@@ -7394,7 +7112,7 @@ as not every provider may support availability zones.</p>
 <td>
 <code>kubelet</code></br>
 <em>
-<a href="#core.gardener.cloud/v1alpha1.KubeletConfig">
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">
 KubeletConfig
 </a>
 </em>
@@ -7409,5 +7127,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>4a68c44a2</code>.
+on git commit <code>63f9d9f55</code>.
 </em></p>

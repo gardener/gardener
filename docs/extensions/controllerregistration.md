@@ -8,7 +8,7 @@ Similar to how `CloudProfile` or `Seed` resources get into the system, the Garde
 The specification mainly describes which of Gardener's extension CRDs are managed, for example:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: os-coreos
@@ -22,17 +22,17 @@ This information tells Gardener that there is an extension controller that can h
 It will now create `ControllerInstallation` resources:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerInstallation
 metadata:
   name: os-coreos
 spec:
   registrationRef:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: ControllerRegistration
     name: os-coreos
   seedRef:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
     name: aws-eu1
 ```
@@ -120,7 +120,7 @@ The `Shoot` resource itself will contain some provider-specific data blobs.
 As a result, some extensions might also want to run in the garden cluster, e.g., to provide `ValidatingWebhookConfiguration`s for validating the correctness of their provider-specific blobs:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: johndoe-aws

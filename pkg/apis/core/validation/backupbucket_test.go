@@ -44,7 +44,7 @@ var _ = Describe("validation", func() {
 					Name:      "backup-secret",
 					Namespace: "garden",
 				},
-				Seed: &seed,
+				SeedName: &seed,
 			},
 		}
 	})
@@ -71,7 +71,7 @@ var _ = Describe("validation", func() {
 			backupBucket.Spec.Provider.Type = ""
 			backupBucket.Spec.Provider.Region = ""
 			backupBucket.Spec.SecretRef = corev1.SecretReference{}
-			backupBucket.Spec.Seed = nil
+			backupBucket.Spec.SeedName = nil
 
 			errorList := ValidateBackupBucket(backupBucket)
 
@@ -93,7 +93,7 @@ var _ = Describe("validation", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seed"),
+					"Field": Equal("spec.seedName"),
 				}))))
 		})
 
@@ -102,7 +102,7 @@ var _ = Describe("validation", func() {
 			newBackupBucket.Spec.Provider.Type = "another-type"
 			newBackupBucket.Spec.Provider.Region = "another-region"
 			seed := "another-seed"
-			newBackupBucket.Spec.Seed = &seed
+			newBackupBucket.Spec.SeedName = &seed
 
 			errorList := ValidateBackupBucketUpdate(newBackupBucket, backupBucket)
 
@@ -112,7 +112,7 @@ var _ = Describe("validation", func() {
 			})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seed"),
+					"Field": Equal("spec.seedName"),
 				}))))
 		})
 	})

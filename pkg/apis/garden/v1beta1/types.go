@@ -601,7 +601,7 @@ type SeedSpec struct {
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks `json:"networks"`
-	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
+	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
 	BlockCIDRs []string `json:"blockCIDRs,omitempty"`

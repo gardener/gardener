@@ -5,6 +5,11 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alp
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,SigningKeySecret
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,IsHibernated
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,GardenerDuration,Duration
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ServiceAccountConfig,SigningKeySecret
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,ClusterAutoscaler
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,Kube2IAM
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,KubeLego

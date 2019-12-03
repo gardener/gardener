@@ -1,7 +1,7 @@
 # Project objects logically group team members, secrets, and Shoot clusters. They result in Kubernetes namespaces
 # prefixed with "garden-".
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Project
 metadata:
   name: dev

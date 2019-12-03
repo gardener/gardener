@@ -55,7 +55,7 @@ type SeedSpec struct {
 	// under the configured object store.
 	// +optional
 	Backup *SeedBackup `json:"backup,omitempty"`
-	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
+	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
 	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
@@ -97,6 +97,7 @@ type SeedBackup struct {
 	// Provider is a provider name.
 	Provider string `json:"provider"`
 	// Region is a region name.
+	// +optional
 	Region *string `json:"region,omitempty"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
 	// the object store where backups should be stored. It should have enough privileges to manipulate

@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/klog"
 )
@@ -224,6 +225,8 @@ func Convert_v1beta1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversio
 		})
 	}
 
+	out.Spec.Networks.BlockCIDRs = in.Spec.BlockCIDRs
+
 	return nil
 }
 
@@ -331,6 +334,8 @@ func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversio
 		}
 	}
 
+	out.Spec.BlockCIDRs = in.Spec.Networks.BlockCIDRs
+
 	return nil
 }
 
@@ -340,6 +345,14 @@ func Convert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedS
 
 func Convert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
 	return autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in, out, s)
+}
+
+func Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+	return autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in, out, s)
+}
+
+func Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in, out, s)
 }
 
 func Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
@@ -389,7 +402,7 @@ func Convert_v1beta1_QuotaSpec_To_garden_QuotaSpec(in *QuotaSpec, out *garden.Qu
 	switch in.Scope {
 	case QuotaScopeProject:
 		out.Scope = corev1.ObjectReference{
-			APIVersion: "core.gardener.cloud/v1alpha1",
+			APIVersion: "core.gardener.cloud/v1beta1",
 			Kind:       "Project",
 		}
 	case QuotaScopeSecret:
@@ -407,7 +420,7 @@ func Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec(in *garden.QuotaSpec, out *Qu
 		return err
 	}
 
-	if in.Scope.APIVersion == "core.gardener.cloud/v1alpha1" && in.Scope.Kind == "Project" {
+	if gvk := schema.FromAPIVersionAndKind(in.Scope.APIVersion, in.Scope.Kind); gvk.Group == "core.gardener.cloud" && gvk.Kind == "Project" {
 		out.Scope = QuotaScopeProject
 	}
 	if in.Scope.APIVersion == "v1" && in.Scope.Kind == "Secret" {
@@ -584,13 +597,13 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 				var ok bool
 				cloudProfileConfig = providerConfig.Object.(*azurev1alpha1.CloudProfileConfig)
 				if !ok {
-					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud.CloudProfile %s", in.Name)
 				}
 			case providerConfig.Raw != nil:
 				if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
 					// If an error occurs then the provider config information contains invalid syntax, and in this
 					// case we don't want to fail here. We rather don't try to migrate.
-					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud.CloudProfile %s", in.Name)
 				}
 			}
 		}
@@ -782,13 +795,13 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 				var ok bool
 				cloudProfileConfig = providerConfig.Object.(*openstackv1alpha1.CloudProfileConfig)
 				if !ok {
-					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+					klog.Errorf("Cannot cast providerConfig of core.gardener.cloud.CloudProfile %s", in.Name)
 				}
 			case providerConfig.Raw != nil:
 				if _, _, err := decoder.Decode(providerConfig.Raw, nil, cloudProfileConfig); err != nil {
 					// If an error occurs then the provider config information contains invalid syntax, and in this
 					// case we don't want to fail here. We rather don't try to migrate.
-					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud/v1alpha1.CloudProfile %s", in.Name)
+					klog.Errorf("Cannot decode providerConfig of core.gardener.cloud.CloudProfile %s", in.Name)
 				}
 			}
 		}
@@ -2256,8 +2269,8 @@ func Convert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, o
 		}
 	}
 
-	if in.Seed != nil {
-		out.Seed = *in.Seed
+	if in.SeedName != nil {
+		out.Seed = *in.SeedName
 	} else {
 		out.Seed = ""
 	}
@@ -2284,9 +2297,9 @@ func Convert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *gar
 	}
 
 	if len(in.Seed) > 0 {
-		out.Seed = &in.Seed
+		out.SeedName = &in.Seed
 	} else {
-		out.Seed = nil
+		out.SeedName = nil
 	}
 
 	return nil

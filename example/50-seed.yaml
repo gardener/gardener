@@ -1,6 +1,6 @@
 # Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Seed
 metadata:
   name: my-seed
@@ -28,8 +28,8 @@ spec:
   # shootDefaults:
   #   pods: 100.96.0.0/11
   #   services: 100.64.0.0/13
-  blockCIDRs:
-  - 169.254.169.254/32
+    blockCIDRs:
+    - 169.254.169.254/32
 # taints:
 # - key: seed.gardener.cloud/disable-dns # all shoots on this seed won't use any DNS, just the plain IPs/hostnames
 # - key: seed.gardener.cloud/protected   # only shoots in the `garden` namespace can use this seed

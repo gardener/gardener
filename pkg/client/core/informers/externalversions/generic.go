@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -61,6 +62,30 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().Shoots().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("shootstates"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1alpha1().ShootStates().Informer()}, nil
+
+		// Group=core.gardener.cloud, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("backupbuckets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().BackupBuckets().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("backupentries"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().BackupEntries().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("cloudprofiles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().CloudProfiles().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("controllerinstallations"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().ControllerInstallations().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("controllerregistrations"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().ControllerRegistrations().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("plants"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Plants().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("projects"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Projects().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("quotas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Quotas().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("secretbindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().SecretBindings().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("seeds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Seeds().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("shoots"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Shoots().Informer()}, nil
 
 	}
 

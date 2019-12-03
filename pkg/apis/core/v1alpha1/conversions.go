@@ -20,6 +20,7 @@ import (
 	"strings"
 	"unsafe"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/utils"
@@ -58,11 +59,71 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 
 	// Add non-generated conversion functions
 	return scheme.AddConversionFuncs(
+		Convert_v1alpha1_BackupBucket_To_core_BackupBucket,
+		Convert_core_BackupBucket_To_v1alpha1_BackupBucket,
+		Convert_v1alpha1_BackupEntry_To_core_BackupEntry,
+		Convert_core_BackupEntry_To_v1alpha1_BackupEntry,
 		Convert_v1alpha1_Seed_To_garden_Seed,
 		Convert_garden_Seed_To_v1alpha1_Seed,
 		Convert_v1alpha1_CloudProfile_To_garden_CloudProfile,
 		Convert_garden_CloudProfile_To_v1alpha1_CloudProfile,
 	)
+}
+
+func Convert_v1alpha1_BackupBucket_To_core_BackupBucket(in *BackupBucket, out *core.BackupBucket, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_BackupBucket_To_core_BackupBucket(in, out, s); err != nil {
+		return err
+	}
+
+	out.Spec.SeedName = in.Spec.Seed
+
+	return nil
+}
+
+func Convert_core_BackupBucket_To_v1alpha1_BackupBucket(in *core.BackupBucket, out *BackupBucket, s conversion.Scope) error {
+	if err := autoConvert_core_BackupBucket_To_v1alpha1_BackupBucket(in, out, s); err != nil {
+		return err
+	}
+
+	out.Spec.Seed = in.Spec.SeedName
+
+	return nil
+}
+
+func Convert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(in *core.BackupBucketSpec, out *BackupBucketSpec, s conversion.Scope) error {
+	return autoConvert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(in, out, s)
+}
+
+func Convert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBucketSpec, out *core.BackupBucketSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(in, out, s)
+}
+
+func Convert_v1alpha1_BackupEntry_To_core_BackupEntry(in *BackupEntry, out *core.BackupEntry, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_BackupEntry_To_core_BackupEntry(in, out, s); err != nil {
+		return err
+	}
+
+	out.Spec.SeedName = in.Spec.Seed
+
+	return nil
+}
+
+func Convert_core_BackupEntry_To_v1alpha1_BackupEntry(in *core.BackupEntry, out *BackupEntry, s conversion.Scope) error {
+	if err := autoConvert_core_BackupEntry_To_v1alpha1_BackupEntry(in, out, s); err != nil {
+		return err
+	}
+
+	out.Spec.Seed = in.Spec.SeedName
+
+	return nil
+}
+
+func Convert_core_BackupEntrySpec_To_v1alpha1_BackupEntrySpec(in *core.BackupEntrySpec, out *BackupEntrySpec, s conversion.Scope) error {
+	return autoConvert_core_BackupEntrySpec_To_v1alpha1_BackupEntrySpec(in, out, s)
+}
+
+func Convert_v1alpha1_BackupEntrySpec_To_core_BackupEntrySpec(in *BackupEntrySpec, out *core.BackupEntrySpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_BackupEntrySpec_To_core_BackupEntrySpec(in, out, s)
 }
 
 func Convert_v1alpha1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversion.Scope) error {
@@ -82,6 +143,7 @@ func Convert_v1alpha1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversi
 
 	out.Spec.IngressDomain = in.Spec.DNS.IngressDomain
 	out.Spec.Cloud.Region = in.Spec.Provider.Region
+	out.Spec.Networks.BlockCIDRs = in.Spec.BlockCIDRs
 
 	return nil
 }
@@ -115,6 +177,8 @@ func Convert_garden_Seed_To_v1alpha1_Seed(in *garden.Seed, out *Seed, s conversi
 		}
 	}
 
+	out.Spec.BlockCIDRs = in.Spec.Networks.BlockCIDRs
+
 	return nil
 }
 
@@ -124,6 +188,14 @@ func Convert_garden_SeedSpec_To_v1alpha1_SeedSpec(in *garden.SeedSpec, out *Seed
 
 func Convert_v1alpha1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
 	return autoConvert_v1alpha1_SeedSpec_To_garden_SeedSpec(in, out, s)
+}
+
+func Convert_garden_SeedNetworks_To_v1alpha1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+	return autoConvert_garden_SeedNetworks_To_v1alpha1_SeedNetworks(in, out, s)
+}
+
+func Convert_v1alpha1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SeedNetworks_To_garden_SeedNetworks(in, out, s)
 }
 
 func Convert_v1alpha1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
@@ -1704,6 +1776,8 @@ func Convert_garden_ShootStatus_To_v1alpha1_ShootStatus(in *garden.ShootStatus, 
 		out.IsHibernated = *in.IsHibernated
 	}
 
+	out.Seed = in.SeedName
+
 	return nil
 }
 
@@ -1726,6 +1800,7 @@ func Convert_v1alpha1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *ga
 	}
 
 	out.IsHibernated = &in.IsHibernated
+	out.SeedName = in.Seed
 
 	return nil
 }

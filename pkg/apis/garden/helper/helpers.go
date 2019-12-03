@@ -23,6 +23,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
@@ -260,7 +261,7 @@ func TaintsHave(taints []garden.SeedTaint, key string) bool {
 
 // QuotaScope returns the scope of a quota scope reference.
 func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
-	if scopeRef.APIVersion == "core.gardener.cloud/v1alpha1" && scopeRef.Kind == "Project" {
+	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "core.gardener.cloud" && gvk.Kind == "Project" {
 		return "project", nil
 	}
 	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {

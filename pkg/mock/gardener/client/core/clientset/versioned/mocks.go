@@ -6,6 +6,7 @@ package versioned
 
 import (
 	v1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gomock "github.com/golang/mock/gomock"
 	discovery "k8s.io/client-go/discovery"
 	reflect "reflect"
@@ -46,6 +47,20 @@ func (m *MockInterface) CoreV1alpha1() v1alpha1.CoreV1alpha1Interface {
 func (mr *MockInterfaceMockRecorder) CoreV1alpha1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1alpha1", reflect.TypeOf((*MockInterface)(nil).CoreV1alpha1))
+}
+
+// CoreV1beta1 mocks base method
+func (m *MockInterface) CoreV1beta1() v1beta1.CoreV1beta1Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CoreV1beta1")
+	ret0, _ := ret[0].(v1beta1.CoreV1beta1Interface)
+	return ret0
+}
+
+// CoreV1beta1 indicates an expected call of CoreV1beta1
+func (mr *MockInterfaceMockRecorder) CoreV1beta1() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1beta1", reflect.TypeOf((*MockInterface)(nil).CoreV1beta1))
 }
 
 // Discovery mocks base method

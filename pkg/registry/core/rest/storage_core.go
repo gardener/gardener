@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
@@ -46,6 +47,7 @@ type StorageProvider struct{}
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(core.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
 	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1alpha1.SchemeGroupVersion.Version] = p.v1alpha1Storage(restOptionsGetter)
+	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1beta1.SchemeGroupVersion.Version] = p.v1beta1Storage(restOptionsGetter)
 	return apiGroupInfo
 }
 
@@ -99,6 +101,52 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
 	storage["shootstates"] = shootStateStorage.ShootState
+
+	return storage
+}
+
+func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
+	storage := map[string]rest.Storage{}
+
+	backupBucketStorage := backupbucketstore.NewStorage(restOptionsGetter)
+	storage["backupbuckets"] = backupBucketStorage.BackupBucket
+	storage["backupbuckets/status"] = backupBucketStorage.Status
+
+	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
+	storage["backupentries"] = backupEntryStorage.BackupEntry
+	storage["backupentries/status"] = backupEntryStorage.Status
+
+	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
+	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
+	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
+	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
+
+	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
+	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
+	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
+
+	plantStorage := plantstore.NewStorage(restOptionsGetter)
+	storage["plants"] = plantStorage.Plant
+	storage["plants/status"] = plantStorage.Status
+
+	projectStorage := projectstore.NewStorage(restOptionsGetter)
+	storage["projects"] = projectStorage.Project
+	storage["projects/status"] = projectStorage.Status
+
+	quotaStorage := quotastore.NewStorage(restOptionsGetter)
+	storage["quotas"] = quotaStorage.Quota
+
+	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
+	storage["secretbindings"] = secretBindingStorage.SecretBinding
+
+	seedStorage := seedstore.NewStorage(restOptionsGetter, cloudprofileStorage.CloudProfile)
+	storage["seeds"] = seedStorage.Seed
+	storage["seeds/status"] = seedStorage.Status
+
+	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	storage["shoots"] = shootStorage.Shoot
+	storage["shoots/status"] = shootStorage.Status
 
 	return storage
 }

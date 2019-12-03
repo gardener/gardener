@@ -4,6 +4,7 @@ package versioned
 
 import (
 	corev1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -12,6 +13,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
+	CoreV1beta1() corev1beta1.CoreV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -19,11 +21,17 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	coreV1alpha1 *corev1alpha1.CoreV1alpha1Client
+	coreV1beta1  *corev1beta1.CoreV1beta1Client
 }
 
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return c.coreV1alpha1
+}
+
+// CoreV1beta1 retrieves the CoreV1beta1Client
+func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
+	return c.coreV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -46,6 +54,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.coreV1beta1, err = corev1beta1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -59,6 +71,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.coreV1alpha1 = corev1alpha1.NewForConfigOrDie(c)
+	cs.coreV1beta1 = corev1beta1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -68,6 +81,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.coreV1alpha1 = corev1alpha1.New(c)
+	cs.coreV1beta1 = corev1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
