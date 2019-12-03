@@ -177,7 +177,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		)
 
 		// Update Shoot status
-		shoot, err = c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		updatedShoot, err := c.updateShootConditions(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
 		if err != nil {
 			botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
 			return nil // We do not want to run in the exponential backoff for the condition checks.
@@ -186,12 +186,12 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		// Mark Shoot as healthy/unhealthy
 		_, _ = kutil.TryUpdateShootLabels(
 			c.k8sGardenClient.GardenCore(),
-			retry.DefaultBackoff, shoot.ObjectMeta,
+			retry.DefaultBackoff, updatedShoot.ObjectMeta,
 			StatusLabelTransform(
 				ComputeStatus(
-					shoot.Status.LastOperation,
-					shoot.Status.LastErrors,
-					shoot.Status.LastError,
+					updatedShoot.Status.LastOperation,
+					updatedShoot.Status.LastErrors,
+					updatedShoot.Status.LastError,
 					conditionAPIServerAvailable,
 					conditionControlPlaneHealthy,
 					conditionEveryNodeReady,
@@ -206,7 +206,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1alpha1.Shoot, key string
 		constraintHibernationPossible = botanist.ConstraintsChecks(ctx, initializeShootClients, constraintHibernationPossible)
 
 		// Update Shoot status
-		shoot, err = c.updateShootConstraints(shoot, constraintHibernationPossible)
+		_, err = c.updateShootConstraints(shoot, constraintHibernationPossible)
 		if err != nil {
 			botanist.Logger.Errorf("Could not update Shoot constraints: %+v", err)
 			return nil
