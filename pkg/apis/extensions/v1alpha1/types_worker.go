@@ -78,7 +78,9 @@ type WorkerSpec struct {
 	// +optional
 	SSHPublicKey []byte `json:"sshPublicKey,omitempty"`
 	// Pools is a list of worker pools.
-	Pools []WorkerPool `json:"pools"`
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Pools []WorkerPool `json:"pools" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // WorkerPool is the definition of a specific worker pool.
@@ -148,7 +150,9 @@ type WorkerStatus struct {
 
 	// MachineDeployments is a list of created machine deployments. It will be used to e.g. configure
 	// the cluster-autoscaler properly.
-	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty"`
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	// ProviderStatus contains provider-specific output for this worker.
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`

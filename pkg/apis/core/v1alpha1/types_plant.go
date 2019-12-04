@@ -58,15 +58,19 @@ type PlantSpec struct {
 	// clusters to be added to Gardener.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 	// Endpoints is the configuration plant endpoints
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Endpoints []Endpoint `json:"endpoints,omitempty"`
+	Endpoints []Endpoint `json:"endpoints,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // PlantStatus is the status of a Plant.
 type PlantStatus struct {
 	// Conditions represents the latest available observations of a Plant's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	// ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
 	// Plant's generation, which is updated on mutation by the API Server.
 	// +optional
