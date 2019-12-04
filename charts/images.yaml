@@ -52,7 +52,15 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-proxy
   targetVersion: ">= 1.17"
-- name: hyperkube # used for kubectl + kubelet binaries on the worker nodes
+- name: etcd-backup-restore
+  sourceRepository: github.com/gardener/etcd-backup-restore
+  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
+  tag: "0.8.0"
+- name: etcd-druid
+  sourceRepository: github.com/gardener/etcd-druid
+  repository: eu.gcr.io/gardener-project/gardener/etcd-druid
+  tag: "0.1.0"	
+- name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
 - name: cluster-autoscaler

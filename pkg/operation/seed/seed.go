@@ -372,6 +372,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			common.HvpaControllerImageName,
 			common.DependencyWatchdogImageName,
 			common.KubeStateMetricsImageName,
+			common.EtcdDruidImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -528,6 +529,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		}
 		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
+		druidGK               = schema.GroupKind{Group: "druid.gardener.cloud", Kind: "Etcd"}
 		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost           = seed.GetIngressFQDN(grafanaPrefix)
 		prometheusHost        = seed.GetIngressFQDN(prometheusPrefix)
@@ -541,6 +543,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	applierOptions[vpaGK] = retainStatusInformation
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
+	applierOptions[druidGK] = retainStatusInformation
 
 	networks := []string{
 		seed.Info.Spec.Networks.Pods,

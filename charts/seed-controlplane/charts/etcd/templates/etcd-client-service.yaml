@@ -4,7 +4,7 @@ metadata:
   name: etcd-{{ .Values.role }}-client
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
+    gardener.cloud/role: controlplane
     app: etcd-statefulset
     role: {{ .Values.role }}
 spec:
