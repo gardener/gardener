@@ -20,6 +20,7 @@ data:
         cluster: {{ .Release.Namespace }}
         project: {{ .Values.shoot.project }}
         shoot_name: {{ .Values.shoot.name }}
+        name: {{ .Values.shoot.name }}
         seed_api: {{ .Values.seed.apiserver }}
         seed_region: {{ .Values.seed.region }}
         seed_provider: {{ .Values.seed.provider }}
