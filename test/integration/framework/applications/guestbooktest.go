@@ -44,13 +44,10 @@ const (
 	// RedisMaster is the name of the redis master deployed by the helm chart
 	RedisMaster = "redis-master"
 
-	// RedisSlave is the name of the redis-slave deployed by the helm chart
-	RedisSlave = "redis-slave"
-
 	guestBookTemplateName = "guestbook-app.yaml.tpl"
 	helmDeployNamespace   = metav1.NamespaceDefault
 	redisChart            = "stable/redis"
-	redisChartVersion     = "9.2.0"
+	redisChartVersion     = "10.2.1"
 )
 
 // GuestBookTest is simple application tests.
@@ -83,12 +80,9 @@ func NewGuestBookTest(resourcesDir string) (*GuestBookTest, error) {
 	}, nil
 }
 
-// WaitUntilPrerequisitesAreReady waits until the redis master and slave is ready.
+// WaitUntilPrerequisitesAreReady waits until the redis master is ready.
 func (t *GuestBookTest) WaitUntilPrerequisitesAreReady(ctx context.Context, gardenerTestOperations *framework.GardenerTestOperation) {
 	err := gardenerTestOperations.WaitUntilStatefulSetIsRunning(ctx, RedisMaster, helmDeployNamespace, gardenerTestOperations.ShootClient)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-	err = gardenerTestOperations.WaitUntilStatefulSetIsRunning(ctx, RedisSlave, helmDeployNamespace, gardenerTestOperations.ShootClient)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
@@ -110,25 +104,21 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context, gardenerTestOper
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ginkgo.By("Applying redis chart")
+	// redis-slaves are not required for test success
+	chartOverrides := map[string]interface{}{
+		"cluster": map[string]interface{}{
+			"enabled": false,
+		},
+	}
 	if shoot.Spec.Provider.Type == "alicloud" {
 		// AliCloud requires a minimum of 20 GB for its PVCs
-		err = gardenerTestOperations.DeployChart(ctx, helmDeployNamespace, t.chartRepo, "redis", map[string]interface{}{
-			"master": map[string]interface{}{
-				"persistence": map[string]interface{}{
-					"size": "20Gi",
-				},
-			},
-			"slave": map[string]interface{}{
-				"persistence": map[string]interface{}{
-					"size": "20Gi",
-				},
-			},
-		})
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	} else {
-		err = gardenerTestOperations.DeployChart(ctx, helmDeployNamespace, t.chartRepo, "redis", nil)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		chartOverrides["master"] = map[string]interface{}{
+			"persistence": map[string]interface{}{
+				"size": "20Gi",
+			}}
 	}
+	err = gardenerTestOperations.DeployChart(ctx, helmDeployNamespace, t.chartRepo, "redis", chartOverrides)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.WaitUntilPrerequisitesAreReady(ctx, gardenerTestOperations)
 
@@ -244,19 +234,6 @@ func (t *GuestBookTest) Cleanup(ctx context.Context, shootTestOperations *framew
 				},
 			}
 
-			redisSlaveServiceToDelete = &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: helmDeployNamespace,
-					Name:      RedisSlave,
-				},
-			}
-
-			redisSlaveStatefulSetToDelete = &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: helmDeployNamespace,
-					Name:      RedisSlave,
-				},
-			}
 		)
 
 		err := deleteResource(ctx, redisMasterServiceToDelete)
@@ -265,11 +242,6 @@ func (t *GuestBookTest) Cleanup(ctx context.Context, shootTestOperations *framew
 		err = deleteResource(ctx, redisMasterStatefulSetToDelete)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		err = deleteResource(ctx, redisSlaveServiceToDelete)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-		err = deleteResource(ctx, redisSlaveStatefulSetToDelete)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 	cleanupGuestbook()
 	cleanupRedis()
