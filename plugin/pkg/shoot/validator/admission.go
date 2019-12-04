@@ -161,6 +161,10 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		if reflect.DeepEqual(newShoot.Spec, oldShoot.Spec) && reflect.DeepEqual(newShoot.ObjectMeta, oldShoot.ObjectMeta) {
 			return nil
 		}
+
+		if newShoot.Spec.Provider.Type != oldShoot.Spec.Provider.Type {
+			return apierrors.NewBadRequest("shoot provider type was changed which is not allowed")
+		}
 	}
 
 	shoot, ok := a.GetObject().(*garden.Shoot)

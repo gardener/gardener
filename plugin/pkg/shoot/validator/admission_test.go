@@ -700,6 +700,22 @@ var _ = Describe("validator", func() {
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
 		})
 
+		It("should reject because the provider type was changed", func() {
+			shoot2 := shoot.DeepCopy()
+			shoot.Spec.Provider.Type = "aws"
+			shoot2.Spec.Provider.Type = "gcp"
+
+			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, shoot2, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+			err := admissionHandler.Admit(attrs, nil)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot provider type was changed which is not allowed")))
+		})
+
 		Context("tests for infrastructure update", func() {
 			var (
 				oldShoot *garden.Shoot
