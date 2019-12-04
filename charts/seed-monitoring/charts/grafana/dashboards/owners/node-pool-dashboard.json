@@ -528,7 +528,7 @@
           "decimals": 2,
           "link": true,
           "linkTooltip": "Drill down to shoot node details",
-          "linkUrl": "/d/shoot-nodes/shoot-node-details?orgId=1&var-Node=${__cell}&var-rate=5m",
+          "linkUrl": "/d/node-details/node-details?orgId=1&var-Node=${__cell}&var-rate=5m",
           "pattern": "node",
           "thresholds": [],
           "type": "number",
