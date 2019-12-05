@@ -393,7 +393,6 @@ func prepareCloudProfile(ctx context.Context) {
 	// update Cloud Profile with integration test machineImage & kubernetes version
 	err = shootGardenerTest.GardenClient.Client().Update(ctx, shootMaintenanceTest.CloudProfile)
 	Expect(err).To(BeNil())
-	return
 }
 
 func prepareShoot() *gardencorev1alpha1.Shoot {

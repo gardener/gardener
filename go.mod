@@ -17,7 +17,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
 	github.com/golang/mock v1.3.1
-	github.com/googleapis/gnostic v0.3.0
+	github.com/googleapis/gnostic v0.3.1
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3 // indirect
 	github.com/hashicorp/go-multierror v0.0.0-20180717150148-3d5d8f294aa0
 	github.com/json-iterator/go v1.1.6
@@ -50,7 +50,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20190722073852-5e22f3d471e6
 	k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
-	sigs.k8s.io/controller-runtime v0.2.0-beta.5
+	sigs.k8s.io/controller-runtime v0.2.2
 )
 
 replace (
@@ -69,6 +69,4 @@ replace (
 	k8s.io/klog => k8s.io/klog v0.1.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532 // kubernetes-1.14.8
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20190320154901-5e45bb682580
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.5
-	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2
 )

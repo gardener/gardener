@@ -308,9 +308,6 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		&appsv1.StatefulSetList{},
 	}
 
-	// TODO: Use `DeleteCollection` as soon it is in the controller-runtime:
-	// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),

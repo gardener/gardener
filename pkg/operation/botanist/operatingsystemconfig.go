@@ -142,7 +142,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	)
 	caBundle := ""
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
-		caBundle = fmt.Sprintf("%s", *cloudProfileCaBundle)
+		caBundle = *cloudProfileCaBundle
 	}
 	if caCert, ok := b.Secrets[v1alpha1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
 		caBundle = fmt.Sprintf("%s\n%s", caBundle, caCert)

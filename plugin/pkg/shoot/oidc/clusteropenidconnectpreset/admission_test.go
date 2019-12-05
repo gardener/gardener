@@ -189,7 +189,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Expect(err.Error()).To(Equal(errorMessage))
 			})
 
-			It("when recieved not a Shoot object", func() {
+			It("when received not a Shoot object", func() {
 				attrs = admission.NewAttributesRecord(&garden.Seed{}, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, false, nil)
 				errorFunc = apierrors.IsBadRequest
 				errorMessage = "could not convert resource into Shoot object"
@@ -252,7 +252,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{}
 			})
 
-			It("successfuly", func() {
+			It("successfully", func() {
 			})
 
 			It("presets which match even with lower weight", func() {
