@@ -207,19 +207,6 @@ func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
-// DeployDependencyWatchdog deploys the dependency watchdog to the Shoot namespace in the Seed.
-func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
-	dependencyWatchdogConfig := map[string]interface{}{
-		"replicas": b.Shoot.GetReplicas(1),
-	}
-
-	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, v1alpha1constants.DeploymentNameDependencyWatchdog)
-	if err != nil {
-		return nil
-	}
-	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, v1alpha1constants.DeploymentNameDependencyWatchdog), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameDependencyWatchdog, nil, dependencyWatchdog)
-}
-
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
 // * etcd-events
 // * etcd-main
@@ -988,13 +975,11 @@ func (b *Botanist) DeployKubeControllerManager() error {
 		},
 	}
 
-	if b.Shoot.HibernationEnabled {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager)
-		if err != nil {
-			return err
-		}
-		defaultValues["replicas"] = replicaCount
+	replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager)
+	if err != nil {
+		return err
 	}
+	defaultValues["replicas"] = replicaCount
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {

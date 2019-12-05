@@ -13,9 +13,13 @@ readlink -f /tmp >/dev/null 2>&1
 if [ $? -eq 0 ]; then
   # do not support readlink -f, so need alternative
   rlink="readlink -f"
+else
+  greadlink -f /tmp >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    rlink="greadlink -f"
+  fi
 fi
 set -e
-
 
 if [[ -z "${SOURCE_PATH}" ]]; then
   if [ -z "$rlink" ]; then
@@ -51,11 +55,11 @@ GO111MODULE=on ginkgo ${COVER_FLAG} -r -mod=vendor cmd pkg plugin
 ###############################################################################
 
 echo "Executing Prometheus alert tests"
-pushd $SOURCE_PATH/charts/seed-monitoring/charts/core/charts/prometheus > /dev/null
+pushd "$SOURCE_PATH/charts/seed-monitoring/charts/core/charts/prometheus" > /dev/null
   promtool test rules rules-tests/*test.yaml
 popd > /dev/null
 
 echo "Executing aggregate Prometheus alert tests"
-pushd $SOURCE_PATH/charts/seed-bootstrap/aggregate-prometheus-rules-tests > /dev/null
+pushd "$SOURCE_PATH/charts/seed-bootstrap/aggregate-prometheus-rules-tests" > /dev/null
   promtool test rules *test.yaml
 popd > /dev/null

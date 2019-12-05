@@ -222,6 +222,9 @@ const (
 	// KubecfgSecretName is the name of the kubecfg secret.
 	KubecfgSecretName = "kubecfg"
 
+	// KubecfgInternalSecretName is the name of the kubecfg secret with cluster IP access.
+	KubecfgInternalSecretName = "kubecfg-internal"
+
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
 
@@ -430,6 +433,9 @@ const (
 
 	// HvpaControllerImageName is the name of the hvpa-controller image
 	HvpaControllerImageName = "hvpa-controller"
+
+	// DependencyWatchdogImageName is the name of the dependency-watchdog image
+	DependencyWatchdogImageName = "dependency-watchdog"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
