@@ -82,8 +82,10 @@ type SeedStatus struct {
 	// +optional
 	Gardener Gardener `json:"gardener,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	// +optional
@@ -164,8 +166,10 @@ type SeedVolume struct {
 	// +optional
 	MinimumSize *resource.Quantity `json:"minimumSize,omitempty"`
 	// Providers is a list of storage class provisioner types for the seed.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Providers []SeedVolumeProvider `json:"providers,omitempty"`
+	Providers []SeedVolumeProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // SeedVolumeProvider is a storage class provisioner type.

@@ -47,8 +47,10 @@ type ShootStateList struct {
 // ShootStateSpec is the specification of the ShootState.
 type ShootStateSpec struct {
 	// Gardener holds the data required to generate resources deployed by the gardenlet
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Gardener []GardenerResourceData `json:"gardener,omitempty"`
+	Gardener []GardenerResourceData `json:"gardener,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	// Extensions holds the state of custom resources reconciled by extension controllers in the seed
 	// +optional
 	Extensions []ExtensionResourceState `json:"extensions,omitempty"`

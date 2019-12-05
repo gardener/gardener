@@ -96,10 +96,14 @@ type ShootSpec struct {
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty"`
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
 	// +optional
-	Constraints []Condition `json:"constraints,omitempty"`
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Constraints []Condition `json:"constraints,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener"`
 	// IsHibernated indicates whether the Shoot is currently hibernated.
@@ -192,8 +196,10 @@ type DNS struct {
 	Domain *string `json:"domain,omitempty"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Providers []DNSProvider `json:"providers,omitempty"`
+	Providers []DNSProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // DNSProvider contains information about a DNS provider.
@@ -335,8 +341,10 @@ type KubeAPIServerConfig struct {
 	KubernetesConfig `json:",inline"`
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
 	// configuration.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty"`
+	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	// APIAudiences are the identifiers of the API. The service account token authenticator will
 	// validate that tokens used against the API are bound to at least one of these audiences.
 	// If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single
@@ -775,7 +783,9 @@ type Provider struct {
 	// +optional
 	InfrastructureConfig *ProviderConfig `json:"infrastructureConfig,omitempty"`
 	// Workers is a list of worker groups.
-	Workers []Worker `json:"workers"`
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Workers []Worker `json:"workers" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // Worker is the base definition of a worker group.
