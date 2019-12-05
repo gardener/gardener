@@ -194,7 +194,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		clusterAutoscaler = map[string]interface{}{
 			"enabled": b.Shoot.WantsClusterAutoscaler,
 		}
-		podsecuritypolicies = map[string]interface{}{
+		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
 		kubeProxyConfig = map[string]interface{}{
@@ -222,6 +222,18 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},
 		}
+		shootInfo = map[string]interface{}{
+			"projectName":       b.Garden.Project.Name,
+			"shootName":         b.Shoot.Info.Name,
+			"provider":          b.Shoot.Info.Spec.Provider.Type,
+			"region":            b.Shoot.Info.Spec.Region,
+			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"podNetwork":        b.Shoot.GetPodNetwork(),
+			"serviceNetwork":    b.Shoot.GetServiceNetwork(),
+			"nodeNetwork":       b.Shoot.Info.Spec.Networking.Nodes,
+			"maintenanceBegin":  b.Shoot.Info.Spec.Maintenance.TimeWindow.Begin,
+			"maintenanceEnd":    b.Shoot.Info.Spec.Maintenance.TimeWindow.End,
+		}
 		nodeExporterConfig        = map[string]interface{}{}
 		blackboxExporterConfig    = map[string]interface{}{}
 		nodeProblemDetectorConfig = map[string]interface{}{}
@@ -235,6 +247,15 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	if openvpnDiffieHellmanSecret, ok := b.Secrets[common.GardenRoleOpenVPNDiffieHellman]; ok {
 		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
+
+	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
+		shootInfo["domain"] = *domain
+	}
+	var extensions []string
+	for extensionType := range b.Shoot.Extensions {
+		extensions = append(extensions, extensionType)
+	}
+	shootInfo["extensions"] = strings.Join(extensions, ",")
 
 	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
 	if err != nil {
@@ -287,7 +308,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
 		"cluster-autoscaler":  clusterAutoscaler,
-		"podsecuritypolicies": podsecuritypolicies,
+		"podsecuritypolicies": podSecurityPolicies,
 		"coredns":             coreDNS,
 		"kube-proxy":          kubeProxy,
 		"vpn-shoot":           vpnShoot,
@@ -297,6 +318,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"blackbox-exporter": blackboxExporter,
 		},
 		"node-problem-detector": nodeProblemDetector,
+		"shoot-info":            shootInfo,
 	})
 }
 

@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shoot-info
+  namespace: kube-system
+data:
+  projectName: {{ .Values.projectName }}
+  shootName: {{ .Values.shootName }}
+  provider: {{ .Values.provider }}
+  region: {{ .Values.region }}
+  kubernetesVersion: {{ .Values.kubernetesVersion }}
+  domain: {{ .Values.domain }}
+  podNetwork: {{ .Values.podNetwork }}
+  serviceNetwork: {{ .Values.serviceNetwork }}
+  nodeNetwork: {{ .Values.nodeNetwork }}
+  maintenanceBegin: {{ .Values.maintenanceBegin }}
+  maintenanceEnd: {{ .Values.maintenanceEnd }}
+  extensions: {{ .Values.extensions }}
