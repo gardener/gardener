@@ -215,7 +215,7 @@
         {
           "format": "bytes",
           "label": null,
-          "logBase": 2,
+          "logBase": 1,
           "max": null,
           "min": null,
           "show": true

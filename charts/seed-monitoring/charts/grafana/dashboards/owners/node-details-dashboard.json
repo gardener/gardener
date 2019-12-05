@@ -523,7 +523,7 @@
         {
           "format": "bytes",
           "label": "Memory",
-          "logBase": 2,
+          "logBase": 1,
           "max": null,
           "min": null,
           "show": true
@@ -972,7 +972,7 @@
             {
               "format": "bytes",
               "label": "Cores",
-              "logBase": 2,
+              "logBase": 1,
               "max": null,
               "min": null,
               "show": true
