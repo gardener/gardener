@@ -63,6 +63,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "Firing Alert(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -147,6 +148,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -232,6 +234,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " Pending Alert(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -316,6 +319,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -371,57 +375,58 @@
       "id": 16,
       "links": [],
       "options": {
-        "maxValue": 100,
-        "minValue": 0,
+        "fieldOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "defaults": {
+            "decimals": null,
+            "mappings": [
+              {
+                "from": "",
+                "id": 1,
+                "operator": "",
+                "text": "0",
+                "to": "",
+                "type": 1,
+                "value": "null"
+              },
+              {
+                "from": "",
+                "id": 2,
+                "operator": "",
+                "text": "0",
+                "to": "",
+                "type": 1,
+                "value": "No data"
+              }
+            ],
+            "max": 100,
+            "min": 0,
+            "thresholds": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ],
+            "unit": "percent"
+          },
+          "override": {},
+          "values": false
+        },
         "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "thresholds": [
-          {
-            "color": "green",
-            "index": 0,
-            "value": null
-          },
-          {
-            "color": "yellow",
-            "index": 1,
-            "value": 40
-          },
-          {
-            "color": "red",
-            "index": 2,
-            "value": 80
-          }
-        ],
-        "valueMappings": [
-          {
-            "from": "",
-            "id": 1,
-            "operator": "",
-            "text": "0",
-            "to": "",
-            "type": 1,
-            "value": "null"
-          },
-          {
-            "from": "",
-            "id": 2,
-            "operator": "",
-            "text": "0",
-            "to": "",
-            "type": 1,
-            "value": "No data"
-          }
-        ],
-        "valueOptions": {
-          "decimals": null,
-          "prefix": "",
-          "stat": "mean",
-          "suffix": "",
-          "unit": "percent"
-        }
+        "showThresholdMarkers": false
       },
-      "pluginVersion": "6.1.4",
+      "pluginVersion": "6.3.2",
       "targets": [
         {
           "expr": "(count(count(ALERTS) by (cluster)) / count(count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot-(.+)\"}) by (namespace))) * 100",
@@ -477,6 +482,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -532,6 +538,7 @@
       },
       "id": 9,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -599,6 +606,7 @@
       },
       "id": 7,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -646,7 +654,7 @@
       ],
       "targets": [
         {
-          "expr": "count(ALERTS{cluster=~\"$Cluster\", severity=~\"$Severity\", alertstate=~\"$AlertState\"}) by (alertname, cluster, severity, alertstate)",
+          "expr": "count(ALERTS{project=~\"$Project\",name=~\"$Shoot\", severity=~\"$Severity\", alertstate=~\"$AlertState\"}) by (alertname, project, name, severity, alertstate)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -681,6 +689,7 @@
       "decimals": 0,
       "description": "Shows the number of ($Severity) alerts in Alert State ($AlertState) for the selected clusters.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -688,6 +697,7 @@
         "y": 24
       },
       "id": 4,
+      "interval": "",
       "legend": {
         "alignAsTable": true,
         "avg": false,
@@ -703,6 +713,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -713,10 +726,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (cluster)",
+          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", project=~\"$Project\", name=~\"$Shoot\"}) by (name,project)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ cluster }}",
+          "legendFormat": "{{ project }}/{{ name }}",
           "refId": "A"
         }
       ],
@@ -771,6 +784,7 @@
       "decimals": 0,
       "description": "Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -793,6 +807,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -803,10 +820,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", cluster=~\"$Cluster\"}) by (alertname,cluster)",
+          "expr": "count(ALERTS{alertname=~\"$Alertname\", severity=~\"$Severity\", alertstate=~\"$AlertState\", project=~\"$Project\", name=~\"$Shoot\"}) by (alertname,project,name)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ alertname }}/{{ cluster }}",
+          "legendFormat": "{{ alertname }}/{{ project }}/{{ name }}",
           "refId": "A"
         }
       ],
@@ -854,7 +871,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
     "monitoring",
@@ -865,19 +882,50 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "d064864",
+          "value": "d064864"
         },
         "datasource": "prometheus",
-        "definition": "label_values(cluster)",
+        "definition": "label_values(ALERTS, project)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
         "multi": true,
-        "name": "Cluster",
+        "name": "Project",
         "options": [],
-        "query": "label_values(cluster)",
-        "refresh": 1,
+        "query": "label_values(ALERTS, project)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "shootwb",
+          "value": "shootwb"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(ALERTS{project=~\"$Project\"}, name)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": true,
+        "name": "Shoot",
+        "options": [
+          {
+            "selected": true,
+            "text": "shootwb",
+            "value": "shootwb"
+          }
+        ],
+        "query": "label_values(ALERTS{project=~\"$Project\"}, name)",
+        "refresh": 0,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,

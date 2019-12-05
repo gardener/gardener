@@ -1,7 +1,6 @@
 {
   "annotations": {
-    "list": [
-    ]
+    "list": []
   },
   "description": "",
   "editable": true,
@@ -18,6 +17,7 @@
       "decimals": 0,
       "description": "Shows how many API Servers are running for the selected shoot.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 8,
@@ -38,6 +38,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -48,7 +51,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "shoot:kube_apiserver:sum_by_pod{cluster=~\"$shoot\"}",
+          "expr": "sum(shoot:kube_apiserver:sum_by_pod{project=~\"$Project\", name=~\"$Shoot\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "API Server Replicas",
@@ -105,6 +108,7 @@
       "decimals": 0,
       "description": "Shows the number of nodes that the selected cluster has.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 8,
@@ -125,6 +129,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -135,10 +142,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "shoot:kube_node_info:count{cluster=~\"$shoot\"}",
+          "expr": "sum(shoot:kube_node_info:count{project=~\"$Project\", name=~\"$Shoot\"}) by (name, project)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ cluster }}",
+          "legendFormat": "{{ project }}/{{ name }}",
           "refId": "A"
         }
       ],
@@ -192,6 +199,7 @@
       "decimals": 0,
       "description": "Shows the total number of pods in the shoot's control plane at any given time.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 8,
@@ -212,6 +220,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -222,7 +233,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"$shoot\"})\n",
+          "expr": "count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot(-|--)$Project(-|--)$Shoot\"})\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "pods",
@@ -278,6 +289,7 @@
       "dashes": false,
       "description": "Shows the CPU usage of the control plane for the selected shoot.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -298,6 +310,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -308,10 +323,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"$shoot\"})",
+          "expr": "sum(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot(-|--)$Project(-|--)$Shoot\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$shoot",
+          "legendFormat": "$Project/$Shoot",
           "refId": "A"
         }
       ],
@@ -363,6 +378,7 @@
       "dashes": false,
       "description": "Shows the memory usage of the selected control plane.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -383,6 +399,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -393,10 +412,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(seed:container_memory_working_set_bytes:sum_by_pod{namespace=~\"$shoot\"})",
+          "expr": "sum(seed:container_memory_working_set_bytes:sum_by_pod{namespace=~\"shoot(-|--)$Project(-|--)$Shoot\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$shoot",
+          "legendFormat": "$Project/$Shoot",
           "refId": "A"
         }
       ],
@@ -443,7 +462,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
     "Control Planes",
@@ -454,16 +473,37 @@
       {
         "allValue": null,
         "datasource": "prometheus",
-        "definition": "label_values(namespace)",
+        "definition": "label_values(shoot:availability,project)",
         "hide": 0,
         "includeAll": false,
-        "label": "Shoot",
+        "label": null,
         "multi": false,
-        "name": "shoot",
+        "name": "Project",
         "options": [],
-        "query": "label_values(namespace)",
+        "query": "label_values(shoot:availability,project)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "datasource": "prometheus",
+        "definition": "label_values(shoot:availability{project=~\"$Project\"},name)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "Shoot",
+        "options": [],
+        "query": "label_values(shoot:availability{project=~\"$Project\"},name)",
         "refresh": 1,
-        "regex": "((shoot-|shoot--)(\\w.+))",
+        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -475,7 +515,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
