@@ -51,7 +51,7 @@ import (
 )
 
 var (
-	kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+	kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig of the Garden cluster that will be used for integration tests")
 	shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
 	shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
 	logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
@@ -131,7 +131,7 @@ var _ = Describe("Shoot application testing", func() {
 	CIt("Dashboard should be available", func(ctx context.Context) {
 		shoot := shootTestOperations.Shoot
 		if !shoot.Spec.Addons.KubernetesDashboard.Enabled {
-			Fail("The test requires .spec.addons.kubernetes-dashboard.enabled to be be true")
+			Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be be true")
 		}
 
 		err := shootTestOperations.DashboardAvailable(ctx)

@@ -46,7 +46,7 @@ import (
 
 var (
 	// flags
-	gardenerKubeconfigPath   = flag.String("gardener-kubecfg-path", "", "the path to the gardenerKubeconfigPath of the Garden cluster. File must exist.")
+	gardenerKubeconfigPath   = flag.String("gardener-kubecfg-path", "", "the path to the kubeconfig of Garden cluster. File must exist.")
 	shootKubeconfigPath      = flag.String("shoot-kubecfg-path", "", "the path to where the Kubeconfig of the Shoot cluster will be downloaded to.")
 	seedKubeconfigPath       = flag.String("seed-kubecfg-path", "", "the path to where the Kubeconfig of the Seed cluster will be downloaded to.")
 	testShootName            = flag.String("shoot-name", "", "unique name to use for test shoots. Used by test-machinery.")

@@ -90,7 +90,7 @@ func (t *GuestBookTest) WaitUntilPrerequisitesAreReady(ctx context.Context, gard
 func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context, gardenerTestOperations *framework.GardenerTestOperation) {
 	shoot := gardenerTestOperations.Shoot
 	if !shoot.Spec.Addons.NginxIngress.Enabled {
-		ginkgo.Fail("The test requires .spec.kubernetes.addons.nginx-ingress.enabled to be true")
+		ginkgo.Fail("The test requires .spec.addons.nginxIngress.enabled to be true")
 	} else if shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil || !*shoot.Spec.Kubernetes.AllowPrivilegedContainers {
 		ginkgo.Fail("The test requires .spec.kubernetes.allowPrivilegedContainers to be true")
 	}
