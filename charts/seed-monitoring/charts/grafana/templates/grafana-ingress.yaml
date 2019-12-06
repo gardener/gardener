@@ -13,7 +13,7 @@ metadata:
     role: {{ .Values.role }}
 spec:
   tls:
-  - secretName: grafana-{{ .Values.role }}-tls
+  - secretName: grafana-tls
     hosts:
     - {{ .Values.ingress.host }}
   rules:

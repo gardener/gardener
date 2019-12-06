@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -34,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -92,6 +94,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		kubeSchedulerCertDNSNames         = dnsNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = dnsNamesForEtcd(b.Shoot.SeedNamespace)
+
+		endUserCrtValidity = 730 * 24 * time.Hour // ~2 years
 	)
 
 	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
@@ -497,6 +501,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			CertType:  secrets.ServerCert,
 			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+			Validity:  &endUserCrtValidity,
 		},
 
 		// Secret definition for prometheus (ingress)
@@ -510,6 +515,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			CertType:  secrets.ServerCert,
 			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+			Validity:  &endUserCrtValidity,
 		},
 	}
 
@@ -567,6 +573,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 				CertType:  secrets.ServerCert,
 				SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+				Validity:  &endUserCrtValidity,
 			},
 			// Secret for elasticsearch
 			&secrets.CertificateSecretConfig{
@@ -641,7 +648,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 }
 
 // DeploySecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
-// used by the kube-apiserver, and all client certificates used for communcation. It also creates RSA key
+// used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
 // pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
 // credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
 // Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
@@ -723,8 +730,39 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
+	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// TODO: (timuthy) remove in future version.
+	var (
+		renewedLabel = "cert.gardener.cloud/renewed"
+		browserCerts = sets.NewString("grafana-tls", "kibana-tls", "prometheus-tls")
+	)
+	for name, secret := range existingSecretsMap {
+		_, ok := secret.Labels[renewedLabel]
+		if browserCerts.Has(name) && !ok {
+			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			delete(existingSecretsMap, name)
+		}
+	}
+
 	if err := b.generateShootSecrets(ctx, existingSecretsMap, wantedSecretsList); err != nil {
 		return err
+	}
+
+	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// TODO: (timuthy) remove in future version.
+	for name, secret := range b.Secrets {
+		_, ok := secret.Labels[renewedLabel]
+		if browserCerts.Has(name) && !ok {
+			if secret.Labels == nil {
+				secret.Labels = make(map[string]string)
+			}
+			secret.Labels[renewedLabel] = "true"
+			if err := b.K8sSeedClient.Client().Update(ctx, secret); err != nil {
+				return err
+			}
+		}
 	}
 
 	b.mutex.Lock()
