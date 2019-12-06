@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -75,16 +74,11 @@ func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsSelec
 	podList := &corev1.PodList{}
 	err := c.Client().List(ctx, podList,
 		client.InNamespace(namespace),
-		utilclient.MatchingLabelsSelector{Selector: labelsSelector})
+		client.MatchingLabelsSelector{Selector: labelsSelector})
 	if err != nil {
 		return nil, err
 	}
 	return podList, nil
-}
-
-// getAdminPassword gets the admin password for authenticating against the api
-func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, error) {
-	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), common.KubecfgSecretName, password)
 }
 
 // getAdminToken gets the admin token for authenticating against the api
@@ -170,7 +164,7 @@ func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *
 func getDeploymentListByLabels(ctx context.Context, labelsSelector labels.Selector, namespace string, c kubernetes.Interface) (*appsv1.DeploymentList, error) {
 	deploymentList := &appsv1.DeploymentList{}
 	if err := c.Client().List(ctx, deploymentList,
-		utilclient.MatchingLabelsSelector{Selector: labelsSelector}); err != nil {
+		client.MatchingLabelsSelector{Selector: labelsSelector}); err != nil {
 		return nil, err
 	}
 

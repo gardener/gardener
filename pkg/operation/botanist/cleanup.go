@@ -91,7 +91,7 @@ var (
 	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
 
 	// NoCleanupPreventionListOption are CollectionMatching that exclude system components or non-auto cleaned up resource.
-	NoCleanupPreventionListOption = utilclient.MatchingLabelsSelector{Selector: CleanupSelector}
+	NoCleanupPreventionListOption = client.MatchingLabelsSelector{Selector: CleanupSelector}
 
 	// MutatingWebhookConfigurationCleanOption is the delete selector for MutatingWebhookConfigurations.
 	MutatingWebhookConfigurationCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
@@ -113,7 +113,7 @@ var (
 
 	// ServiceCleanOption is the delete selector for Services.
 	ServiceCleanOption = utilclient.ListWith{
-		utilclient.MatchingLabelsSelector{
+		client.MatchingLabelsSelector{
 			Selector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention),
 		},
 	}
@@ -123,7 +123,7 @@ var (
 
 	// NamespaceMatchingFieldsSelector is the delete field selector for Namespaces.
 	NamespaceMatchingFieldsSelector = utilclient.ListWith{
-		utilclient.MatchingFieldsSelector{
+		client.MatchingFieldsSelector{
 			Selector: fields.AndSelectors(
 				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
 				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceSystem),
@@ -135,7 +135,7 @@ var (
 
 	// APIServiceCleanOption is the delete selector for APIServices.
 	APIServiceCleanOption = utilclient.ListWith{
-		utilclient.MatchingLabelsSelector{
+		client.MatchingLabelsSelector{
 			Selector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged),
 		},
 	}

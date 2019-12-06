@@ -49,7 +49,7 @@ type CloudProfileList struct {
 // CloudProfileSpec is the specification of a CloudProfile.
 // It must contain exactly one of its defined keys.
 type CloudProfileSpec struct {
-	// CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.
+	// CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.

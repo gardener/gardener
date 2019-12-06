@@ -16,8 +16,6 @@ package client
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -93,34 +91,4 @@ func (l Limit) ApplyToList(opts *client.ListOptions) {
 		opts.Raw = &metav1.ListOptions{}
 	}
 	opts.Raw.Limit = int64(l)
-}
-
-// MatchingLabelsSelector filters the list/delete operation on the given label
-// selector (or index in the case of cached lists). A struct is used because
-// labels.Selector is an interface, which cannot be aliased.
-//
-// TODO: Replace this with client.MatchingLabelsSelector (available from v0.2.1)
-// https://github.com/kubernetes-sigs/controller-runtime/pull/578
-type MatchingLabelsSelector struct {
-	labels.Selector
-}
-
-// ApplyToList restricts the list operation to match the label selector.
-func (m MatchingLabelsSelector) ApplyToList(opts *client.ListOptions) {
-	opts.LabelSelector = m
-}
-
-// MatchingFieldsSelector filters the list/delete operation on the given field
-// selector (or index in the case of cached lists). A struct is used because
-// fields.Selector is an interface, which cannot be aliased.
-//
-// TODO: Replace this with client.MatchingFieldsSelector (available from v0.2.1)
-// https://github.com/kubernetes-sigs/controller-runtime/pull/578
-type MatchingFieldsSelector struct {
-	fields.Selector
-}
-
-// ApplyToList restricts the list operation to match the field selector.
-func (m MatchingFieldsSelector) ApplyToList(opts *client.ListOptions) {
-	opts.FieldSelector = m
 }

@@ -211,7 +211,7 @@ func ToExecute(errorID string, task func() error) TaskFunc {
 
 // HandleErrors takes a reference to an ErrorContext, onSuccess and onFailure callback functions and a variadic list of taskFuncs.
 // It sequentially adds the Tasks' errorIDs to the provided ErrorContext and executes them.
-// If the ErrorContext has errors from the previous reconcilation and the tasks which caused errors complete successfully OnSuccess is called.
+// If the ErrorContext has errors from the previous reconciliation and the tasks which caused errors complete successfully OnSuccess is called.
 // If a task fails OnFailure is called
 func HandleErrors(errorContext *ErrorContext, onSuccess SuccessHandler, onFailure FailureHandler, tasks ...TaskFunc) error {
 	for _, task := range tasks {
