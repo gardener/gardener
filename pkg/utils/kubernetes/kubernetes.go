@@ -173,8 +173,8 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 }
 
 // GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
-// (ip address or hostname). It returns the value of the technical name whereby it always prefers the IP address (if given)
-// over the hostname. It also returns the list of all load balancer ingresses.
+// (ip address or hostname). It returns the value of the technical name whereby it always prefers the hostname (if given)
+// over the IP address. It also returns the list of all load balancer ingresses.
 func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace, name string) (string, error) {
 	service := &corev1.Service{}
 	if err := client.Get(ctx, Key(namespace, name), service); err != nil {
@@ -189,10 +189,10 @@ func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace
 	switch {
 	case length == 0:
 		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created")
-	case serviceStatusIngress[length-1].IP != "":
-		return serviceStatusIngress[length-1].IP, nil
 	case serviceStatusIngress[length-1].Hostname != "":
 		return serviceStatusIngress[length-1].Hostname, nil
+	case serviceStatusIngress[length-1].IP != "":
+		return serviceStatusIngress[length-1].IP, nil
 	}
 
 	return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")

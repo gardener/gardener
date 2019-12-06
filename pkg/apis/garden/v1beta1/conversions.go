@@ -1288,51 +1288,53 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 	}
 	out.Spec.Networking = networking
 
-	var dns garden.DNS
-	if err := autoConvert_v1beta1_DNS_To_garden_DNS(&in.Spec.DNS, &dns, s); err != nil {
-		return err
-	}
-
-	var provider garden.DNSProvider
-	if in.Spec.DNS.ExcludeDomains != nil || in.Spec.DNS.ExcludeZones != nil || in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.Provider != nil || in.Spec.DNS.SecretName != nil {
-		provider.SecretName = in.Spec.DNS.SecretName
-		provider.Type = in.Spec.DNS.Provider
-
-		var domains *garden.DNSIncludeExclude
-		if in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.ExcludeDomains != nil {
-			domains = &garden.DNSIncludeExclude{}
-			for _, val := range in.Spec.DNS.IncludeDomains {
-				domains.Include = append(domains.Include, val)
-			}
-			for _, val := range in.Spec.DNS.ExcludeDomains {
-				domains.Exclude = append(domains.Exclude, val)
-			}
-		}
-		provider.Domains = domains
-
-		var zones *garden.DNSIncludeExclude
-		if in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.ExcludeZones != nil {
-			zones = &garden.DNSIncludeExclude{}
-			for _, val := range in.Spec.DNS.IncludeZones {
-				zones.Include = append(zones.Include, val)
-			}
-			for _, val := range in.Spec.DNS.ExcludeZones {
-				zones.Exclude = append(zones.Exclude, val)
-			}
-		}
-		provider.Zones = zones
-
-		dns.Providers = append(dns.Providers, provider)
-	}
-
-	if additionalProviders, ok := in.Annotations[garden.MigrationShootDNSProviders]; ok {
-		var providers []garden.DNSProvider
-		if err := json.Unmarshal([]byte(additionalProviders), &providers); err != nil {
+	if in.Spec.DNS != nil {
+		var dns garden.DNS
+		if err := autoConvert_v1beta1_DNS_To_garden_DNS(in.Spec.DNS, &dns, s); err != nil {
 			return err
 		}
-		dns.Providers = append(dns.Providers, providers...)
+
+		var provider garden.DNSProvider
+		if in.Spec.DNS != nil && (in.Spec.DNS.ExcludeDomains != nil || in.Spec.DNS.ExcludeZones != nil || in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.Provider != nil || in.Spec.DNS.SecretName != nil) {
+			provider.SecretName = in.Spec.DNS.SecretName
+			provider.Type = in.Spec.DNS.Provider
+
+			var domains *garden.DNSIncludeExclude
+			if in.Spec.DNS.IncludeDomains != nil || in.Spec.DNS.ExcludeDomains != nil {
+				domains = &garden.DNSIncludeExclude{}
+				for _, val := range in.Spec.DNS.IncludeDomains {
+					domains.Include = append(domains.Include, val)
+				}
+				for _, val := range in.Spec.DNS.ExcludeDomains {
+					domains.Exclude = append(domains.Exclude, val)
+				}
+			}
+			provider.Domains = domains
+
+			var zones *garden.DNSIncludeExclude
+			if in.Spec.DNS.IncludeZones != nil || in.Spec.DNS.ExcludeZones != nil {
+				zones = &garden.DNSIncludeExclude{}
+				for _, val := range in.Spec.DNS.IncludeZones {
+					zones.Include = append(zones.Include, val)
+				}
+				for _, val := range in.Spec.DNS.ExcludeZones {
+					zones.Exclude = append(zones.Exclude, val)
+				}
+			}
+			provider.Zones = zones
+
+			dns.Providers = append(dns.Providers, provider)
+		}
+
+		if additionalProviders, ok := in.Annotations[garden.MigrationShootDNSProviders]; ok {
+			var providers []garden.DNSProvider
+			if err := json.Unmarshal([]byte(additionalProviders), &providers); err != nil {
+				return err
+			}
+			dns.Providers = append(dns.Providers, providers...)
+		}
+		out.Spec.DNS = &dns
 	}
-	out.Spec.DNS = &dns
 
 	var workerMigrationInfo garden.WorkerMigrationInfo
 	if data, ok := in.Annotations[garden.MigrationShootWorkers]; ok {
@@ -2167,9 +2169,10 @@ func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conve
 	}
 	out.Spec.Networking = networking
 
-	var dns DNS
+	var dns *DNS
 	if in.Spec.DNS != nil {
-		if err := autoConvert_garden_DNS_To_v1beta1_DNS(in.Spec.DNS, &dns, s); err != nil {
+		dns = &DNS{}
+		if err := autoConvert_garden_DNS_To_v1beta1_DNS(in.Spec.DNS, dns, s); err != nil {
 			return err
 		}
 

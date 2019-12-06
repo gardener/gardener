@@ -48,6 +48,9 @@ When the `gardener-controller-manager` starts it scans the `garden` namespace of
   * Not every end-user/stakeholder/customer has its own domain, however, Gardener needs to create a DNS record for every shoot cluster.
   * As landscape operator you might want to define a default domain owned and controlled by you that is used for all shoot clusters that don't specify their own domain.
 
+:warning: Please note that the mentioned domain secrets are only needed if you have at least one seed cluster that is not tainted with `seed.gardener.cloud/disable-dns`.
+Seeds with this taint don't create any DNS records for shoots scheduled on it, hence, if you only have such seeds, you don't need to create the domain secrets.
+
 * **Alerting secrets** (optional), contain the alerting configuration and credentials for the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) to send email alerts. It is also possible to configure the monitoring stack to send alerts to an alertmanager not deployed by Gardener to handle alerting. Please see [this](../../example/10-secret-alerting.yaml) for an example.
   * If email alerting is configured:
     * An Alertmanager is deployed into each seed cluster that handles the alerting for all shoots on the seed cluster.

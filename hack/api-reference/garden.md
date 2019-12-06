@@ -821,6 +821,7 @@ DNS
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>DNS contains information about the DNS settings of the Shoot.</p>
 </td>
 </tr>
@@ -7655,6 +7656,7 @@ DNS
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>DNS contains information about the DNS settings of the Shoot.</p>
 </td>
 </tr>
@@ -8206,5 +8208,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>722e44a70</code>.
+on git commit <code>4a68c44a2</code>.
 </em></p>

@@ -105,13 +105,14 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 
-	secrets, err := garden.ReadGardenSecrets(f.k8sInformers)
+	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
 	runtime.Must(err)
 
-	shootList, err := f.k8sGardenCoreInformers.Core().V1alpha1().Shoots().Lister().List(labels.Everything())
-	runtime.Must(err)
-
-	runtime.Must(garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secrets[common.GardenRoleInternalDomain]))
+	if secret, ok := secrets[common.GardenRoleInternalDomain]; ok {
+		shootList, err := f.k8sGardenCoreInformers.Core().V1alpha1().Shoots().Lister().List(labels.Everything())
+		runtime.Must(err)
+		runtime.Must(garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secret))
+	}
 
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, "images.yaml"))
 	runtime.Must(err)

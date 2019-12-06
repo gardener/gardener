@@ -85,6 +85,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	var (
 		defaultTimeout     = 30 * time.Second
 		defaultInterval    = 5 * time.Second
+		dnsEnabled         = !gardencorev1alpha1helper.TaintsHave(botanist.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS)
 		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
 		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 		allowBackup        = o.Seed.Info.Spec.Backup != nil
@@ -120,18 +121,24 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deploySecrets = g.Add(flow.Task{
-			Name:         "Deploying Shoot certificates / keys",
-			Fn:           flow.TaskFn(botanist.DeploySecrets),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Name: "Deploying Shoot certificates / keys",
+			Fn:   flow.TaskFn(botanist.DeploySecrets),
+			Dependencies: func() flow.TaskIDs {
+				taskIDs := flow.NewTaskIDs(deployNamespace)
+				if !dnsEnabled {
+					taskIDs.Insert(waitUntilKubeAPIServerServiceIsReady)
+				}
+				return taskIDs
+			}(),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(managedInternalDNS),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedExternalDNS),
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInfrastructure = g.Add(flow.Task{
@@ -260,7 +267,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(dnsEnabled && managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployManagedResources),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
@@ -320,7 +327,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
 	if o.Shoot.Info.Namespace == v1alpha1constants.GardenNamespace {
 		if o.ShootedSeed != nil {
-			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs, o.ShootedSeed.ShootDefaults, o.ShootedSeed.Backup); err != nil {
+			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible, o.ShootedSeed.DisableDNS, o.ShootedSeed.MinimumVolumeSize, o.ShootedSeed.BlockCIDRs, o.ShootedSeed.ShootDefaults, o.ShootedSeed.Backup); err != nil {
 				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
 			}
 		} else {

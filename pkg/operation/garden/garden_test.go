@@ -132,7 +132,7 @@ var _ = Describe("Garden", func() {
 		It("should return an error due to incomplete secrets map", func() {
 			_, err := GetInternalDomain(map[string]*corev1.Secret{})
 
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error", func() {

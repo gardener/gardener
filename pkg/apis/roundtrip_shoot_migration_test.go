@@ -497,7 +497,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 					},
 					Seed: &seedName,
 				},
-				DNS: gardenv1beta1.DNS{
+				DNS: &gardenv1beta1.DNS{
 					Domain:         &dnsDomain,
 					SecretName:     &dnsProvider1SecretName,
 					Provider:       &dnsProvider1Type,

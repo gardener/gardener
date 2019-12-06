@@ -11630,7 +11630,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"cloud", "dns", "kubernetes"},
+				Required: []string{"cloud", "kubernetes"},
 			},
 		},
 		Dependencies: []string{

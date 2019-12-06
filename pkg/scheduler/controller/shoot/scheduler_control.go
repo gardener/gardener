@@ -213,10 +213,17 @@ func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *g
 			candidateErrors[seed.Name] = err
 			continue
 		}
+
+		if ignoreSeedDueToDNSConfiguration(seed, shoot) {
+			candidateErrors[seed.Name] = fmt.Errorf("seed does not support DNS")
+			continue
+		}
+
 		if !seedSelector.Matches(labels.Set(seed.Labels)) {
 			candidateErrors[seed.Name] = fmt.Errorf("seed labels don't match seed selector")
 			continue
 		}
+
 		candidates = append(candidates, seed)
 	}
 
@@ -307,6 +314,17 @@ func verifySeedAvailability(seed *gardencorev1alpha1.Seed) bool {
 		return cond.Status == gardencorev1alpha1.ConditionTrue
 	}
 	return false
+}
+
+// ignore seed if it disables DNS and shoot has DNS but not unmanaged
+func ignoreSeedDueToDNSConfiguration(seed *gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot) bool {
+	if !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+		return false
+	}
+	if shoot.Spec.DNS == nil {
+		return false
+	}
+	return !gardencorev1alpha1helper.ShootUsesUnmanagedDNS(shoot)
 }
 
 // UpdateShootToBeScheduledOntoSeed sets the seed name where the shoot should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.

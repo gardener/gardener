@@ -33,6 +33,7 @@ type Shoot struct {
 	SeedNamespace               string
 	KubernetesMajorMinorVersion string
 
+	DisableDNS            bool
 	InternalClusterDomain string
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain
