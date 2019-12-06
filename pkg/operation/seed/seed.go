@@ -279,6 +279,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			common.VpaRecommenderImageName,
 			common.VpaUpdaterImageName,
 			common.HvpaControllerImageName,
+			common.DependencyWatchdogImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -472,7 +473,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		return err
 	}
 
-	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1alpha1constants.GardenNamespace, chartName, nil, map[string]interface{}{
+	err = chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1alpha1constants.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
 			"images": chart.ImageMapToValues(images),
@@ -552,6 +553,16 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 			"basicAuthSecret": monitoringBasicAuth,
 		},
 	}, applierOptions)
+
+	if err != nil {
+		return err
+	}
+
+	// Delete the shoot specific dependency-watchdog deployments in the
+	// invidual shoot control-planes in favour of the central deployment
+	// in the seed-bootstrap.
+	// TODO: This code is to be removed in the next release.
+	return deleteControlPlaneDependencyWatchdogs(k8sSeedClient.Client())
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
@@ -659,4 +670,76 @@ func seedWantsAlertmanager(keys []string, secrets map[string]*corev1.Secret) boo
 		}
 	}
 	return false
+}
+
+type _continue string
+
+func (c _continue) ApplyToList(opts *client.ListOptions) {
+	if opts.Raw == nil {
+		opts.Raw = &metav1.ListOptions{}
+	}
+	opts.Raw.Continue = string(c)
+}
+
+// deleteControlPlaneDependencyWatchdogs deletes the shoot specific dependency-watchdog
+// deployments in the invidual shoot control-planes in favour of the central deployment
+// in the seed-bootstrap.
+// TODO: This code is to be removed in the next release.
+func deleteControlPlaneDependencyWatchdogs(crClient client.Client) error {
+	var continueToken string
+
+	for {
+		list := &corev1.NamespaceList{}
+		if err := crClient.List(context.TODO(), list, _continue(continueToken)); err != nil {
+			return nil
+		}
+
+		for i := range list.Items {
+			ns := &list.Items[i]
+			if ns.DeletionTimestamp != nil {
+				continue // Already deleted
+			}
+
+			if err := deleteDependencyWatchdogFromNS(crClient, ns.Name); err != nil {
+				return err
+			}
+		}
+
+		if list.Continue == "" {
+			break
+		}
+		continueToken = list.Continue
+	}
+
+	return nil
+}
+
+func deleteDependencyWatchdogFromNS(crClient client.Client, ns string) error {
+	for _, obj := range []struct {
+		apiGroup string
+		version  string
+		kind     string
+		name     string
+	}{
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1alpha1constants.VPANameDependencyWatchdog},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscalerCheckpoint", v1alpha1constants.VPANameDependencyWatchdog},
+		{"apps", "v1", "Deployment", v1alpha1constants.DeploymentNameDependencyWatchdog},
+		{"", "v1", "ConfigMap", v1alpha1constants.ConfigMapNameDependencyWatchdog},
+		{"rbac.authorization.k8s.io", "v1", "RoleBinding", v1alpha1constants.RoleBindingNameDependencyWatchdog},
+		{"", "v1", "ServiceAccount", v1alpha1constants.ServiceAccountNameDependencyWatchdog},
+	} {
+		u := &unstructured.Unstructured{}
+		u.SetName(obj.name)
+		u.SetNamespace(ns)
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   obj.apiGroup,
+			Version: obj.version,
+			Kind:    obj.kind,
+		})
+		if err := crClient.Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }

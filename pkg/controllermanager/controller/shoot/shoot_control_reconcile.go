@@ -284,11 +284,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployManagedResources, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Dependency Watchdog",
-			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdog).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),

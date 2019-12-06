@@ -2,13 +2,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dependency-watchdog-config
+  name: dependency-watchdog-endpoint-config
   namespace: {{ .Release.Namespace }}
   labels:
-    app: dependency-watchdog
+    app: dependency-watchdog-endpoint
 data:
   dep-config.yaml: |-
-      namespace: {{ .Release.Namespace }}
       services:
         kube-apiserver:
           dependantPods:

@@ -534,6 +534,22 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	})
 
+	// Secret definition for kubecfg-internal
+	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+		CertificateSecretConfig: &secrets.CertificateSecretConfig{
+			Name:      common.KubecfgInternalSecretName,
+			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+		},
+
+		BasicAuth: basicAuthAPIServer,
+		Token:     kubecfgToken,
+
+		KubeConfigRequest: &secrets.KubeConfigRequest{
+			ClusterName:  b.Shoot.SeedNamespace,
+			APIServerURL: fmt.Sprintf("%s.%s.svc", v1alpha1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+		},
+	})
+
 	loggingEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
 		elasticsearchHosts := []string{"elasticsearch-logging",
