@@ -233,7 +233,6 @@ func (t *GuestBookTest) Cleanup(ctx context.Context, shootTestOperations *framew
 					Name:      RedisMaster,
 				},
 			}
-
 		)
 
 		err := deleteResource(ctx, redisMasterServiceToDelete)

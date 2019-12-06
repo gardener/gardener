@@ -90,6 +90,7 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 				"customConfig": b.Shoot.Info.Spec.Addons.NginxIngress.Config,
 				"service": map[string]interface{}{
 					"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
+					"externalTrafficPolicy":    *b.Shoot.Info.Spec.Addons.NginxIngress.ExternalTrafficPolicy,
 				},
 			},
 		}

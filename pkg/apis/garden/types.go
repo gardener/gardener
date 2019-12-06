@@ -1197,6 +1197,9 @@ type NginxIngress struct {
 	// Config contains custom configuration for the nginx-ingress-controller configuration.
 	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options
 	Config map[string]string
+	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
+	// exposing the nginx-ingress. Defaults to `Cluster`.
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
 }
 
 // Monocular describes configuration values for the monocular addon.

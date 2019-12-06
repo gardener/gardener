@@ -3369,6 +3369,13 @@ func schema_pkg_apis_core_v1alpha1_NginxIngress(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service` exposing the nginx-ingress. Defaults to `Cluster`.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
@@ -9471,6 +9478,13 @@ func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) c
 									},
 								},
 							},
+						},
+					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service` exposing the nginx-ingress. Defaults to `Cluster`.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

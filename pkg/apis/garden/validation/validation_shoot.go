@@ -51,6 +51,10 @@ var (
 		garden.KubernetesDashboardAuthModeBasic,
 		garden.KubernetesDashboardAuthModeToken,
 	)
+	availableNginxIngressExternalTrafficPolicies = sets.NewString(
+		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
+		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
+	)
 )
 
 // ValidatePositiveDuration validates that a duration is positive.
@@ -211,6 +215,14 @@ func validateAddons(addons *garden.Addons, kubeAPIServerConfig *garden.KubeAPISe
 
 	if addons == nil {
 		return allErrs
+	}
+
+	if addons.NginxIngress != nil && addons.NginxIngress.Enabled {
+		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
+			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginx-ingress", "externalTrafficPolicy"), *policy, availableNginxIngressExternalTrafficPolicies.List()))
+			}
+		}
 	}
 
 	if addons.Kube2IAM != nil && addons.Kube2IAM.Enabled {

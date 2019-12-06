@@ -666,6 +666,7 @@ spec:
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "false")}
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
+    # externalTrafficPolicy: Cluster
     # config:
     #   enable-access-log-for-default-backend: "false"
     kubernetes-dashboard:

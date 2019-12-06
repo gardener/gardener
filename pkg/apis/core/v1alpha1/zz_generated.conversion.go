@@ -3145,6 +3145,7 @@ func autoConvert_v1alpha1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, 
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	out.Config = *(*map[string]string)(unsafe.Pointer(&in.Config))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 
@@ -3159,6 +3160,7 @@ func autoConvert_garden_NginxIngress_To_v1alpha1_NginxIngress(in *garden.NginxIn
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	out.Config = *(*map[string]string)(unsafe.Pointer(&in.Config))
+	out.ExternalTrafficPolicy = (*v1.ServiceExternalTrafficPolicyType)(unsafe.Pointer(in.ExternalTrafficPolicy))
 	return nil
 }
 
