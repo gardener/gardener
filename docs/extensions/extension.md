@@ -6,10 +6,10 @@ But, some requirements don't match with those special resources or don't depend 
 
 ## What is required to register and support an Extension type?
 
-Gardener creates one `Extension` resource per registered extension type in `ControllerRegistration` per shoot. 
+Gardener creates one `Extension` resource per registered extension type in `ControllerRegistration` per shoot.
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: extension-example
@@ -39,11 +39,12 @@ spec:
 Your controller needs to reconcile `extensions.extensions.gardener.cloud`. Since there can exist multiple `Extension` resources per shoot, each one holds a `spec.type` field to let controllers check their responsibility (similar to all other extension resources of Gardener).
 
 ## ProviderConfig
+
 It is possible to provide data in the `Shoot` resource which is copied to `spec.providerConfig` of the `Extension` resource.
 
 ```yaml
 ---
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: bar

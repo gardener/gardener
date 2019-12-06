@@ -200,10 +200,10 @@ type DNS struct {
 	Domain *string `json:"domain,omitempty"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
-	// +patchMergeKey=name
+	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Providers []DNSProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Providers []DNSProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // DNSProvider contains information about a DNS provider.

@@ -1,13 +1,13 @@
 # Quota object limiting the resources consumed by shoot clusters either per provider secret or per project/namespace.
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Quota
 metadata:
   name: trial-quota
   namespace: garden-trial
 spec:
-  scope: # options are either core.gardener.cloud/v1alpha1.Project or v1.Secret
-    apiVersion: core.gardener.cloud/v1alpha1
+  scope: # options are either core.gardener.cloud/v1beta1.Project or v1.Secret
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Project
 # clusterLifetimeDays: 14
   metrics:

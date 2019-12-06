@@ -21,7 +21,7 @@
   annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {})
 %># Plant cluster registration manifest through which an external kubernetes cluster will be mapped
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Plant
 metadata:
   name:  ${value("metadata.name", "example-plant")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>

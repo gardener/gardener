@@ -54,14 +54,14 @@ cleanup() {
 }
 trap "cleanup" EXIT SIGINT
 
-# core.gardener.cloud API clients
+# core.gardener.cloud APIs
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   deepcopy,defaulter,client,lister,informer,openapi \
   github.com/gardener/gardener/pkg/client/core \
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \
-  core:v1alpha1 \
+  "core:v1alpha1,v1beta1" \
   -h <(headers)
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
@@ -69,28 +69,30 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   github.com/gardener/gardener/pkg/client/core \
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \
-  core:v1alpha1 \
+  "core:v1alpha1,v1beta1" \
   --extra-peer-dirs=github.com/gardener/gardener/pkg/apis/garden \
   -h <(headers)
+
+# extensions.gardener.cloud APIs
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   "deepcopy,client,informer,lister" \
   github.com/gardener/gardener/pkg/client/extensions \
   github.com/gardener/gardener/pkg/apis \
-  extensions:v1alpha1 \
+  "extensions:v1alpha1" \
   -h <(headers)
 
-# garden.sapcloud.io API clients
+# garden.sapcloud.io APIs
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   all \
   github.com/gardener/gardener/pkg/client/garden \
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \
-  garden:v1beta1 \
+  "garden:v1beta1" \
   -h <(headers)
 
-# settings.gardener.cloud API clients
+# settings.gardener.cloud APIs
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   "all" \

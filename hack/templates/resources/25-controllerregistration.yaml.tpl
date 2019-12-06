@@ -20,7 +20,7 @@
 %># ControllerRegistration object allows to register external controllers.
 # See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: ${value("metadata.name", "os-coreos")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>

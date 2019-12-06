@@ -245,11 +245,11 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    nodesCIDR,
-							Pods:     podsCIDR,
-							Services: servicesCIDR,
+							Nodes:      nodesCIDR,
+							Pods:       podsCIDR,
+							Services:   servicesCIDR,
+							BlockCIDRs: []string{blockCIDR},
 						},
-						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{Key: garden.SeedTaintDisableDNS},
 							{Key: garden.SeedTaintProtected},
@@ -304,11 +304,11 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    nodesCIDR,
-							Pods:     podsCIDR,
-							Services: servicesCIDR,
+							Nodes:      nodesCIDR,
+							Pods:       podsCIDR,
+							Services:   servicesCIDR,
+							BlockCIDRs: []string{blockCIDR},
 						},
-						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{Key: garden.SeedTaintProtected},
 							{Key: taintKeyOtherOne},
@@ -404,7 +404,7 @@ var _ = Describe("Machine Image Conversion", func() {
 						ClusterLifetimeDays: &clusterLifetimeDays,
 						Metrics:             metrics,
 						Scope: corev1.ObjectReference{
-							APIVersion: "core.gardener.cloud/v1alpha1",
+							APIVersion: "core.gardener.cloud/v1beta1",
 							Kind:       "Project",
 						},
 					},
@@ -442,9 +442,9 @@ var _ = Describe("Machine Image Conversion", func() {
 				}
 			})
 
-			It("should correctly convert for scopeRef=core.gardener.cloud/v1alpha1.Project", func() {
+			It("should correctly convert for scopeRef=core.gardener.cloud/v1beta1.Project", func() {
 				in.Spec.Scope = corev1.ObjectReference{
-					APIVersion: "core.gardener.cloud/v1alpha1",
+					APIVersion: "core.gardener.cloud/v1beta1",
 					Kind:       "Project",
 				}
 				Expect(scheme.Convert(in, out, nil)).To(BeNil())

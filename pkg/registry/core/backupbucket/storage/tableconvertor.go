@@ -73,7 +73,7 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 
 		cells = append(cells, backupBucket.Name)
 		cells = append(cells, backupBucket.Spec.Provider.Type)
-		cells = append(cells, backupBucket.Spec.Seed)
+		cells = append(cells, backupBucket.Spec.SeedName)
 		if lastOp := backupBucket.Status.LastOperation; lastOp != nil {
 			cells = append(cells, lastOp.State)
 			cells = append(cells, lastOp.Progress)

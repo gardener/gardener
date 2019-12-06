@@ -20,7 +20,7 @@
 %># ControllerInstallation object requests a specific controller to get deployed to a seed cluster.
 # See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerInstallation
 metadata:
   name: ${value("metadata.name", "os-coreos")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
@@ -32,10 +32,10 @@ metadata:
   % endif
 spec:
   registrationRef:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: ControllerRegistration
     name: ${value("metadata.name", "os-coreos")}
   seedRef:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
     name: my-seed

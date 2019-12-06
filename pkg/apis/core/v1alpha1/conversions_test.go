@@ -137,11 +137,11 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    nodesCIDR,
-							Pods:     podsCIDR,
-							Services: servicesCIDR,
+							Nodes:      nodesCIDR,
+							Pods:       podsCIDR,
+							Services:   servicesCIDR,
+							BlockCIDRs: []string{blockCIDR},
 						},
-						BlockCIDRs: []string{blockCIDR},
 						Taints: []garden.SeedTaint{
 							{
 								Key: SeedTaintDisableDNS,
@@ -196,9 +196,10 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:    nodesCIDR,
-							Pods:     podsCIDR,
-							Services: servicesCIDR,
+							Nodes:      nodesCIDR,
+							Pods:       podsCIDR,
+							Services:   servicesCIDR,
+							BlockCIDRs: []string{blockCIDR},
 						},
 						Taints: []garden.SeedTaint{
 							{
@@ -211,7 +212,6 @@ var _ = Describe("Conversion", func() {
 								Key: SeedTaintInvisible,
 							},
 						},
-						BlockCIDRs: []string{blockCIDR},
 						Volume: &garden.SeedVolume{
 							MinimumSize: &minimumVolumeSizeQuantity,
 							Providers: []garden.SeedVolumeProvider{

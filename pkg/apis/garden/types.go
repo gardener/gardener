@@ -553,9 +553,6 @@ type SeedSpec struct {
 	SecretRef corev1.SecretReference
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks
-	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
-	// in the seed cluster.
-	BlockCIDRs []string
 	// Taints describes taints on the seed.
 	Taints []SeedTaint
 	// Backup holds the object store configuration for the backups of shoot(currently only etcd).
@@ -643,6 +640,9 @@ type SeedNetworks struct {
 	Services string
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	ShootDefaults *ShootNetworks
+	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
+	// in the seed cluster.
+	BlockCIDRs []string
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.
@@ -859,9 +859,9 @@ type ShootStatus struct {
 	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
 	// must be retried until we give up).
 	RetryCycleStartTime *metav1.Time
-	// Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
+	// SeedName is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
-	Seed *string
+	SeedName *string
 	// IsHibernated indicates whether the Shoot is currently hibernated.
 	IsHibernated *bool
 	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and

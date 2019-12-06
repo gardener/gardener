@@ -6,6 +6,8 @@ import (
 	clientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	corev1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1"
 	fakecorev1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1/fake"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	fakecorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -58,4 +60,9 @@ var _ clientset.Interface = &Clientset{}
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return &fakecorev1alpha1.FakeCoreV1alpha1{Fake: &c.Fake}
+}
+
+// CoreV1beta1 retrieves the CoreV1beta1Client
+func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
+	return &fakecorev1beta1.FakeCoreV1beta1{Fake: &c.Fake}
 }

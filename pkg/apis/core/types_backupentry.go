@@ -52,8 +52,8 @@ type BackupEntryList struct {
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string
-	// Seed holds the name of the seed allocated to BackupBucket for running controller.
-	Seed *string
+	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	SeedName *string
 }
 
 // BackupEntryStatus holds the most recently observed status of the Backup Entry.

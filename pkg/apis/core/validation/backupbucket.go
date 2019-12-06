@@ -52,8 +52,8 @@ func ValidateBackupBucketSpec(spec *core.BackupBucketSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider.region"), spec.Provider.Region, "region must not be empty"))
 	}
 
-	if spec.Seed == nil || len(*spec.Seed) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), spec.Seed, "seed must not be empty"))
+	if spec.SeedName == nil || len(*spec.SeedName) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed must not be empty"))
 	}
 
 	allErrs = append(allErrs, validateSecretReference(spec.SecretRef, fldPath.Child("secretRef"))...)
@@ -66,7 +66,7 @@ func ValidateBackupBucketSpecUpdate(newSpec, oldSpec *core.BackupBucketSpec, fld
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider, oldSpec.Provider, fldPath.Child("provider"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedName, oldSpec.SeedName, fldPath.Child("seedName"))...)
 
 	return allErrs
 }

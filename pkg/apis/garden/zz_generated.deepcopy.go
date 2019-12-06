@@ -3375,6 +3375,11 @@ func (in *SeedNetworks) DeepCopyInto(out *SeedNetworks) {
 		*out = new(ShootNetworks)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.BlockCIDRs != nil {
+		in, out := &in.BlockCIDRs, &out.BlockCIDRs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -3411,11 +3416,6 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	out.Provider = in.Provider
 	out.SecretRef = in.SecretRef
 	in.Networks.DeepCopyInto(&out.Networks)
-	if in.BlockCIDRs != nil {
-		in, out := &in.BlockCIDRs, &out.BlockCIDRs
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.Taints != nil {
 		in, out := &in.Taints, &out.Taints
 		*out = make([]SeedTaint, len(*in))
@@ -3758,8 +3758,8 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		in, out := &in.RetryCycleStartTime, &out.RetryCycleStartTime
 		*out = (*in).DeepCopy()
 	}
-	if in.Seed != nil {
-		in, out := &in.Seed, &out.Seed
+	if in.SeedName != nil {
+		in, out := &in.SeedName, &out.SeedName
 		*out = new(string)
 		**out = **in
 	}

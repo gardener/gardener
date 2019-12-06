@@ -660,7 +660,7 @@ SeedNetworks
 </td>
 <td>
 <em>(Optional)</em>
-<p>BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
+<p>BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 in the seed cluster.</p>
 </td>
 </tr>
@@ -7343,7 +7343,7 @@ SeedNetworks
 </td>
 <td>
 <em>(Optional)</em>
-<p>BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
+<p>BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 in the seed cluster.</p>
 </td>
 </tr>
@@ -8208,5 +8208,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>4a68c44a2</code>.
+on git commit <code>63f9d9f55</code>.
 </em></p>

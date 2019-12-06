@@ -293,7 +293,7 @@ var _ = Describe("helper", func() {
 			Expect(err).To(expectedErr)
 		},
 
-		Entry("project", "core.gardener.cloud/v1alpha1", "Project", "project", BeNil()),
+		Entry("project", "core.gardener.cloud/v1beta1", "Project", "project", BeNil()),
 		Entry("secret", "v1", "Secret", "secret", BeNil()),
 		Entry("unknown", "v2", "Foo", "", HaveOccurred()),
 	)

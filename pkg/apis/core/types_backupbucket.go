@@ -51,8 +51,8 @@ type BackupBucketSpec struct {
 	Provider BackupBucketProvider
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference
-	// Seed holds the name of the seed allocated to BackupBucket for running controller.
-	Seed *string
+	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	SeedName *string
 }
 
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.

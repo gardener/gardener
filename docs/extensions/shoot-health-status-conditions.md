@@ -53,7 +53,7 @@ Gardener will pick the list of conditions and recognize that the there is one wi
 It will merge it with its own `ControlPlaneHealthy` condition and report it back to the `Shoot`'s status:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   labels:
