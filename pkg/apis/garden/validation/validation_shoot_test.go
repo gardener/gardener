@@ -404,6 +404,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
+			v := corev1.ServiceExternalTrafficPolicyTypeCluster
+			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+			errorList := ValidateShoot(shoot)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow external traffic policies 'Local' for nginx-ingress", func() {
+			v := corev1.ServiceExternalTrafficPolicyTypeLocal
+			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+			errorList := ValidateShoot(shoot)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid unsupported external traffic policies for nginx-ingress", func() {
+			v := corev1.ServiceExternalTrafficPolicyType("something-else")
+			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.addons.nginx-ingress.externalTrafficPolicy"),
+			}))))
+		})
+
 		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
 			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer(garden.KubernetesDashboardAuthModeBasic)
 			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = makeBoolPointer(false)

@@ -1923,6 +1923,11 @@ func (in *NginxIngress) DeepCopyInto(out *NginxIngress) {
 			(*out)[key] = val
 		}
 	}
+	if in.ExternalTrafficPolicy != nil {
+		in, out := &in.ExternalTrafficPolicy, &out.ExternalTrafficPolicy
+		*out = new(v1.ServiceExternalTrafficPolicyType)
+		**out = **in
+	}
 	return
 }
 

@@ -65,6 +65,11 @@ func SetObjectDefaults_SecretBindingList(in *SecretBindingList) {
 
 func SetObjectDefaults_Shoot(in *Shoot) {
 	SetDefaults_Shoot(in)
+	if in.Spec.Addons != nil {
+		if in.Spec.Addons.NginxIngress != nil {
+			SetDefaults_NginxIngress(in.Spec.Addons.NginxIngress)
+		}
+	}
 	if in.Spec.Maintenance != nil {
 		SetDefaults_Maintenance(in.Spec.Maintenance)
 	}

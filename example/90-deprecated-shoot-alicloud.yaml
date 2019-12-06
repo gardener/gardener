@@ -179,6 +179,7 @@ spec:
     nginx-ingress:
       enabled: false
       loadBalancerSourceRanges: []
+    # externalTrafficPolicy: Cluster
     # config:
     #   enable-access-log-for-default-backend: "false"
     kubernetes-dashboard:
