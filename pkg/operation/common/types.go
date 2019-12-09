@@ -449,7 +449,6 @@ var (
 		v1alpha1constants.DeploymentNameKubeAPIServer,
 		v1alpha1constants.DeploymentNameKubeControllerManager,
 		v1alpha1constants.DeploymentNameKubeScheduler,
-		v1alpha1constants.DeploymentNameDependencyWatchdog,
 		MachineControllerManagerDeploymentName,
 	)
 

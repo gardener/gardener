@@ -1,6 +1,6 @@
 # Integration Testing Manual
 
-This manual describes the Gardener integration test directory structure.
+This manual gives an overview about existing integration tests of Gardener.
 
 ## Structure
 
@@ -22,9 +22,12 @@ is divided into the following major subdirectories:
 │   └── logging
 └── shoots
     ├── applications
+    ├── creation
+    ├── deletion
+    ├── hibernation
     ├── maintenance
-    ├── operations
-    ├── ts
+    ├── networking
+    ├── reconcile
     ├── update
     └── worker
 ```
@@ -72,136 +75,98 @@ There are two special directories that are dynamically filled with the correct t
 
 ### Shoots
 
-This directory contains the actual tests. Currently the testing framework supports two kinds of tests:
+This directory contains the actual tests. Currently the testing framework supports several kinds of tests:
 
-- Shoot operation
+- Shoot creation
 - Shoot application
 
-### Shoot operation
+### Shoot Creation test
 
-Shoot operation tests are meant to test shoot creation / deletion as standalone tests or as coupled tests.
-
-The test takes the following options
-
-```go
-// Required kubeconfig for the garden cluster
-kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-
-// Needed for the standalone shoot creation test and the coupled creation / deletion test
-shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-
-// Needed for the standalone deletion test and the coupled creation / deletion test
-shootNamespace    = flag.String("shootNamespace", "", "shootNamespace is used for creation and deletion of shoots")
-logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-
-// Prefix for the names of the test shoots
-testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
-```
+Create Shoot test is meant to test shoot creation.
 
 #### Example Run
 
 ```console
-go test -kubeconfig $HOME/.kube/config -shootpath shoot.yaml -shootNamespace garden-dev -ginkgo.v
+go test \
+  -mod=vendor \
+  -timeout=20m \
+  ./test/integration/shoots/creation \
+  -gardener-kubecfg-path=$HOME/.kube/config \
+  -shoot-name=$SHOOT_NAME
+  -cloud-profile=$CLOUDPROFILE \
+  -seed=$SEED \
+  -secret-binding=$SECRET_BINDING \
+  -provider-type=$PROVIDER_TYPE \
+  -region=$REGION \
+  -k8s-version=$K8S_VERSION \
+  -project-namespace=$PROJECT_NAMESPACE \
+  -infrastructure-provider-config-filepath=$INFRASTRUCTURE_PROVIDER_CONFIG_FILEPATH \
+  -controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH \
+  -workers-config-filepath=$$WORKERS_CONFIG_FILEPATH \
+  -networking-pods=$NETWORKING_PODS \
+  -networking-services=$NETWORKING_SERVICES \
+  -networking-nodes=$NETWORKING_NODES \
+  -ginkgo.v \
+  -ginkgo.progress
 ```
-
-> NOTE: please remove the shoot name `metadata.name` and the DNS domain `spec.dns.domain` from your shoot YAML as the testing framework will be creating those for you.
-
-The above command will read the garden kubeconfig from `$HOME/.kube/config`, the shoot yaml from `shoot.yaml`, the project namespace from `shootNamespace` and finally, it also request `cleanup` of resources after the test is run.
 
 ### Shoot application
 
-Shoot applications tests are tests that are executed on a shoot. There are two possiblities for running these tests:
-
-- execute against an existing shoot by specifying the shootName
-- create a shoot from a yaml spec and execute the tests against this shoot
+Shoot applications tests are tests that are executed on a Shoot. The test is executed against an existing Shoot by specifying the `-shoot-name` and `shoot-namespace` flags.
 
 Below are the flags used for running the application tests:
 
 ```go
-// Required kubeconfig for the garden cluster
-kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-
-// Shoot options if running tests against an existing shoot
-shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
-shootNamespace    = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-
-// Prefix for the names of the test shoots
-testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
-
-// If it is preferrable to create a test shoot for running the application test, the shoot yaml path needs to be specified
-shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-
-// Optional parameter that can be used to customize the location where the shoot kubeconfig is downloaded
-downloadPath      = flag.String("downloadPath", "/tmp/test", "the path to which you download the kubeconfig")
-
-// If specified the test will clean up the created / existing shoot
-cleanup           = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
+kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig of the Garden cluster that will be used for integration tests")
+shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+downloadPath   = flag.String("download-path", "/tmp/test", "the path to which you download the kubeconfig")
 ```
 
 #### Example Run
 
-To create a test shoot and run the tests on it, use the following command:
+The command requires a garden kubeconfig, Shoot name and Shoot namespace.
 
 ```console
-go test -kubeconfig $HOME/.kube/config  -shootpath shoot.yaml -cleanup -ginkgo.v
+go test \
+  -mod=vendor \
+  ./test/integration/shoots/applciation \
+  -kubecfg $HOME/.kube/config \
+  -shoot-name $SHOOT_NAME \
+  -shoot-namespace "garden-dev" \
+  -ginkgo.v \
+  -ginkgo.progress
 ```
-
-> NOTE: please remove the shoot name `metadata.name` and the DNS domain `spec.dns.domain` from your shoot YAML as the testing framework will be creating those for you.
-
-The command requires a garden kubeconfig and the shoot yaml path. Additionally, the cleanup option was specified to delete the created shoots after tests are complete.
-
-To use an existing shoot, the following command can be used:
-
-```console
-go test -kubeconfig $HOME/.kube/config -shootName "test-zefc8aswue" -shootNamespace "garden-dev" -ginkgo.v -ginkgo.progress
-```
-
-The above command requires a garden kubeconfig, the seed name, the shoot name, and the project namespace.
 
 ### Seed Logging
 
-Seed logging tests are meant to test the logging functionality for seed clusters. There are two possiblities for running these tests:
-
-- execute against an existing shoot by specifying the shootName
-- create a shoot from a yaml spec and execute the tests against this shoot
+Seed logging tests are meant to test the logging functionality for Seed clusters. The test is executed against an existing Shoot by specifying the `-shoot-name` and `shoot-namespace` flags.
 
 Below are the flags used for running the logging tests:
 
 ```go
-// Required kubeconfig for the garden cluster
-kubeconfig           = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-
-// Shoot options if running tests against an existing shoot
-shootName            = flag.String("shootName", "", "the name of the shoot we want to test")
-shootNamespace       = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-
-// Prefix for the names of the test shoots
-testShootsPrefix     = flag.String("prefix", "", "prefix to use for test shoots")
-
-// If it is preferrable to create a test shoot for running the application test, the shoot yaml path needs to be specified
-shootTestYamlPath    = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-logLevel             = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-logsCount            = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
-
-// If specified the test will clean up the created shoot
-cleanup              = flag.Bool("cleanup", false, "deletes the newly created test shoot after the test suite is done")
+kubeconfig       = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+shootName        = flag.String("shoot-name", "", "the name of the shoot we want to test")
+shootNamespace   = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+testShootsPrefix = flag.String("prefix", "", "prefix to use for test shoots")
+logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+logsCount        = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
 ```
 
 #### Example Run
 
-To create a test shoot and run the tests on it, use the following command:
+The command requires a garden kubeconfig, shoot name and shoot namespace.
 
 ```console
-cd test/integration/seeds/logging
-go test -kubeconfig $HOME/.kube/config -shootpath shoot.yaml -timeout 20m -cleanup -ginkgo.v
-```
-
-To use an existing shoot, the following command can be used:
-
-```console
-cd test/integration/seeds/logging
-go test -kubeconfig $HOME/.kube/config -shootName "test-zefc8aswue" -shootNamespace "garden-dev" -ginkgo.v -ginkgo.progress
+go test \
+  -mod=vendor \
+  ./test/integration/seeds/logging \
+  -kubecfg $HOME/.kube/config \
+  -shoot-name $SHOOT_NAME \
+  -shoot-namespace $SHOOT_NAMESPACE \
+  -ginkgo.v \
+  -ginkgo.progress
 ```
 
 ## Gardener
@@ -219,14 +184,15 @@ This is tested by:
 2. Check if a service account in a project namespace can access the `garden` project.
 
 #### Example Run
+
 ```console
-cd test/integration/gardener/rbac
-ginkgo \
-    --progress \
-    -v \
-    --noColor \
-    -kubeconfig=$HOME/.kube/config \
-    -project-namespace=garden-core
+go test \
+  -mod=vendor \
+  ./test/integration/gardener/rbac \
+  -kubecfg=$HOME/.kube/config \
+  -project-namespace=$PROJECT_NAMESPACE \
+  -ginkgo.v \
+  -ginkgo.progress
 ```
 
 ### Gardener reconcile test
@@ -234,12 +200,13 @@ ginkgo \
 The gardener reconcile test checks if all shoots of a gardener cluster are successfully reconciled after the gardener version was updated.
 
 #### Example Run
+
 ```console
-cd test/integration/gardener/rbac
-ginkgo \
-    --progress \
-    -v \
-    --noColor \
-    -kubeconfig=$HOME/.kube/config \
-    -version=0.26.4
+go test \
+  -mod=vendor \
+  ./test/integration/gardener/rbac \
+  -kubecfg=$HOME/.kube/config \
+  -version=0.26.4 \
+  -ginkgo.v \
+  -ginkgo.progress
 ```
