@@ -26,6 +26,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
@@ -52,6 +53,8 @@ import (
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"k8s.io/apiserver/pkg/server/options/encryptionconfig"
+	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -222,20 +225,16 @@ func (o *Options) config() (*apiserver.Config, error) {
 		}, nil
 	}
 
-	gardenerVersion := version.Get()
-	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
-	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
-	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerVersion.GitVersion
-	gardenerAPIServerConfig.Version = &gardenerVersion
+	apiConfig := &apiserver.Config{
+		GenericConfig: gardenerAPIServerConfig,
+		ExtraConfig:   apiserver.ExtraConfig{},
+	}
 
-	if err := o.Recommended.ApplyTo(gardenerAPIServerConfig); err != nil {
+	if err := o.ApplyTo(apiConfig); err != nil {
 		return nil, err
 	}
 
-	return &apiserver.Config{
-		GenericConfig: gardenerAPIServerConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
-	}, nil
+	return apiConfig, err
 }
 
 func (o Options) run(stopCh <-chan struct{}) error {
@@ -259,4 +258,61 @@ func (o Options) run(stopCh <-chan struct{}) error {
 	}
 
 	return server.GenericAPIServer.PrepareRun().Run(stopCh)
+}
+
+// ApplyTo applies the options to the given config.
+func (o *Options) ApplyTo(config *apiserver.Config) error {
+	gardenerAPIServerConfig := config.GenericConfig
+
+	gardenerVersion := version.Get()
+	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerVersion.GitVersion
+	gardenerAPIServerConfig.Version = &gardenerVersion
+
+	if err := o.Recommended.SecureServing.ApplyTo(&gardenerAPIServerConfig.SecureServing, &gardenerAPIServerConfig.LoopbackClientConfig); err != nil {
+		return err
+	}
+	if err := o.Recommended.Authentication.ApplyTo(&gardenerAPIServerConfig.Authentication, gardenerAPIServerConfig.SecureServing, gardenerAPIServerConfig.OpenAPIConfig); err != nil {
+		return err
+	}
+	if err := o.Recommended.Authorization.ApplyTo(&gardenerAPIServerConfig.Authorization); err != nil {
+		return err
+	}
+	if err := o.Recommended.Audit.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.ClientConfig, gardenerAPIServerConfig.SharedInformerFactory, o.Recommended.ProcessInfo, o.Recommended.Webhook); err != nil {
+		return err
+	}
+	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
+		return err
+	}
+	if err := o.Recommended.CoreAPI.ApplyTo(gardenerAPIServerConfig); err != nil {
+		return err
+	}
+	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
+		return err
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, initializers...); err != nil {
+		return err
+	}
+
+	storageFactory := &storage.GardenerStorageFactory{
+		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(
+			o.Recommended.Etcd.StorageConfig,
+			o.Recommended.Etcd.DefaultStorageMediaType,
+			api.Codecs,
+			serverstorage.NewDefaultResourceEncodingConfig(api.Scheme),
+			gardenerAPIServerConfig.MergedResourceConfig,
+			nil),
+	}
+
+	if len(o.Recommended.Etcd.EncryptionProviderConfigFilepath) != 0 {
+		transformerOverrides, err := encryptionconfig.GetTransformerOverrides(o.Recommended.Etcd.EncryptionProviderConfigFilepath)
+		if err != nil {
+			return err
+		}
+		for groupResource, transformer := range transformerOverrides {
+			storageFactory.SetTransformer(groupResource, transformer)
+		}
+	}
+
+	return o.Recommended.Etcd.ApplyWithStorageFactoryTo(storageFactory, &gardenerAPIServerConfig.Config)
 }

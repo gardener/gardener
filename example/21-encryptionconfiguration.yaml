@@ -1,0 +1,12 @@
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+    - controllerregistrations.garden.sapcloud.io
+    - controllerregistrations.core.gardener.cloud
+    providers:
+    - aescbc:
+        keys:
+        - name: key1
+          secret: PMVh6r9+U9rr+J6pyKyGtQoVvLwI2SDXQG4lgMPx1Ck=
+    - identity: {}
