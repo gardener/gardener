@@ -230,14 +230,12 @@ var _ = Describe("health check", func() {
 
 		// system component deployments
 		calicoKubeControllersDeployment = newDeployment(shootNamespace, common.CalicoKubeControllersDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
-		calicoTyphaDeployment           = newDeployment(shootNamespace, common.CalicoTyphaDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
 		coreDNSDeployment               = newDeployment(shootNamespace, common.CoreDNSDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
 		vpnShootDeployment              = newDeployment(shootNamespace, common.VPNShootDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
 		metricsServerDeployment         = newDeployment(shootNamespace, common.MetricsServerDeploymentName, v1alpha1constants.GardenRoleSystemComponent, true)
 
 		requiredSystemComponentDeployments = []*appsv1.Deployment{
 			calicoKubeControllersDeployment,
-			calicoTyphaDeployment,
 			coreDNSDeployment,
 			vpnShootDeployment,
 			metricsServerDeployment,
@@ -422,7 +420,6 @@ var _ = Describe("health check", func() {
 			"0.100.200",
 			[]*appsv1.Deployment{
 				calicoKubeControllersDeployment,
-				calicoTyphaDeployment,
 				coreDNSDeployment,
 				vpnShootDeployment,
 			},
@@ -439,8 +436,7 @@ var _ = Describe("health check", func() {
 			"0.100.200",
 			[]*appsv1.Deployment{
 				calicoKubeControllersDeployment,
-				newDeployment(calicoTyphaDeployment.Namespace, calicoTyphaDeployment.Name, roleOf(calicoTyphaDeployment), false),
-				coreDNSDeployment,
+				newDeployment(coreDNSDeployment.Namespace, coreDNSDeployment.Name, roleOf(coreDNSDeployment), false),
 				vpnShootDeployment,
 				metricsServerDeployment,
 			},
