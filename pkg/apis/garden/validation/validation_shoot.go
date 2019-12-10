@@ -25,6 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
@@ -146,6 +147,12 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if metav1.HasAnnotation(oldShoot.ObjectMeta, common.ShootExperimentalAddonKyma) && !metav1.HasAnnotation(newShoot.ObjectMeta, common.ShootExperimentalAddonKyma) {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations", common.ShootExperimentalAddonKyma), "experimental kyma addon can not be removed/uninstalled - please delete your cluster if you want to get rid of it"))
+	}
+
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.DeletionTimestamp != nil, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 

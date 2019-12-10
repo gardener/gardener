@@ -1,0 +1,14 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: kyma-installer
+  labels:
+    app: kyma-on-gardener
+subjects:
+- kind: ServiceAccount
+  name: kyma-installer
+  namespace: kyma-installer
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
