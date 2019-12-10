@@ -280,7 +280,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	case len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].SecretName != nil:
 		secret := &corev1.Secret{}
 		if err := client.Get(ctx, kutil.Key(shoot.Namespace, *shoot.Spec.DNS.Providers[0].SecretName), secret); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get dns provider secret \"%s\": %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
 		}
 		externalDomain.SecretData = secret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type
