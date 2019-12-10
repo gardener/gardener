@@ -25,6 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
@@ -136,7 +137,7 @@ func ValidateShoot(shoot *garden.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, ValidateShootSpec(&shoot.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -146,6 +147,12 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if metav1.HasAnnotation(oldShoot.ObjectMeta, common.ShootExperimentalAddonKyma) && !metav1.HasAnnotation(newShoot.ObjectMeta, common.ShootExperimentalAddonKyma) {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations", common.ShootExperimentalAddonKyma), "experimental kyma addon can not be removed/uninstalled - please delete your cluster if you want to get rid of it"))
+	}
+
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.DeletionTimestamp != nil, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 
@@ -153,7 +160,7 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
+func ValidateShootSpec(meta metav1.ObjectMeta, spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
@@ -178,6 +185,17 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
+	}
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {
+		kubernetesGeq114Less116, err := utils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.16")
+		if err != nil {
+			kubernetesGeq114Less116 = false
+		}
+		if !kubernetesGeq114Less116 {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("kubernetes", "version"), "experimental kyma addon needs Kubernetes >= 1.14 and < 1.16"))
+		}
 	}
 
 	return allErrs

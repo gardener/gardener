@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: kyma-initializer
+  name: kyma-initializer-certificate
+  namespace: kyma-installer
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      name: kyma-initializer-certificate
+      namespace: kyma-installer
+      annotations:
+        sidecar.istio.io/inject: “false”
+      labels:
+        app: kyma-initializer
+    spec:
+      serviceAccountName: kyma-initializer
+      restartPolicy: Never
+      initContainers:
+      - name: requirements
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: K8S_VERSION
+            value: {{ .Values.requires.k8s.version | quote }}
+          - name: GARDENER_EXTENSIONS
+            value: {{ .Values.requires.gardener.extensions | quote }}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/requirements.sh" | printf "%s" | indent 12 }}
+      containers:
+      - name: certs
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: DELAY
+            value: {{ .Values.jobs.delay | quote }}
+          - name: SUBDOMAIN
+            value: {{ .Values.kyma.subdomain | quote }}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/certificate.sh" | printf "%s" | indent 12 }}
