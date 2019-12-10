@@ -21,8 +21,8 @@ import (
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -32,7 +32,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,16 +78,16 @@ var _ = Describe("validator", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
-			seedSecret       = v1.Secret{
+			seedSecret       = corev1.Secret{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      seedName,
 					Namespace: "garden",
 				},
 				Data: map[string][]byte{
-					kubeclient.KubeConfig: []byte(""),
+					kubernetes.KubeConfig: []byte(""),
 				},
-				Type: v1.SecretTypeOpaque,
+				Type: corev1.SecretTypeOpaque,
 			}
 
 			projectBase = garden.Project{
@@ -156,7 +156,7 @@ var _ = Describe("validator", func() {
 						Services: seedServicesCIDR,
 						Nodes:    seedNodesCIDR,
 					},
-					SecretRef: v1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      seedSecret.Name,
 						Namespace: seedSecret.Namespace,
 					},

@@ -135,7 +135,9 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		return nil, err
 	}
 
-	for _, secret := range secrets {
+	for _, obj := range secrets {
+		secret := obj.DeepCopy()
+
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleDefaultDomain {

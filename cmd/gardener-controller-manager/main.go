@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"syscall"
@@ -32,10 +31,6 @@ func init() {
 }
 
 func main() {
-	if err := exec.Command("which", "openvpn").Run(); err != nil {
-		panic("openvpn is not installed or not executable. cannot start controller manager.")
-	}
-
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}

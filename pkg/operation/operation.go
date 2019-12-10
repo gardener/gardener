@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -51,12 +51,12 @@ import (
 )
 
 // New creates a new operation object with a Shoot resource object.
-func New(shoot *gardencorev1alpha1.Shoot, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
-	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot, shootBackup)
+func New(shoot *gardencorev1alpha1.Shoot, config *config.GardenletConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot)
 }
 
 func newOperation(
-	config *config.ControllerManagerConfiguration,
+	config *config.GardenletConfiguration,
 	logger *logrus.Entry,
 	k8sGardenClient kubernetes.Interface,
 	k8sGardenCoreInformers gardencoreinformers.Interface,
@@ -66,7 +66,6 @@ func newOperation(
 	namespace string,
 	seedName *string,
 	shoot *gardencorev1alpha1.Shoot,
-	shootBackup *config.ShootBackup,
 ) (*Operation, error) {
 
 	secrets := make(map[string]*corev1.Secret)
@@ -112,7 +111,6 @@ func newOperation(
 		K8sGardenClient:        k8sGardenClient,
 		K8sGardenCoreInformers: k8sGardenCoreInformers,
 		ChartApplierGarden:     kubernetes.NewChartApplier(renderer, applier),
-		ShootBackup:            shootBackup,
 	}
 
 	if shoot != nil {
@@ -151,16 +149,10 @@ func (o *Operation) InitializeSeedClients() error {
 		return nil
 	}
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret,
-		kubernetes.WithClientConnectionOptions(o.Config.SeedClientConnection),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
+	k8sSeedClient, err := seed.GetSeedClient(context.TODO(), o.K8sGardenClient.Client(), o.Config.SeedClientConnection.ClientConnectionConfiguration, o.Config.SeedSelector == nil, o.Seed.Info.Name)
 	if err != nil {
 		return err
 	}
-
 	o.K8sSeedClient = k8sSeedClient
 
 	renderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
@@ -197,7 +189,7 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardencorev1alpha1.GardenerName,
-		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection),
+		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.ShootScheme,
 		}),

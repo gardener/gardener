@@ -39,11 +39,12 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Provider (CloudProfile)", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cloudprofile"]},
+			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["status"]},
+			{Name: "Provider (CloudProfile)", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "Region", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["region"]},
-			{Name: "Ingress Domain", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["domain"]},
-			{Name: "Available", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["available"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
+			{Name: "Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["version"]},
+			{Name: "K8S Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["kubernetesVersion"]},
 		},
 	}
 }
@@ -74,16 +75,31 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 			cells = []interface{}{}
 		)
 
+		gardenletReadyCondition := gardenhelper.GetCondition(seed.Status.Conditions, garden.SeedGardenletReady)
+		seedBootstrappedCondition := gardenhelper.GetCondition(seed.Status.Conditions, garden.SeedBootstrapped)
+
 		cells = append(cells, seed.Name)
+		if gardenletReadyCondition != nil && gardenletReadyCondition.Status == garden.ConditionUnknown {
+			cells = append(cells, "Unknown")
+		} else if (gardenletReadyCondition == nil || gardenletReadyCondition.Status != garden.ConditionTrue) ||
+			(seedBootstrappedCondition == nil || seedBootstrappedCondition.Status != garden.ConditionTrue) {
+			cells = append(cells, "NotReady")
+		} else {
+			cells = append(cells, "Ready")
+		}
 		cells = append(cells, fmt.Sprintf("%s (%s)", seed.Spec.Provider.Type, seed.Spec.Cloud.Profile))
-		cells = append(cells, seed.Spec.Cloud.Region)
-		cells = append(cells, seed.Spec.IngressDomain)
-		if cond := gardenhelper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
-			cells = append(cells, cond.Status)
+		cells = append(cells, seed.Spec.Provider.Region)
+		cells = append(cells, metatable.ConvertToHumanReadableDateType(seed.CreationTimestamp))
+		if gardener := seed.Status.Gardener; gardener != nil && len(gardener.Version) > 0 {
+			cells = append(cells, gardener.Version)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
-		cells = append(cells, metatable.ConvertToHumanReadableDateType(seed.CreationTimestamp))
+		if k8sVersion := seed.Status.KubernetesVersion; k8sVersion != nil {
+			cells = append(cells, *k8sVersion)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
 
 		return cells, nil
 	})

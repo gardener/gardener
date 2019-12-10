@@ -25,8 +25,9 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
+	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/scheduler"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	configloader "github.com/gardener/gardener/pkg/scheduler/apis/config/loader"
 	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
@@ -159,7 +160,7 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +261,12 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(shootScheduler) //, backupBucketScheduler)
+	gardenmetrics.RegisterControllerMetrics(
+		scheduler.ControllerWorkerSum,
+		scheduler.ScrapeFailures,
+		shootScheduler,
+		// backupBucketScheduler,
+	)
 
 	go shootScheduler.Run(ctx, g.K8sGardenCoreInformers)
 	// TODO: Enable later
@@ -274,7 +280,7 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 }
 
 func discoveryFromSchedulerConfiguration(cfg *config.SchedulerConfiguration) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
 	if err != nil {
 		return nil, err
 	}

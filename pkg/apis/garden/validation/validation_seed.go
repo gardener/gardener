@@ -16,13 +16,14 @@ package validation
 
 import (
 	"fmt"
+	"net"
+	"regexp"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/operation/common"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"net"
-	"regexp"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 )
@@ -84,7 +85,9 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	}
 
 	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
-	allErrs = append(allErrs, validateSecretReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+	if seedSpec.SecretRef != nil {
+		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+	}
 
 	networksPath := fldPath.Child("networks")
 

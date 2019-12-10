@@ -60,9 +60,10 @@ spec:
   cloud:
     profile: ${value("spec.cloud.profile", cloud)}
     region: ${value("spec.cloud.region", region)}
-  secretRef:
-    name: ${value("spec.secretRef.name", "seed-" + cloud)}
-    namespace: ${value("spec.secretRef.namespace", "garden")}
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: ${value("spec.secretRef.name", "seed-" + cloud)}
+#   namespace: ${value("spec.secretRef.namespace", "garden")}
   ingressDomain: ${value("spec.ingressDomain", "dev." + cloud + ".seed.example.com")}
   networks: # Seed and Shoot networks must be disjunct
     nodes: ${value("spec.networks.nodes", "10.240.0.0/16")}

@@ -3414,7 +3414,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	*out = *in
 	out.Cloud = in.Cloud
 	out.Provider = in.Provider
-	out.SecretRef = in.SecretRef
+	if in.SecretRef != nil {
+		in, out := &in.SecretRef, &out.SecretRef
+		*out = new(v1.SecretReference)
+		**out = **in
+	}
 	in.Networks.DeepCopyInto(&out.Networks)
 	if in.Taints != nil {
 		in, out := &in.Taints, &out.Taints
@@ -3456,7 +3460,16 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	out.Gardener = in.Gardener
+	if in.Gardener != nil {
+		in, out := &in.Gardener, &out.Gardener
+		*out = new(Gardener)
+		**out = **in
+	}
+	if in.KubernetesVersion != nil {
+		in, out := &in.KubernetesVersion, &out.KubernetesVersion
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

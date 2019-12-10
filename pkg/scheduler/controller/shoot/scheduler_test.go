@@ -69,7 +69,11 @@ var _ = Describe("Scheduler_Control", func() {
 			Status: gardencorev1alpha1.SeedStatus{
 				Conditions: []gardencorev1alpha1.Condition{
 					{
-						Type:   gardencorev1alpha1.SeedAvailable,
+						Type:   gardencorev1alpha1.SeedGardenletReady,
+						Status: gardencorev1alpha1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1alpha1.SeedBootstrapped,
 						Status: gardencorev1alpha1.ConditionTrue,
 					},
 				},
@@ -368,12 +372,37 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster due to unavailability", func() {
+		It("should fail because it cannot find a seed cluster due to gardenlet not ready", func() {
 			gardenCoreInformerFactory.Core().V1alpha1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
 			seed.Status.Conditions = []gardencorev1alpha1.Condition{
 				{
-					Type:   gardencorev1alpha1.SeedAvailable,
+					Type:   gardencorev1alpha1.SeedGardenletReady,
+					Status: gardencorev1alpha1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1alpha1.SeedBootstrapped,
+					Status: gardencorev1alpha1.ConditionTrue,
+				},
+			}
+			gardenCoreInformerFactory.Core().V1alpha1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1alpha1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1alpha1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1alpha1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+
+		It("should fail because it cannot find a seed cluster due to not bootstrapped", func() {
+			gardenCoreInformerFactory.Core().V1alpha1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+			seed.Status.Conditions = []gardencorev1alpha1.Condition{
+				{
+					Type:   gardencorev1alpha1.SeedGardenletReady,
+					Status: gardencorev1alpha1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1alpha1.SeedBootstrapped,
 					Status: gardencorev1alpha1.ConditionFalse,
 				},
 			}

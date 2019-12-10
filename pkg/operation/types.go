@@ -23,7 +23,7 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -37,7 +37,7 @@ import (
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
-	Config                    *config.ControllerManagerConfiguration
+	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
 	GardenerInfo              *gardencorev1alpha1.Gardener
 	Secrets                   map[string]*corev1.Secret
@@ -57,7 +57,6 @@ type Operation struct {
 	APIServerAddress          string
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
-	ShootBackup               *config.ShootBackup
 	MonitoringClient          prometheusclient.API
 }
 

@@ -634,6 +634,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 the account the Seed cluster has been deployed to.</p>
 </td>
@@ -7317,6 +7318,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 the account the Seed cluster has been deployed to.</p>
 </td>
@@ -7409,20 +7411,6 @@ configured object store.</p>
 <tbody>
 <tr>
 <td>
-<code>gardener</code></br>
-<em>
-<a href="#garden.sapcloud.io/v1beta1.Gardener">
-Gardener
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Gardener holds information about the Gardener which last acted on the Shoot.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>conditions</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.Condition">
@@ -7433,6 +7421,32 @@ Gardener
 <td>
 <em>(Optional)</em>
 <p>Conditions represents the latest available observations of a Seed&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardener</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.Gardener">
+Gardener
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Gardener holds information about the Gardener which last acted on the Seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetesVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubernetesVersion is the Kubernetes version of the seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -8208,5 +8222,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>63f9d9f55</code>.
+on git commit <code>3af47ac69</code>.
 </em></p>

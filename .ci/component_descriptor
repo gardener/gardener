@@ -9,12 +9,14 @@ images="$(yaml2json < $images_file)"
 echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
 
 eval "$(jq -r ".images |
-  map(if (.name == \"hyperkube\") then
-    \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
-  elif (.repository | startswith(\"eu.gcr.io/gardener-project/gardener\")) then
-    \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
-  else
-    \"--container-image-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"image_reference\\\": \\\"\" + .repository + \":\" + .tag + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+  map(if (.name != \"gardenlet\") then
+    (if (.name == \"hyperkube\") then
+      \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    elif (.repository | startswith(\"eu.gcr.io/gardener-project/gardener\")) then
+      \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    else
+      \"--container-image-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"image_reference\\\": \\\"\" + .repository + \":\" + .tag + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    end)
   end) |
   \"${ADD_DEPENDENCIES_CMD} \\\\\n\" +
   join(\" \\\\\n\")" <<< "$images")"

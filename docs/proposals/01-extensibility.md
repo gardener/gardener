@@ -753,7 +753,7 @@ Gardener does not only deploy a DNS controller into the Seeds but also into its 
 For every Shoot cluster, Gardener commissions it to create a DNS `TXT` record containing the name of the Seed responsible for the Shoot (holding the control plane), e.g.
 
 ```bash
-$ dig -t txt aws-01.core.garden.example.com
+dig -t txt aws-01.core.garden.example.com
 
 ...
 ;; ANSWER SECTION:

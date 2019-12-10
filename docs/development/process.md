@@ -7,14 +7,14 @@ If you have finished your work, please [create a pull request](compare) **based 
 
 :warning: Please ensure that your modifications pass the lint checks, formatting checks, static code checks, and unit tests by executing
 
-```
-$ make verify
+```bash
+make verify
 ```
 
-:rotating_light: Please run `./hack/generate-code` whenever you modify the any API within `pkg/apis`.
+:rotating_light: Please run `make generate` whenever you modify the any API within `pkg/apis`.
 
 Please do not file your pull request unless you receive a successful response from here!
 
-# Creating a new Release or a Hotfix
+## Creating a new Release
 
 Please refer to the [Gardener contributor guide](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md).

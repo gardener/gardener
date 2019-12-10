@@ -22,13 +22,9 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -95,8 +91,8 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 
 	defer c.shootMaintenanceRequeue(key, shoot)
 
-	if common.ShouldIgnoreShoot(c.respectSyncPeriodOverwrite(), shoot) || !mustMaintainNow(shoot) {
-		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot (it is either marked as 'to-be-ignored' or must not be maintained now).", key)
+	if !mustMaintainNow(shoot) {
+		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot must not be maintained now.", key)
 		return nil
 	}
 
@@ -106,9 +102,12 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 // newRandomTimeWindow computes a new random time window either for today or the next day (depending on <today>).
 func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1alpha1.Shoot) {
 	var (
-		duration        = c.durationUntilNextShootSync(shoot)
+		now             = time.Now()
+		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
+		duration        = window.RandomDurationUntilNext(now)
 		nextMaintenance = time.Now().Add(duration)
 	)
+
 	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration, nextMaintenance.UTC())
 	c.shootMaintenanceQueue.AddAfter(key, duration)
 }
@@ -122,49 +121,40 @@ type MaintenanceControlInterface interface {
 // NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
 // implements the documented semantics for maintaining Shoots. You should use an instance returned from
 // NewDefaultMaintenanceControl() for any scenario other than testing.
-func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1alpha1.Gardener, recorder record.EventRecorder) MaintenanceControlInterface {
-	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenCoreInformers, secrets, imageVector, identity, recorder}
+func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) MaintenanceControlInterface {
+	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenCoreInformers, recorder}
 }
 
 type defaultMaintenanceControl struct {
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.Interface
-	secrets                map[string]*corev1.Secret
-	imageVector            imagevector.ImageVector
-	identity               *gardencorev1alpha1.Gardener
 	recorder               record.EventRecorder
 }
 
 func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot, key string) error {
-	operationID, err := utils.GenerateRandomString(8)
-	if err != nil {
-		return err
-	}
-
 	var (
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 		handleError = func(msg string) {
-			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1alpha1.ShootEventMaintenanceError, "[%s] %s", operationID, msg)
+			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1alpha1.ShootEventMaintenanceError, "%s", msg)
 			shootLogger.Error(msg)
 		}
 	)
 
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
-	operation, err := operation.New(shoot, &config.ControllerManagerConfiguration{}, shootLogger, c.k8sGardenClient, c.k8sGardenCoreInformers, c.identity, c.secrets, c.imageVector, nil)
+	cloudProfile, err := c.k8sGardenCoreInformers.CloudProfiles().Lister().Get(shoot.Spec.CloudProfileName)
 	if err != nil {
-		handleError(fmt.Sprintf("Could not initialize a new operation: %s", err.Error()))
-		return nil
+		return err
 	}
 
-	updatedMachineImages, err := MaintainMachineImages(operation.Shoot.Info, operation.Shoot.CloudProfile, operation.Shoot.GetMachineImages())
+	updatedMachineImages, err := MaintainMachineImages(shootObj, cloudProfile, gardencorev1alpha1helper.GetMachineImagesFor(shoot))
 	if err != nil {
 		// continue execution to allow the kubernetes version update
 		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
-	updatedKubernetesVersion, err := MaintainKubernetesVersion(operation.Shoot.Info, operation.Shoot.CloudProfile)
+	updatedKubernetesVersion, err := MaintainKubernetesVersion(shootObj, cloudProfile)
 	if err != nil {
 		// continue execution to allow the machine image version update
 		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
@@ -195,7 +185,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 	}
 	msg := "Completed; updated the Shoot specification successfully."
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", msg)
-	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1alpha1.ShootEventMaintenanceDone, "[%s] %s", operationID, msg)
+	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1alpha1.ShootEventMaintenanceDone, "%s", msg)
 
 	return nil
 }

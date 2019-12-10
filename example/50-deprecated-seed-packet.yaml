@@ -8,9 +8,10 @@ spec:
   cloud:
     profile: packet
     region: ewr1
-  secretRef:
-    name: seed-packet
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-packet
+#   namespace: garden
   ingressDomain: dev.packet.seed.example.com
   networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16

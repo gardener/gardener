@@ -16,6 +16,7 @@ REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
 SCHEDULER_IMAGE_REPOSITORY         := $(REGISTRY)/scheduler
+GARDENLET_IMAGE_REPOSITORY         := $(REGISTRY)/gardenlet
 IMAGE_TAG                          := $(shell cat VERSION)
 WORKDIR                            := $(shell pwd)
 PUSH_LATEST                        := true
@@ -44,6 +45,10 @@ start-controller-manager:
 .PHONY: start-scheduler
 start-scheduler:
 	@./hack/start-scheduler
+
+.PHONY: start-gardenlet
+start-gardenlet:
+	@./hack/start-gardenlet
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
@@ -75,6 +80,11 @@ build:
 		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-scheduler \
 		cmd/gardener-scheduler/*.go
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+		-mod=vendor \
+		-ldflags "$(LD_FLAGS)" \
+		-o bin/gardenlet \
+		cmd/gardenlet/*.go
 
 .PHONY: build-local
 build-local:
@@ -90,6 +100,7 @@ docker-images:
 	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(APISERVER_IMAGE_REPOSITORY):latest         -f Dockerfile --target apiserver .
 	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
 	@docker build -t $(SCHEDULER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(SCHEDULER_IMAGE_REPOSITORY):latest         -f Dockerfile --target scheduler .
+	@docker build -t $(GARDENLET_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(GARDENLET_IMAGE_REPOSITORY):latest         -f Dockerfile --target gardenlet .
 
 .PHONY: docker-login
 docker-login:
@@ -100,21 +111,26 @@ docker-push:
 	@if ! docker images $(APISERVER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(APISERVER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(CONROLLER_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(CONROLLER_MANAGER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(SCHEDULER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(SCHEDULER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
+	@if ! docker images $(GARDENLET_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(GARDENLET_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)
 	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG)
 	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(SCHEDULER_IMAGE_REPOSITORY):$(IMAGE_TAG)
 	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(SCHEDULER_IMAGE_REPOSITORY):latest; fi
+	@gcloud docker -- push $(GARDENLET_IMAGE_REPOSITORY):$(IMAGE_TAG)
+	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(GARDENLET_IMAGE_REPOSITORY):latest; fi
 
 .PHONY: rename-binaries
 rename-binaries:
 	@if [[ -f bin/gardener-apiserver ]]; then cp bin/gardener-apiserver gardener-apiserver-darwin-amd64; fi
 	@if [[ -f bin/gardener-controller-manager ]]; then cp bin/gardener-controller-manager gardener-controller-manager-darwin-amd64; fi
 	@if [[ -f bin/gardener-scheduler ]]; then cp bin/gardener-scheduler gardener-scheduler-darwin-amd64; fi
+	@if [[ -f bin/gardenlet ]]; then cp bin/gardenlet gardenlet-darwin-amd64; fi
 	@if [[ -f bin/rel/gardener-apiserver ]]; then cp bin/rel/gardener-apiserver gardener-apiserver-linux-amd64; fi
 	@if [[ -f bin/rel/gardener-controller-manager ]]; then cp bin/rel/gardener-controller-manager gardener-controller-manager-linux-amd64; fi
 	@if [[ -f bin/rel/gardener-scheduler ]]; then cp bin/rel/gardener-scheduler gardener-scheduler-linux-amd64; fi
+	@if [[ -f bin/rel/gardenlet ]]; then cp bin/rel/gardenlet gardenlet-linux-amd64; fi
 
 .PHONY: clean
 clean:

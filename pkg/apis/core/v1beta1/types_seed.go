@@ -63,7 +63,8 @@ type SeedSpec struct {
 	Provider SeedProvider `json:"provider"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 	// Taints describes taints on the seed.
 	// +optional
 	Taints []SeedTaint `json:"taints,omitempty"`
@@ -76,7 +77,10 @@ type SeedSpec struct {
 type SeedStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	// +optional
-	Gardener Gardener `json:"gardener,omitempty"`
+	Gardener *Gardener `json:"gardener,omitempty"`
+	// KubernetesVersion is the Kubernetes version of the seed cluster.
+	// +optional
+	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge

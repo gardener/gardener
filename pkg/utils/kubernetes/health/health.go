@@ -27,6 +27,7 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 )
@@ -286,7 +287,8 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 
 var (
 	trueSeedConditionTypes = []gardencorev1alpha1.ConditionType{
-		gardencorev1alpha1.SeedAvailable,
+		gardencorev1alpha1.SeedGardenletReady,
+		gardencorev1alpha1.SeedBootstrapped,
 	}
 )
 
@@ -295,7 +297,7 @@ func CheckSeed(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Garde
 	if seed.Status.ObservedGeneration < seed.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", seed.Status.ObservedGeneration, seed.Generation)
 	}
-	if seed.Status.Gardener != *identity {
+	if !apiequality.Semantic.DeepEqual(seed.Status.Gardener, identity) {
 		return fmt.Errorf("observing Gardener version not up to date (%v/%v)", seed.Status.Gardener, identity)
 	}
 

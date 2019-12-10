@@ -8,13 +8,14 @@ spec:
   provider:
     type: <provider-name> # e.g., aws, azure, gcp, ...
     region: europe-1
-  secretRef:
-    name: seed-secret
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-secret
+#   namespace: garden
 # Configuration of backup object store provider into which the backups will be stored.
 # If you don't want to have backups then don't specify the `.spec.backup` key.
   backup:
-    type: <provider-name> # e.g., aws, azure, gcp, ...
+    provider: <provider-name> # e.g., aws, azure, gcp, ...
     region: europe-1
     secretRef:
       name: backup-secret

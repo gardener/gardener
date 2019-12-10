@@ -26,9 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -48,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,15 +67,17 @@ var wantedCertificateAuthorities = map[string]*utilsecrets.CertificateSecretConf
 // New takes a <k8sGardenClient>, the <k8sGardenCoreInformers> and a <seed> manifest, and creates a new Seed representation.
 // It will add the CloudProfile and identify the cloud provider.
 func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, seed *gardencorev1alpha1.Seed) (*Seed, error) {
-	secret := &corev1.Secret{}
-	if err := k8sGardenClient.Client().Get(context.TODO(), kutil.Key(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name), secret); err != nil {
-		return nil, err
+	seedObj := &Seed{Info: seed}
+
+	if seed.Spec.SecretRef != nil {
+		secret := &corev1.Secret{}
+		if err := k8sGardenClient.Client().Get(context.TODO(), kutil.Key(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name), secret); err != nil {
+			return nil, err
+		}
+		seedObj.Secret = secret
 	}
 
-	return &Seed{
-		Info:   seed,
-		Secret: secret,
-	}, nil
+	return seedObj, nil
 }
 
 // NewFromName creates a new Seed object based on the name of a Seed manifest.
@@ -104,6 +107,46 @@ func List(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencor
 	}
 
 	return seedList, nil
+}
+
+// GetSeedClient returns the Kubernetes client for the seed cluster. If `inCluster` is set to true then
+// the in-cluster client is returned, otherwise the secret reference of the given `seedName` is read
+// and a client with the stored kubeconfig is created.
+func GetSeedClient(ctx context.Context, gardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool, seedName string) (kubernetes.Interface, error) {
+	if inCluster {
+		return kubernetes.NewClientFromFile(
+			"",
+			clientConnection.Kubeconfig,
+			kubernetes.WithClientConnectionOptions(clientConnection),
+			kubernetes.WithClientOptions(
+				client.Options{
+					Scheme: kubernetes.SeedScheme,
+				},
+			),
+		)
+	}
+
+	seed := &gardencorev1alpha1.Seed{}
+	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
+		return nil, err
+	}
+
+	if seed.Spec.SecretRef == nil {
+		return nil, fmt.Errorf("seed has no secret reference pointing to a kubeconfig - cannot create client")
+	}
+
+	seedSecret, err := common.GetSecretFromSecretRef(ctx, gardenClient, seed.Spec.SecretRef)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewClientFromSecretObject(
+		seedSecret,
+		kubernetes.WithClientConnectionOptions(clientConnection),
+		kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}),
+	)
 }
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
@@ -151,7 +194,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 	}
 
 	// Logging feature gate
-	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
+	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		secretList = append(secretList,
 			&utilsecrets.CertificateSecretConfig{
 				Name: "kibana-tls",
@@ -204,15 +247,10 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
+func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
 	const chartName = "seed-bootstrap"
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret,
-		kubernetes.WithClientConnectionOptions(config.SeedClientConnection),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
+	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
 	if err != nil {
 		return err
 	}
@@ -295,7 +333,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 		sgFluentdPassword     string
 		sgFluentdPasswordHash string
 		fluentdReplicaCount   int32
-		loggingEnabled        = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+		loggingEnabled        = gardenletfeatures.FeatureGate.Enabled(features.Logging)
 		existingSecretsMap    = map[string]*corev1.Secret{}
 		filters               = strings.Builder{}
 		parsers               = strings.Builder{}
@@ -349,7 +387,7 @@ func BootstrapCluster(seed *Seed, config *config.ControllerManagerConfiguration,
 	}
 
 	// HVPA feature gate
-	var hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if !hvpaEnabled {
 		if err := common.DeleteHvpa(k8sSeedClient, v1alpha1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
@@ -617,30 +655,25 @@ func (s *Seed) GetIngressFQDN(subDomain, shootName, projectName string) string {
 }
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-func (s *Seed) CheckMinimumK8SVersion() error {
+func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool) (string, error) {
 	// We require CRD status subresources for the extension controllers that we install into the seeds.
-	// CRD status subresources are alpha in 1.10 and can be enabled with the `CustomResourceSubresources` feature gate.
-	// They are enabled by default in 1.11. We allow 1.10 but users must make sure that the feature gate is enabled in
-	// this case.
-	minSeedVersion := "1.10"
+	minSeedVersion := "1.11"
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret, kubernetes.WithClientOptions(
-		client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
+	k8sSeedClient, err := GetSeedClient(ctx, k8sGardenClient, clientConnection, inCluster, s.Info.Name)
 	if err != nil {
-		return err
+		return "<unknown>", err
 	}
 
-	seedVersionOK, err := utils.CompareVersions(k8sSeedClient.Version(), ">=", minSeedVersion)
+	version := k8sSeedClient.Version()
+
+	seedVersionOK, err := utils.CompareVersions(version, ">=", minSeedVersion)
 	if err != nil {
-		return err
+		return "<unknown>", err
 	}
 	if !seedVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
+		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
 	}
-	return nil
+	return version, nil
 }
 
 // MustReserveExcessCapacity configures whether we have to reserve excess capacity in the Seed cluster.
