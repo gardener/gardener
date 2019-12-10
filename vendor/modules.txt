@@ -273,11 +273,14 @@ github.com/xi2/xz
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/openpgp
 golang.org/x/crypto/openpgp/armor
 golang.org/x/crypto/openpgp/clearsign
@@ -287,6 +290,7 @@ golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/poly1305
+golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/terminal
@@ -576,6 +580,7 @@ k8s.io/apiserver/pkg/server/healthz
 k8s.io/apiserver/pkg/server/httplog
 k8s.io/apiserver/pkg/server/mux
 k8s.io/apiserver/pkg/server/options
+k8s.io/apiserver/pkg/server/options/encryptionconfig
 k8s.io/apiserver/pkg/server/resourceconfig
 k8s.io/apiserver/pkg/server/routes
 k8s.io/apiserver/pkg/server/storage
@@ -589,6 +594,11 @@ k8s.io/apiserver/pkg/storage/names
 k8s.io/apiserver/pkg/storage/storagebackend
 k8s.io/apiserver/pkg/storage/storagebackend/factory
 k8s.io/apiserver/pkg/storage/value
+k8s.io/apiserver/pkg/storage/value/encrypt/aes
+k8s.io/apiserver/pkg/storage/value/encrypt/envelope
+k8s.io/apiserver/pkg/storage/value/encrypt/envelope/v1beta1
+k8s.io/apiserver/pkg/storage/value/encrypt/identity
+k8s.io/apiserver/pkg/storage/value/encrypt/secretbox
 k8s.io/apiserver/pkg/util/dryrun
 k8s.io/apiserver/pkg/util/feature
 k8s.io/apiserver/pkg/util/flushwriter

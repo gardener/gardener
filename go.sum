@@ -127,7 +127,6 @@ github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822c
 github.com/gardener/etcd-backup-restore v0.0.0-20190807103447-4c8bc2972b60/go.mod h1:w55uXFfKnGZFpcfl18L1yFtd2ZhRt1NpA7bxkAAHeKg=
 github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03 h1:7fpVS/PBb93mtR+i97JszSO0jkw9dIFNuV0AZd6FEg4=
 github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03/go.mod h1:Y3om11E865x4aQ7cmcHjknb8RMgCO153huRb/SvP+9o=
-github.com/gardener/external-dns-management v0.0.0-20191105152640-6ab503392c02 h1:8YX7RxiRMdCyn/42ryWnZ46SU8pnBnokZzkKFuf+TxY=
 github.com/gardener/gardener v0.0.0-20190913144920-5b4adb9f114d/go.mod h1:8LOLWzproKzfww5LdDo0/7FyVQR7gR1QA5LQc5buDzQ=
 github.com/gardener/gardener v0.0.0-20191028054636-32cb0027c126/go.mod h1:Ow7vOXQYgQeHTRFn2HdbEIptelrSB5NLmVFIt2rgNeY=
 github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca h1:MhPDRJz6djMpOBxlxvTG/St47cfoi4e0JRo2t9LpkVk=
