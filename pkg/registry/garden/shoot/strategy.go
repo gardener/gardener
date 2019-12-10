@@ -117,6 +117,11 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 		return true
 	}
 
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if oldShoot.ObjectMeta.Annotations[common.ShootExperimentalAddonKyma] != newShoot.ObjectMeta.Annotations[common.ShootExperimentalAddonKyma] {
+		return true
+	}
+
 	return false
 }
 
