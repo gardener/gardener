@@ -1425,6 +1425,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.AWS.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1440,7 +1441,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1566,6 +1567,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Azure.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1581,7 +1583,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1701,6 +1703,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.GCP.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1716,7 +1719,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1977,6 +1980,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Alicloud.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1992,7 +1996,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -2078,6 +2082,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Packet.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -2093,7 +2098,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
