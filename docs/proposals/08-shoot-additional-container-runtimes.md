@@ -68,8 +68,8 @@ Since each operating system distribution has different methods of installing sof
 
 ## Design Details
 
-	<!---
+<!---
 		Nimrod: please elaborate 
-	-->
+-->
 
 ## Alternatives
