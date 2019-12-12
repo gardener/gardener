@@ -2284,7 +2284,7 @@ func schema_pkg_apis_core_v1alpha1_Hibernation(ref common.ReferenceCallback) com
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled is true if the Shoot's desired state is hibernated, false otherwise.",
+							Description: "Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated. If it is false or nil, the Shoot's desired state is to be awaken.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -7178,7 +7178,7 @@ func schema_pkg_apis_core_v1beta1_Hibernation(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled is true if the Shoot's desired state is hibernated, false otherwise.",
+							Description: "Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated. If it is false or nil, the Shoot's desired state is to be awaken.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -13058,7 +13058,7 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled is true if the Shoot's desired state is hibernated, false otherwise.",
+							Description: "Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated. If it is false or nil, the Shoot's desired state is to be awaken.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
