@@ -49,6 +49,9 @@ controllers:
       duration: 1m
     - type: EveryNodeReady
       duration: 5m
+  shootStateSync:
+    concurrentSyncs: 5
+    syncPeriod: 30s
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m

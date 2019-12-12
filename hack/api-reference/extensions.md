@@ -2253,6 +2253,20 @@ DefaultStatus
 </tr>
 <tr>
 <td>
+<code>nodesCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
+This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
+be statically defined in the Shoot resource but must be computed dynamically.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>providerStatus</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
@@ -3190,5 +3204,5 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>79c676930</code>.
+on git commit <code>f13d679ab</code>.
 </em></p>

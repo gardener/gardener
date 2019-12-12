@@ -2182,6 +2182,13 @@ func schema_pkg_apis_core_v1alpha1_ExtensionResourceState(ref common.ReferenceCa
 							Format:      "",
 						},
 					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the extension custom resource",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"purpose": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Purpose of the extension custom resource",

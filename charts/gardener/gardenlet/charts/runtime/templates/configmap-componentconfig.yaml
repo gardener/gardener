@@ -94,6 +94,9 @@ data:
         {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 8 }}
         {{- end }}
+      shootStateSync:
+        concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}
     leaderElection:
       leaderElect: {{ required ".Values.global.gardenlet.config.leaderElection.leaderElect is required" .Values.global.gardenlet.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.global.gardenlet.config.leaderElection.leaseDuration is required" .Values.global.gardenlet.config.leaderElection.leaseDuration }}

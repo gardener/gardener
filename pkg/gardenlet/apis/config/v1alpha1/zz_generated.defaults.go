@@ -68,6 +68,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ShootCare != nil {
 			SetDefaults_ShootCareControllerConfiguration(in.Controllers.ShootCare)
 		}
+		if in.Controllers.ShootStateSync != nil {
+			SetDefaults_ShootStateSyncControllerConfiguration(in.Controllers.ShootStateSync)
+		}
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)

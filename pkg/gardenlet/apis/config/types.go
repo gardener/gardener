@@ -111,6 +111,8 @@ type GardenletControllerConfiguration struct {
 	Shoot *ShootControllerConfiguration
 	// ShootCare defines the configuration of the ShootCare controller.
 	ShootCare *ShootCareControllerConfiguration
+	// ShootStateSync defines the configuration of the ShootState controller
+	ShootStateSync *ShootStateSyncControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -206,6 +208,17 @@ type ConditionThreshold struct {
 	Type string
 	// Duration is the duration how long the condition can stay in the progressing state.
 	Duration *metav1.Duration
+}
+
+// ShootStateSyncControllerConfiguration defines the configuration of the
+// ShootStateController controller.
+type ShootStateSyncControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing extension resources are
+	// synced to the ShootState resource
+	SyncPeriod *metav1.Duration
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

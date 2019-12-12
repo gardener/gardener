@@ -133,6 +133,9 @@ type GardenletControllerConfiguration struct {
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
+	// ShootStateSync defines the configuration of the ShootStateController controller
+	// +optional
+	ShootStateSync *ShootStateSyncControllerConfiguration `json:"extensionsSync,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -191,6 +194,17 @@ type SeedControllerConfiguration struct {
 	// +optional
 	ReserveExcessCapacity *bool `json:"reserveExcessCapacity,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
+type ShootStateSyncControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }

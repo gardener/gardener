@@ -30,6 +30,11 @@ func (d *DefaultSpec) GetExtensionType() string {
 	return d.Type
 }
 
+// GetExtensionPurpose implements Spec.
+func (d *DefaultSpec) GetExtensionPurpose() *string {
+	return nil
+}
+
 // DefaultStatus contains common status fields for every extension resource.
 type DefaultStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
@@ -77,4 +82,9 @@ func (d *DefaultStatus) GetLastError() LastError {
 // GetObservedGeneration implements Status.
 func (d *DefaultStatus) GetObservedGeneration() int64 {
 	return d.ObservedGeneration
+}
+
+// GetState implements Status.
+func (d *DefaultStatus) GetState() *runtime.RawExtension {
+	return d.State
 }

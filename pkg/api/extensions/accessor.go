@@ -92,6 +92,15 @@ func nestedInt64(obj map[string]interface{}, fields ...string) int64 {
 	return v
 }
 
+func nestedStringReference(obj map[string]interface{}, fields ...string) *string {
+	v, ok, err := unstructured.NestedString(obj, fields...)
+	if err != nil || !ok {
+		return nil
+	}
+
+	return &v
+}
+
 func nestedInt(obj map[string]interface{}, fields ...string) int {
 	v, ok, err := unstructured.NestedFieldNoCopy(obj, fields...)
 	if err != nil || !ok {
@@ -142,6 +151,11 @@ func (u unstructuredSpecAccessor) GetExtensionType() string {
 	return nestedString(u.UnstructuredContent(), "spec", "type")
 }
 
+func (u unstructuredSpecAccessor) GetExtensionPurpose() *string {
+
+	return nestedStringReference(u.UnstructuredContent(), "spec", "purpose")
+}
+
 // GetConditions implements Status.
 func (u unstructuredStatusAccessor) GetConditions() []gardencorev1beta1.Condition {
 	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "conditions")
@@ -189,6 +203,20 @@ func (u unstructuredStatusAccessor) GetLastOperation() extensionsv1alpha1.LastOp
 // GetObservedGeneration implements Status.
 func (u unstructuredStatusAccessor) GetObservedGeneration() int64 {
 	return nestedInt64(u.Object, "status", "observedGeneration")
+}
+
+// GetState implements Status.
+func (u unstructuredStatusAccessor) GetState() *runtime.RawExtension {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "state")
+	if err != nil || !ok {
+		return nil
+	}
+	raw := &runtime.RawExtension{}
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(val.(map[string]interface{}), raw)
+	if err != nil {
+		return nil
+	}
+	return raw
 }
 
 // GetDescription implements LastError.

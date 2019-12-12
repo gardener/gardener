@@ -76,6 +76,9 @@ global:
             duration: 1m
           - type: EveryNodeReady
             duration: 5m
+        shootStateSync:
+          concurrentSyncs: 5
+          syncPeriod: 30s
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

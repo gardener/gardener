@@ -43,6 +43,12 @@ func (o *OperatingSystemConfig) GetExtensionSpec() Spec {
 	return &o.Spec
 }
 
+// GetExtensionPurpose implements Object.
+func (o *OperatingSystemConfigSpec) GetExtensionPurpose() *string {
+	return (*string)(&o.Purpose)
+
+}
+
 // GetExtensionStatus implements Object.
 func (o *OperatingSystemConfig) GetExtensionStatus() Status {
 	return &o.Status
