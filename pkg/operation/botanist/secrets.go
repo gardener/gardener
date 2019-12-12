@@ -98,7 +98,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
-	if b.Shoot.ExternalClusterDomain != nil {
+	if b.Shoot.ExternalClusterDomain != nil && b.Shoot.Info.Spec.DNS != nil && b.Shoot.Info.Spec.DNS.Domain != nil {
 		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 	}
 

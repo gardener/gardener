@@ -193,7 +193,7 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 			return apierrors.NewInternalError(err)
 		}
 
-		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
+		if shoot.Spec.DNS != nil && shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
 			// Shoot already specifies a default domain, set providers to nil
 			shoot.Spec.DNS.Providers = nil
 
