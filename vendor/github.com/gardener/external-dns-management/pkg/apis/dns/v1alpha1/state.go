@@ -19,4 +19,6 @@ package v1alpha1
 const STATE_PENDING = "Pending"
 const STATE_ERROR = "Error"
 const STATE_INVALID = "Invalid"
+const STATE_STALE = "Stale"
 const STATE_READY = "Ready"
+const STATE_DELETING = "Deleting"

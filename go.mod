@@ -8,12 +8,12 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/frankban/quicktest v1.5.0 // indirect
-	github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc // indirect
-	github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
+	github.com/gardener/controller-manager-library v0.1.0 // indirect
+	github.com/gardener/external-dns-management v0.7.3
 	github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
 	github.com/gardener/gardener-resource-manager v0.8.1
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
-	github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945
+	github.com/gardener/machine-controller-manager v0.25.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
 	github.com/golang/mock v1.3.1
@@ -55,7 +55,7 @@ require (
 
 replace (
 	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
-	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945
+	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.25.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.0.0-20191004102349-159aefb8556b // kubernetes-1.14.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed // kubernetes-1.14.8

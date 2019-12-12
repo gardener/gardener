@@ -54,6 +54,7 @@ type DNSEntryStatus struct {
 	State              string   `json:"state"`
 	Message            *string  `json:"message,omitempty"`
 	ProviderType       *string  `json:"providerType,omitempty"`
+	Provider           *string  `json:"provider,omitempty"`
 	Zone               *string  `json:"zone,omitempty"`
 	TTL                *int64   `json:"ttl,omitempty"`
 	Targets            []string `json:"targets,omitempty"`

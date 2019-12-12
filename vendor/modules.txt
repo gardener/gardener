@@ -46,7 +46,7 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.5.0+incompatible
 github.com/evanphx/json-patch
-# github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc
+# github.com/gardener/controller-manager-library v0.1.0
 github.com/gardener/controller-manager-library/pkg/controllermanager/controller/reconcile/conditions
 github.com/gardener/controller-manager-library/pkg/ctxutil
 github.com/gardener/controller-manager-library/pkg/fieldpath
@@ -55,7 +55,7 @@ github.com/gardener/controller-manager-library/pkg/kutil
 github.com/gardener/controller-manager-library/pkg/logger
 github.com/gardener/controller-manager-library/pkg/resources
 github.com/gardener/controller-manager-library/pkg/utils
-# github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03
+# github.com/gardener/external-dns-management v0.7.3
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
@@ -83,7 +83,7 @@ github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945 => github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945
+# github.com/gardener/machine-controller-manager v0.25.0 => github.com/gardener/machine-controller-manager v0.25.0
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
 # github.com/ghodss/yaml v1.0.0
