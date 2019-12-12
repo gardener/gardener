@@ -122,11 +122,13 @@ github.com/frankban/quicktest v1.5.0/go.mod h1:jaStnuzAqU1AJdCO0l53JDCJrVDKcS03D
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gardener/controller-manager-library v0.0.0-20190830161011-2626c078acef/go.mod h1:v6cbldxmpL2fYBEB2lSnq3LSEPwIHus9En6iIhwNE1k=
-github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc h1:9iqVa4Z+VfvAWuZFxdtAdznLPJk6+9k2R9zR7yiCmRE=
-github.com/gardener/controller-manager-library v0.0.0-20191022090355-2f744b5822cc/go.mod h1:v6cbldxmpL2fYBEB2lSnq3LSEPwIHus9En6iIhwNE1k=
+github.com/gardener/controller-manager-library v0.1.0 h1:jwPhyo8qe6X+5Zui/qOMVLF3xB3sHsT0jyLKqquN+IU=
+github.com/gardener/controller-manager-library v0.1.0/go.mod h1:v6cbldxmpL2fYBEB2lSnq3LSEPwIHus9En6iIhwNE1k=
 github.com/gardener/etcd-backup-restore v0.0.0-20190807103447-4c8bc2972b60/go.mod h1:w55uXFfKnGZFpcfl18L1yFtd2ZhRt1NpA7bxkAAHeKg=
 github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03 h1:7fpVS/PBb93mtR+i97JszSO0jkw9dIFNuV0AZd6FEg4=
 github.com/gardener/external-dns-management v0.0.0-20190220100540-b4bbb5832a03/go.mod h1:Y3om11E865x4aQ7cmcHjknb8RMgCO153huRb/SvP+9o=
+github.com/gardener/external-dns-management v0.7.3 h1:SAW9ur2mjZ+x89xbmcplJgqNUmFGYIZLI2E+PaBhhG0=
+github.com/gardener/external-dns-management v0.7.3/go.mod h1:Y3om11E865x4aQ7cmcHjknb8RMgCO153huRb/SvP+9o=
 github.com/gardener/gardener v0.0.0-20190913144920-5b4adb9f114d/go.mod h1:8LOLWzproKzfww5LdDo0/7FyVQR7gR1QA5LQc5buDzQ=
 github.com/gardener/gardener v0.0.0-20191028054636-32cb0027c126/go.mod h1:Ow7vOXQYgQeHTRFn2HdbEIptelrSB5NLmVFIt2rgNeY=
 github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca h1:MhPDRJz6djMpOBxlxvTG/St47cfoi4e0JRo2t9LpkVk=
@@ -140,8 +142,8 @@ github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d h1:PbaSkl
 github.com/gardener/hvpa-controller v0.0.0-20190924063424-ef5c3668949d/go.mod h1:YUvzinEboe8b9FTflj+wGvXaZBHHhQTd+R9Vk581wIE=
 github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25 h1:nOFITmV7vt4fcYPEXgj66Qs83FdDEMvL/LQcR0diRRE=
 github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25/go.mod h1:yj7YJ6ijo4adcpXQKutPFZfQuKLdM5UMZZUlpbM3vig=
-github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945 h1:r8byoT/xXJ8plkoXRKVLXE+ztnnnqFek3gn2NUe+n2s=
-github.com/gardener/machine-controller-manager v0.0.0-20191118095523-e30355bc7945/go.mod h1:anjeXFvK/AWZAhWT17qXFjt8SgZgbQaHbZIL7vf2lqo=
+github.com/gardener/machine-controller-manager v0.25.0 h1:YM3IBp5sUAtC+ULwWxw4Pd/YwZtTTm+/hWvOyTkneXI=
+github.com/gardener/machine-controller-manager v0.25.0/go.mod h1:aVUz5U39DEcQ3Jl/0bH28zfm0mV12OX9bqWf8V6mubQ=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-ini/ini v1.36.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
