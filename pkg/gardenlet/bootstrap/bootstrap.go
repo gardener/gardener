@@ -84,7 +84,9 @@ func RequestSeedCertificate(ctx context.Context, client certificatesv1beta1clien
 		return nil, err
 	}
 
-	return csr.WaitForCertificate(client, req, 3600*time.Second)
+	childCtx, cancel := context.WithTimeout(ctx, 3600*time.Second)
+	defer cancel()
+	return csr.WaitForCertificate(childCtx, client, req)
 }
 
 // This digest should include all the relevant pieces of the CSR we care about.

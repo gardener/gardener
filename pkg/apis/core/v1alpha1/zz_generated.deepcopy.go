@@ -212,7 +212,7 @@ func (in *BackupBucket) DeepCopyObject() runtime.Object {
 func (in *BackupBucketList) DeepCopyInto(out *BackupBucketList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]BackupBucket, len(*in))
@@ -343,7 +343,7 @@ func (in *BackupEntry) DeepCopyObject() runtime.Object {
 func (in *BackupEntryList) DeepCopyInto(out *BackupEntryList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]BackupEntry, len(*in))
@@ -466,7 +466,7 @@ func (in *CloudProfile) DeepCopyObject() runtime.Object {
 func (in *CloudProfileList) DeepCopyInto(out *CloudProfileList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CloudProfile, len(*in))
@@ -690,7 +690,7 @@ func (in *ControllerInstallation) DeepCopyObject() runtime.Object {
 func (in *ControllerInstallationList) DeepCopyInto(out *ControllerInstallationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ControllerInstallation, len(*in))
@@ -796,7 +796,7 @@ func (in *ControllerRegistration) DeepCopyObject() runtime.Object {
 func (in *ControllerRegistrationList) DeepCopyInto(out *ControllerRegistrationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ControllerRegistration, len(*in))
@@ -2069,7 +2069,7 @@ func (in *Plant) DeepCopyObject() runtime.Object {
 func (in *PlantList) DeepCopyInto(out *PlantList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Plant, len(*in))
@@ -2185,7 +2185,7 @@ func (in *Project) DeepCopyObject() runtime.Object {
 func (in *ProjectList) DeepCopyInto(out *ProjectList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Project, len(*in))
@@ -2374,7 +2374,7 @@ func (in *Quota) DeepCopyObject() runtime.Object {
 func (in *QuotaList) DeepCopyInto(out *QuotaList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Quota, len(*in))
@@ -2491,7 +2491,7 @@ func (in *SecretBinding) DeepCopyObject() runtime.Object {
 func (in *SecretBindingList) DeepCopyInto(out *SecretBindingList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]SecretBinding, len(*in))
@@ -2590,7 +2590,7 @@ func (in *SeedDNS) DeepCopy() *SeedDNS {
 func (in *SeedList) DeepCopyInto(out *SeedList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Seed, len(*in))
@@ -2856,7 +2856,7 @@ func (in *Shoot) DeepCopyObject() runtime.Object {
 func (in *ShootList) DeepCopyInto(out *ShootList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Shoot, len(*in))
@@ -3019,7 +3019,7 @@ func (in *ShootState) DeepCopyObject() runtime.Object {
 func (in *ShootStateList) DeepCopyInto(out *ShootStateList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ShootState, len(*in))

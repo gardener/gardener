@@ -15,13 +15,13 @@
 package features
 
 import (
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/component-base/featuregate"
 )
 
 var (
 	// FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
-	FeatureGate  = utilfeature.NewFeatureGate()
-	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
+	FeatureGate  = featuregate.NewFeatureGate()
+	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{}
 )
 
 // RegisterFeatureGates registers the feature gates of the Gardener Controller Manager.

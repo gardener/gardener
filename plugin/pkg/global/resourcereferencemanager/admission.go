@@ -15,6 +15,7 @@
 package resourcereferencemanager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -172,7 +173,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 }
 
 // Admit ensures that referenced resources do actually exist.
-func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {

@@ -15,6 +15,8 @@
 package plant_test
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -23,12 +25,11 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	. "github.com/gardener/gardener/plugin/pkg/plant"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Admission", func() {
@@ -83,11 +84,11 @@ var _ = Describe("Admission", func() {
 				defaultUserInfo = &user.DefaultInfo{Name: defaultUserName}
 			)
 
-			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, garden.Resource("plants").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
+			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, garden.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
@@ -114,15 +115,15 @@ var _ = Describe("Admission", func() {
 			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)
 			Expect(err).NotTo(HaveOccurred())
 
-			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, false, nil)
-			err = admissionHandler.Validate(attrs, nil)
+			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err = admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("another plant resource already exists"))
 		})
 		It("should do nothing because the resource is not a Plant", func() {
-			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", plant.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, false, nil)
-			err := admissionHandler.Validate(attrs, nil)
+			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", plant.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -134,12 +135,12 @@ var _ = Describe("Admission", func() {
 			plant.Spec.SecretRef.Name = "secretref"
 			err := gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			Expect(err).NotTo(HaveOccurred())
-			attrs = admission.NewAttributesRecord(&plant, &plant, core.Kind("Plant").WithVersion("version"), "", plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Update, false, nil)
+			attrs = admission.NewAttributesRecord(&plant, &plant, core.Kind("Plant").WithVersion("version"), "", plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
 			Expect(err).NotTo(HaveOccurred())
 
-			err = admissionHandler.Validate(attrs, nil)
+			err = admissionHandler.Validate(context.TODO(), attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

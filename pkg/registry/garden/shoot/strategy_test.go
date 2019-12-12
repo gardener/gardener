@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apiserver/pkg/storage"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -64,18 +63,10 @@ var _ = Describe("GetAttrs", func() {
 	})
 })
 
-var _ = Describe("TriggerFunc", func() {
-	It("should return correct matching values", func() {
-		expected := []storage.MatchValue{
-			{IndexName: garden.ShootSeedNameDeprecated, Value: "foo"},
-			{IndexName: garden.ShootSeedName, Value: "foo"},
-			{IndexName: garden.ShootCloudProfileName, Value: "baz"},
-		}
-
-		mv := strategy.TriggerFunc(newShoot("foo"))
-
-		Expect(mv).To(Equal(expected))
-
+var _ = Describe("SeedNameTriggerFunc", func() {
+	It("should return spec.seedName", func() {
+		actual := strategy.SeedNameTriggerFunc(newShoot("foo"))
+		Expect(actual).To(Equal("foo"))
 	})
 })
 
@@ -88,7 +79,7 @@ var _ = Describe("MatchShoot", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(garden.ShootSeedNameDeprecated, garden.ShootSeedName, garden.ShootCloudProfileName))
+		Expect(result.IndexFields).To(ConsistOf(garden.ShootSeedName))
 	})
 })
 

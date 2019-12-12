@@ -15,6 +15,7 @@
 package dns
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -112,8 +113,10 @@ func (d *DNS) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = &DNS{}
+
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
-func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if d.readyFunc == nil {
 		d.AssignReadyFunc(func() bool {

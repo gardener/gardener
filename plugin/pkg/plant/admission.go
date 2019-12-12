@@ -15,22 +15,21 @@
 package plant
 
 import (
+	"context"
 	"fmt"
 	"io"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -93,8 +92,10 @@ func (a *AdmitPlant) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = &AdmitPlant{}
+
 // Admit ensures that the plant is correctly annotated
-func (a *AdmitPlant) Admit(attrs admission.Attributes, o admission.ObjectInterfaces) error {
+func (a *AdmitPlant) Admit(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}
@@ -121,10 +122,12 @@ func (a *AdmitPlant) Admit(attrs admission.Attributes, o admission.ObjectInterfa
 	return nil
 }
 
+var _ admission.ValidationInterface = &AdmitPlant{}
+
 // Validate makes admissions decisions based on the resources specified in a Plant object.
 // It does reject the request if there another plant managing the cluster, if the plant name is invalid
 // or the project that contains the plant resource is deleted
-func (a *AdmitPlant) Validate(attrs admission.Attributes, o admission.ObjectInterfaces) error {
+func (a *AdmitPlant) Validate(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}

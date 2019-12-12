@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
@@ -124,7 +125,7 @@ func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 		var conditions []corev1.NodeCondition
 
 		for _, condition := range node.Status.Conditions {
-			if condition.Type != corev1.NodeOutOfDisk {
+			if condition.Type != health.NodeOutOfDisk {
 				conditions = append(conditions, condition)
 			}
 		}
