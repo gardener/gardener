@@ -37,7 +37,7 @@ spec:
         - probe
         - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
         - --deployed-namespace={{ .Release.Namespace }}
-        - --v=4
+        - --v=3
         resources:
           requests:
             cpu: 200m
