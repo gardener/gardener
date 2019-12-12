@@ -3781,7 +3781,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Enabled is true if the Shoot&rsquo;s desired state is hibernated, false otherwise.</p>
+<p>Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot&rsquo;s desired state is to be hibernated.
+If it is false or nil, the Shoot&rsquo;s desired state is to be awaken.</p>
 </td>
 </tr>
 <tr>
@@ -8222,5 +8223,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>3af47ac69</code>.
+on git commit <code>857401a84</code>.
 </em></p>
