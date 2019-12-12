@@ -26,17 +26,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/gardener/gardener/pkg/utils/retry"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,6 +42,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/helm/pkg/repo"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
@@ -71,7 +69,7 @@ func NewGardenTestOperation(k8sGardenClient kubernetes.Interface, logger logrus.
 }
 
 // NewGardenTestOperationWithShoot initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
-func NewGardenTestOperationWithShoot(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *gardencorev1alpha1.Shoot) (*GardenerTestOperation, error) {
+func NewGardenTestOperationWithShoot(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot) (*GardenerTestOperation, error) {
 	operation := &GardenerTestOperation{
 		Logger:       logger,
 		GardenClient: k8sGardenClient,
@@ -86,7 +84,7 @@ func NewGardenTestOperationWithShoot(ctx context.Context, k8sGardenClient kubern
 }
 
 // AddShoot sets the shoot and its seed for the GardenerOperation.
-func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev1alpha1.Shoot) error {
+func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	if o.GardenClient == nil {
 		return errors.New("no gardener client is defined")
 	}
@@ -95,9 +93,9 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev
 		seedClient  kubernetes.Interface
 		shootClient kubernetes.Interface
 
-		seed         = &gardencorev1alpha1.Seed{}
-		cloudProfile = &gardencorev1alpha1.CloudProfile{}
-		project      = &gardencorev1alpha1.Project{}
+		seed         = &gardencorev1beta1.Seed{}
+		cloudProfile = &gardencorev1beta1.CloudProfile{}
+		project      = &gardencorev1beta1.Project{}
 	)
 
 	if err := o.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
@@ -157,7 +155,7 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev
 		return errors.Wrap(err, "could not add schemes to shoot scheme")
 	}
 	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
-		shootClient, err = kubernetes.NewClientFromSecret(seedClient, computeTechnicalID(project.Name, shoot), gardencorev1alpha1.GardenerName, kubernetes.WithClientOptions(client.Options{
+		shootClient, err = kubernetes.NewClientFromSecret(seedClient, computeTechnicalID(project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
 			Scheme: shootScheme,
 		}))
 		if err != nil {
@@ -173,7 +171,7 @@ func (o *GardenerTestOperation) AddShoot(ctx context.Context, shoot *gardencorev
 	return nil
 }
 
-func computeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) string {
+func computeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
 	// Use the stored technical ID in the Shoot's status field if it's there.
 	// For backwards compatibility we keep the pattern as it was before we had to change it
 	// (double hyphens).

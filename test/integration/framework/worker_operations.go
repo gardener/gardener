@@ -16,7 +16,7 @@ package framework
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // NewWorkerGardenerTest creates a new NewWorkerGardenerTest
@@ -33,7 +33,7 @@ func (s *WorkerGardenerTest) SetupShootWorkers(shootMachineImageName *string, sh
 	}
 
 	// clear current workers
-	s.ShootGardenerTest.Shoot.Spec.Provider.Workers = []gardencorev1alpha1.Worker{}
+	s.ShootGardenerTest.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
 
 	// determine two different machine image names from the CloudProfile
 	if shootMachineImageName == nil || len(*shootMachineImageName) == 0 || shootMachineImageName2 == nil || len(*shootMachineImageName2) == 0 {

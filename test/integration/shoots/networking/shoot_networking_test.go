@@ -31,28 +31,27 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	"io/ioutil"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"text/template"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	. "github.com/gardener/gardener/test/integration/shoots"
-
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/shoots"
+
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -108,7 +107,7 @@ var _ = Describe("Shoot network testing", func() {
 		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, networkTestLogger)
 		Expect(err).NotTo(HaveOccurred())
 
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 		gardenerTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, networkTestLogger, shoot)
 		Expect(err).NotTo(HaveOccurred())
 	}, InitializationTimeout)

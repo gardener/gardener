@@ -19,26 +19,20 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
-	"k8s.io/client-go/util/retry"
-
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/sirupsen/logrus"
-
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewPlantTest creates a new plantGardenerTest object, given an already created plant (created after parsing a plant YAML) and a path to a kubeconfig of an external cluster
-func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1alpha1.Plant, logger *logrus.Logger) (*PlantTest, error) {
+func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1beta1.Plant, logger *logrus.Logger) (*PlantTest, error) {
 	if len(kubeconfig) == 0 {
 		return nil, fmt.Errorf("Please specify the kubeconfig path correctly")
 	}
@@ -114,8 +108,8 @@ func (s *PlantTest) GetPlantSecret(ctx context.Context) (*v1.Secret, error) {
 }
 
 // GetPlant gets the test plant
-func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1alpha1.Plant, error) {
-	plant := &gardencorev1alpha1.Plant{}
+func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1beta1.Plant, error) {
+	plant := &gardencorev1beta1.Plant{}
 	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
 		Namespace: s.Plant.Namespace,
 		Name:      s.Plant.Name,
@@ -169,7 +163,7 @@ func (s *PlantTest) DeletePlant(ctx context.Context) error {
 // WaitForPlantToBeCreated waits for the plant to be created
 func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
 	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
 			return utilretry.SevereError(err)
@@ -183,7 +177,7 @@ func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
 // WaitForPlantToBeDeleted waits for the plant to be deleted
 func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
 	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.ObjectMeta.Namespace, Name: s.Plant.ObjectMeta.Name}, plant)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -200,7 +194,7 @@ func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
 // WaitForPlantToBeReconciledSuccessfully waits for the plant to be reconciled with a status indicating success
 func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) error {
 	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
 			return utilretry.SevereError(err)
@@ -218,7 +212,7 @@ func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) 
 // WaitForPlantToBeReconciledWithUnknownStatus waits for the plant to be reconciled, setting the expected status 'unknown'
 func (s *PlantTest) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context) error {
 	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
 			return utilretry.SevereError(err)
