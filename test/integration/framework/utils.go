@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
@@ -29,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -151,7 +151,7 @@ func (o *GardenerTestOperation) dashboardAvailableWithBasicAuth(ctx context.Cont
 	return nil
 }
 
-func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *gardencorev1alpha1.Shoot) error {
+func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *gardencorev1beta1.Shoot) error {
 	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
 	if err != nil {
 		return fmt.Errorf("failed to patch bytes")
@@ -172,7 +172,7 @@ func getDeploymentListByLabels(ctx context.Context, labelsSelector labels.Select
 }
 
 // ShootCreationCompleted checks if a shoot is successfully reconciled.
-func ShootCreationCompleted(newShoot *gardencorev1alpha1.Shoot) bool {
+func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) bool {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
 		return false
 	}
@@ -181,15 +181,15 @@ func ShootCreationCompleted(newShoot *gardencorev1alpha1.Shoot) bool {
 	}
 
 	for _, condition := range newShoot.Status.Conditions {
-		if condition.Status != gardencorev1alpha1.ConditionTrue {
+		if condition.Status != gardencorev1beta1.ConditionTrue {
 			return false
 		}
 	}
 
 	if newShoot.Status.LastOperation != nil {
-		if newShoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate ||
-			newShoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeReconcile {
-			if newShoot.Status.LastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded {
+		if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
+			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile {
+			if newShoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				return false
 			}
 		}
@@ -224,13 +224,13 @@ func Exists(path string) (bool, error) {
 }
 
 // plantCreationSuccessful determines, based on the plant condition and Cluster Info, if the Plant was reconciled successfully
-func plantCreationSuccessful(plantStatus *gardencorev1alpha1.PlantStatus) bool {
+func plantCreationSuccessful(plantStatus *gardencorev1beta1.PlantStatus) bool {
 	if len(plantStatus.Conditions) == 0 {
 		return false
 	}
 
 	for _, condition := range plantStatus.Conditions {
-		if condition.Status != gardencorev1alpha1.ConditionTrue {
+		if condition.Status != gardencorev1beta1.ConditionTrue {
 			return false
 		}
 	}
@@ -243,13 +243,13 @@ func plantCreationSuccessful(plantStatus *gardencorev1alpha1.PlantStatus) bool {
 }
 
 // plantReconciledWithStatusUnknown determines, based on the plant status.condition and status.ClusterInfo, if the PlantStatus is 'unknown'
-func plantReconciledWithStatusUnknown(plantStatus *gardencorev1alpha1.PlantStatus) bool {
+func plantReconciledWithStatusUnknown(plantStatus *gardencorev1beta1.PlantStatus) bool {
 	if len(plantStatus.Conditions) == 0 {
 		return false
 	}
 
 	for _, condition := range plantStatus.Conditions {
-		if condition.Status != gardencorev1alpha1.ConditionFalse && condition.Status != gardencorev1alpha1.ConditionUnknown {
+		if condition.Status != gardencorev1beta1.ConditionFalse && condition.Status != gardencorev1beta1.ConditionUnknown {
 			return false
 		}
 	}
@@ -274,18 +274,18 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 	return false
 }
 
-func shootIsScheduledSuccessfully(newSpec *gardencorev1alpha1.ShootSpec) bool {
+func shootIsScheduledSuccessfully(newSpec *gardencorev1beta1.ShootSpec) bool {
 	if newSpec.SeedName != nil {
 		return true
 	}
 	return false
 }
 
-func setHibernation(shoot *gardencorev1alpha1.Shoot, hibernated bool) {
+func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	if shoot.Spec.Hibernation != nil {
 		shoot.Spec.Hibernation.Enabled = &hibernated
 	}
-	shoot.Spec.Hibernation = &gardencorev1alpha1.Hibernation{
+	shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: &hibernated,
 	}
 }

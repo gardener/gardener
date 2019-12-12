@@ -20,12 +20,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 func TestFramework(t *testing.T) {
@@ -72,29 +72,29 @@ var _ = Describe("Framework tests", func() {
 
 	Context("Scheduler Operations - ChooseRegionAndZoneWithNoSeed", func() {
 		var (
-			seed             gardencorev1alpha1.Seed
-			allSeeds         []gardencorev1alpha1.Seed
+			seed             gardencorev1beta1.Seed
+			allSeeds         []gardencorev1beta1.Seed
 			seedName         = "seed-1"
 			regionEuropeWest = "europe-west1"
 			regionEuropeEast = "us-east1"
 			providerType     = "aws"
 
-			seedBase = gardencorev1alpha1.Seed{
+			seedBase = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
-				Spec: gardencorev1alpha1.SeedSpec{
-					Provider: gardencorev1alpha1.SeedProvider{Type: providerType, Region: regionEuropeWest},
+				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{Type: providerType, Region: regionEuropeWest},
 				},
 			}
 
-			regions = []gardencorev1alpha1.Region{
+			regions = []gardencorev1beta1.Region{
 				{
 					Name: regionEuropeWest,
 				},
 				{
 					Name: regionEuropeEast,
-					Zones: []gardencorev1alpha1.AvailabilityZone{
+					Zones: []gardencorev1beta1.AvailabilityZone{
 						{
 							Name: "europe-east1-b",
 						},
@@ -108,7 +108,7 @@ var _ = Describe("Framework tests", func() {
 
 		BeforeEach(func() {
 			seed = *seedBase.DeepCopy()
-			allSeeds = []gardencorev1alpha1.Seed{
+			allSeeds = []gardencorev1beta1.Seed{
 				seed,
 			}
 		})
