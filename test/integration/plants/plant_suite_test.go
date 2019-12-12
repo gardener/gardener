@@ -15,10 +15,10 @@
 package plants
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestPlant(t *testing.T) {

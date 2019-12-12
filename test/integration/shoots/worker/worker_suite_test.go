@@ -15,10 +15,10 @@
 package worker
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestShootOperations(t *testing.T) {

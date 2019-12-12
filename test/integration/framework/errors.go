@@ -17,8 +17,8 @@ package framework
 import "errors"
 
 var (
-	// ErrNoRepositoriesFound no repositories found in repoitories file
-	ErrNoRepositoriesFound = errors.New("no repositories found in repoitories file")
+	// ErrNoRepositoriesFound no repositories found in repository file
+	ErrNoRepositoriesFound = errors.New("no repositories found in repository file")
 
 	// ErrNoInternalIPsForNodeWasFound no internal IPs were found for node
 	ErrNoInternalIPsForNodeWasFound = errors.New("no internal IPs were found for node")

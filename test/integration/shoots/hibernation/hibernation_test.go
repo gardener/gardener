@@ -31,23 +31,19 @@ package hibernation
 import (
 	"context"
 	"flag"
-	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/test/integration/framework"
+	"github.com/gardener/gardener/test/integration/framework/applications"
+	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/gardener/gardener/test/integration/framework"
-	. "github.com/gardener/gardener/test/integration/shoots"
-
-	"github.com/gardener/gardener/test/integration/framework/applications"
-
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 var (
@@ -92,7 +88,7 @@ var _ = Describe("Shoot Hibernation testing", func() {
 		validateFlags()
 
 		var err error
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 		shootGardenerTest, err = NewShootGardenerTest(*kubeconfigPath, shoot, shootAppTestLogger)
 		Expect(err).NotTo(HaveOccurred())
 

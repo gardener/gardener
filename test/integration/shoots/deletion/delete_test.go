@@ -22,22 +22,19 @@ package deletion
 import (
 	"context"
 	"flag"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/gardener/gardener/test/integration/shoots"
-
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 var (
@@ -68,7 +65,7 @@ var _ = Describe("Shoot deletion testing", func() {
 	CIt("Testing if Shoot can be deleted", func(ctx context.Context) {
 		gardenerConfigPath := *kubeconfigPath
 
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *projectNamespace, Name: *shootName}}
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *projectNamespace, Name: *shootName}}
 		shootGardenerTest, err := NewShootGardenerTest(gardenerConfigPath, shoot, testLogger)
 		Expect(err).To(BeNil())
 

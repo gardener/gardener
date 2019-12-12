@@ -29,14 +29,14 @@ package shootreconcile_test
 import (
 	"context"
 	"flag"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -86,7 +86,7 @@ var _ = Describe("Shoot update testing", func() {
 		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootTestLogger)
 		Expect(err).NotTo(HaveOccurred())
 
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 		shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -98,14 +98,14 @@ var _ = Describe("Shoot update testing", func() {
 
 	CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
 		By("maintain shoot")
-		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+		_, err := shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
 			return nil
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		By("reconcile shoot")
-		_, err = shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+		_, err = shootGardenerTest.UpdateShoot(ctx, shootTestOperations.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[common.ShootOperation] = common.ShootOperationReconcile
 			return nil
 		})

@@ -29,21 +29,17 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/test/integration/framework"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -103,7 +99,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 
 	CIt("Should reconcile all shoots", func(ctx context.Context) {
 		err := retry.UntilTimeout(ctx, 30*time.Second, ReconcileShootsTimeout, func(ctx context.Context) (bool, error) {
-			shoots := &gardencorev1alpha1.ShootList{}
+			shoots := &gardencorev1beta1.ShootList{}
 			err := gardenClient.Client().List(ctx, shoots)
 			if err != nil {
 				testLogger.Debug(err.Error())
