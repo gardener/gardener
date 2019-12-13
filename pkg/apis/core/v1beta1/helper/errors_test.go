@@ -38,6 +38,7 @@ var _ = Describe("helper", func() {
 				Entry("quota exceeded", "limitexceeded", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
 				Entry("insufficient privileges", "accessdenied", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
 				Entry("infrastructure dependencies", "pendingverification", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
+				Entry("infrastructure dependencies", "not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "not available in the current hardware cluster")),
 			)
 		})
 	})
