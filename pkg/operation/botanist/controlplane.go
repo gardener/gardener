@@ -27,8 +27,8 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -658,11 +658,11 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer() error {
-	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
-		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	var (
@@ -1039,11 +1039,11 @@ func (b *Botanist) DeployKubeScheduler() error {
 // data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
 func (b *Botanist) DeployETCD(ctx context.Context) error {
-	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
-		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	etcdConfig := map[string]interface{}{

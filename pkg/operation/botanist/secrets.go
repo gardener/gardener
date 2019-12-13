@@ -26,8 +26,8 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -564,7 +564,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	})
 
-	loggingEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+	loggingEnabled := gardenletfeatures.FeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
 		elasticsearchHosts := []string{"elasticsearch-logging",
 			fmt.Sprintf("elasticsearch-logging.%s", b.Shoot.SeedNamespace),
@@ -1028,7 +1028,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		},
 	}
 
-	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
+	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		projectSecrets = append(projectSecrets, projectSecret{
 			secretName:  "logging-ingress-credentials-users",
 			suffix:      secretSuffixLogging,
