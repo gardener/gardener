@@ -22,8 +22,8 @@ import (
 
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -107,10 +107,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
 					"elasticsearch": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.Logging),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
 					"hvpa": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.HVPA),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
 					},
 				},
 			},
