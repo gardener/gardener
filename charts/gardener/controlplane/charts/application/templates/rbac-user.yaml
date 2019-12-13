@@ -153,6 +153,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - garden.sapcloud.io
   - core.gardener.cloud
   resources:
@@ -217,6 +225,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
   - configmaps
   - serviceaccounts
   verbs:
