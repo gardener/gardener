@@ -132,11 +132,9 @@ Since each operating system distribution has different methods of installing sof
            ExecStart=/var/lib/kata-containers/configure.sh
            ```
            
-           The installation script will be responsible for:
-           1. Configure the config.toml plugins at /etc/containerd/config.toml to contain the relevant runtime plugins.
+           The installation script will be responsible for configuring the config.toml plugins at /etc/containerd/config.toml to contain the relevant runtime plugins.
                 1. kata-containers -  __TBD__
                 2. gvisor - __TBD__
-           2. Inform systemd about the new configuration (sudo systemctl daemon-reload)
   
 5. Installation of a container runtime in the cluster will be done by the extension controllers. Each runtime type will be represented as an Extension resource. For example:
       ```yaml
