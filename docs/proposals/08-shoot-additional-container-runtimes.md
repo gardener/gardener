@@ -68,62 +68,93 @@ Since each operating system distribution has different methods of installing sof
 
 ## Design Details
 
-1. In order to configure each shoot in the cluster to work with CRI the following configurations should be done:
-    1. Add kubelet execution flags (Defined in the OperationSystemConfig - original):
+1. In order to configure each worker machine in the cluster to work with CRI, the following configurations should be done:
+    1. Add kubelet execution flags:
         1. --container-runtime=remote
         2. --container-runtime-endpoint=unix:///.../containerd.socket
-    2. Make sure that containerd is configured to enable the CRI plugin. In the containerd config.toml "cri" plugin must not be disabled.
-2. Containerd socket path and containerd configurations are different for each OS. To make sure the configurations above are set in each shoot, each OS extension would be responsible to configure them.
+    2. Make sure that containerd configuration file exist in path /etc/containerd/config.toml and it is configured to enable the CRI plugin (In the containerd config.toml "cri" plugin must not be disabled).
+    
+2. Containerd socket path and containerd configurations are different for each OS. To make sure the configurations above are set in each worker machine, each OS extension would be responsible to configure them.
     1. os-ubuntu - 
         1. Add a controlplane webhook to manipulate the OperatingSystemConfig and add the following flags to the kubelet execution command:
             1. --container-runtime=remote
             2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
-        2. If there will be a config.toml file in /etc/containerd/config.toml, containerd service will start with this file configuration by default.
+        2. Create a containerd configuration file: /etc/containerd/config.toml based on the current configuration file in the path: __TBD__ and remove the CRI disabled plugin.
     2. os-coreos - 
         1. Add a controlplane webhook to manipulate the OperatingSystemConfig and add the following flags to the kubelet execution command:
            1. --container-runtime=remote
            2. --container-runtime-endpoint=unix:///var/run/docker/libcontainerd/docker-containerd.socket
-        2. Add a generator that will override the default containerd.service unit. It will create a new unit in:  /etc/systemd/system/containerd.service  unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml
+        2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration of containerd. 
+        3. Add a generator that will override the default containerd.service unit. It will create a new unit in: /etc/systemd/system/containerd.service unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml.
+        
     3. os-suse-jeos - __TBD__ 
-3. In order to install additional runtimes on the machine we must provide the installation scripts to the machine (Shoot) file system and run them.
+    
+3. Docker-monitor daemon and rotate log should be replaced with equivalent conatinerd services. __TBD__ 
+4. In order to install additional runtimes on the worker machine we must provide the installation scripts to the machine file system and run them.
    The installation script should download and install the runtime binaries in each OS.
-   Instructions for Gardener to copy files to the Shoot filesystem and execute them is done via the cloud config secret.
+   Instructions for Gardener to copy files to the machine filesystem and execute them is done via the cloud config secret.
    
-   *Consider installing by default all additional runtimes available (Binaries and containerd plugin configurations). The cluster configuration installation will be done only if these additional runtimes were declared) It is also possible to install only the declared runtimes (Maybe save them in the OperatingSystemConfig from the shoot CRD __TBD__)*
-   Each OS extention should implement a generator that will:
-    1. copy the installation script file.
-       ```yaml
-       #cloud-config
-       write_files:
-         path: '/var/lib/additional-runtime/install.sh'
-         ...
-       ```
-    2. create a service unit to run it.
-       ```yaml
-       - path: '/etc/systemd/system/gardener-user.service'
-         encoding: b64
-         content: 
+   1. Each OS extension should implement a generator that will copy a generic packages installation script file.
+        ```yaml
+          #cloud-config
+          write_files:
+            path: '/var/lib/packages/install.sh'
+            ...
+      ```
+      
+      The installation file will be executed with different parameters defining the relevant package that should be installed:
+        1. Package name
+        2. Package path url
+        3.  __TBD__ 
+        
+   2. Each Extension controller should reconcile the OperatingSystemConfig (Should be enhanced to contain additional runtime data __TBD__):
+        1. Create a service unit to run the runtime binaries package installation script with the relevant parameters (e.g name of runtime container. package url).
+           ```
            [Unit]
            Description=Download and install additional runtimes binaries
            ...
        
            [Service]
-           ExecStart=/var/lib/additional-runtime/install.sh
+           ExecStart=/var/lib/packages/install.sh <Parameters>
            ...
-       ```
-
-    3. configure containerd (config.toml) to work with the additional runtime shim. Copy the config.toml file to /etc/containerd/config.toml
-        ```yaml
-          #cloud-config
-          write_files:
-            path: '/etc/containerd/config.toml'
-            ...
-          ```
-   Specific installations of container runtimes in each OS __TBD__
+           ```
+        2. Copy a container runtime configuration script file and create a unit to run it. For example:
+           ```yaml
+           #cloud-config
+           write_files:
+           path: '/var/lib/kata-containers/configure.sh'
+           ...
+           [Unit]
+           Description=Configure 
+           ...
+      
+           [Service]
+           ExecStart=/var/lib/kata-containers/configure.sh
+           ```
            
-4. Installation of the runtime environment in the cluster is done by applying the RuntimeClass. This should be done only
-   if the user chose the additional runtime in the Shoot specification. This should be done similar to the deployment of other addons into the cluster (e.g.,kubernetes-dashboard)
-
+           The installation script will be responsible for:
+           1. Configure the config.toml plugins at /etc/containerd/config.toml to contain the relevant runtime plugins.
+                1. kata-containers -  __TBD__
+                2. gvisor - __TBD__
+           2. Inform systemd about the new configuration (sudo systemctl daemon-reload)
+  
+5. Installation of a container runtime in the cluster will be done by the extension controllers. Each runtime type will be represented as an Extension resource. For example:
+      ```yaml
+      apiVersion: core.gardener.cloud/v1beta1
+      kind: ControllerRegistration
+      metadata:
+        name: extenstion-kata-containers-runtime
+      spec:
+        resources:
+        - kind: Extension
+          type: kata-containers-runtime
+          globallyEnabled: false # Must be false so the extension resource will be created only if configured in the Shoot manifest
+    ...
+      ```
+   Today, extensions resources are created by default when defined in the Extension section of the Shoot spec. We define the additional runtimes in the worker spec. It is possible to enhance Gardener to create them if exist for at least one worker group or define them per Worker and per Shoot. 
+   The extensions controllers will reconcile resources from the corresponding type by applying the relevant RuntimeClasses to the cluster:
+    1. kata-containers - __TBD__
+    2. gvisor - __TBD__
 
 -->
 
