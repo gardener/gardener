@@ -35,11 +35,8 @@ import (
 
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) csrAdd(obj interface{}) {
@@ -139,20 +136,8 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 			Reason:  "AutoApproved",
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
-		if _, err := c.k8sGardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr); err != nil {
-			return err
-		}
-
-		bootstrapTokenName := fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:"))
-		csrLogger.Infof("[CSR APPROVER] Deleting bootstrap token %s", bootstrapTokenName)
-
-		bootstrapTokenSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      bootstrapTokenName,
-				Namespace: metav1.NamespaceSystem,
-			},
-		}
-		return client.IgnoreNotFound(c.k8sGardenClient.Client().Delete(ctx, bootstrapTokenSecret))
+		_, err := c.k8sGardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
+		return err
 	}
 
 	message := fmt.Sprintf("recognized csr %q but subject access review was not approved", csr.Name)
