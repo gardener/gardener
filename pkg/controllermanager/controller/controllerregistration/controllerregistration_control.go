@@ -318,7 +318,7 @@ func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Clien
 		}
 
 		logger.Infof("Waiting for backupBucket to be deleted...")
-		return utilsretry.MinorError(common.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
+		return utilsretry.MinorError(gardencorev1alpha1helper.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {

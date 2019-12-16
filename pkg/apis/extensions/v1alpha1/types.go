@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,9 +23,9 @@ import (
 type Status interface {
 	// GetConditions retrieves the Conditions of a status.
 	// Conditions may be nil.
-	GetConditions() []gardencorev1alpha1.Condition
+	GetConditions() []gardencorev1beta1.Condition
 	// SetConditions sets the Conditions of a status.
-	SetConditions([]gardencorev1alpha1.Condition)
+	SetConditions([]gardencorev1beta1.Condition)
 	// GetLastOperation retrieves the LastOperation of a status.
 	// LastOperation may be nil.
 	GetLastOperation() LastOperation
@@ -45,9 +45,9 @@ type LastOperation interface {
 	// GetProgress returns progress of the last operation.
 	GetProgress() int
 	// GetState returns the LastOperationState of the last operation.
-	GetState() gardencorev1alpha1.LastOperationState
+	GetState() gardencorev1beta1.LastOperationState
 	// GetType returns the LastOperationType of the last operation.
-	GetType() gardencorev1alpha1.LastOperationType
+	GetType() gardencorev1beta1.LastOperationType
 }
 
 // LastError is the last error on an object.
@@ -57,7 +57,7 @@ type LastError interface {
 	// GetTaskID gets the task ID of the last error.
 	GetTaskID() *string
 	// GetCodes gets the error codes of the last error.
-	GetCodes() []gardencorev1alpha1.ErrorCode
+	GetCodes() []gardencorev1beta1.ErrorCode
 	// GetLastUpdateTime retrieves the last time the error was updated.
 	GetLastUpdateTime() *metav1.Time
 }

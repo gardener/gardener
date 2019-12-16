@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -91,7 +91,7 @@ func (b *Botanist) WaitUntilNetworkIsReady(ctx context.Context) error {
 
 // WaitUntilNetworkIsDeleted waits until the Network resource has been deleted.
 func (b *Botanist) WaitUntilNetworkIsDeleted(ctx context.Context) error {
-	var lastError *gardencorev1alpha1.LastError
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retry.UntilTimeout(ctx, DefaultInterval, NetworkDefaultTimeout, func(ctx context.Context) (bool, error) {
 		network := &extensionsv1alpha1.Network{}
@@ -108,7 +108,7 @@ func (b *Botanist) WaitUntilNetworkIsDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for Network to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("network is still present"), lastError))
+		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("network is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete Network")
 		if lastError != nil {
