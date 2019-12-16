@@ -548,10 +548,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	})
 
-	// Secret definition for kubecfg-internal
+	// Secret definition for dependency-watchdog-internal-probe
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.KubecfgInternalSecretName,
+			Name:      common.DependencyWatchdogInternalProbeSecretName,
 			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
 		},
 
@@ -561,6 +561,22 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: fmt.Sprintf("%s.%s.svc", v1alpha1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+		},
+	})
+
+	// Secret definition for dependency-watchdog-external-probe
+	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+		CertificateSecretConfig: &secrets.CertificateSecretConfig{
+			Name:      common.DependencyWatchdogExternalProbeSecretName,
+			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+		},
+
+		BasicAuth: basicAuthAPIServer,
+		Token:     kubecfgToken,
+
+		KubeConfigRequest: &secrets.KubeConfigRequest{
+			ClusterName:  b.Shoot.SeedNamespace,
+			APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
 		},
 	})
 
