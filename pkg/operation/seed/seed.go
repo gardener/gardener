@@ -760,6 +760,7 @@ func deleteDependencyWatchdogFromNS(crClient client.Client, ns string) error {
 		{"", "v1", "ConfigMap", v1alpha1constants.ConfigMapNameDependencyWatchdog},
 		{"rbac.authorization.k8s.io", "v1", "RoleBinding", v1alpha1constants.RoleBindingNameDependencyWatchdog},
 		{"", "v1", "ServiceAccount", v1alpha1constants.ServiceAccountNameDependencyWatchdog},
+		{"", "v1", "Secret", common.DeprecatedKubecfgInternalProbeSecretName},
 	} {
 		u := &unstructured.Unstructured{}
 		u.SetName(obj.name)
