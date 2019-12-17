@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -456,19 +456,19 @@ func (in *DefaultStatus) DeepCopyInto(out *DefaultStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]corev1alpha1.Condition, len(*in))
+		*out = make([]v1beta1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.LastError != nil {
 		in, out := &in.LastError, &out.LastError
-		*out = new(corev1alpha1.LastError)
+		*out = new(v1beta1.LastError)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.LastOperation != nil {
 		in, out := &in.LastOperation, &out.LastOperation
-		*out = new(corev1alpha1.LastOperation)
+		*out = new(v1beta1.LastOperation)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.State != nil {

@@ -25,6 +25,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -438,7 +440,7 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 
 // waitUntilControlPlaneDeleted waits until the control plane resource with the following name has been deleted.
 func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
-	var lastError *gardencorev1alpha1.LastError
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
@@ -455,7 +457,7 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 		}
 
 		b.Logger.Infof("Waiting for control plane to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
+		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {

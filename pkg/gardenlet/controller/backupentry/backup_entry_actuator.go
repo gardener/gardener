@@ -23,6 +23,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -249,7 +251,7 @@ func (a *actuator) deleteBackupEntryExtension(ctx context.Context) error {
 
 // waitUntilBackupEntryExtensionDeleted waits until backup entry extension resource is deleted in seed cluster.
 func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) error {
-	var lastError *gardencorev1alpha1.LastError
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
 		be := &extensionsv1alpha1.BackupEntry{}
@@ -266,7 +268,7 @@ func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) err
 		}
 
 		a.logger.Infof("Waiting for backupEntry to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("backupEntry is still present"), lastError))
+		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("backupEntry is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupEntry object to be deleted")
 		if lastError != nil {

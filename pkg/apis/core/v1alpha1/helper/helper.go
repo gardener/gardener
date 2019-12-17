@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
+	errors "github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -726,4 +727,12 @@ func GetDefaultMachineImageFromCloudProfile(profile gardencorev1alpha1.CloudProf
 		return nil
 	}
 	return &profile.Spec.MachineImages[0]
+}
+
+// WrapWithLastError is wrapper function for gardencorev1alpha1.LastError
+func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error {
+	if err == nil || lastError == nil {
+		return err
+	}
+	return errors.Wrapf(err, "last error: %s", lastError.Description)
 }

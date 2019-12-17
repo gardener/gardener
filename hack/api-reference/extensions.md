@@ -1744,7 +1744,7 @@ string
 <code>conditions</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.Condition">
-[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </a>
 </em>
 </td>
@@ -1758,7 +1758,7 @@ string
 <code>lastError</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.LastError">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError
 </a>
 </em>
 </td>
@@ -1772,7 +1772,7 @@ github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
 <code>lastOperation</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.LastOperation">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
 </a>
 </em>
 </td>
@@ -3190,5 +3190,5 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>857401a84</code>.
+on git commit <code>1d09d6259</code>.
 </em></p>

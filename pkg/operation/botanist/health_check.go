@@ -25,6 +25,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -574,7 +575,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1alpha1.Condition, extensionsCondition []extensionCondition) *gardencorev1alpha1.Condition {
 	for _, cond := range extensionsCondition {
-		if cond.condition.Status == gardencorev1alpha1.ConditionFalse {
+		if cond.condition.Status == gardencorev1beta1.ConditionFalse {
 			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), cond.condition.Message)
 			return &c
 		}
@@ -929,7 +930,7 @@ func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts
 }
 
 type extensionCondition struct {
-	condition     gardencorev1alpha1.Condition
+	condition     gardencorev1beta1.Condition
 	extensionType string
 	extensionName string
 }
@@ -966,11 +967,11 @@ func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]extensionCo
 
 			for _, condition := range acc.GetExtensionStatus().GetConditions() {
 				switch condition.Type {
-				case gardencorev1alpha1.ShootControlPlaneHealthy:
+				case gardencorev1beta1.ShootControlPlaneHealthy:
 					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, extensionCondition{condition, kind, name})
-				case gardencorev1alpha1.ShootEveryNodeReady:
+				case gardencorev1beta1.ShootEveryNodeReady:
 					conditionsEveryNodeReady = append(conditionsEveryNodeReady, extensionCondition{condition, kind, name})
-				case gardencorev1alpha1.ShootSystemComponentsHealthy:
+				case gardencorev1beta1.ShootSystemComponentsHealthy:
 					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, extensionCondition{condition, kind, name})
 				}
 			}
