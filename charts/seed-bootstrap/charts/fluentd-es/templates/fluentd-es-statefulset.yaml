@@ -26,6 +26,7 @@ spec:
         networking.gardener.cloud/from-aggregate-prometheus: allowed
         networking.gardener.cloud/to-dns: allowed
     spec:
+      {{- if gt (int .Values.fluentd.replicaCount ) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,6 +41,7 @@ spec:
                 values:
                 - logging
             topologyKey: "kubernetes.io/hostname"
+      {{- end }}
       containers:
       - name: fluentd-es
         image: {{ index .Values.global.images "fluentd-es" }}

@@ -31,6 +31,7 @@ spec:
       {{- if not .Values.global.scheduler.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}
       {{- end }}
+      {{- if gt (int .Values.global.scheduler.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -45,6 +46,7 @@ spec:
                 values:
                 - scheduler
             topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
       - name: gardener-scheduler
         image: {{ required ".Values.global.scheduler.image.repository is required" .Values.global.scheduler.image.repository }}:{{ required ".Values.global.scheduler.image.tag is required" .Values.global.scheduler.image.tag }}

@@ -36,6 +36,7 @@ spec:
       {{- if not .Values.global.controller.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
       {{- end }}
+      {{- if gt (int .Values.global.controller.replicaCountreplicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -50,6 +51,7 @@ spec:
                 values:
                 - controller-manager
             topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
       - name: gardener-controller-manager
         image: {{ required ".Values.global.controller.image.repository is required" .Values.global.controller.image.repository }}:{{ required ".Values.global.controller.image.tag is required" .Values.global.controller.image.tag }}

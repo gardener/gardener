@@ -38,6 +38,7 @@ spec:
       {{- if not .Values.global.gardenlet.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
       {{- end }}
+      {{- if gt (int .Values.global.gardenlet.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -52,6 +53,7 @@ spec:
                 values:
                 - gardenlet
             topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
       - name: gardenlet
         image: {{ required ".Values.global.gardenlet.image.repository is required" .Values.global.gardenlet.image.repository }}:{{ required ".Values.global.gardenlet.image.tag is required" .Values.global.gardenlet.image.tag }}
