@@ -6,7 +6,7 @@ spec:
   description: Tests the creation of a plant.
 
   activeDeadlineSeconds: 600
-  labels: ["gardener","default"]
+  labels: ["shoot","default"]
 
   command: [bash, -c]
   args:
