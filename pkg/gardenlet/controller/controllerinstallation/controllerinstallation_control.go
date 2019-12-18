@@ -419,7 +419,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 func (c *defaultControllerInstallationControl) updateConditions(controllerInstallation *gardencorev1alpha1.ControllerInstallation, conditions ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.ControllerInstallation, error) {
 	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = conditions
+			controllerInstallation.Status.Conditions = gardencorev1alpha1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 			return controllerInstallation, nil
 		}, func(cur, updated *gardencorev1alpha1.ControllerInstallation) bool {
 			return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)

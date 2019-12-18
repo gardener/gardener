@@ -22,6 +22,11 @@ controllers:
   backupEntry:
     concurrentSyncs: 20
     deletionGracePeriodHours: 0
+  controllerInstallation:
+    concurrentSyncs: 20
+  controllerInstallationCare:
+    concurrentSyncs: 20
+    syncPeriod: 30s
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h

@@ -46,6 +46,7 @@ type Controller struct {
 	config *config.GardenletConfiguration
 
 	controllerInstallationControl ControlInterface
+	careControl                   CareControlInterface
 
 	recorder record.EventRecorder
 
@@ -59,6 +60,8 @@ type Controller struct {
 	controllerInstallationQueue  workqueue.RateLimitingInterface
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	controllerInstallationSynced cache.InformerSynced
+
+	controllerInstallationCareQueue workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -79,20 +82,27 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFacto
 		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
 		controllerInstallationLister   = controllerInstallationInformer.Lister()
 		controllerInstallationQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation")
+
+		controllerInstallationCareQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care")
 	)
 
 	controller := &Controller{
-		k8sGardenClient:               k8sGardenClient,
-		k8sGardenCoreInformers:        gardenCoreInformerFactory,
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenCoreInformers: gardenCoreInformerFactory,
+
 		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
-		config:                        config,
-		recorder:                      recorder,
+		careControl:                   NewDefaultCareControl(k8sGardenClient, config),
+
+		config:   config,
+		recorder: recorder,
 
 		seedLister: seedLister,
 		seedQueue:  seedQueue,
 
 		controllerInstallationLister: controllerInstallationLister,
 		controllerInstallationQueue:  controllerInstallationQueue,
+
+		controllerInstallationCareQueue: controllerInstallationCareQueue,
 
 		workerCh: make(chan int),
 	}
@@ -108,13 +118,21 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFacto
 			DeleteFunc: controller.controllerInstallationDelete,
 		},
 	})
+
+	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: controller.controllerInstallationCareAdd,
+		},
+	})
+
 	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
 	return controller
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
+func (c *Controller) Run(ctx context.Context, workers, careWorkers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.controllerRegistrationSynced, c.controllerInstallationSynced) {
@@ -138,16 +156,21 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
 	}
 
+	for i := 0; i < careWorkers; i++ {
+		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationCareQueue, "ControllerInstallation Care", c.reconcileControllerInstallationCareKey, &waitGroup, c.workerCh)
+	}
+
 	// Shutdown handling
 	<-ctx.Done()
 	c.controllerInstallationQueue.ShutDown()
+	c.controllerInstallationCareQueue.ShutDown()
 
 	for {
-		if c.controllerInstallationQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.controllerInstallationQueue.Len() == 0 && c.controllerInstallationCareQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running ControllerInstallation worker and no items left in the queues. Terminated ControllerInstallation controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d ControllerInstallation worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerInstallationQueue.Len())
+		logger.Logger.Debugf("Waiting for %d ControllerInstallation worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerInstallationQueue.Len()+c.controllerInstallationCareQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

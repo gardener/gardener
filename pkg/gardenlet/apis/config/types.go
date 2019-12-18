@@ -103,6 +103,8 @@ type GardenletControllerConfiguration struct {
 	BackupEntry *BackupEntryControllerConfiguration
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	ControllerInstallation *ControllerInstallationControllerConfiguration
+	// ControllerInstallationCare defines the configuration of the ControllerInstallationCare controller.
+	ControllerInstallationCare *ControllerInstallationCareControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
 	// Shoot defines the configuration of the Shoot controller.
@@ -134,6 +136,17 @@ type ControllerInstallationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+}
+
+// ControllerInstallationCareControllerConfiguration defines the configuration of the ControllerInstallationCare
+// controller.
+type ControllerInstallationCareControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of ControllerInstallations is performed.
+	SyncPeriod *metav1.Duration
 }
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.
