@@ -50,15 +50,20 @@ type Controller struct {
 
 	config *config.GardenletConfiguration
 
-	control          ControlInterface
-	heartbeatControl HeartbeatControlInterface
-	recorder         record.EventRecorder
+	control               ControlInterface
+	heartbeatControl      HeartbeatControlInterface
+	extensionCheckControl ExtensionCheckControlInterface
+
+	recorder record.EventRecorder
 
 	seedLister gardencorelisters.SeedLister
 	seedSynced cache.InformerSynced
 
-	seedQueue          workqueue.RateLimitingInterface
-	seedHeartbeatQueue workqueue.RateLimitingInterface
+	controllerInstallationSynced cache.InformerSynced
+
+	seedQueue               workqueue.RateLimitingInterface
+	seedHeartbeatQueue      workqueue.RateLimitingInterface
+	seedExtensionCheckQueue workqueue.RateLimitingInterface
 
 	shootLister gardencorelisters.ShootLister
 
@@ -83,24 +88,29 @@ func NewSeedController(
 		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
 		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		seedInformer = gardenCoreV1alpha1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-		secretLister = corev1Informer.Secrets().Lister()
-		shootLister  = gardenCoreV1alpha1Informer.Shoots().Lister()
+		controllerInstallationInformer = gardenCoreV1alpha1Informer.ControllerInstallations()
+		seedInformer                   = gardenCoreV1alpha1Informer.Seeds()
+
+		controllerInstallationLister = controllerInstallationInformer.Lister()
+		secretLister                 = corev1Informer.Secrets().Lister()
+		seedLister                   = seedInformer.Lister()
+		shootLister                  = gardenCoreV1alpha1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, config, secretLister, shootLister),
-		heartbeatControl:       NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1alpha1Informer, identity, config),
-		config:                 config,
-		recorder:               recorder,
-		seedLister:             seedLister,
-		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		seedHeartbeatQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-hearbeat"),
-		shootLister:            shootLister,
-		workerCh:               make(chan int),
+		k8sGardenClient:         k8sGardenClient,
+		k8sGardenCoreInformers:  gardenCoreInformerFactory,
+		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, config, secretLister, shootLister),
+		heartbeatControl:        NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1alpha1Informer, identity, config),
+		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient, controllerInstallationLister, recorder),
+		config:                  config,
+		recorder:                recorder,
+		seedLister:              seedLister,
+		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		seedHeartbeatQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-hearbeat"),
+		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
+		shootLister:             shootLister,
+		workerCh:                make(chan int),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -118,8 +128,17 @@ func NewSeedController(
 			AddFunc: seedController.seedHeartbeatAdd,
 		},
 	})
-
 	seedController.seedSynced = seedInformer.Informer().HasSynced
+
+	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    seedController.controllerInstallationOfSeedAdd,
+			UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
+			DeleteFunc: seedController.controllerInstallationOfSeedDelete,
+		},
+	})
+	seedController.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
 	return seedController
 }
@@ -128,7 +147,7 @@ func NewSeedController(
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.controllerInstallationSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -164,19 +183,21 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedHeartbeatQueue, "Seed Heartbeat", c.reconcileSeedHeartbeatKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
 	c.seedHeartbeatQueue.ShutDown()
+	c.seedExtensionCheckQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.seedHeartbeatQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.seedQueue.Len() == 0 && c.seedHeartbeatQueue.Len() == 0 && c.seedExtensionCheckQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Seed worker and no items left in the queues. Terminated Seed controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len()+c.seedHeartbeatQueue.Len())
+		logger.Logger.Debugf("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len()+c.seedHeartbeatQueue.Len()+c.seedExtensionCheckQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

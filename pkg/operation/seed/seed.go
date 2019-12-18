@@ -597,7 +597,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 
 	// Delete the shoot specific dependency-watchdog deployments in the
-	// invidual shoot control-planes in favour of the central deployment
+	// individual shoot control-planes in favour of the central deployment
 	// in the seed-bootstrap.
 	// TODO: This code is to be removed in the next release.
 	return deleteControlPlaneDependencyWatchdogs(k8sSeedClient.Client())

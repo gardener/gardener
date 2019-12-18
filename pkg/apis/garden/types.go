@@ -1789,11 +1789,13 @@ const (
 )
 
 const (
-	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
-	SeedGardenletReady ConditionType = "GardenletReady"
 	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
 	// bootstrapped.
 	SeedBootstrapped ConditionType = "Bootstrapped"
+	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
+	SeedExtensionsReady ConditionType = "ExtensionsReady"
+	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
+	SeedGardenletReady ConditionType = "GardenletReady"
 
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
