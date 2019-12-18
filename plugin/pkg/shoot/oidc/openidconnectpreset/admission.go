@@ -15,6 +15,7 @@
 package openidconnectpreset
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -55,8 +56,7 @@ type OpenIDConnectPreset struct {
 }
 
 var (
-	_                             = admissioninitializer.WantsSettingsInformerFactory(&OpenIDConnectPreset{})
-	_ admission.MutationInterface = &OpenIDConnectPreset{}
+	_ = admissioninitializer.WantsSettingsInformerFactory(&OpenIDConnectPreset{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -90,8 +90,10 @@ func (o *OpenIDConnectPreset) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = &OpenIDConnectPreset{}
+
 // Admit tries to determine a OpenIDConnectPreset hosted zone for the Shoot's external domain.
-func (o *OpenIDConnectPreset) Admit(a admission.Attributes, out admission.ObjectInterfaces) error {
+func (o *OpenIDConnectPreset) Admit(ctx context.Context, a admission.Attributes, out admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if o.readyFunc == nil {
 		o.AssignReadyFunc(func() bool {

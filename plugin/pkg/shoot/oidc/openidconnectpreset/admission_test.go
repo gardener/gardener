@@ -15,18 +15,20 @@
 package openidconnectpreset_test
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
-
-	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("OpenID Connect Preset", func() {
@@ -100,17 +102,17 @@ var _ = Describe("OpenID Connect Preset", func() {
 			BeforeEach(func() {
 				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			AfterEach(func() {
-				Expect(admissionHandler.Admit(attrs, nil)).NotTo(HaveOccurred())
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).NotTo(HaveOccurred())
 				Expect(shoot).To(Equal(expected))
 			})
 
 			DescribeTable("disabled operations",
 				func(op admission.Operation) {
-					attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", op, false, nil)
+					attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", op, nil, false, nil)
 				},
 				Entry("update verb", admission.Update),
 				Entry("delete verb", admission.Delete),
@@ -118,7 +120,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			)
 
 			It("subresource is status", func() {
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			It("version is not correct", func() {
@@ -148,13 +150,13 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = nil
 				errorMessage = ""
 			})
 
 			AfterEach(func() {
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(errorFunc(err)).To(BeTrue(), "error type should be the same")
 				Expect(shoot).To(Equal(expected))
@@ -162,7 +164,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("when received not a Shoot object", func() {
-				attrs = admission.NewAttributesRecord(&garden.Seed{}, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, false, nil)
+				attrs = admission.NewAttributesRecord(&garden.Seed{}, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = apierrors.IsBadRequest
 				errorMessage = "could not convert resource into Shoot object"
 			})
@@ -208,8 +210,8 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			AfterEach(func() {
 				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
-				attrs := admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-				err := admissionHandler.Admit(attrs, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer).NotTo(BeNil())

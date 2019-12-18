@@ -15,18 +15,19 @@
 package resources_test
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/testing"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/admission"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/client-go/testing"
 )
 
 var _ = Describe("resources", func() {
@@ -66,23 +67,23 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should do nothing because the resource is not ControllerRegistration", func() {
-			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", controllerRegistration.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, false, nil)
+			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", controllerRegistration.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should allow the object because no other resource in the system uses the kind/type combination", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, false, nil)
+			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Validate(attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not deny the object because it is updated", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, &controllerRegistration, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, false, nil)
+			attrs = admission.NewAttributesRecord(&controllerRegistration, &controllerRegistration, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
 				return true, &core.ControllerRegistrationList{
@@ -90,13 +91,13 @@ var _ = Describe("resources", func() {
 				}, nil
 			})
 
-			err := admissionHandler.Validate(attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should deny the object because another resource in the system uses the kind/type combination", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, false, nil)
+			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
@@ -107,7 +108,7 @@ var _ = Describe("resources", func() {
 				}, nil
 			})
 
-			err := admissionHandler.Validate(attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsForbidden(err)).To(BeTrue())

@@ -56,7 +56,7 @@ func (in *ClusterOpenIDConnectPreset) DeepCopyObject() runtime.Object {
 func (in *ClusterOpenIDConnectPresetList) DeepCopyInto(out *ClusterOpenIDConnectPresetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterOpenIDConnectPreset, len(*in))
@@ -219,7 +219,7 @@ func (in *OpenIDConnectPreset) DeepCopyObject() runtime.Object {
 func (in *OpenIDConnectPresetList) DeepCopyInto(out *OpenIDConnectPresetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]OpenIDConnectPreset, len(*in))

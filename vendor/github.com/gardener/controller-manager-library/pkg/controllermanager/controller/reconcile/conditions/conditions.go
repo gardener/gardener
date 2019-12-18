@@ -30,7 +30,6 @@ type ModificationHandler interface {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // Condition reflects a dedicated condition for a dedicated object. It can
@@ -333,6 +332,7 @@ func NewConditionLayout(cfg ...TweakFunction) *ConditionLayout {
 	}
 	return c
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // ConditionType represents a dedicated kind of condition for a dedicated
@@ -347,8 +347,8 @@ type ConditionType struct {
 var defaultLayout = NewConditionLayout()
 
 func NewConditionType(name string, t *ConditionLayout) *ConditionType {
-	if t==nil {
-		t=defaultLayout
+	if t == nil {
+		t = defaultLayout
 	}
 	c := &ConditionType{
 		name:            name,

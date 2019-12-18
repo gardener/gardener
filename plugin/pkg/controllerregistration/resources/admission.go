@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -23,7 +24,6 @@ import (
 
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -80,10 +80,12 @@ func (r *Resources) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.ValidationInterface = &Resources{}
+
 // Validate makes admissions decisions based on the resources specified in a ControllerRegistration object.
 // It does reject the request if there is any other existing ControllerRegistration object in the system that
 // specifies the same resource kind/type combination like the incoming object.
-func (r *Resources) Validate(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (r *Resources) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {
