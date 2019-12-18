@@ -20,7 +20,9 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/api"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -54,6 +56,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/server/options/encryptionconfig"
+	"k8s.io/apiserver/pkg/server/resourceconfig"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	kubeinformers "k8s.io/client-go/informers"
@@ -118,7 +121,12 @@ func NewOptions(out, errOut io.Writer) *Options {
 		StdOut: out,
 		StdErr: errOut,
 	}
-	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(gardenv1beta1.SchemeGroupVersion, schema.GroupKind{Group: gardenv1beta1.GroupName})
+	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
+		gardencorev1beta1.SchemeGroupVersion,
+		schema.GroupKind{Group: gardenv1beta1.GroupName},
+		schema.GroupKind{Group: gardencorev1alpha1.GroupName},
+		schema.GroupKind{Group: gardencorev1beta1.GroupName},
+	)
 	return o
 }
 
@@ -294,15 +302,40 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 		return err
 	}
 
+	resourceConfig := serverstorage.NewResourceConfig()
+	resourceConfig.EnableVersions(
+		gardencorev1alpha1.SchemeGroupVersion,
+		gardenv1beta1.SchemeGroupVersion,
+		settingsv1alpha1.SchemeGroupVersion,
+	)
+
+	mergedResourceConfig, err := resourceconfig.MergeAPIResourceConfigs(resourceConfig, nil, api.Scheme)
+	if err != nil {
+		return err
+	}
+
+	resourceEncodingConfig := serverstorage.NewDefaultResourceEncodingConfig(api.Scheme)
+	// TODO: `ShootState` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootState` got promoted.
+	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootstates"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
+
 	storageFactory := &storage.GardenerStorageFactory{
 		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(
 			o.Recommended.Etcd.StorageConfig,
 			o.Recommended.Etcd.DefaultStorageMediaType,
 			api.Codecs,
-			serverstorage.NewDefaultResourceEncodingConfig(api.Scheme),
-			gardenerAPIServerConfig.MergedResourceConfig,
-			nil),
+			resourceEncodingConfig,
+			mergedResourceConfig,
+			nil,
+		),
 	}
+
+	// TODO: This can be removed once the already deprecated garden.sapcloud.io/v1beta1 API group is removed.
+	storageFactory.AddCohabitatingResources(gardencore.Resource("cloudprofiles"), garden.Resource("cloudprofiles"))
+	storageFactory.AddCohabitatingResources(gardencore.Resource("projects"), garden.Resource("projects"))
+	storageFactory.AddCohabitatingResources(gardencore.Resource("quotas"), garden.Resource("quotas"))
+	storageFactory.AddCohabitatingResources(gardencore.Resource("secretbindings"), garden.Resource("secretbindings"))
+	storageFactory.AddCohabitatingResources(gardencore.Resource("seeds"), garden.Resource("seeds"))
+	storageFactory.AddCohabitatingResources(gardencore.Resource("shoots"), garden.Resource("shoots"))
 
 	if len(o.Recommended.Etcd.EncryptionProviderConfigFilepath) != 0 {
 		transformerOverrides, err := encryptionconfig.GetTransformerOverrides(o.Recommended.Etcd.EncryptionProviderConfigFilepath)
