@@ -61,7 +61,7 @@ spec:
             - containerName: blackbox-exporter
               mode: "Off"
     updatePolicy:
-      updateMode: "ScaleUp"
+      updateMode: "Auto"
   weightBasedScalingIntervals:
     - vpaWeight: 0
       startReplicaCount: {{ .Values.minReplicas }}
