@@ -29,9 +29,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certificatesv1beta1client "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -39,6 +44,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // RequestSeedCertificate will create a certificate signing request for a seed
@@ -47,7 +53,7 @@ import (
 // status, once approved by API server, it will return the API server's issued
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error. This is intended for use on seeds (gardenlet).
-func RequestSeedCertificate(ctx context.Context, client certificatesv1beta1client.CertificateSigningRequestInterface, privateKeyData []byte, seedName string) (certData []byte, err error) {
+func RequestSeedCertificate(ctx context.Context, certificateClient certificatesv1beta1client.CertificateSigningRequestInterface, privateKeyData []byte, seedName string) (certData []byte, csrName string, err error) {
 	subject := &pkix.Name{
 		Organization: []string{"gardener.cloud:system:seeds"},
 		CommonName:   "gardener.cloud:system:seed:" + string(seedName),
@@ -55,11 +61,11 @@ func RequestSeedCertificate(ctx context.Context, client certificatesv1beta1clien
 
 	privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
 	if err != nil {
-		return nil, fmt.Errorf("invalid private key for certificate request: %v", err)
+		return nil, "", fmt.Errorf("invalid private key for certificate request: %v", err)
 	}
 	csrData, err := certutil.MakeCSR(privateKey, subject, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate certificate request: %v", err)
+		return nil, "", fmt.Errorf("unable to generate certificate request: %v", err)
 	}
 
 	usages := []certificatesv1beta1.KeyUsage{
@@ -71,22 +77,28 @@ func RequestSeedCertificate(ctx context.Context, client certificatesv1beta1clien
 	// The Signer interface contains the Public() method to get the public key.
 	signer, ok := privateKey.(crypto.Signer)
 	if !ok {
-		return nil, fmt.Errorf("private key does not implement crypto.Signer")
+		return nil, "", fmt.Errorf("private key does not implement crypto.Signer")
 	}
 
 	name, err := digestedName(signer.Public(), subject, usages)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	req, err := csr.RequestCertificate(client, csrData, name, usages, privateKey)
+	req, err := csr.RequestCertificate(certificateClient, csrData, name, usages, privateKey)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	childCtx, cancel := context.WithTimeout(ctx, 3600*time.Second)
 	defer cancel()
-	return csr.WaitForCertificate(childCtx, client, req)
+
+	certData, err = csr.WaitForCertificate(childCtx, certificateClient, req)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return certData, req.Name, nil
 }
 
 // This digest should include all the relevant pieces of the CSR we care about.
@@ -162,4 +174,21 @@ func kubeconfigWithAuthInfo(config *rest.Config, authInfo *clientcmdapi.AuthInfo
 		}},
 		CurrentContext: "gardenlet",
 	})
+}
+
+// DeleteBootstrapToken deletes a bootstrap token that was used to request a certificate.
+func DeleteBootstrapToken(ctx context.Context, c client.Client, csrName string) error {
+	csr := &certificatesv1beta1.CertificateSigningRequest{}
+	if err := c.Get(ctx, kutil.Key(csrName), csr); err != nil {
+		return err
+	}
+
+	bootstrapTokenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:")),
+			Namespace: metav1.NamespaceSystem,
+		},
+	}
+
+	return client.IgnoreNotFound(c.Delete(ctx, bootstrapTokenSecret))
 }

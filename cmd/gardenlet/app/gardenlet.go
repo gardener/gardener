@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
+	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -276,11 +277,12 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 
 	var (
 		kubeconfigFromBootstrap []byte
+		csrName                 string
 		err                     error
 	)
 
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, err = bootstrapKubeconfig(ctx, logger, cfg.GardenClientConnection, cfg.SeedClientConnection.ClientConnectionConfiguration, cfg.SeedConfig)
+		kubeconfigFromBootstrap, csrName, err = bootstrapKubeconfig(ctx, logger, cfg.GardenClientConnection, cfg.SeedClientConnection.ClientConnectionConfiguration, cfg.SeedConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -310,6 +312,14 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// Delete bootstrap token if certificate was freshly acquired
+	if len(csrName) > 0 {
+		logger.Infof("Deleting bootstrap token secret used to request a certificate")
+		if err := bootstrap.DeleteBootstrapToken(ctx, k8sGardenClient.Client(), csrName); err != nil {
+			return nil, err
+		}
 	}
 
 	seedRestCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
