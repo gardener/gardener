@@ -131,7 +131,7 @@ The command requires a garden kubeconfig, Shoot name and Shoot namespace.
 ```console
 go test \
   -mod=vendor \
-  ./test/integration/shoots/applciation \
+  ./test/integration/shoots/application \
   -kubecfg $HOME/.kube/config \
   -shoot-name $SHOOT_NAME \
   -shoot-namespace "garden-dev" \
