@@ -40,6 +40,7 @@ spec:
       {{- if not .Values.global.apiserver.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
       {{- end }}
+      {{- if gt (int .Values.global.apiserver.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -54,6 +55,7 @@ spec:
                 values:
                 - apiserver
             topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
       - name: gardener-apiserver
         image: {{ required ".Values.global.apiserver.image.repository is required" .Values.global.apiserver.image.repository }}:{{ required ".Values.global.apiserver.image.tag is required" .Values.global.apiserver.image.tag }}
