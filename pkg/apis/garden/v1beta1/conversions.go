@@ -40,6 +40,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog"
 )
 
@@ -1482,8 +1483,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.AWS.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.AWS.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1623,8 +1627,12 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.ProviderConfig = data.ProviderConfig
 				w.Zones = data.Zones
 			}
-			if w.Zones == nil && zoned {
-				w.Zones = in.Spec.Cloud.Azure.Zones
+
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Azure.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1760,8 +1768,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.GCP.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.GCP.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1897,8 +1908,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Volume = data.Volume
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.OpenStack.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.OpenStack.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -2037,8 +2051,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.Alicloud.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Alicloud.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -2139,8 +2156,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.Packet.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Packet.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -2247,7 +2267,6 @@ func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conve
 		}
 		metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootProvider, string(data))
 	}
-
 	return nil
 }
 

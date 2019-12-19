@@ -1207,13 +1207,19 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 
 		out.Spec.Cloud.Azure.Zones = nil
 		out.Spec.Cloud.Azure.Workers = nil
+		zones := sets.NewString()
 		for _, worker := range in.Spec.Provider.Workers {
 			var o garden.Worker
 			if err := autoConvert_v1alpha1_Worker_To_garden_Worker(&worker, &o, s); err != nil {
 				return err
 			}
 			out.Spec.Cloud.Azure.Workers = append(out.Spec.Cloud.Azure.Workers, o)
-			out.Spec.Cloud.Azure.Zones = o.Zones
+			for _, zone := range o.Zones {
+				if !zones.Has(zone) {
+					out.Spec.Cloud.Azure.Zones = append(out.Spec.Cloud.Azure.Zones, zone)
+					zones.Insert(zone)
+				}
+			}
 		}
 
 	case "gcp":
@@ -1313,9 +1319,13 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 				return err
 			}
 			out.Spec.Cloud.GCP.Workers = append(out.Spec.Cloud.GCP.Workers, o)
-			zones.Insert(o.Zones...)
+			for _, zone := range o.Zones {
+				if !zones.Has(zone) {
+					out.Spec.Cloud.GCP.Zones = append(out.Spec.Cloud.GCP.Zones, zone)
+					zones.Insert(zone)
+				}
+			}
 		}
-		out.Spec.Cloud.GCP.Zones = zones.List()
 
 	case "openstack":
 		if out.Spec.Cloud.OpenStack == nil {
@@ -1425,9 +1435,13 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 				return err
 			}
 			out.Spec.Cloud.OpenStack.Workers = append(out.Spec.Cloud.OpenStack.Workers, o)
-			zones.Insert(o.Zones...)
+			for _, zone := range o.Zones {
+				if !zones.Has(zone) {
+					out.Spec.Cloud.OpenStack.Zones = append(out.Spec.Cloud.OpenStack.Zones, zone)
+					zones.Insert(zone)
+				}
+			}
 		}
-		out.Spec.Cloud.OpenStack.Zones = zones.List()
 
 	case "alicloud":
 		if out.Spec.Cloud.Alicloud == nil {
@@ -1555,9 +1569,13 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 				return err
 			}
 			out.Spec.Cloud.Packet.Workers = append(out.Spec.Cloud.Packet.Workers, o)
-			zones.Insert(o.Zones...)
+			for _, zone := range o.Zones {
+				if !zones.Has(zone) {
+					out.Spec.Cloud.Packet.Zones = append(out.Spec.Cloud.Packet.Zones, zone)
+					zones.Insert(zone)
+				}
+			}
 		}
-		out.Spec.Cloud.Packet.Zones = zones.List()
 
 		var cloudControllerManager *garden.CloudControllerManagerConfig
 		if data, ok := in.Annotations[garden.MigrationShootCloudControllerManager]; ok {
