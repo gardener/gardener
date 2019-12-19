@@ -3718,6 +3718,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should allow updating the dns providers if seed is assigned", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+				oldShoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-dns-provider")
+
+				newShoot := prepareShootForUpdate(oldShoot)
+				newShoot.Spec.SeedName = makeStringPointer("seed")
+				newShoot.Spec.DNS.Providers = nil
+
+				errorList := ValidateShootUpdate(newShoot, oldShoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should forbid updating the dns provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				shoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-other-provider")

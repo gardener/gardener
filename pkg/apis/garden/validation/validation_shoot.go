@@ -875,7 +875,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Zones, oldSpec.Cloud.Packet.Zones, packetPath.Child("zones"))...)
 	}
 
-	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
+	seedGotAssigned := oldSpec.SeedName == nil && newSpec.SeedName != nil
+
+	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
@@ -939,7 +941,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 	return allErrs
 }
 
-func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorList {
+func validateDNSUpdate(new, old *garden.DNS, seedGotAssigned bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if old != nil && new == nil {
@@ -951,24 +953,28 @@ func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorLis
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
 		}
 
-		providersNew := 0
-		if new != nil {
-			providersNew = len(new.Providers)
-		}
+		// allow to finalize DNS configuration during seed assignment. this is required because
+		// some decisions about the DNS setup can only be taken once the target seed is clarified.
+		if !seedGotAssigned {
+			providersNew := 0
+			if new != nil {
+				providersNew = len(new.Providers)
+			}
 
-		providersOld := 0
-		if old != nil {
-			providersOld = len(old.Providers)
-		}
+			providersOld := 0
+			if old != nil {
+				providersOld = len(old.Providers)
+			}
 
-		if providersNew != providersOld {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
-			return allErrs
-		}
+			if providersNew != providersOld {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
+				return allErrs
+			}
 
-		for i, provider := range new.Providers {
-			if provider.Type != old.Providers[i].Type {
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
+			for i, provider := range new.Providers {
+				if provider.Type != old.Providers[i].Type {
+					allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
+				}
 			}
 		}
 	}
