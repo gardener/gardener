@@ -123,8 +123,8 @@ spec:
   insecureSkipTLSVerify: true
   group: garden.sapcloud.io
   version: v1beta1
-  groupPriorityMinimum: 10000
-  versionPriority: 20
+  groupPriorityMinimum: 10
+  versionPriority: 10
   service:
     name: gardener-apiserver
     namespace: garden
@@ -137,8 +137,8 @@ spec:
   insecureSkipTLSVerify: true
   group: core.gardener.cloud
   version: v1alpha1
-  groupPriorityMinimum: 10
-  versionPriority: 10
+  groupPriorityMinimum: 9999
+  versionPriority: 19
   service:
     name: gardener-apiserver
     namespace: garden
@@ -151,8 +151,8 @@ spec:
   insecureSkipTLSVerify: true
   group: core.gardener.cloud
   version: v1beta1
-  groupPriorityMinimum: 11
-  versionPriority: 11
+  groupPriorityMinimum: 10000
+  versionPriority: 20
   service:
     name: gardener-apiserver
     namespace: garden
