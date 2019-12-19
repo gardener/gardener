@@ -3694,6 +3694,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should forbid removing the dns section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns"),
+				}))))
+			})
+
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")

@@ -942,25 +942,30 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if new != nil && old != nil && old.Domain != nil && new.Domain != old.Domain {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+	if old != nil && new == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
 	}
 
-	providersNew := 0
-	if new != nil {
-		providersNew = len(new.Providers)
-	}
+	if new != nil && old != nil {
+		if old.Domain != nil && new.Domain != old.Domain {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+		}
 
-	providersOld := 0
-	if old != nil {
-		providersOld = len(old.Providers)
-	}
-	if providersNew != providersOld {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
-		return allErrs
-	}
+		providersNew := 0
+		if new != nil {
+			providersNew = len(new.Providers)
+		}
 
-	if new != nil {
+		providersOld := 0
+		if old != nil {
+			providersOld = len(old.Providers)
+		}
+
+		if providersNew != providersOld {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
+			return allErrs
+		}
+
 		for i, provider := range new.Providers {
 			if provider.Type != old.Providers[i].Type {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
