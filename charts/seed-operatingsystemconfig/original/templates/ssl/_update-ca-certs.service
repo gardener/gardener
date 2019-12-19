@@ -9,7 +9,7 @@
     DefaultDependencies=no
     Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
     After=systemd-tmpfiles-setup.service clean-ca-certificates.service
-    Before=sysinit.target
+    Before=sysinit.target kubelet.service
     ConditionPathIsReadWrite=/etc/ssl/certs
     ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
     [Service]
@@ -17,6 +17,6 @@
     ExecStart=/usr/sbin/update-ca-certificates
     ExecStartPost=/bin/systemctl restart docker
     [Install]
-    WantedBy=kubelet.service
+    WantedBy=multi-user.target
 {{- end -}}
 {{- end -}}
