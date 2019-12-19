@@ -1,0 +1,12 @@
+---
+jobs:
+  image: eu.gcr.io/kyma-project/test-infra/alpine-kubectl:v20190325-ff66a3a
+  delay: 30
+kyma:
+  version: "1.8.0"
+  subdomain: "kyma"
+requires:
+  k8s:
+    version: "1.15"
+  gardener:
+    extensions: "shoot-cert-service,shoot-dns-service"

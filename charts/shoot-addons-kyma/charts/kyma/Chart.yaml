@@ -1,0 +1,5 @@
+apiVersion: v1alpha1
+appVersion: "0.1"
+description: Temporarily experimental support for out-of-the-box installation of Kyma
+name: kyma
+version: 0.1.0

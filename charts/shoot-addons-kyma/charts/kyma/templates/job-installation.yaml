@@ -1,0 +1,65 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kyma-initializer-installation
+  namespace: kyma-installer
+  labels:
+    app: kyma-initializer
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      name: kyma-initializer-installation
+      namespace: kyma-installer
+      annotations:
+        sidecar.istio.io/inject: “false”
+      labels:
+        app: kyma-initializer
+    spec:
+      serviceAccountName: kyma-initializer
+      restartPolicy: Never
+      initContainers:
+      - name: requirements
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: K8S_VERSION
+            value: {{ .Values.requires.k8s.version | quote }}
+          - name: GARDENER_EXTENSIONS
+            value: {{ .Values.requires.gardener.extensions | quote }}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/requirements.sh" | printf "%s" | indent 12 }}
+      - name: wait-for-tiller
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: DELAY
+            value: {{ .Values.jobs.delay | quote}}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/wait-for-tiller.sh" | printf "%s" | indent 12 }}
+      - name: wait-for-certificate
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: DELAY
+            value: {{ .Values.jobs.delay | quote }}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/wait-for-certificate.sh" | printf "%s" | indent 12 }}
+      containers:
+      - name: installation
+        image: {{ .Values.jobs.image | quote }}
+        env:
+          - name: KYMA_VERSION
+            value: {{ .Values.kyma.version | quote }}
+        command:
+          - bash
+          - -c
+          - |
+{{ .Files.Get "files/installation.sh" | printf "%s" | indent 12 }}

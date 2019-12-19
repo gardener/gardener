@@ -253,6 +253,10 @@ const (
 	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
 	SecretRefChecksumAnnotation = "checksum/secret.data"
 
+	// ShootExperimentalAddonKyma is a constant for an annotation on the shoot stating that Kyma shall be installed.
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	ShootExperimentalAddonKyma = "experimental.addons.shoot.gardener.cloud/kyma"
+
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
