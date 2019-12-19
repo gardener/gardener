@@ -151,15 +151,29 @@ var _ = Describe("dns", func() {
 		It("should do nothing because the seed disables DNS", func() {
 			seedCopy := seed.DeepCopy()
 			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, garden.SeedTaint{Key: garden.SeedTaintDisableDNS})
-			shootBefore := shoot.DeepCopy()
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.DNS = nil
+			shootBefore := shootCopy.DeepCopy()
+
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
+			attrs := admission.NewAttributesRecord(shootCopy, nil, garden.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*shootCopy).To(Equal(*shootBefore))
+		})
+
+		It("should throw an error because the seed disables DNS but shoot specifies a dns section", func() {
+			seedCopy := seed.DeepCopy()
+			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, garden.SeedTaint{Key: garden.SeedTaintDisableDNS})
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(shoot).To(Equal(*shootBefore))
+			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot's .spec.dns section must be nil if seed with disabled DNS is chosen")))
 		})
 
 		It("should do nothing because the shoot specifies the 'unmanaged' dns provider", func() {

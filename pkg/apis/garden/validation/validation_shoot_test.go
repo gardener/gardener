@@ -3694,6 +3694,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should forbid removing the dns section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns"),
+				}))))
+			})
+
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")
@@ -3704,6 +3716,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.domain"),
 				}))))
+			})
+
+			It("should allow updating the dns providers if seed is assigned", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+				oldShoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-dns-provider")
+
+				newShoot := prepareShootForUpdate(oldShoot)
+				newShoot.Spec.SeedName = makeStringPointer("seed")
+				newShoot.Spec.DNS.Providers = nil
+
+				errorList := ValidateShootUpdate(newShoot, oldShoot)
+
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid updating the dns provider", func() {
