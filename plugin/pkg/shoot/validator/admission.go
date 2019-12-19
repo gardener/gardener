@@ -1185,7 +1185,10 @@ top:
 }
 
 func validateZones(constraints []garden.Region, region, oldRegion, zone string) (bool, []string) {
-	validValues := []string{}
+	var (
+		validValues = []string{}
+		regionFound = false
+	)
 
 	for _, r := range constraints {
 		if r.Name == region {
@@ -1195,10 +1198,12 @@ func validateZones(constraints []garden.Region, region, oldRegion, zone string) 
 					return true, nil
 				}
 			}
+			regionFound = true
+			break
 		}
 	}
 
-	if region == oldRegion {
+	if !regionFound && region == oldRegion {
 		return true, nil
 	}
 
