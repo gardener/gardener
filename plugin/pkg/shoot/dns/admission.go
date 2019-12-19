@@ -165,6 +165,9 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 		return apierrors.NewBadRequest(fmt.Sprintf("could not get referenced seed: %+v", err.Error()))
 	}
 	if dnsDisabled {
+		if shoot.Spec.DNS != nil {
+			return apierrors.NewBadRequest("shoot's .spec.dns section must be nil if seed with disabled DNS is chosen")
+		}
 		return nil
 	}
 
