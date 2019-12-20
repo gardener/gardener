@@ -359,7 +359,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		},
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-tls",
+				Name:      AlertManagerTLS,
 				Namespace: namespace,
 			},
 		},

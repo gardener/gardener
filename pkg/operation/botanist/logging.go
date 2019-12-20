@@ -37,7 +37,6 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	var (
-		kibanaHost                             = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 		kibanaCredentials                      = b.Secrets["kibana-logging-sg-credentials"]
 		kibanaUserIngressCredentialsSecretName = "logging-ingress-credentials-users"
 		sgKibanaUsername                       = kibanaCredentials.Data[secrets.DataKeyUserName]
@@ -93,9 +92,26 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	sgFluentdPasswordHash = string(sgFluentdSecret.Data["bcryptPasswordHash"])
 
+	kibanaTLSOverride := common.KibanaTLS
+	if b.ControlPlaneWildcardCert != nil {
+		kibanaTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		// TODO: timuthy - remove in the future. Old Kibana host is retained for migration reasons.
+		{
+			"hostName":   b.ComputeKibanaHostDeprecated(),
+			"secretName": common.KibanaTLS,
+		},
+		{
+			"hostName":   b.ComputeKibanaHost(),
+			"secretName": kibanaTLSOverride,
+		},
+	}
+
 	elasticKibanaCurator := map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"host":            kibanaHost,
+			"hosts":           hosts,
 			"basicAuthSecret": ingressBasicAuth,
 		},
 		"elasticsearch": map[string]interface{}{

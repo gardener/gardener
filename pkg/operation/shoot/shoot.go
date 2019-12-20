@@ -213,6 +213,9 @@ func (s *Shoot) IPVSEnabled() bool {
 		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1alpha1.ProxyModeIPVS
 }
 
+// TechnicalIDPrefix is a prefix used for a shoot's technical id.
+const TechnicalIDPrefix = "shoot--"
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) string {
@@ -224,7 +227,7 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) str
 	}
 
 	// New clusters shall be created with the new technical id (double hyphens).
-	return fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)
+	return fmt.Sprintf("%s%s--%s", TechnicalIDPrefix, projectName, shoot.Name)
 }
 
 // ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.

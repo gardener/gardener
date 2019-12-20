@@ -10,11 +10,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   tls:
-  - secretName: grafana-tls
+  - secretName: {{ .Values.grafana.secretName }}
     hosts:
-    - {{ .Values.grafana.host }}
+    - {{ .Values.grafana.hostName }}
   rules:
-  - host: {{ .Values.grafana.host }}
+  - host: {{ .Values.grafana.hostName }}
     http:
       paths:
       - backend:

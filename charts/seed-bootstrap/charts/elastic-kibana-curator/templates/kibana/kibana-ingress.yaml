@@ -12,18 +12,20 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: kibana-basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header Authorization $http_authorization;"
-  name: kibana
-  namespace: {{.Release.Namespace}}
 spec:
   tls:
-  - secretName: kibana-tls
+  {{- range .Values.ingress.hosts }}
+  - secretName: {{ required ".secretName is required" .secretName }}
     hosts:
-    - {{ .Values.ingress.host }}
+    - {{ required ".hostName is required" .hostName }}
+  {{- end }}
   rules:
-  - host: {{ .Values.ingress.host }}
+  {{- range .Values.ingress.hosts }}
+  - host: {{ required ".hostName is required" .hostName }}
     http:
       paths:
       - backend:
           serviceName: kibana-logging
-          servicePort: {{ .Values.kibana.service.internalPort }}
+          servicePort: {{ $.Values.kibana.service.internalPort }}
         path: /
+  {{- end }}

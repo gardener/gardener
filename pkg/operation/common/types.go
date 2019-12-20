@@ -15,6 +15,8 @@
 package common
 
 import (
+	"time"
+
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -161,6 +163,15 @@ const (
 
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
+
+	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
+	PrometheusPrefix = "p"
+
+	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
+	AlertManagerPrefix = "au"
+
+	// KibanaPrefix is a constant for a prefix used for the Kibana instance.
+	KibanaPrefix = "k"
 
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
@@ -446,6 +457,22 @@ const (
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
+
+	// ControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
+	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
+	ControlPlaneWildcardCert = "controlplane-cert"
+
+	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
+	AlertManagerTLS = "alertmanager-tls"
+	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
+	GrafanaTLS = "grafana-tls"
+	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
+	PrometheusTLS = "prometheus-tls"
+	// KibanaTLS is the name of the secret resource which holds the TLS certificate for Kibana.
+	KibanaTLS = "kibana-tls"
+
+	// EndUserCrtValidity is the time period a user facing certificate is valid.
+	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
 var (
