@@ -319,4 +319,14 @@ var _ = Describe("helper", func() {
 		Entry("dns providers but different type", &garden.DNS{Providers: []garden.DNSProvider{{Type: &differentType}}}, false),
 		Entry("dns providers and unmanaged type", &garden.DNS{Providers: []garden.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
+
+	DescribeTable("#FindWorkerByName",
+		func(workers []garden.Worker, name string, expectedWorker *garden.Worker) {
+			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))
+		},
+
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []garden.Worker{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []garden.Worker{{Name: "foo"}}, "foo", &garden.Worker{Name: "foo"}),
+	)
 })
