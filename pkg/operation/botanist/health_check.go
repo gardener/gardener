@@ -575,7 +575,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1alpha1.Condition, extensionsCondition []extensionCondition) *gardencorev1alpha1.Condition {
 	for _, cond := range extensionsCondition {
-		if cond.condition.Status == gardencorev1beta1.ConditionFalse {
+		if cond.condition.Status == gardencorev1beta1.ConditionFalse || cond.condition.Status == gardencorev1beta1.ConditionUnknown {
 			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), cond.condition.Message)
 			return &c
 		}
