@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -114,7 +114,7 @@ func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value st
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace
 // name in the project statuses.
-func ProjectForNamespace(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1alpha1.Project, error) {
+func ProjectForNamespace(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
 	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func ProjectForNamespace(projectLister gardencorelisters.ProjectLister, namespac
 		}
 	}
 
-	return nil, apierrors.NewNotFound(gardencorev1alpha1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
+	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
 // ProjectNameForNamespace determines the project name for a given <namespace>. It tries to identify it first per the namespace's ownerReferences.
@@ -246,7 +246,7 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 	}
 
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", v1alpha1constants.GardenRole, GardenRoleHvpa),
+		LabelSelector: fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, GardenRoleHvpa),
 	}
 
 	// Delete all Crds with label "gardener.cloud/role=hvpa"
@@ -310,7 +310,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
-			client.MatchingLabels(map[string]string{v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleLogging})); err != nil {
+			client.MatchingLabels(map[string]string{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleLogging})); err != nil {
 			return err
 		}
 
@@ -329,7 +329,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 	objs := []runtime.Object{
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1alpha1constants.StatefulSetNameAlertManager,
+				Name:      v1beta1constants.StatefulSetNameAlertManager,
 				Namespace: namespace,
 			},
 		},
@@ -470,12 +470,12 @@ func CurrentReplicaCount(client client.Client, namespace, deploymentName string)
 }
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
-func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot) bool {
-	return respectSyncPeriodOverwrite || shoot.Namespace == v1alpha1constants.GardenNamespace
+func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
+	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
 }
 
 // ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
-func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot) bool {
+func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return false
 	}
@@ -490,26 +490,26 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha
 }
 
 // IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *gardencorev1alpha1.Shoot) bool {
+func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 
-	return lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateFailed &&
+	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
 		shoot.Generation == shoot.Status.ObservedGeneration &&
 		shoot.Status.Gardener.Version == version.Get().GitVersion
 }
 
 // IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
 // maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1alpha1.Shoot) bool {
+func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
 // IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
 // is Succeeded.
-func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1alpha1.Shoot) bool {
+func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 	return shoot.Generation == shoot.Status.ObservedGeneration &&
-		(lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded)
+		(lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded)
 }
 
 // SyncPeriodOfShoot determines the sync period of the given shoot.
@@ -517,7 +517,7 @@ func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1alpha1.Shoot) b
 // If no overwrite is allowed, the defaultMinSyncPeriod is returned.
 // Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
 // the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
-func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1alpha1.Shoot) time.Duration {
+func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1beta1.Shoot) time.Duration {
 	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
 		return defaultMinSyncPeriod
 	}
@@ -547,7 +547,7 @@ func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *ut
 }
 
 // EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1alpha1.Shoot) *utils.MaintenanceTimeWindow {
+func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) *utils.MaintenanceTimeWindow {
 	maintenance := shoot.Spec.Maintenance
 	if maintenance == nil || maintenance.TimeWindow == nil {
 		return utils.AlwaysTimeWindow

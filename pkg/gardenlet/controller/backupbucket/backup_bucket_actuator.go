@@ -20,10 +20,8 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -59,10 +57,10 @@ type actuator struct {
 	gardenClient client.Client
 	seedClient   client.Client
 	logger       logrus.FieldLogger
-	backupBucket *gardencorev1alpha1.BackupBucket
+	backupBucket *gardencorev1beta1.BackupBucket
 }
 
-func newActuator(gardenClient, seedClient client.Client, bb *gardencorev1alpha1.BackupBucket, logger logrus.FieldLogger) Actuator {
+func newActuator(gardenClient, seedClient client.Client, bb *gardencorev1beta1.BackupBucket, logger logrus.FieldLogger) Actuator {
 	return &actuator{
 		logger:       logger.WithField("backupbucket", bb.Name),
 		backupBucket: bb,
@@ -145,7 +143,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 
@@ -164,7 +162,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
-		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -173,7 +171,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 			Region: a.backupBucket.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-				Namespace: v1alpha1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}
 		return nil
@@ -199,7 +197,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		backupBucket = bb
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
 	}
 
 	if backupBucket.Status.GeneratedSecretRef != nil {
@@ -211,10 +209,10 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		coreGeneratedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generateGeneratedBackupBucketSecretName(a.backupBucket.Name),
-				Namespace: v1alpha1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}
-		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1alpha1.SchemeGroupVersion.WithKind("BackupBucket"))
+		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 
 		if err := kutil.CreateOrUpdate(ctx, a.gardenClient, coreGeneratedSecret, func() error {
 			coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
@@ -282,9 +280,9 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil
@@ -295,7 +293,7 @@ func (a *actuator) deleteBackupBucketExtensionSecret(ctx context.Context) error 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 

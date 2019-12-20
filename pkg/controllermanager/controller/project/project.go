@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -59,10 +59,10 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
+		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
+		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		projectInformer = gardenCoreV1alpha1Informer.Projects()
+		projectInformer = gardenCoreV1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
 		namespaceInformer = corev1Informer.Namespaces()

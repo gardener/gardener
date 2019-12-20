@@ -15,7 +15,7 @@
 package operation_test
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/operation"
 	operationseed "github.com/gardener/gardener/pkg/operation/seed"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
@@ -30,14 +30,14 @@ import (
 var _ = Describe("operation", func() {
 	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, domain string, matcher types.GomegaMatcher) {
 		var (
-			seed = &gardencorev1alpha1.Seed{
-				Spec: gardencorev1alpha1.SeedSpec{
-					DNS: gardencorev1alpha1.SeedDNS{
+			seed = &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
 						IngressDomain: domain,
 					},
 				},
 			}
-			shoot = &gardencorev1alpha1.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: shootName,
 				},
@@ -52,7 +52,7 @@ var _ = Describe("operation", func() {
 			}
 		)
 
-		shoot.Status = gardencorev1alpha1.ShootStatus{
+		shoot.Status = gardencorev1beta1.ShootStatus{
 			TechnicalID: operationshoot.ComputeTechnicalID(projectName, shoot),
 		}
 

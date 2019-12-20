@@ -17,7 +17,7 @@ package backupentry
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
@@ -34,7 +34,7 @@ func (c *Controller) backupEntryAdd(obj interface{}) {
 
 func (c *Controller) backupEntryUpdate(oldObj, newObj interface{}) {
 	var (
-		newBackupEntry    = newObj.(*gardencorev1alpha1.BackupEntry)
+		newBackupEntry    = newObj.(*gardencorev1beta1.BackupEntry)
 		backupEntryLogger = logger.NewFieldLogger(logger.Logger, "backupentry", fmt.Sprintf("%s/%s", newBackupEntry.Namespace, newBackupEntry.Name))
 	)
 

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -46,7 +46,7 @@ func (c *Controller) projectAdd(obj interface{}) {
 }
 
 func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
-	newProject := newObj.(*gardencorev1alpha1.Project)
+	newProject := newObj.(*gardencorev1beta1.Project)
 
 	if newProject.Generation == newProject.Status.ObservedGeneration {
 		return
@@ -96,7 +96,7 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileProject(project *gardencorev1alpha1.Project) (bool, error)
+	ReconcileProject(project *gardencorev1beta1.Project) (bool, error)
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
@@ -115,14 +115,14 @@ type defaultControl struct {
 	namespaceLister        kubecorev1listers.NamespaceLister
 }
 
-func newProjectLogger(project *gardencorev1alpha1.Project) logrus.FieldLogger {
+func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
 	if project == nil {
 		return logger.Logger
 	}
 	return logger.NewFieldLogger(logger.Logger, "project", project.Name)
 }
 
-func (c *defaultControl) ReconcileProject(obj *gardencorev1alpha1.Project) (bool, error) {
+func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool, error) {
 	var (
 		project       = obj.DeepCopy()
 		projectLogger = newProjectLogger(project)
@@ -134,14 +134,14 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1alpha1.Project) (bool
 		return c.delete(project, projectLogger)
 	}
 
-	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), project, gardencorev1alpha1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
 		return false, fmt.Errorf("could not add finalizer to Project: %s", err.Error())
 	}
 
 	return false, c.reconcile(project, projectLogger)
 }
 
-func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardencorev1alpha1.Project) (*gardencorev1alpha1.Project, error)) (*gardencorev1alpha1.Project, error) {
+func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
 	project, err := kutils.TryUpdateProjectStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, objectMeta, transform)
 	if err != nil {
 		newProjectLogger(project).Errorf("Error updating the status of the project: %q", err.Error())
@@ -149,7 +149,7 @@ func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, trans
 	return project, err
 }
 
-func (c *defaultControl) reportEvent(project *gardencorev1alpha1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
+func (c *defaultControl) reportEvent(project *gardencorev1beta1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
 	var (
 		eventType     string
 		projectLogger = newProjectLogger(project)

@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -79,7 +79,7 @@ var (
 	GracePeriodFiveMinutes = utilclient.DeleteWith{client.GracePeriodSeconds(5 * 60)}
 
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
-	NotSystemComponent = MustNewRequirement(v1alpha1constants.DeprecatedGardenRole, selection.NotEquals, v1alpha1constants.GardenRoleSystemComponent)
+	NotSystemComponent = MustNewRequirement(v1beta1constants.DeprecatedGardenRole, selection.NotEquals, v1beta1constants.GardenRoleSystemComponent)
 	// NoCleanupPrevention is a requirement that the ShootNoCleanup label of something is not true.
 	NoCleanupPrevention = MustNewRequirement(common.ShootNoCleanup, selection.NotEquals, "true")
 	// NotKubernetesProvider is a requirement that the Provider label of something is not KubernetesProvider.
@@ -220,7 +220,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1alpha1constants.AnnotationShootSkipCleanup) {
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
 			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
 			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),

@@ -120,7 +120,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 				Spec: garden.QuotaSpec{
 					Scope: corev1.ObjectReference{
-						APIVersion: "core.gardener.cloud/v1alpha1",
+						APIVersion: "core.gardener.cloud/v1beta1",
 						Kind:       "Project",
 					},
 				},
@@ -318,7 +318,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 					Spec: garden.QuotaSpec{
 						Scope: corev1.ObjectReference{
-							APIVersion: "core.gardener.cloud/v1alpha1",
+							APIVersion: "core.gardener.cloud/v1beta1",
 							Kind:       "Project",
 						},
 					},

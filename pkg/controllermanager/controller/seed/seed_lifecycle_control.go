@@ -17,9 +17,9 @@ package seed
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -66,7 +66,7 @@ func (c *Controller) reconcileSeedKey(key string) error {
 // ControlInterface implements the control logic for managing the lifecycle for Seeds. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	Reconcile(seed *gardencorev1alpha1.Seed, key string) error
+	Reconcile(seed *gardencorev1beta1.Seed, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
@@ -82,7 +82,7 @@ type defaultControl struct {
 	config                 *config.ControllerManagerConfiguration
 }
 
-func (c *defaultControl) Reconcile(seedObj *gardencorev1alpha1.Seed, key string) error {
+func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) error {
 	var (
 		seed       = seedObj.DeepCopy()
 		seedLogger = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
@@ -94,21 +94,21 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1alpha1.Seed, key string)
 	}
 
 	for _, condition := range seed.Status.Conditions {
-		if condition.Type == gardencorev1alpha1.SeedGardenletReady && (condition.Status == gardencorev1alpha1.ConditionUnknown || !condition.LastUpdateTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration))) {
+		if condition.Type == gardencorev1beta1.SeedGardenletReady && (condition.Status == gardencorev1beta1.ConditionUnknown || !condition.LastUpdateTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration))) {
 			return nil
 		}
 	}
 
 	seedLogger.Infof("Setting status for seed %q to 'unknown' as gardenlet stopped reporting seed status.", seed.Name)
 
-	conditionGardenletReady := gardencorev1alpha1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1alpha1.SeedGardenletReady)
-	conditionGardenletReady = gardencorev1alpha1helper.UpdatedCondition(conditionGardenletReady, gardencorev1alpha1.ConditionUnknown, "SeedStatusUnknown", "Gardenlet stopped posting seed status.")
+	conditionGardenletReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionGardenletReady = gardencorev1beta1helper.UpdatedCondition(conditionGardenletReady, gardencorev1beta1.ConditionUnknown, "SeedStatusUnknown", "Gardenlet stopped posting seed status.")
 
 	// Update Seed status
 	// We don't handle the error here as we don't want to run into the exponential backoff for the hearbeat.
 	_, err := kutil.TryUpdateSeedConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta,
-		func(seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
-			seed.Status.Conditions = gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, conditionGardenletReady)
+		func(seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+			seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, conditionGardenletReady)
 			return seed, nil
 		},
 	)

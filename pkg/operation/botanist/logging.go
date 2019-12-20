@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -86,7 +86,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	ct := b.Shoot.Info.CreationTimestamp.Time
 
 	sgFluentdSecret := &corev1.Secret{}
-	if err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(v1alpha1constants.GardenNamespace, "fluentd-es-sg-credentials"), sgFluentdSecret); err != nil {
+	if err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "fluentd-es-sg-credentials"), sgFluentdSecret); err != nil {
 		return err
 	}
 

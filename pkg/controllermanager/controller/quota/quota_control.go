@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -87,7 +87,7 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileQuota(quota *gardencorev1alpha1.Quota, key string) error
+	ReconcileQuota(quota *gardencorev1beta1.Quota, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
@@ -104,7 +104,7 @@ type defaultControl struct {
 	secretBindingLister    gardencorelisters.SecretBindingLister
 }
 
-func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key string) error {
+func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota, key string) error {
 	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key strin
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
-		if !sets.NewString(quota.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
+		if !sets.NewString(quota.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return nil
 		}
 
@@ -134,9 +134,9 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key strin
 
 			// Remove finalizer from Quota
 			quotaFinalizers := sets.NewString(quota.Finalizers...)
-			quotaFinalizers.Delete(gardencorev1alpha1.GardenerName)
+			quotaFinalizers.Delete(gardencorev1beta1.GardenerName)
 			quota.Finalizers = quotaFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Quotas(quota.Namespace).Update(quota); client.IgnoreNotFound(err) != nil {
+			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Quotas(quota.Namespace).Update(quota); client.IgnoreNotFound(err) != nil {
 				quotaLogger.Error(err.Error())
 				return err
 			}
@@ -145,12 +145,12 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1alpha1.Quota, key strin
 
 		message := fmt.Sprintf("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
 		quotaLogger.Info(message)
-		c.recorder.Event(quota, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+		c.recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 
 		return errors.New("Quota still has references")
 	}
 
-	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), quota, gardencorev1alpha1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
 		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
 		return err
 	}

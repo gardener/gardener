@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -89,7 +89,7 @@ func (c *Controller) reconcileControllerRegistrationKey(key string) error {
 // ControlInterface implements the control logic for updating ControllerRegistrations. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	Reconcile(*gardencorev1alpha1.ControllerRegistration) error
+	Reconcile(*gardencorev1beta1.ControllerRegistration) error
 }
 
 // NewDefaultControllerRegistrationControl returns a new instance of the default implementation ControlInterface that
@@ -109,7 +109,7 @@ type defaultControllerRegistrationControl struct {
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 }
 
-func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1alpha1.ControllerRegistration) error {
+func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.ControllerRegistration) error {
 	var (
 		controllerRegistration = obj.DeepCopy()
 		logger                 = logger.NewFieldLogger(logger.Logger, "controllerregistration", controllerRegistration.Name)
@@ -121,7 +121,7 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1alpha1
 	return c.reconcile(controllerRegistration, logger)
 }
 
-func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration *gardencorev1alpha1.ControllerRegistration, logger logrus.FieldLogger) error {
+func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration *gardencorev1beta1.ControllerRegistration, logger logrus.FieldLogger) error {
 	var (
 		err              error
 		result           error
@@ -142,13 +142,13 @@ func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration 
 	}
 
 	if mustWriteFinalizer {
-		controllerRegistration, err = kutil.TryUpdateControllerRegistrationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerRegistration.ObjectMeta, func(c *gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error) {
+		controllerRegistration, err = kutil.TryUpdateControllerRegistrationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerRegistration.ObjectMeta, func(c *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error) {
 			if finalizers := sets.NewString(c.Finalizers...); !finalizers.Has(FinalizerName) {
 				finalizers.Insert(FinalizerName)
 				c.Finalizers = finalizers.UnsortedList()
 			}
 			return c, nil
-		}, func(cur, updated *gardencorev1alpha1.ControllerRegistration) bool {
+		}, func(cur, updated *gardencorev1beta1.ControllerRegistration) bool {
 			return sets.NewString(cur.Finalizers...).Has(FinalizerName)
 		})
 		if err != nil {
@@ -158,7 +158,7 @@ func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration 
 
 	// Live lookup to prevent working on a stale cache and trying to create multiple installations for the same
 	// registration/seed combination.
-	controllerInstallationList, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().List(metav1.ListOptions{})
+	controllerInstallationList, err := c.k8sGardenClient.GardenCore().CoreV1beta1().ControllerInstallations().List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (c *defaultControllerRegistrationControl) reconcile(controllerRegistration 
 	return result
 }
 
-func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(controllerRegistration *gardencorev1alpha1.ControllerRegistration, seed *gardencorev1alpha1.Seed, installationsMap map[string]string) error {
+func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(controllerRegistration *gardencorev1beta1.ControllerRegistration, seed *gardencorev1beta1.Seed, installationsMap map[string]string) error {
 	if seed.DeletionTimestamp != nil {
 		if installation, ok := installationsMap[seed.Name]; ok {
 			if seed.Spec.Backup != nil {
@@ -188,27 +188,27 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 				}
 			}
 
-			if err := c.k8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().Delete(installation, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			if err := c.k8sGardenClient.GardenCore().CoreV1beta1().ControllerInstallations().Delete(installation, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
 		}
 		return nil
 	}
 
-	seed, err := kutil.TryUpdateSeedWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta, func(s *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
+	seed, err := kutil.TryUpdateSeedWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta, func(s *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
 		if finalizers := sets.NewString(s.Finalizers...); !finalizers.Has(FinalizerName) {
 			finalizers.Insert(FinalizerName)
 			s.Finalizers = finalizers.UnsortedList()
 		}
 		return s, nil
-	}, func(cur, updated *gardencorev1alpha1.Seed) bool {
+	}, func(cur, updated *gardencorev1beta1.Seed) bool {
 		return sets.NewString(cur.Finalizers...).Has(FinalizerName)
 	})
 	if err != nil {
 		return err
 	}
 
-	installationSpec := gardencorev1alpha1.ControllerInstallationSpec{
+	installationSpec := gardencorev1beta1.ControllerInstallationSpec{
 		SeedRef: corev1.ObjectReference{
 			Name:            seed.Name,
 			ResourceVersion: seed.ResourceVersion,
@@ -234,7 +234,7 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 	)
 
 	if name, ok := installationsMap[seed.Name]; ok {
-		_, err := kutil.CreateOrPatchControllerInstallation(c.k8sGardenClient.GardenCore(), metav1.ObjectMeta{Name: name}, func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) *gardencorev1alpha1.ControllerInstallation {
+		_, err := kutil.CreateOrPatchControllerInstallation(c.k8sGardenClient.GardenCore(), metav1.ObjectMeta{Name: name}, func(controllerInstallation *gardencorev1beta1.ControllerInstallation) *gardencorev1beta1.ControllerInstallation {
 			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
 			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
 			controllerInstallation.Spec = installationSpec
@@ -243,7 +243,7 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 		return err
 	}
 
-	controllerInstallation := &gardencorev1alpha1.ControllerInstallation{
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controllerRegistration.Name),
 			Labels: map[string]string{
@@ -254,11 +254,11 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 		Spec: installationSpec,
 	}
 
-	_, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().Create(controllerInstallation)
+	_, err = c.k8sGardenClient.GardenCore().CoreV1beta1().ControllerInstallations().Create(controllerInstallation)
 	return err
 }
 
-func (c *defaultControllerRegistrationControl) delete(controllerRegistration *gardencorev1alpha1.ControllerRegistration, logger logrus.FieldLogger) error {
+func (c *defaultControllerRegistrationControl) delete(controllerRegistration *gardencorev1beta1.ControllerRegistration, logger logrus.FieldLogger) error {
 	var (
 		result error
 		count  int
@@ -273,7 +273,7 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 		if controllerInstallation.Spec.RegistrationRef.Name == controllerRegistration.Name {
 			count++
 
-			if err := c.k8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().Delete(controllerInstallation.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			if err := c.k8sGardenClient.GardenCore().CoreV1beta1().ControllerInstallations().Delete(controllerInstallation.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
 			}
 		}
@@ -286,24 +286,24 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 		return fmt.Errorf("deletion of installations is still pending")
 	}
 
-	_, err = kutil.TryUpdateControllerRegistrationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerRegistration.ObjectMeta, func(c *gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error) {
+	_, err = kutil.TryUpdateControllerRegistrationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerRegistration.ObjectMeta, func(c *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error) {
 		finalizers := sets.NewString(c.Finalizers...)
 		finalizers.Delete(FinalizerName)
 		c.Finalizers = finalizers.UnsortedList()
 		return c, nil
-	}, func(cur, updated *gardencorev1alpha1.ControllerRegistration) bool {
+	}, func(cur, updated *gardencorev1beta1.ControllerRegistration) bool {
 		return !sets.NewString(cur.Finalizers...).Has(FinalizerName)
 	})
 	return err
 }
 
 // waitUntilBackupBucketDeleted waits until backup bucket extension resource is deleted in gardener cluster.
-func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardencorev1alpha1.Seed, logger *logrus.Entry) error {
-	var lastError *gardencorev1alpha1.LastError
+func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, logger *logrus.Entry) error {
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retryutils.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
 		backupBucketName := string(seed.UID)
-		bb := &gardencorev1alpha1.BackupBucket{}
+		bb := &gardencorev1beta1.BackupBucket{}
 
 		if err := gardenClient.Get(ctx, kutil.Key(backupBucketName), bb); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -318,13 +318,13 @@ func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Clien
 		}
 
 		logger.Infof("Waiting for backupBucket to be deleted...")
-		return retryutils.MinorError(gardencorev1alpha1helper.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
+		return retryutils.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil

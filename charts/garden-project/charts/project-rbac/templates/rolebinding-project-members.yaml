@@ -5,7 +5,7 @@ metadata:
   name: gardener.cloud:system:project-member
   namespace: {{ .Release.Namespace }}
   ownerReferences:
-  - apiVersion: core.gardener.cloud/v1alpha1
+  - apiVersion: core.gardener.cloud/v1beta1
     kind: Project
     blockOwnerDeletion: false
     controller: true

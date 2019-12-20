@@ -17,20 +17,18 @@ package seed_test
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/gardener/gardener/pkg/operation/common"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/seed"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,8 +133,8 @@ var _ = Describe("seed", func() {
 			var (
 				size = "20Gi"
 				seed = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
 							Volume: nil,
 						},
 					},
@@ -152,9 +150,9 @@ var _ = Describe("seed", func() {
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
 				seed                = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
-							Volume: &gardencorev1alpha1.SeedVolume{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
+							Volume: &gardencorev1beta1.SeedVolume{
 								MinimumSize: &minimumSizeQuantity,
 							},
 						},
@@ -171,9 +169,9 @@ var _ = Describe("seed", func() {
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
 				seed                = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
-							Volume: &gardencorev1alpha1.SeedVolume{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
+							Volume: &gardencorev1beta1.SeedVolume{
 								MinimumSize: &minimumSizeQuantity,
 							},
 						},

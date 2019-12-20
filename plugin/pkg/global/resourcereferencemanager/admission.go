@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -338,8 +338,8 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
 			Verb:            "get",
-			APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
-			APIVersion:      gardencorev1alpha1.SchemeGroupVersion.Version,
+			APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+			APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
 			Resource:        "quotas",
 			Subresource:     "",
 			Namespace:       quotaRef.Namespace,
@@ -376,7 +376,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 }
 
 func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
-	// The new core.gardener.cloud/{v1alpha1,v1beta1}.Seed resource does no longer reference a cloud profile.
+	// The new core.gardener.cloud/{v1beta1,v1beta1}.Seed resource does no longer reference a cloud profile.
 	// We only have to check it a value was given.
 	if len(seed.Spec.Cloud.Profile) > 0 {
 		if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {

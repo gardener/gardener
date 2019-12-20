@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -55,16 +55,16 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenInformerFactory.Core().V1alpha1()
-		seedInformer               = gardenCoreV1alpha1Informer.Seeds()
-		seedLister                 = seedInformer.Lister()
+		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
+		seedInformer              = gardenCoreV1beta1Informer.Seeds()
+		seedLister                = seedInformer.Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreV1alpha1Informer, config),
+		control:                NewDefaultControl(k8sGardenClient, gardenCoreV1beta1Informer, config),
 		recorder:               recorder,
 		seedLister:             seedLister,
 		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),

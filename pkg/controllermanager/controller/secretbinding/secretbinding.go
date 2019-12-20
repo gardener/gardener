@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -56,13 +56,13 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenInformerFactory.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
+		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
+		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		secretBindingInformer = gardenCoreV1alpha1Informer.SecretBindings()
+		secretBindingInformer = gardenCoreV1beta1Informer.SecretBindings()
 		secretBindingLister   = secretBindingInformer.Lister()
 		secretLister          = corev1Informer.Secrets().Lister()
-		shootLister           = gardenCoreV1alpha1Informer.Shoots().Lister()
+		shootLister           = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	secretBindingController := &Controller{

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -64,9 +64,9 @@ var _ = Describe("dns", func() {
 			defaultDomainSecret   = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "secret-1",
-					Namespace: v1alpha1constants.GardenNamespace,
+					Namespace: v1beta1constants.GardenNamespace,
 					Labels: map[string]string{
-						v1alpha1constants.GardenRole: common.GardenRoleDefaultDomain,
+						v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
 						common.DNSDomain:   domain,

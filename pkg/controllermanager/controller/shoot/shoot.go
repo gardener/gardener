@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -67,10 +67,10 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
+		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
+		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		shootInformer = gardenCoreV1alpha1Informer.Shoots()
+		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 
 		configMapInformer = corev1Informer.ConfigMaps()
@@ -83,8 +83,8 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 
 		config:                      config,
 		recorder:                    recorder,
-		maintenanceControl:          NewDefaultMaintenanceControl(k8sGardenClient, gardenCoreV1alpha1Informer, recorder),
-		quotaControl:                NewDefaultQuotaControl(k8sGardenClient, gardenCoreV1alpha1Informer),
+		maintenanceControl:          NewDefaultMaintenanceControl(k8sGardenClient, gardenCoreV1beta1Informer, recorder),
+		quotaControl:                NewDefaultQuotaControl(k8sGardenClient, gardenCoreV1beta1Informer),
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 
 		shootLister:     shootLister,
@@ -121,7 +121,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 	})
 
 	shootController.shootSynced = shootInformer.Informer().HasSynced
-	shootController.quotaSynced = gardenCoreV1alpha1Informer.Quotas().Informer().HasSynced
+	shootController.quotaSynced = gardenCoreV1beta1Informer.Quotas().Informer().HasSynced
 	shootController.configMapSynced = configMapInformer.Informer().HasSynced
 
 	return shootController

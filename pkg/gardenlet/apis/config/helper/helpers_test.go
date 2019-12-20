@@ -15,7 +15,7 @@
 package helper_test
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
@@ -34,7 +34,7 @@ var _ = Describe("helper", func() {
 			seedName := "some-name"
 
 			config := &config.SeedConfig{
-				Seed: gardencorev1alpha1.Seed{
+				Seed: gardencorev1beta1.Seed{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: seedName,
 					},

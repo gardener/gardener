@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -119,7 +119,7 @@ func ShootWantsBasicAuthentication(shoot *gardenv1beta1.Shoot) bool {
 // ShootWantsAlertmanager checks if the given Shoot needs an Alertmanger.
 func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*corev1.Secret) bool {
 	if alertingSMTPSecret := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPSecret) > 0 {
-		if address, ok := shoot.Annotations[v1alpha1constants.AnnotationShootOperatedBy]; ok && utils.TestEmail(address) {
+		if address, ok := shoot.Annotations[v1beta1constants.AnnotationShootOperatedBy]; ok && utils.TestEmail(address) {
 			return true
 		}
 	}
@@ -129,7 +129,7 @@ func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*core
 // ShootIgnoreAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoreAlerts(shoot *gardenv1beta1.Shoot) bool {
 	ignore := false
-	if value, ok := shoot.Annotations[v1alpha1constants.AnnotationShootIgnoreAlerts]; ok {
+	if value, ok := shoot.Annotations[v1beta1constants.AnnotationShootIgnoreAlerts]; ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore
@@ -901,11 +901,11 @@ func setDefaults_ShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServer
 
 // ReadShootedSeed determines whether the Shoot has been marked to be registered automatically as a Seed cluster.
 func ReadShootedSeed(shoot *gardenv1beta1.Shoot) (*ShootedSeed, error) {
-	if shoot.Namespace != v1alpha1constants.GardenNamespace || shoot.Annotations == nil {
+	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
 		return nil, nil
 	}
 
-	val, ok := shoot.Annotations[v1alpha1constants.AnnotationShootUseAsSeed]
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
 	if !ok {
 		return nil, nil
 	}

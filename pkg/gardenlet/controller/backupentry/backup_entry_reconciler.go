@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -62,7 +62,7 @@ func newReconciler(ctx context.Context, gardenClient client.Client, recorder rec
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	be := &gardencorev1alpha1.BackupEntry{}
+	be := &gardencorev1beta1.BackupEntry{}
 	if err := r.client.Get(r.ctx, request.NamespacedName, be); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[BACKUPENTRY RECONCILE] %s - skipping because BackupEntry has been deleted", request.NamespacedName)
@@ -79,10 +79,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return r.reconcileBackupEntry(be)
 }
 
-func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.BackupEntry) (reconcile.Result, error) {
+func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupEntry, gardencorev1alpha1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(r.ctx, r.client, backupEntry, gardencorev1beta1.GardenerName); err != nil {
 		backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -92,7 +92,7 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 		return reconcile.Result{}, updateErr
 	}
 
-	seedClient, err := seedpkg.GetSeedClient(r.ctx, r.client, r.config.SeedClientConnection.ClientConnectionConfiguration, r.config.SeedSelector == nil, *backupEntry.Spec.Seed)
+	seedClient, err := seedpkg.GetSeedClient(r.ctx, r.client, r.config.SeedClientConnection.ClientConnectionConfiguration, r.config.SeedSelector == nil, *backupEntry.Spec.SeedName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -101,11 +101,11 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 	if err := a.Reconcile(r.ctx); err != nil {
 		backupEntryLogger.Errorf("Failed to reconcile backup entry: %+v", err)
 
-		reconcileErr := &gardencorev1alpha1.LastError{
-			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
+		reconcileErr := &gardencorev1beta1.LastError{
+			Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
 		}
-		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1alpha1.EventReconcileError, "%s", reconcileErr.Description)
+		r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
 		if updateErr := r.updateBackupEntryStatusError(backupEntry, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
 			backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion error: %+v", updateErr)
@@ -120,29 +120,29 @@ func (r *reconciler) reconcileBackupEntry(backupEntry *gardencorev1alpha1.Backup
 	}
 
 	if updateErr := controllerutils.RemoveGardenerOperationAnnotation(r.ctx, retry.DefaultBackoff, r.client, backupEntry); updateErr != nil {
-		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1alpha1constants.GardenerOperation, updateErr)
+		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEntry) (reconcile.Result, error) {
+func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", backupEntry.Name)
-	if !sets.NewString(backupEntry.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
+	if !sets.NewString(backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		backupEntryLogger.Debug("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
 	}
 
 	gracePeriod := computeGracePeriod(*r.config.Controllers.BackupEntry.DeletionGracePeriodHours)
-	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1alpha1.BackupEntryForceDeletion])
+	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || time.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		if updateErr := r.updateBackupEntryStatusProcessing(backupEntry, "Deletion of Backup Entry in progress.", 2); updateErr != nil {
 			backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion start: %+v", updateErr)
 			return reconcile.Result{}, updateErr
 		}
 
-		seedClient, err := seedpkg.GetSeedClient(r.ctx, r.client, r.config.SeedClientConnection.ClientConnectionConfiguration, r.config.SeedSelector == nil, *backupEntry.Spec.Seed)
+		seedClient, err := seedpkg.GetSeedClient(r.ctx, r.client, r.config.SeedClientConnection.ClientConnectionConfiguration, r.config.SeedSelector == nil, *backupEntry.Spec.SeedName)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -151,11 +151,11 @@ func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEnt
 		if err := a.Delete(r.ctx); err != nil {
 			backupEntryLogger.Errorf("Failed to delete backup entry: %+v", err)
 
-			deleteErr := &gardencorev1alpha1.LastError{
-				Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
+			deleteErr := &gardencorev1beta1.LastError{
+				Codes:       gardencorev1beta1helper.ExtractErrorCodes(err),
 				Description: err.Error(),
 			}
-			r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, "%s", deleteErr.Description)
+			r.recorder.Eventf(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
 
 			if updateErr := r.updateBackupEntryStatusError(backupEntry, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
 				backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion error: %+v", updateErr)
@@ -177,11 +177,11 @@ func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1alpha1.BackupEnt
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1alpha1.BackupEntry, message string, progress int) error {
+func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1beta1.BackupEntry, message string, progress int) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
-		be.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-			Type:           gardencorev1alpha1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
-			State:          gardencorev1alpha1.LastOperationStateProcessing,
+		be.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+			State:          gardencorev1beta1.LastOperationStateProcessing,
 			Progress:       progress,
 			Description:    message,
 			LastUpdateTime: metav1.Now(),
@@ -190,15 +190,15 @@ func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1alpha1.Ba
 	})
 }
 
-func (r *reconciler) updateBackupEntryStatusError(be *gardencorev1alpha1.BackupEntry, message string, lastError *gardencorev1alpha1.LastError) error {
+func (r *reconciler) updateBackupEntryStatusError(be *gardencorev1beta1.BackupEntry, message string, lastError *gardencorev1beta1.LastError) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
 		progress := 1
 		if be.Status.LastOperation != nil {
 			progress = be.Status.LastOperation.Progress
 		}
-		be.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-			Type:           gardencorev1alpha1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
-			State:          gardencorev1alpha1.LastOperationStateError,
+		be.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+			State:          gardencorev1beta1.LastOperationStateError,
 			Progress:       progress,
 			Description:    message,
 			LastUpdateTime: metav1.Now(),
@@ -208,12 +208,12 @@ func (r *reconciler) updateBackupEntryStatusError(be *gardencorev1alpha1.BackupE
 	})
 }
 
-func (r *reconciler) updateBackupEntryStatusSucceeded(be *gardencorev1alpha1.BackupEntry, message string) error {
+func (r *reconciler) updateBackupEntryStatusSucceeded(be *gardencorev1beta1.BackupEntry, message string) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
 		be.Status.LastError = nil
-		be.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-			Type:           gardencorev1alpha1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
-			State:          gardencorev1alpha1.LastOperationStateSucceeded,
+		be.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+			State:          gardencorev1beta1.LastOperationStateSucceeded,
 			Progress:       100,
 			Description:    message,
 			LastUpdateTime: metav1.Now(),
@@ -223,12 +223,12 @@ func (r *reconciler) updateBackupEntryStatusSucceeded(be *gardencorev1alpha1.Bac
 	})
 }
 
-func (r *reconciler) updateBackupEntryStatusPending(be *gardencorev1alpha1.BackupEntry, message string) error {
+func (r *reconciler) updateBackupEntryStatusPending(be *gardencorev1beta1.BackupEntry, message string) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
 		be.Status.ObservedGeneration = be.Generation
-		be.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-			Type:           gardencorev1alpha1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
-			State:          gardencorev1alpha1.LastOperationStatePending,
+		be.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
+			State:          gardencorev1beta1.LastOperationStatePending,
 			Progress:       1,
 			Description:    message,
 			LastUpdateTime: metav1.Now(),

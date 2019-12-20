@@ -16,7 +16,7 @@ package shoot_test
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 
 	. "github.com/onsi/ginkgo"
@@ -44,16 +44,16 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		Describe("ForceMachineImageUpdateRequired", func() {
 			var (
-				shootCurrentImage = &gardencorev1alpha1.ShootMachineImage{
+				shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 					Name:    "CoreOs",
 					Version: "1.0.0",
 				}
 			)
 
 			It("should determine that forceUpdate is required", func() {
-				imageCloudProvider := gardencorev1alpha1.MachineImage{
+				imageCloudProvider := gardencorev1beta1.MachineImage{
 					Name: "CoreOs",
-					Versions: []gardencorev1alpha1.ExpirableVersion{
+					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
 							Version: "1.0.1",
 						},
@@ -69,9 +69,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 
 			It("should determine that forceUpdate is not required", func() {
-				imageCloudProvider := gardencorev1alpha1.MachineImage{
+				imageCloudProvider := gardencorev1beta1.MachineImage{
 					Name: "CoreOs",
-					Versions: []gardencorev1alpha1.ExpirableVersion{
+					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
 							Version: "1.0.1",
 						},
@@ -90,29 +90,29 @@ var _ = Describe("Shoot Maintenance", func() {
 
 	Describe("MaintainMachineImages", func() {
 		var (
-			shootCurrentImage    *gardencorev1alpha1.ShootMachineImage
-			cloudProfile         *gardencorev1alpha1.CloudProfile
-			shoot                *gardencorev1alpha1.Shoot
-			machineCurrentImages []*gardencorev1alpha1.ShootMachineImage
+			shootCurrentImage    *gardencorev1beta1.ShootMachineImage
+			cloudProfile         *gardencorev1beta1.CloudProfile
+			shoot                *gardencorev1beta1.Shoot
+			machineCurrentImages []*gardencorev1beta1.ShootMachineImage
 		)
 
 		BeforeEach(func() {
-			shootCurrentImage = &gardencorev1alpha1.ShootMachineImage{
+			shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 				Name:    "CoreOs",
 				Version: "1.0.0",
 			}
 
-			machineCurrentImages = []*gardencorev1alpha1.ShootMachineImage{shootCurrentImage}
+			machineCurrentImages = []*gardencorev1beta1.ShootMachineImage{shootCurrentImage}
 
-			cloudProfile = &gardencorev1alpha1.CloudProfile{
+			cloudProfile = &gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "profile",
 				},
-				Spec: gardencorev1alpha1.CloudProfileSpec{
-					MachineImages: []gardencorev1alpha1.MachineImage{
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					MachineImages: []gardencorev1beta1.MachineImage{
 						{
 							Name: "CoreOs",
-							Versions: []gardencorev1alpha1.ExpirableVersion{
+							Versions: []gardencorev1beta1.ExpirableVersion{
 								{
 									Version: "1.0.0",
 								},
@@ -126,13 +126,13 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 
-			shoot = &gardencorev1alpha1.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "shoot",
 				},
-				Spec: gardencorev1alpha1.ShootSpec{
-					Maintenance: &gardencorev1alpha1.Maintenance{
-						AutoUpdate: &gardencorev1alpha1.MaintenanceAutoUpdate{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 							MachineImageVersion: true,
 						},
 					},
@@ -171,10 +171,10 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
-			cloudProfile.Spec.MachineImages = []gardencorev1alpha1.MachineImage{
+			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "CoreOs",
-					Versions: []gardencorev1alpha1.ExpirableVersion{
+					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
 							Version:        "1.1.1",
 							ExpirationDate: &expirationDateInTheFuture,
@@ -202,14 +202,14 @@ var _ = Describe("Shoot Maintenance", func() {
 
 	Describe("Maintain Kubernetes Version", func() {
 		var (
-			cloudProfile       *gardencorev1alpha1.CloudProfile
-			shoot              *gardencorev1alpha1.Shoot
-			kubernetesSettings gardencorev1alpha1.KubernetesSettings
+			cloudProfile       *gardencorev1beta1.CloudProfile
+			shoot              *gardencorev1beta1.Shoot
+			kubernetesSettings gardencorev1beta1.KubernetesSettings
 		)
 
 		BeforeEach(func() {
-			kubernetesSettings = gardencorev1alpha1.KubernetesSettings{
-				Versions: []gardencorev1alpha1.ExpirableVersion{
+			kubernetesSettings = gardencorev1beta1.KubernetesSettings{
+				Versions: []gardencorev1beta1.ExpirableVersion{
 					{
 						Version: "1.0.2",
 					},
@@ -222,33 +222,33 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				},
 			}
-			cloudProfile = &gardencorev1alpha1.CloudProfile{
+			cloudProfile = &gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "profile",
 				},
-				Spec: gardencorev1alpha1.CloudProfileSpec{
+				Spec: gardencorev1beta1.CloudProfileSpec{
 					Kubernetes: kubernetesSettings,
 				},
 			}
 
-			shoot = &gardencorev1alpha1.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "shoot",
 				},
-				Spec: gardencorev1alpha1.ShootSpec{
-					Maintenance: &gardencorev1alpha1.Maintenance{
-						AutoUpdate: &gardencorev1alpha1.MaintenanceAutoUpdate{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 							KubernetesVersion: true,
 						},
 					},
-					Kubernetes: gardencorev1alpha1.Kubernetes{Version: "1.0.0"},
+					Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.0.0"},
 				},
 			}
 		})
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
-			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
 
@@ -260,7 +260,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should determine that the shoot kubernetes version must be maintained - MaintenanceAutoUpdate set to true", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
-			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
 
@@ -272,7 +272,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should determine that the kubernetes version must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
-			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
 
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
 
@@ -283,7 +283,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) -> update to latest kubernetes patch version with same minor", func() {
 			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:2]
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: "1.0.0"}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
 
@@ -295,7 +295,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should determine that the shootKubernetes version must NOT be maintained - cloud profile has no matching kubernetes version defined & autoUpdate == false", func() {
 			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:2]
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-			shoot.Spec.Kubernetes = gardencorev1alpha1.Kubernetes{Version: "1.0.0"}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
 			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
 

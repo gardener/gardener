@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -86,7 +86,7 @@ func (c *Controller) reconcileSeedKey(key string) error {
 // SeedControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type SeedControlInterface interface {
-	Reconcile(*gardencorev1alpha1.Seed) error
+	Reconcile(*gardencorev1beta1.Seed) error
 }
 
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
@@ -106,7 +106,7 @@ type defaultSeedControl struct {
 	controllerRegistrationQueue  workqueue.RateLimitingInterface
 }
 
-func (c *defaultSeedControl) Reconcile(obj *gardencorev1alpha1.Seed) error {
+func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 	var (
 		ctx    = context.TODO()
 		seed   = obj.DeepCopy()
@@ -141,7 +141,7 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1alpha1.Seed) error {
 		for _, controllerInstallation := range controllerInstallationList {
 			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
 				message := fmt.Sprintf("ControllerInstallations for seed %q still pending, cannot release seed", seed.Name)
-				c.recorder.Event(seed, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+				c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 				return fmt.Errorf(message)
 			}
 		}

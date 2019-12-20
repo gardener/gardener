@@ -17,7 +17,7 @@ package v1alpha1
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -278,7 +278,7 @@ type LeaderElectionConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1alpha1.Seed `json:",inline"`
+	gardencorev1beta1.Seed `json:",inline"`
 }
 
 const (

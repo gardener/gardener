@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -55,11 +55,11 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewQuotaController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		coreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
+		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 
-		quotaInformer       = coreV1alpha1Informer.Quotas()
+		quotaInformer       = gardenCoreV1beta1Informer.Quotas()
 		quotaLister         = quotaInformer.Lister()
-		secretBindingLister = coreV1alpha1Informer.SecretBindings().Lister()
+		secretBindingLister = gardenCoreV1beta1Informer.SecretBindings().Lister()
 	)
 
 	quotaController := &Controller{

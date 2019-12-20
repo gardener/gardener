@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -86,7 +86,7 @@ func NewOptions() (*Options, error) {
 	if err := configv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardencorev1alpha1.AddToScheme(o.scheme); err != nil {
+	if err := gardencorev1beta1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
 
@@ -214,7 +214,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardenlet.
 type Gardenlet struct {
 	Config                 *config.GardenletConfiguration
-	Identity               *gardencorev1alpha1.Gardener
+	Identity               *gardencorev1beta1.Gardener
 	GardenNamespace        string
 	K8sGardenClient        kubernetes.Interface
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
@@ -424,13 +424,13 @@ func (g *Gardenlet) startControllers(ctx context.Context) {
 // we need to identify for still ongoing operations whether another Gardenlet instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func determineGardenletIdentity() (*gardencorev1alpha1.Gardener, string, error) {
+func determineGardenletIdentity() (*gardencorev1beta1.Gardener, string, error) {
 	var (
 		validID     = regexp.MustCompile(`([0-9a-f]{64})`)
 		gardenletID string
 
 		gardenletName   string
-		gardenNamespace = v1alpha1constants.GardenNamespace
+		gardenNamespace = v1beta1constants.GardenNamespace
 		err             error
 	)
 
@@ -484,7 +484,7 @@ func determineGardenletIdentity() (*gardencorev1alpha1.Gardener, string, error) 
 		gardenNamespace = string(ns)
 	}
 
-	return &gardencorev1alpha1.Gardener{
+	return &gardencorev1beta1.Gardener{
 		ID:      gardenletID,
 		Name:    gardenletName,
 		Version: version.Get().GitVersion,

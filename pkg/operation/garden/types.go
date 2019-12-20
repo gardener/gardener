@@ -15,12 +15,12 @@
 package garden
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
-	Project        *gardencorev1alpha1.Project
+	Project        *gardencorev1beta1.Project
 	DefaultDomains []*Domain
 	InternalDomain *Domain
 }

@@ -17,8 +17,8 @@ package shoot
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -66,8 +66,8 @@ func (s Status) OrWorse(other Status) Status {
 }
 
 // StatusLabelTransform transforms the shoot labels depending on the given Status.
-func StatusLabelTransform(status Status) func(*gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
-	return func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+func StatusLabelTransform(status Status) func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+	return func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		// TODO (AC): Deprecate common.ShootUnhealthy once tools adapted
 		healthy := statusToBool(status)
 		if !healthy {
@@ -81,11 +81,11 @@ func StatusLabelTransform(status Status) func(*gardencorev1alpha1.Shoot) (*garde
 }
 
 // ConditionStatusToStatus converts the given ConditionStatus to a shoot label Status.
-func ConditionStatusToStatus(status gardencorev1alpha1.ConditionStatus) Status {
+func ConditionStatusToStatus(status gardencorev1beta1.ConditionStatus) Status {
 	switch status {
-	case gardencorev1alpha1.ConditionTrue:
+	case gardencorev1beta1.ConditionTrue:
 		return StatusHealthy
-	case gardencorev1alpha1.ConditionProgressing:
+	case gardencorev1beta1.ConditionProgressing:
 		return StatusProgressing
 	}
 	return StatusUnhealthy
@@ -95,7 +95,7 @@ func ConditionStatusToStatus(status gardencorev1alpha1.ConditionStatus) Status {
 // By default, the Status is StatusHealthy. The condition status is converted to
 // a Status by using ConditionStatusToStatus. Always the worst status of the combined
 // states wins.
-func ComputeConditionStatus(conditions ...gardencorev1alpha1.Condition) Status {
+func ComputeConditionStatus(conditions ...gardencorev1beta1.Condition) Status {
 	status := StatusHealthy
 	for _, condition := range conditions {
 		status = status.OrWorse(ConditionStatusToStatus(condition.Status))
@@ -114,29 +114,29 @@ func BoolToStatus(cond bool) Status {
 }
 
 // ComputeStatus computes the label Status of a shoot depending on the given lastOperation, lastError and conditions.
-func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastErrors []gardencorev1alpha1.LastError, lastError *gardencorev1alpha1.LastError, conditions ...gardencorev1alpha1.Condition) Status {
+func ComputeStatus(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError, conditions ...gardencorev1beta1.Condition) Status {
 	// Shoot has been created and not yet reconciled.
 	if lastOperation == nil {
 		return StatusHealthy
 	}
 
 	// If shoot is created or deleted then the last error indicates the healthiness.
-	if lastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate || lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete {
-		return BoolToStatus(len(lastErrors) == 0 && lastError == nil)
+	if lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate || lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete {
+		return BoolToStatus(len(lastErrors) == 0)
 	}
 
 	status := ComputeConditionStatus(conditions...)
 
 	// If an operation is currently processing then the last error state is reported.
-	if lastOperation.State == gardencorev1alpha1.LastOperationStateProcessing {
-		return status.OrWorse(BoolToStatus(len(lastErrors) == 0 && lastError == nil))
+	if lastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
+		return status.OrWorse(BoolToStatus(len(lastErrors) == 0))
 	}
 
 	// If the last operation has succeeded then the shoot is healthy.
-	return status.OrWorse(BoolToStatus(lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded))
+	return status.OrWorse(BoolToStatus(lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded))
 }
 
-func shootIsSeed(shoot *gardencorev1alpha1.Shoot) bool {
-	shootedSeed, err := gardencorev1alpha1helper.ReadShootedSeed(shoot)
+func shootIsSeed(shoot *gardencorev1beta1.Shoot) bool {
+	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
 	return err == nil && shootedSeed != nil
 }
