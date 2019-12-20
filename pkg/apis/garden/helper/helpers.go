@@ -269,3 +269,13 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 	}
 	return "", fmt.Errorf("unknown quota scope")
 }
+
+// FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
+func FindWorkerByName(workers []garden.Worker, name string) *garden.Worker {
+	for _, w := range workers {
+		if w.Name == name {
+			return &w
+		}
+	}
+	return nil
+}

@@ -2960,6 +2960,120 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should use latest machine image as old shoot does not specify one", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+					{
+						Name: imageName,
+						Versions: []garden.ExpirableVersion{
+							{
+								Version: version2,
+							},
+							{
+								Version:        version1,
+								ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+							},
+						},
+					},
+				}
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = nil
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}))
+			})
+
+			It("should not touch the machine image of the old shoot", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
+					Name: imageName,
+					Versions: []garden.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version1,
+				}
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Provider.Workers[0].Machine.Image = nil
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(newShoot, &shoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*newShoot).To(Equal(shoot))
+			})
+
+			It("should respect the desired machine image of the new shoot", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
+					Name: imageName,
+					Versions: []garden.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version1,
+				}
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(newShoot, &shoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}))
+			})
+
 			It("should not reject due to an usable machine type", func() {
 				shoot.Spec.Provider.Workers = []garden.Worker{
 					{

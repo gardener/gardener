@@ -342,12 +342,10 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		return apierrors.NewBadRequest(err.Error())
 	}
 
-	for idx, worker := range shoot.Spec.Provider.Workers {
-		if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
-		}
-	}
-
+	// General approach with machine image defaulting in this code: Try to keep the machine image
+	// from the old shoot object to not accidentally update it to the default machine image.
+	// This should only happen in the maintenance time window of shoots and is performed by the
+	// shoot maintenance controller.
 	switch shoot.Spec.Provider.Type {
 	case "aws":
 		if shoot.Spec.Cloud.AWS.MachineImage == nil {
@@ -356,7 +354,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.AWS.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.AWS.Workers[idx].Machine.Image = shoot.Spec.Cloud.AWS.MachineImage
+				shoot.Spec.Cloud.AWS.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.AWS.Workers, worker.Name, shoot.Spec.Cloud.AWS.MachineImage)
 			}
 		}
 
@@ -387,7 +385,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Azure.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Azure.Workers[idx].Machine.Image = shoot.Spec.Cloud.Azure.MachineImage
+				shoot.Spec.Cloud.Azure.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Azure.Workers, worker.Name, shoot.Spec.Cloud.Azure.MachineImage)
 			}
 		}
 
@@ -418,7 +416,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.GCP.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.GCP.Workers[idx].Machine.Image = shoot.Spec.Cloud.GCP.MachineImage
+				shoot.Spec.Cloud.GCP.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.GCP.Workers, worker.Name, shoot.Spec.Cloud.GCP.MachineImage)
 			}
 		}
 
@@ -449,7 +447,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.OpenStack.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.OpenStack.Workers[idx].Machine.Image = shoot.Spec.Cloud.OpenStack.MachineImage
+				shoot.Spec.Cloud.OpenStack.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.OpenStack.Workers, worker.Name, shoot.Spec.Cloud.OpenStack.MachineImage)
 			}
 		}
 
@@ -480,7 +478,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Packet.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Packet.Workers[idx].Machine.Image = shoot.Spec.Cloud.Packet.MachineImage
+				shoot.Spec.Cloud.Packet.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Packet.Workers, worker.Name, shoot.Spec.Cloud.Packet.MachineImage)
 			}
 		}
 
@@ -511,7 +509,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Alicloud.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Alicloud.Workers[idx].Machine.Image = shoot.Spec.Cloud.Alicloud.MachineImage
+				shoot.Spec.Cloud.Alicloud.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Alicloud.Workers, worker.Name, shoot.Spec.Cloud.Alicloud.MachineImage)
 			}
 		}
 
@@ -545,7 +543,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	for idx, worker := range shoot.Spec.Provider.Workers {
 		if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
+			shoot.Spec.Provider.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Provider.Workers, worker.Name, image)
 		}
 	}
 
@@ -1297,4 +1295,11 @@ func validateMachineImagesConstraints(constraints []garden.CloudProfileMachineIm
 		}
 	}
 	return false, validValues
+}
+
+func getOldWorkerMachineImageOrDefault(workers []garden.Worker, name string, defaultImage *garden.ShootMachineImage) *garden.ShootMachineImage {
+	if oldWorker := helper.FindWorkerByName(workers, name); oldWorker != nil && oldWorker.Machine.Image != nil {
+		return oldWorker.Machine.Image
+	}
+	return defaultImage
 }
