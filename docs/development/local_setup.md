@@ -73,6 +73,10 @@ On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index
 ## Installing Minikube
 
 You'll need to have [minikube](https://github.com/kubernetes/minikube#installation) installed and running.
+> Note: Gardener is working only with self-contained kubeconfig files because of [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
+> ```bash
+> minikube config set embed-certs true
+> ```
 
 Alternatively, you can also install Docker for Desktop and [kind](https://github.com/kubernetes-sigs/kind).
 
@@ -139,8 +143,8 @@ The commands below will configure your `minikube` with the absolute minimum reso
 #### Start minikube
 
 ```bash
-minikube start
-😄  minikube v1.0.1 on darwin (amd64)
+minikube start --embed-certs #  `--embed-certs` can be omitted if minikube has already been set to create self-contained kubeconfig files.
+😄  minikube v1.5.2 on darwin (amd64)
 🔥  Creating virtualbox VM (CPUs=2, Memory=2048MB, Disk=20000MB) ...
 [...]
 🏄  Done! Thank you for using minikube!
