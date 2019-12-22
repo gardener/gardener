@@ -342,8 +342,11 @@ const (
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"
 
-	// KubernetesDashboardImageName is the name of the KubernetesDashboard image.
+	// KubernetesDashboardImageName is the name of the kubernetes-dashboard image.
 	KubernetesDashboardImageName = "kubernetes-dashboard"
+
+	// KubernetesDashboardMetricsScraperImageName is the name of the kubernetes-dashboard-metrics-scraper image.
+	KubernetesDashboardMetricsScraperImageName = "kubernetes-dashboard-metrics-scraper"
 
 	// BusyboxImageName is the name of the Busybox image.
 	BusyboxImageName = "busybox"

@@ -5,13 +5,7 @@
 
 images:
   kubernetes-dashboard: image-repository:image-tag
-imagePullPolicy: "IfNotPresent"
-
-nodeSelector: {}
-
-httpsPort: 443
-
-serviceType: ClusterIP
+  kubernetes-dashboard-metrics-scraper: image-repository:image-tag
 
 authenticationMode: basic
 
@@ -22,12 +16,3 @@ resources:
   limits:
     cpu: 100m
     memory: 256Mi
-
-rbac:
-  ## If true, create & use RBAC resources
-  #
-  create: true
-
-  ## Ignored if rbac.create is true
-  #
-  serviceAccountName: default
