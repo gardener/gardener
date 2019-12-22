@@ -56,7 +56,7 @@ admissionPlugins:
 #       namespace2: <node-selectors-labels>
 
 images:
-  hyperkube: image-repository
+  kube-apiserver: image-repository
   vpn-seed: image-repository:image-tag
   blackbox-exporter: image-repository:image-tag
 

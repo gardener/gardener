@@ -28,10 +28,10 @@
           local output=""
 
           function kubectl {
-            /opt/bin/hyperkube kubectl --kubeconfig /var/lib/kubelet/kubeconfig-real "$@"
+            /opt/bin/kubectl --kubeconfig /var/lib/kubelet/kubeconfig-real "$@"
           }
           function restart_kubelet {
-            pkill -f "hyperkube kubelet"
+            pkill -f "kubelet"
           }
           function patch_internal_ip {
             echo "Updating Node object $2 with InternalIP $3."

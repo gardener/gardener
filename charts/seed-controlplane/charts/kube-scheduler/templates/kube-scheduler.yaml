@@ -53,14 +53,18 @@ spec:
         operator: Exists
       containers:
       - name: kube-scheduler
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "kube-scheduler" }}
         imagePullPolicy: IfNotPresent
         command:
+        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
         {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - scheduler
         {{- else }}
         - kube-scheduler
+        {{- end }}
+        {{- else }}
+        - /usr/local/bin/kube-scheduler
         {{- end }}
         - --config=/var/lib/kube-scheduler-config/config.yaml
         {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}

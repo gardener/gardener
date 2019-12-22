@@ -20,9 +20,38 @@ images:
   sourceRepository: github.com/etcd-io/etcd
   repository: quay.io/coreos/etcd
   tag: v3.3.17
-- name: hyperkube
+- name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-apiserver
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-apiserver
+  targetVersion: ">= 1.17"
+- name: kube-controller-manager
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-controller-manager
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-controller-manager
+  targetVersion: ">= 1.17"
+- name: kube-scheduler
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-scheduler
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-scheduler
+  targetVersion: ">= 1.17"
+- name: kube-proxy
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-proxy
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-proxy
+  targetVersion: ">= 1.17"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler

@@ -9,7 +9,7 @@ echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
 
 eval "$(jq -r ".images |
   map(select(.name != \"gardenlet\") |
-    if (.name == \"hyperkube\") then
+    if (.name == \"kube-apiserver\" or .name == \"kube-controller-manager\" or .name == \"kube-scheduler\" or .name == \"kube-proxy\") then
       \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
     elif (.repository | startswith(\"eu.gcr.io/gardener-project/gardener\")) then
       \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"

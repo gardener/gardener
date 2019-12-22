@@ -12,21 +12,26 @@ PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
 
 mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
 
-function docker-preload() {
+function binary-preload() {
   name="$1"
-  image="$2"
-  echo "Checking whether to preload $name from $image"
-  if [ -z $(docker images -q "$image") ]; then
-    echo "Preloading $name from $image"
-    docker pull "$image"
-  else
-    echo "No need to preload $name from $image"
+  url="$2"
+  directory="/opt/bin"
+  location="$directory/$name"
+
+  echo "Checking whether to preload $name from $url"
+  if [ -f "$location" ] && [ -x "$location" ]; then
+    echo "No need to preload $name from $url"
+    return 0
   fi
+
+  echo "Preloading $name from $url to $location"
+  mkdir -p "$directory"
+  wget "$url" -O "$location"
+  chmod +x "$location"
 }
 
-{{ range $name, $image := (required ".images is required" .images) -}}
-docker-preload "{{ $name }}" "{{ $image }}"
-{{ end }}
+binary-preload "kubelet" "https://storage.googleapis.com/kubernetes-release/release/v{{ .kubernetesVersion }}/bin/linux/amd64/kubelet"
+binary-preload "kubectl" "https://storage.googleapis.com/kubernetes-release/release/v{{ .kubernetesVersion }}/bin/linux/amd64/kubectl"
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 {{ .worker.cloudConfig | b64enc }}

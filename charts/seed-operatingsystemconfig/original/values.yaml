@@ -8,7 +8,6 @@ osc:
 # caBundle: |
 #   root certificates
 images:
-  hyperkube: image-repository
   pause-container: image-repository
 kubernetes:
   clusterDNS: 100.64.0.10

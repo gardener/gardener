@@ -327,8 +327,17 @@ const (
 	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
 	NodeProblemDetectorImageName = "node-problem-detector"
 
-	// HyperkubeImageName is the name of the Hyperkube image.
-	HyperkubeImageName = "hyperkube"
+	// KubeAPIServerImageName is the name of the kube-apiserver image.
+	KubeAPIServerImageName = "kube-apiserver"
+
+	// KubeControllerManagerImageName is the name of the kube-controller-manager image.
+	KubeControllerManagerImageName = "kube-controller-manager"
+
+	// KubeSchedulerImageName is the name of the kube-scheduler image.
+	KubeSchedulerImageName = "kube-scheduler"
+
+	// KubeProxyImageName is the name of the kube-proxy image.
+	KubeProxyImageName = "kube-proxy"
 
 	// MetricsServerImageName is the name of the MetricsServer image.
 	MetricsServerImageName = "metrics-server"

@@ -8,7 +8,7 @@ kube-proxy:
 # featureGates: {}
   podAnnotations: {}
   images:
-    hyperkube: image-repository
+    kube-proxy: image-repository
 vpn-shoot:
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16
