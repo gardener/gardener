@@ -125,6 +125,7 @@ allowedMetrics:
   - etcdbr_validation_duration_seconds_count
   - etcdbr_validation_duration_seconds_sum
   - process_resident_memory_bytes
+  - process_cpu_seconds_total
   kubeProxy:
   - kubeproxy_network_programming_duration_seconds_bucket
   - kubeproxy_network_programming_duration_seconds_count
