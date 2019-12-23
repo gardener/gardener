@@ -30,6 +30,9 @@
 * [GEP-4: New `core.gardener.cloud/v1alpha1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core](proposals/04-new-core-gardener-cloud-apis.md)
 * [GEP-5: Gardener Versioning Policy](proposals/05-versioning-policy.md)
 * [GEP-6: Integrating etcd-druid with Gardener](proposals/06-etcd-druid.md)
+* [GEP-7: Shoot Control Plane Migration](proposals/07-shoot-control-plane-migration.md)
+* [GEP-8: SNI Passthrough proxy for kube-apiservers](proposals/08-shoot-apiserver-via-sni.md)
+* [GEP-9: Gardener integration test framework](proposals/09-test-framework.md)
 
 ## Development
 
