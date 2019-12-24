@@ -47,7 +47,7 @@ type GardenletConfiguration struct {
 	Controllers *GardenletControllerConfiguration `json:"controllers,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
-	LeaderElection *LeaderElectionConfiguration `json:"leaderElection,omityempty"`
+	LeaderElection *LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// Discovery defines the configuration of the discovery client.
 	// +optional
 	Discovery *DiscoveryConfiguration `json:"discovery,omitempty"`

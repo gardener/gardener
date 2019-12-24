@@ -35,7 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -56,7 +55,6 @@ type Controller struct {
 	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
 
-	configMapLister              kubecorev1listers.ConfigMapLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	seedLister                   gardencorelisters.SeedLister
 	shootLister                  gardencorelisters.ShootLister
@@ -67,9 +65,7 @@ type Controller struct {
 	shootSeedQueue              workqueue.RateLimitingInterface
 	seedRegistrationQueue       workqueue.RateLimitingInterface
 
-	cloudProfileSynced           cache.InformerSynced
 	controllerInstallationSynced cache.InformerSynced
-	secretBindingSynced          cache.InformerSynced
 	seedSynced                   cache.InformerSynced
 	shootSynced                  cache.InformerSynced
 

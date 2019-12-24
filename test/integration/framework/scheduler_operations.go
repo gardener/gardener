@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -176,7 +176,7 @@ func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Contex
 		uid := fmt.Sprintf("%s", s.ShootGardenerTest.Shoot.UID)
 		kind := "Shoot"
 		fieldSelector := s.ShootGardenerTest.GardenClient.Kubernetes().CoreV1().Events(s.ShootGardenerTest.Shoot.Namespace).GetFieldSelector(&s.ShootGardenerTest.Shoot.Name, &s.ShootGardenerTest.Shoot.Namespace, &kind, &uid)
-		eventList, err := s.ShootGardenerTest.GardenClient.Kubernetes().CoreV1().Events(s.ShootGardenerTest.Shoot.Namespace).List(v1.ListOptions{FieldSelector: fieldSelector.String()})
+		eventList, err := s.ShootGardenerTest.GardenClient.Kubernetes().CoreV1().Events(s.ShootGardenerTest.Shoot.Namespace).List(metav1.ListOptions{FieldSelector: fieldSelector.String()})
 		if err != nil {
 			return false, err
 		}

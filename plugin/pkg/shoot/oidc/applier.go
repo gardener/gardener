@@ -17,7 +17,7 @@ package oidc
 import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ApplyOIDCConfiguration applies preset OpenID Connect configuration to the shoot.
@@ -25,7 +25,7 @@ func ApplyOIDCConfiguration(shoot *garden.Shoot, preset *settingsv1alpha1.OpenID
 	if shoot == nil || preset == nil {
 		return
 	}
-	useRequiredClaims, err := utils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, ">= 1.11")
+	useRequiredClaims, err := version.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, ">= 1.11")
 	if err != nil {
 		// Don't mutate the resource anymore, because the version is invalid
 		// and it'll be caught by validation.

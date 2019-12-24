@@ -34,9 +34,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,11 +55,11 @@ const (
 	caSeed = "ca-seed"
 )
 
-var wantedCertificateAuthorities = map[string]*utilsecrets.CertificateSecretConfig{
+var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretConfig{
 	caSeed: {
 		Name:       caSeed,
 		CommonName: "kubernetes",
-		CertType:   utilsecrets.CACert,
+		CertType:   secretsutils.CACert,
 	},
 }
 
@@ -152,13 +151,13 @@ func GetSeedClient(ctx context.Context, gardenClient client.Client, clientConnec
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilsecrets.Certificate) ([]utilsecrets.ConfigInterface, error) {
+func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secretsutils.Certificate) ([]secretsutils.ConfigInterface, error) {
 	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
-	secretList := []utilsecrets.ConfigInterface{
-		&utilsecrets.CertificateSecretConfig{
+	secretList := []secretsutils.ConfigInterface{
+		&secretsutils.CertificateSecretConfig{
 			Name: "vpa-tls-certs",
 
 			CommonName:   "vpa-webhook.garden.svc",
@@ -166,10 +165,10 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 			DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
 			IPAddresses:  nil,
 
-			CertType:  utilsecrets.ServerCert,
+			CertType:  secretsutils.ServerCert,
 			SigningCA: certificateAuthorities[caSeed],
 		},
-		&utilsecrets.CertificateSecretConfig{
+		&secretsutils.CertificateSecretConfig{
 			Name: "grafana-tls",
 
 			CommonName:   "grafana",
@@ -177,10 +176,10 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 			DNSNames:     []string{seed.GetIngressFQDN("g-seed", "", "garden")},
 			IPAddresses:  nil,
 
-			CertType:  utilsecrets.ServerCert,
+			CertType:  secretsutils.ServerCert,
 			SigningCA: certificateAuthorities[caSeed],
 		},
-		&utilsecrets.CertificateSecretConfig{
+		&secretsutils.CertificateSecretConfig{
 			Name: "aggregate-prometheus-tls",
 
 			CommonName:   "prometheus",
@@ -188,7 +187,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 			DNSNames:     []string{seed.GetIngressFQDN("p-seed", "", "garden")},
 			IPAddresses:  nil,
 
-			CertType:  utilsecrets.ServerCert,
+			CertType:  secretsutils.ServerCert,
 			SigningCA: certificateAuthorities[caSeed],
 		},
 	}
@@ -196,7 +195,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 	// Logging feature gate
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		secretList = append(secretList,
-			&utilsecrets.CertificateSecretConfig{
+			&secretsutils.CertificateSecretConfig{
 				Name: "kibana-tls",
 
 				CommonName:   "kibana",
@@ -204,21 +203,21 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 				DNSNames:     []string{seed.GetIngressFQDN("k", "", "garden")},
 				IPAddresses:  nil,
 
-				CertType:  utilsecrets.ServerCert,
+				CertType:  secretsutils.ServerCert,
 				SigningCA: certificateAuthorities[caSeed],
 			},
 
 			// Secret definition for logging ingress
-			&utilsecrets.BasicAuthSecretConfig{
+			&secretsutils.BasicAuthSecretConfig{
 				Name:   "seed-logging-ingress-credentials",
-				Format: utilsecrets.BasicAuthFormatNormal,
+				Format: secretsutils.BasicAuthFormatNormal,
 
 				Username:       "admin",
 				PasswordLength: 32,
 			},
-			&secrets.BasicAuthSecretConfig{
+			&secretsutils.BasicAuthSecretConfig{
 				Name:   "fluentd-es-sg-credentials",
-				Format: secrets.BasicAuthFormatNormal,
+				Format: secretsutils.BasicAuthFormatNormal,
 
 				Username:                  "fluentd",
 				PasswordLength:            32,
@@ -233,7 +232,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
 func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := utilsecrets.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1alpha1constants.GardenNamespace)
+	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1alpha1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +242,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 		return nil, err
 	}
 
-	return utilsecrets.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1alpha1constants.GardenNamespace)
+	return secretsutils.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1alpha1constants.GardenNamespace)
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
@@ -264,14 +263,14 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		return err
 	}
 
-	if _, err := kutils.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		kutils.SetMetaDataLabel(&ns.ObjectMeta, "role", v1alpha1constants.GardenNamespace)
+	if _, err := kutil.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", v1alpha1constants.GardenNamespace)
 		return ns, nil
 	}); err != nil {
 		return err
 	}
-	if _, err := kutils.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		kutils.SetMetaDataLabel(&ns.ObjectMeta, "role", metav1.NamespaceSystem)
+	if _, err := kutil.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", metav1.NamespaceSystem)
 		return ns, nil
 	}); err != nil {
 		return err
@@ -287,7 +286,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 				},
 			}
 
-			if err := kutils.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
+			if err := kutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
 				secretObj.Type = corev1.SecretTypeOpaque
 				secretObj.Data = secret.Data
 				return nil
@@ -360,12 +359,12 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		}
 
 		credentials := deployedSecretsMap["seed-logging-ingress-credentials"]
-		basicAuth = utils.CreateSHA1Secret(credentials.Data[utilsecrets.DataKeyUserName], credentials.Data[utilsecrets.DataKeyPassword])
+		basicAuth = utils.CreateSHA1Secret(credentials.Data[secretsutils.DataKeyUserName], credentials.Data[secretsutils.DataKeyPassword])
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
 
 		sgFluentdCredentials := deployedSecretsMap["fluentd-es-sg-credentials"]
-		sgFluentdPassword = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPassword])
-		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPasswordBcryptHash])
+		sgFluentdPassword = string(sgFluentdCredentials.Data[secretsutils.DataKeyPassword])
+		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[secretsutils.DataKeyPasswordBcryptHash])
 
 		// Read extension provider specific configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
@@ -496,7 +495,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	)
 
 	if monitoringCredentials != nil {
-		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[utilsecrets.DataKeyUserName], monitoringCredentials.Data[utilsecrets.DataKeyPassword])
+		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[secretsutils.DataKeyUserName], monitoringCredentials.Data[secretsutils.DataKeyPassword])
 	}
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
@@ -666,7 +665,7 @@ func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient clien
 
 	version := k8sSeedClient.Version()
 
-	seedVersionOK, err := utils.CompareVersions(version, ">=", minSeedVersion)
+	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minSeedVersion)
 	if err != nil {
 		return "<unknown>", err
 	}

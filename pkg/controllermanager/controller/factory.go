@@ -45,7 +45,6 @@ import (
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
 	cfg                    *config.ControllerManagerConfiguration
-	gardenNamespace        string
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory

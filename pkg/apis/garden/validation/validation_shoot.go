@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	"github.com/robfig/cron"
@@ -189,7 +190,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *garden.ShootSpec, fldPath *
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {
-		kubernetesGeq114Less116, err := utils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.16")
+		kubernetesGeq114Less116, err := versionutils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.16")
 		if err != nil {
 			kubernetesGeq114Less116 = false
 		}
@@ -935,7 +936,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 	if oldConfig != nil {
 		oldMode = *oldConfig.Mode
 	}
-	if ok, _ := utils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
+	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
 	return allErrs
@@ -991,7 +992,7 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 
 	// Forbid Kubernetes version downgrade
-	downgrade, err := utils.CompareVersions(new, "<", old)
+	downgrade, err := versionutils.CompareVersions(new, "<", old)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
 	}
@@ -1006,7 +1007,7 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 	nextMinorVersion := oldVersion.IncMinor().IncMinor()
 
-	skippingMinorVersion, err := utils.CompareVersions(new, ">=", nextMinorVersion.String())
+	skippingMinorVersion, err := versionutils.CompareVersions(new, ">=", nextMinorVersion.String())
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
 	}
@@ -1125,7 +1126,7 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
-			geqKubernetes111, err := utils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
+			geqKubernetes111, err := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
 			if err != nil {
 				geqKubernetes111 = false
 			}
@@ -1214,7 +1215,7 @@ func ValidateClusterAutoscaler(autoScaler garden.ClusterAutoscaler, fldPath *fie
 func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	k8sVersionLessThan112, err := utils.CompareVersions(kubernetesVersion, "<", "1.12")
+	k8sVersionLessThan112, err := versionutils.CompareVersions(kubernetesVersion, "<", "1.12")
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, kubernetesVersion, err.Error()))
 	}
@@ -1419,7 +1420,7 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-// ValidateWorker validates the worker object.
+// ValidateKubeletConfig validates the KubeletConfig object.
 func ValidateKubeletConfig(kubeletConfig garden.KubeletConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

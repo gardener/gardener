@@ -40,9 +40,8 @@ const FinalizerName = "core.gardener.cloud/plant"
 
 // Controller controls Plant.
 type Controller struct {
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	k8sInformers           kubeinformers.SharedInformerFactory
-	config                 *config.ControllerManagerConfiguration
+	k8sInformers kubeinformers.SharedInformerFactory
+	config       *config.ControllerManagerConfiguration
 
 	recorder record.EventRecorder
 

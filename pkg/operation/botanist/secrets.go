@@ -1129,10 +1129,6 @@ func generateOpenVPNTLSAuth() ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func gardenEtcdEncryptionSecretName(shootName string) string {
-	return fmt.Sprintf("%s.%s", shootName, common.EtcdEncryptionSecretName)
-}
-
 func dnsNamesForService(name, namespace string) []string {
 	return []string{
 		name,

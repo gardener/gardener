@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/logger"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -159,23 +159,23 @@ func InitialStats(all TaskIDs) *Stats {
 	}
 }
 
-func newExecution(flow *Flow, logger logrus.FieldLogger, reporter ProgressReporter, errorCleaner ErrorCleaner, errorContext *utilerrors.ErrorContext) *execution {
+func newExecution(flow *Flow, log logrus.FieldLogger, reporter ProgressReporter, errorCleaner ErrorCleaner, errorContext *utilerrors.ErrorContext) *execution {
 	all := NewTaskIDs()
 
 	for name := range flow.nodes {
 		all.Insert(name)
 	}
 
-	if logger == nil {
-		logger = utils.NewNopLogger()
+	if log == nil {
+		log = logger.NewNopLogger()
 	}
-	logger = logger.WithField(logKeyFlow, flow.name)
+	log = log.WithField(logKeyFlow, flow.name)
 
 	return &execution{
 		flow,
 		InitialStats(all),
 		nil,
-		logger,
+		log,
 		reporter,
 		errorCleaner,
 		errorContext,

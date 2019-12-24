@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -64,12 +64,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		},
 		nil,
 		errors.ToExecute("Create botanist", func() error {
-			return utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+			return retryutils.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(o)
 				if err != nil {
-					return utilretry.MinorError(err)
+					return retryutils.MinorError(err)
 				}
-				return utilretry.Ok()
+				return retryutils.Ok()
 			})
 		}),
 		errors.ToExecute("Check required extensions exist", func() error {
@@ -103,15 +103,15 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		errors.ToExecute("Wait for seed deletion", func() error {
 			if o.Shoot.Info.Namespace == v1alpha1constants.GardenNamespace && o.ShootedSeed != nil {
 				// wait for seed object to be deleted before going on with shoot deletion
-				if err := utilretry.UntilTimeout(context.TODO(), time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
+				if err := retryutils.UntilTimeout(context.TODO(), time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
 					_, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().Get(o.Shoot.Info.Name, metav1.GetOptions{})
 					if apierrors.IsNotFound(err) {
-						return utilretry.Ok()
+						return retryutils.Ok()
 					}
 					if err != nil {
-						return utilretry.SevereError(err)
+						return retryutils.SevereError(err)
 					}
-					return utilretry.NotOk()
+					return retryutils.NotOk()
 				}); err != nil {
 					return fmt.Errorf("Failed while waiting for seed %s to be deleted, err=%s", o.Shoot.Info.Name, err.Error())
 				}
@@ -520,19 +520,19 @@ func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) erro
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
-	return utilretry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
+	return retryutils.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
 		shoot, err := c.shootLister.Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
 		if apierrors.IsNotFound(err) {
-			return utilretry.Ok()
+			return retryutils.Ok()
 		}
 		if err != nil {
-			return utilretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 		lastOperation := shoot.Status.LastOperation
 		if !sets.NewString(shoot.Finalizers...).Has(gardencorev1alpha1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
-			return utilretry.Ok()
+			return retryutils.Ok()
 		}
-		return utilretry.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1alpha1.GardenerName))
+		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1alpha1.GardenerName))
 	})
 }
 

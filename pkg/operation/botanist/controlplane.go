@@ -32,10 +32,10 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -706,7 +706,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	)
 
-	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	enableEtcdEncryption, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {
 		return err
 	}
@@ -957,7 +957,7 @@ func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupV
 	auditGroupVersion := schemaVersion.GroupVersion().String()
 
 	if auditGroupVersion == "audit.k8s.io/v1" {
-		return utils.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
+		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
 	}
 	return true, nil
 }

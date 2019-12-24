@@ -519,10 +519,7 @@ func quotaVerificationNeeded(new, old garden.Shoot) bool {
 
 func hasSufficientQuota(limit, required resource.Quantity) bool {
 	compareCode := limit.Cmp(required)
-	if compareCode == -1 {
-		return false
-	}
-	return true
+	return compareCode != -1
 }
 
 func sumQuantity(values ...resource.Quantity) resource.Quantity {

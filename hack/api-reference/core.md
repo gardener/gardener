@@ -319,7 +319,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -2115,7 +2115,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -3902,7 +3902,7 @@ string
 <a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
-<p>KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.</p>
+<p>KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.</p>
 </p>
 <table>
 <thead>
@@ -7157,5 +7157,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>d1b0b367f</code>.
+on git commit <code>2ea956a7f</code>.
 </em></p>

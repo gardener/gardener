@@ -146,12 +146,11 @@ Seed logging tests are meant to test the logging functionality for Seed clusters
 Below are the flags used for running the logging tests:
 
 ```go
-kubeconfig       = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-shootName        = flag.String("shoot-name", "", "the name of the shoot we want to test")
-shootNamespace   = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
-testShootsPrefix = flag.String("prefix", "", "prefix to use for test shoots")
-logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-logsCount        = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
+kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+logsCount      = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
 ```
 
 #### Example Run
