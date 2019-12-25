@@ -48,7 +48,7 @@ workers:
   autoScalerMin: 1
   autoScalerMax: 2
   maxSurge: 1
-  additionalRuntimes:
+  containerRuntimes:
   - gvisor
   - kata-containers
   machineImage:
@@ -68,91 +68,71 @@ Since each operating system distribution has different methods of installing sof
 
 ## Design Details
 
-1. In order to configure each worker machine in the cluster to work with CRI, the following configurations should be done:
-    1. Add kubelet execution flags:
-        1. --container-runtime=remote
-        2. --container-runtime-endpoint=unix:///.../containerd.socket
-    2. Make sure that containerd configuration file exist in path /etc/containerd/config.toml and it is configured to enable the CRI plugin (In the containerd config.toml "cri" plugin must not be disabled).
-    
-2. Containerd socket path and containerd configurations are different for each OS. To make sure the configurations above are set in each worker machine, each OS extension would be responsible to configure them.
-    1. os-ubuntu - 
-        1. Add a controlplane webhook to manipulate the OperatingSystemConfig and add the following flags to the kubelet execution command:
+1. Change the nodes container runtime to work with CRI and containerd by default.
+    1. In order to configure each worker machine in the cluster to work with CRI, the following configurations should be done:
+        1. Add kubelet execution flags:
             1. --container-runtime=remote
-            2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
-        2. Create a containerd configuration file: /etc/containerd/config.toml based on the current configuration file in the path: __TBD__ and remove the CRI disabled plugin.
-    2. os-coreos - 
-        1. Add a controlplane webhook to manipulate the OperatingSystemConfig and add the following flags to the kubelet execution command:
-           1. --container-runtime=remote
-           2. --container-runtime-endpoint=unix:///var/run/docker/libcontainerd/docker-containerd.socket
-        2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration of containerd. 
-        3. Add a generator that will override the default containerd.service unit. It will create a new unit in: /etc/systemd/system/containerd.service unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml.
+            2. --container-runtime-endpoint=unix:///.../containerd.socket
+        2. Make sure that containerd configuration file exist in path /etc/containerd/config.toml and it is configured to enable the CRI plugin (In the containerd config.toml "cri" plugin must not be disabled).
         
-    3. os-suse-jeos - __TBD__ 
-    
-3. Docker-monitor daemon and rotate log should be replaced with equivalent conatinerd services. __TBD__ 
-4. In order to install additional runtimes on the worker machine we must provide the installation scripts to the machine file system and run them.
-   The installation script should download and install the runtime binaries in each OS.
-   Instructions for Gardener to copy files to the machine filesystem and execute them is done via the cloud config secret.
+    2. Containerd socket path and containerd configurations are different for each OS. To make sure the configurations above are set in each worker machine, each OS extension would be responsible to configure them during the reconciliation of the 
+       OperatingSystemConfig when it creates the cloud init.
+        1. os-ubuntu - 
+            1. Add the following flags to the kubelet execution command:
+                1. --container-runtime=remote
+                2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
+            2. Create a containerd configuration file: /etc/containerd/config.toml based on the current default configuration (containerd config default).
+        2. os-coreos - 
+            1. Add the following flags to the kubelet execution command:
+               1. --container-runtime=remote
+               2. --container-runtime-endpoint=unix:///var/run/docker/libcontainerd/docker-containerd.socket
+            2. Create a containerd configuration file: /etc/containerd/config.toml based on the file in the path: __TBD__ and remove the CRI disabled plugin. 
+            3. Override the default containerd.service unit. Create a new unit in: /etc/systemd/system/containerd.service unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml.
+        3. os-suse-jeos - __TBD__     
+        
+    3. Docker-monitor daemon and rotate log should be replaced with equivalent conatinerd services. __TBD__ 
+
+2. Validate workers additional runtime configurations.  
+3. Add support for each additional container runtime in the cluster.   
+    1. In order to install each additional available runtime in the cluster we should:
+        1. Install the runtime binaries in each Worker's pool nodes that specified the runtime support.
+        2. Apply the relevant RuntimeClass to the cluster.
+        
+    2. The installation above should be done by a new kind of extension: RuntimeContainer resource. For each runtime container type (Kata-container/gvisor) a dedicate extension controller will be created. 
+        1. A label for each container runtime support will be added to every node that belongs to the worker pool. This should be done similar
+           to the way labels created today for each node, through kubelet execution parameters (_kubelet.flags: --node-labels). When creating the OperatingSystemConfig (original) for the worker each container runtime support should be mapped to a label on the node.
+           For Example:
+           label: container.runtime.kata-containers=true (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.kata-container)
+           label: container.runtime.gvisor=true (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.gvisor)
+        2. During the Shoot reconciliation (Similar steps to the Extensions today) Gardener will create new RuntimeContainer resource if a container runtime exist in at least one worker spec:
+            ```yaml
+            apiVersion: runtimecontainer.gardener.cloud/v1alpha1
+            kind: RuntimeContainer
+            metadata:
+              name: kata-containers-runtime-extention
+              namespace: shoot--foo--bar
+            spec:
+              type: kata-containers
+            ```   
    
-   1. Each OS extension should implement a generator that will copy a generic packages installation script file.
-        ```yaml
-          #cloud-config
-          write_files:
-            path: '/var/lib/packages/install.sh'
-            ...
-      ```
-      
-      The installation file will be executed with different parameters defining the relevant package that should be installed:
-        1. Package name
-        2. Package path url
-        3.  __TBD__ 
-        
-   2. Each Extension controller should reconcile the OperatingSystemConfig (Should be enhanced to contain additional runtime data __TBD__):
-        1. Create a service unit to run the runtime binaries package installation script with the relevant parameters (e.g name of runtime container. package url).
-           ```
-           [Unit]
-           Description=Download and install additional runtimes binaries
-           ...
-       
-           [Service]
-           ExecStart=/var/lib/packages/install.sh <Parameters>
-           ...
-           ```
-        2. Copy a container runtime configuration script file and create a unit to run it. For example:
-           ```yaml
-           #cloud-config
-           write_files:
-           path: '/var/lib/kata-containers/configure.sh'
-           ...
-           [Unit]
-           Description=Configure 
-           ...
-      
-           [Service]
-           ExecStart=/var/lib/kata-containers/configure.sh
-           ```
-           
-           The installation script will be responsible for configuring the config.toml plugins at /etc/containerd/config.toml to contain the relevant runtime plugins.
-                1. kata-containers -  __TBD__
-                2. gvisor - __TBD__
-  
-5. Installation of a container runtime in the cluster will be done by the extension controllers. Each runtime type will be represented as an Extension resource. For example:
-      ```yaml
-      apiVersion: core.gardener.cloud/v1beta1
-      kind: ControllerRegistration
-      metadata:
-        name: extenstion-kata-containers-runtime
-      spec:
-        resources:
-        - kind: Extension
-          type: kata-containers-runtime
-          globallyEnabled: false # Must be false so the extension resource will be created only if configured in the Shoot manifest
-    ...
-      ```
-   Today, extensions resources are created by default when defined in the Extension section of the Shoot spec. We define the additional runtimes in the worker spec. It is possible to enhance Gardener to create them if exist for at least one worker group or define them per Worker and per Shoot. 
-   The extensions controllers will reconcile resources from the corresponding type by applying the relevant RuntimeClasses to the cluster:
-    1. kata-containers - __TBD__
-    2. gvisor - __TBD__
+            Gardener will wait that all RuntimeContainers extensions will be reconciled by the appropriate extensions controllers.
+        3. Each runtime extension controller will be responsible to reconcile it's RuntimeContainer resource type.
+           rc-kata-containers extension controller will reconcile RuntimeContainer resource from type kata-container and rc-gvisor will reconcile RuntimeContainer resource from gvisor.
+           Reconciliation process by container runtime extension controllers:
+           1. Runtime extension controller from specific type should apply a chart which responsible for the installation of the runtime container in the cluster:
+                1. DaemonSet which will run a privileged pod on each node with the label: container.runtime.<type of the resource>:true The pod will be responsible for:
+                    1. Download the runtime container binaries (From the web or from the extension package   __TBD__) and copy them to the relevant path in the host OS.
+                    2. Add the relevant container runtime plugin section to the containerd configuration file (/etc/containerd/config.toml).
+                    3. Restart containerd in the node. 
+                3. RuntimeClass in the cluster to support the runtime class. for example:
+                   ```yaml
+                   apiVersion: node.k8s.io/v1beta1
+                   kind: RuntimeClass
+                   metadata:
+                     name: gvisor
+                   handler: runsc
+                   ```
+           2. Update the status of the relevant RuntimeContainer resource to succeeded.
 
 -->
 
