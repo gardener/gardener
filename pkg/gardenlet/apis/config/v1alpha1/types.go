@@ -121,6 +121,9 @@ type GardenletControllerConfiguration struct {
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	// +optional
 	ControllerInstallation *ControllerInstallationControllerConfiguration `json:"controllerInstallation,omitempty"`
+	// ControllerInstallationCare defines the configuration of the ControllerInstallationCare controller.
+	// +optional
+	ControllerInstallationCare *ControllerInstallationCareControllerConfiguration `json:"controllerInstallationCare,omitempty"`
 	// Seed defines the configuration of the Seed controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -159,6 +162,19 @@ type ControllerInstallationControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// ControllerInstallationCareControllerConfiguration defines the configuration of the ControllerInstallationCare
+// controller.
+type ControllerInstallationCareControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of ControllerInstallations is performed.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.

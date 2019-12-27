@@ -14,22 +14,10 @@
 
 package controllerinstallation
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
 // HelmDeployment is a providerConfig specific type for ControllerInstallation.
 type HelmDeployment struct {
 	// Chart is a Helm chart tarball.
 	Chart []byte `json:"chart,omitempty"`
 	// Values is a map of values for the given chart.
 	Values map[string]interface{} `json:"values,omitempty"`
-}
-
-// DeployedResources is a providerStatus specific type for ControllerInstallation.
-//
-// TODO: Kept for backwards compatibility. Remove after several releases.
-type DeployedResources struct {
-	// Resources is a list of objects that have been created.
-	Resources []corev1.ObjectReference `json:"resources,omitempty"`
 }

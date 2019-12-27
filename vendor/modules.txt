@@ -94,6 +94,7 @@ github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/pac
 # github.com/gardener/gardener-resource-manager v0.8.1
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
+github.com/gardener/gardener-resource-manager/pkg/health
 github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 github.com/gardener/hvpa-controller/api/v1alpha1

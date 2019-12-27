@@ -63,9 +63,10 @@ type ControllerInstallationStatus struct {
 }
 
 const (
-	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
-	ControllerInstallationValid ConditionType = "Valid"
-
+	// ControllerInstallationHealthy is a condition type for indicating whether the controller is healthy.
+	ControllerInstallationHealthy ConditionType = "Healthy"
 	// ControllerInstallationInstalled is a condition type for indicating whether the controller has been installed.
 	ControllerInstallationInstalled ConditionType = "Installed"
+	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
+	ControllerInstallationValid ConditionType = "Valid"
 )

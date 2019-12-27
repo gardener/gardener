@@ -45,7 +45,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -286,30 +285,6 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	// TODO: Remove after several releases.
-	controllerInstallation, err = kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
-			var resources DeployedResources
-			status, err := json.Marshal(resources)
-			if err != nil {
-				return nil, fmt.Errorf("could not marshal status for resources: %+v", err)
-			}
-
-			controllerInstallation.Status.ProviderStatus = &gardencorev1alpha1.ProviderConfig{
-				RawExtension: runtime.RawExtension{
-					Raw: status,
-				},
-			}
-			return controllerInstallation, nil
-		}, func(cur, updated *gardencorev1alpha1.ControllerInstallation) bool {
-			return equality.Semantic.DeepEqual(cur.Status.ProviderStatus, updated.Status.ProviderStatus)
-		},
-	)
-	if err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not write status for new resources: %+v", err))
-		return err
-	}
-
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionTrue, "InstallationSuccessful", "Installation of new resources succeeded.")
 	return nil
 }
@@ -388,18 +363,6 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
-	// TODO: Kept for backwards compatibility. Remove after several releases.
-	if controllerInstallation.Status.ProviderStatus != nil {
-		if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
-			if isDeletionInProgressError(err) {
-				conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
-			} else {
-				conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
-			}
-			return err
-		}
-	}
-
 	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -419,7 +382,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 func (c *defaultControllerInstallationControl) updateConditions(controllerInstallation *gardencorev1alpha1.ControllerInstallation, conditions ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.ControllerInstallation, error) {
 	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = conditions
+			controllerInstallation.Status.Conditions = gardencorev1alpha1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 			return controllerInstallation, nil
 		}, func(cur, updated *gardencorev1alpha1.ControllerInstallation) bool {
 			return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
@@ -493,55 +456,6 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 
 	if len(relevantExtension) != 0 {
 		return newDeletionInProgressError("deletion of extensions is still pending")
-	}
-
-	return nil
-}
-
-// cleanOldResources cleans ControllerInstallation resources which are not found in the given <newResourcesSet>.
-//
-// TODO: Kept for backwards compatibility. Remove after several releases.
-func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient kubernetes.Interface, controllerInstallation *gardencorev1alpha1.ControllerInstallation, newResourcesSet sets.String) error {
-	providerStatus := controllerInstallation.Status.ProviderStatus
-	if providerStatus == nil {
-		return nil
-	}
-
-	var oldResources DeployedResources
-	if err := json.Unmarshal(providerStatus.Raw, &oldResources); err != nil {
-		return err
-	}
-
-	var (
-		deleted = true
-		result  error
-	)
-
-	for _, oldResource := range oldResources.Resources {
-		if !newResourcesSet.Has(objectReferenceToString(oldResource)) {
-			reader := kubernetes.NewObjectReferenceReader(&oldResource)
-			obj, err := reader.Read()
-			if err != nil {
-				result = multierror.Append(result, err)
-				continue
-			}
-
-			if err := k8sSeedClient.Client().Delete(context.TODO(), obj); err != nil {
-				if !apierrors.IsNotFound(err) {
-					result = multierror.Append(result, err)
-				}
-				continue
-			}
-			deleted = false
-		}
-	}
-
-	if result != nil {
-		return result
-	}
-
-	if !deleted {
-		return newDeletionInProgressError("deletion of old resources is still pending")
 	}
 
 	return nil
