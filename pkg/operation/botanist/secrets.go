@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
@@ -29,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -95,7 +95,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		etcdCertDNSNames = dnsNamesForEtcd(b.Shoot.SeedNamespace)
 
-		endUserCrtValidity = 730 * 24 * time.Hour // ~2 years
+		endUserCrtValidity = common.EndUserCrtValidity
 	)
 
 	if gardencorev1alpha1helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
@@ -487,20 +487,21 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		// Secret definition for alertmanager (ingress)
 		&secrets.CertificateSecretConfig{
-			Name: "alertmanager-tls",
+			Name: common.AlertManagerTLS,
 
 			CommonName:   "alertmanager",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
-			DNSNames:     []string{b.ComputeAlertManagerHost()},
+			DNSNames:     b.ComputeAlertManagerHosts(),
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerCert,
 			SigningCA: certificateAuthorities[v1alpha1constants.SecretNameCACluster],
+			Validity:  &endUserCrtValidity,
 		},
 
 		// Secret definition for grafana (ingress)
 		&secrets.CertificateSecretConfig{
-			Name: "grafana-tls",
+			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
@@ -514,11 +515,11 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		// Secret definition for prometheus (ingress)
 		&secrets.CertificateSecretConfig{
-			Name: "prometheus-tls",
+			Name: common.PrometheusTLS,
 
 			CommonName:   "prometheus",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
-			DNSNames:     []string{b.ComputePrometheusHost()},
+			DNSNames:     b.ComputePrometheusHosts(),
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerCert,
@@ -588,11 +589,11 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		}
 		secretList = append(secretList,
 			&secrets.CertificateSecretConfig{
-				Name: "kibana-tls",
+				Name: common.KibanaTLS,
 
 				CommonName:   "kibana",
 				Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
-				DNSNames:     []string{b.ComputeKibanaHost()},
+				DNSNames:     b.ComputeKibanaHosts(),
 				IPAddresses:  nil,
 
 				CertType:  secrets.ServerCert,
@@ -754,11 +755,12 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
-	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// Only necessary to renew certificates for Alertmanager, Grafana, Kibana, Prometheus
 	// TODO: (timuthy) remove in future version.
 	var (
-		renewedLabel = "cert.gardener.cloud/renewed"
-		browserCerts = sets.NewString("grafana-tls", "kibana-tls", "prometheus-tls")
+		oldRenewedLabel = "cert.gardener.cloud/renewed"
+		renewedLabel    = "cert.gardener.cloud/renewed-endpoint"
+		browserCerts    = sets.NewString(common.GrafanaTLS, common.KibanaTLS, common.PrometheusTLS, common.AlertManagerTLS)
 	)
 	for name, secret := range existingSecretsMap {
 		_, ok := secret.Labels[renewedLabel]
@@ -774,7 +776,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
-	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// Only necessary to renew certificates for Alertmanager, Grafana, Kibana, Prometheus
 	// TODO: (timuthy) remove in future version.
 	for name, secret := range b.Secrets {
 		_, ok := secret.Labels[renewedLabel]
@@ -782,7 +784,9 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			if secret.Labels == nil {
 				secret.Labels = make(map[string]string)
 			}
+			delete(secret.Labels, oldRenewedLabel)
 			secret.Labels[renewedLabel] = "true"
+
 			if err := b.K8sSeedClient.Client().Update(ctx, secret); err != nil {
 				return err
 			}
@@ -794,6 +798,28 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	for name, secret := range b.Secrets {
 		b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
+	}
+
+	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
+	if err != nil {
+		return err
+	}
+
+	if wildcardCert != nil {
+		// Copy certificate to shoot namespace
+		crt := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      wildcardCert.GetName(),
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+		if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), crt, func() error {
+			crt.Data = wildcardCert.Data
+			return nil
+		}); err != nil {
+			return err
+		}
+		b.ControlPlaneWildcardCert = crt
 	}
 
 	return nil

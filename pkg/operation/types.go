@@ -58,6 +58,9 @@ type Operation struct {
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
 	MonitoringClient          prometheusclient.API
+
+	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
+	ControlPlaneWildcardCert *corev1.Secret
 }
 
 type prometheusRoundTripper struct {

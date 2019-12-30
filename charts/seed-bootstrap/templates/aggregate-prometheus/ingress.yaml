@@ -10,11 +10,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   tls:
-  - secretName: aggregate-prometheus-tls
+  - secretName: {{ .Values.aggregatePrometheus.secretName }}
     hosts:
-    - {{ .Values.aggregatePrometheus.host }}
+    - {{ .Values.aggregatePrometheus.hostName }}
   rules:
-  - host: {{ .Values.aggregatePrometheus.host }}
+  - host: {{ .Values.aggregatePrometheus.hostName }}
     http:
       paths:
       - backend:

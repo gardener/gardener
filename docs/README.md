@@ -16,6 +16,7 @@
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
+* [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
