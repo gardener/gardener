@@ -339,6 +339,9 @@ const (
 	// KubeProxyImageName is the name of the kube-proxy image.
 	KubeProxyImageName = "kube-proxy"
 
+	// HyperkubeImageName is the name of the hyperkube image (used for kubectl + kubelet on the worker nodes).
+	HyperkubeImageName = "hyperkube"
+
 	// MetricsServerImageName is the name of the MetricsServer image.
 	MetricsServerImageName = "metrics-server"
 

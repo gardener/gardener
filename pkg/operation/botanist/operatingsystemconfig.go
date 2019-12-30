@@ -405,6 +405,11 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 		"workers":           workers,
 	}
 
+	config, err = b.InjectShootShootImages(config, common.HyperkubeImageName)
+	if err != nil {
+		return nil, err
+	}
+
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 

@@ -52,6 +52,9 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-proxy
   targetVersion: ">= 1.17"
+- name: hyperkube # used for kubectl + kubelet binaries on the worker nodes
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
