@@ -62,7 +62,7 @@ Each extension will need to address the following concern:
 1. Hook the runtime binary into the containerd configuration file, so that the runtime becomes available to containerd.
 1. Apply a label to each node that allows identifying nodes where the runtime is available.
 1. Apply the relevant `RuntimeClass` to the Gardener cluster, to expose the functionality to users.
-1. Provide a `ValidatingWebhook` to catch invalid configurations. For example, Kata Containers on AWS requires a `machineType` of `i3.metal`, so any `Shoot` requests with a Kata Containers runtime and a different machine type on AWS should be rejected.
+1. Provide a separate binary with a `ValidatingWebhook` (deployable to the garden cluster) to catch invalid configurations. For example, Kata Containers on AWS requires a `machineType` of `i3.metal`, so any `Shoot` requests with a Kata Containers runtime and a different machine type on AWS should be rejected.
 
 Since each operating system distribution has different methods of installing software (apt on ubuntu, zypper on SuSE, Torcx on CoreOS/Flatcar), we will enhance the operating system extensions to add a standard `installSoftware` script which can abstract the mechanics of installing new software on a node. The new runtime extensions will use this new functionality to install the relevant runtimes to the worker nodes.
 
