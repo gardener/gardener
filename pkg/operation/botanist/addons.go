@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
@@ -346,7 +347,7 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 	}
 	kubernetesDashboardImagesToInject := []string{common.KubernetesDashboardImageName}
 
-	k8sVersionLessThan116, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.16")
+	k8sVersionLessThan116, err := versionutils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.16")
 	if err != nil {
 		return nil, err
 	}

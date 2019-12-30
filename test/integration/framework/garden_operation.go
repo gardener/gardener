@@ -30,9 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
@@ -523,7 +523,7 @@ func (o *GardenerTestOperation) GetDashboardPodIP(ctx context.Context) (string, 
 		"k8s-app": "kubernetes-dashboard",
 	}))
 
-	k8sVersionLessThan116, err := utils.CompareVersions(o.Shoot.Spec.Kubernetes.Version, "<", "1.16")
+	k8sVersionLessThan116, err := versionutils.CompareVersions(o.Shoot.Spec.Kubernetes.Version, "<", "1.16")
 	if err != nil {
 		return "", err
 	}
