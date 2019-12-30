@@ -66,7 +66,7 @@ var _ = Describe("seed", func() {
 		It("should return a wildcard certificate secret", func() {
 			secretList := &corev1.SecretList{
 				Items: []corev1.Secret{
-					corev1.Secret{},
+					{},
 				},
 			}
 			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
@@ -84,8 +84,8 @@ var _ = Describe("seed", func() {
 		It("should return an error because more than one wildcard secrets is found", func() {
 			secretList := &corev1.SecretList{
 				Items: []corev1.Secret{
-					corev1.Secret{},
-					corev1.Secret{},
+					{},
+					{},
 				},
 			}
 			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
