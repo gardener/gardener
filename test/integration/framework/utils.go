@@ -275,10 +275,7 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 }
 
 func shootIsScheduledSuccessfully(newSpec *gardencorev1beta1.ShootSpec) bool {
-	if newSpec.SeedName != nil {
-		return true
-	}
-	return false
+	return newSpec.SeedName != nil
 }
 
 func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {

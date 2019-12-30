@@ -30,9 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
@@ -298,7 +298,7 @@ func (b *HealthChecker) CheckSystemComponents(
 	// was already reconciled by this version (otherwise it does not exist yet)
 	// TODO: This code can be removed in a future version.
 	requiredSystemComponentDaemonSets := common.RequiredSystemComponentDaemonSets.Union(nil)
-	gardenerVersionLessThan0310, err := utils.CompareVersions(gardenerVersion, "<", "0.31")
+	gardenerVersionLessThan0310, err := version.CompareVersions(gardenerVersion, "<", "0.31")
 	if err != nil {
 		return nil, err
 	}

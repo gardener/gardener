@@ -21,8 +21,8 @@ import (
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -233,7 +233,7 @@ var supportedKubernetesVersions = []string{
 
 func checkIfSupportedKubernetesVersion(gitVersion string) error {
 	for _, supportedVersion := range supportedKubernetesVersions {
-		ok, err := utils.CompareVersions(gitVersion, "~", supportedVersion)
+		ok, err := versionutils.CompareVersions(gitVersion, "~", supportedVersion)
 		if err != nil {
 			return err
 		}

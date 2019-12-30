@@ -653,7 +653,7 @@ type KubeletConfigEviction struct {
 	NodeFSInodesFree *string `json:"nodeFSInodesFree,omitempty"`
 }
 
-// KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.
+// KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.
 type KubeletConfigEvictionMinimumReclaim struct {
 	// MemoryAvailable is the threshold for the memory reclaim on the host server.
 	// +optional

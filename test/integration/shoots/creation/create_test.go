@@ -77,7 +77,6 @@ var (
 	shootGardenerTest     *ShootGardenerTest
 	testLogger            *logrus.Logger
 	shootYamlPath         = "/example/90-shoot.yaml"
-	trueVar               = true
 	err                   error
 	gardenerTestOperation *GardenerTestOperation
 )

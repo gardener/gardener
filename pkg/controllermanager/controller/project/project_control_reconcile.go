@@ -26,8 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectLogger logrus.FieldLogger) error {
@@ -85,15 +85,15 @@ func (c *defaultControl) reconcile(project *gardencorev1alpha1.Project, projectL
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
-			if err := utilretry.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
+			if err := retryutils.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
 				if err := c.k8sGardenClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
 					if apierrors.IsNotFound(err) {
-						return utilretry.Ok()
+						return retryutils.Ok()
 					}
-					return utilretry.SevereError(err)
+					return retryutils.SevereError(err)
 				}
 
-				return utilretry.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
+				return retryutils.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
 			}); err != nil {
 				c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
 			}

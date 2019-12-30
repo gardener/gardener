@@ -17,6 +17,7 @@ package logger
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -52,6 +53,13 @@ func NewLogger(logLevel string) *logrus.Logger {
 		},
 	}
 	Logger = logger
+	return logger
+}
+
+// NewNopLogger instantiates a new logger that logs to ioutil.Discard.
+func NewNopLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.Out = ioutil.Discard
 	return logger
 }
 

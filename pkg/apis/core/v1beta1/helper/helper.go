@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	errors "github.com/pkg/errors"
@@ -617,7 +617,7 @@ func UpdateMachineImages(workers []gardencorev1beta1.Worker, machineImages []*ga
 // KubernetesVersionExistsInCloudProfile checks if the given Kubernetes version exists in the CloudProfile
 func KubernetesVersionExistsInCloudProfile(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, gardencorev1beta1.ExpirableVersion, error) {
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		ok, err := utils.CompareVersions(version.Version, "=", currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, "=", currentVersion)
 		if err != nil {
 			return false, gardencorev1beta1.ExpirableVersion{}, err
 		}
@@ -663,7 +663,7 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1beta1.CloudProfil
 	)
 
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		ok, err := utils.CompareVersions(version.Version, operator, currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, operator, currentVersion)
 		if err != nil {
 			return false, []string{}, []gardencorev1beta1.ExpirableVersion{}, err
 		}

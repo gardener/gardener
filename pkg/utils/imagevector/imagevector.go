@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"gopkg.in/yaml.v2"
 )
@@ -189,7 +189,7 @@ func checkConstraint(constraint, version *string) (score int, ok bool, err error
 		return 0, true, nil
 	}
 
-	matches, err := utils.CheckVersionMeetsConstraint(*version, *constraint)
+	matches, err := versionutils.CheckVersionMeetsConstraint(*version, *constraint)
 	if err != nil || !matches {
 		return 0, false, err
 	}

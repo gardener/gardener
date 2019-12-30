@@ -54,7 +54,6 @@ type Controller struct {
 	seedLister gardencorelisters.SeedLister
 	seedSynced cache.InformerSynced
 
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerRegistrationSynced cache.InformerSynced
 
 	controllerInstallationQueue  workqueue.RateLimitingInterface

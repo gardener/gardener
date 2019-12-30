@@ -219,9 +219,9 @@ const (
 	LabelKubernetes = "kubernetes"
 	// LabelAPIServer is a constant for a label for the kube-apiserver.
 	LabelAPIServer = "apiserver"
-	// LabelAPIServer is a constant for a label for the kube-controller-manager.
+	// LabelControllerManager is a constant for a label for the kube-controller-manager.
 	LabelControllerManager = "controller-manager"
-	// LabelAPIServer is a constant for a label for the kube-scheduler.
+	// LabelScheduler is a constant for a label for the kube-scheduler.
 	LabelScheduler = "scheduler"
 
 	// GardenNamespace is the namespace in which the configuration and secrets for
@@ -254,9 +254,9 @@ const (
 	// OperatingSystemConfigFilePathKubeletConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
 	OperatingSystemConfigFilePathKubeletConfig = "/var/lib/kubelet/config/kubelet"
 
-	// FluentBitConfigMapKubernetesFilterConfig is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
+	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"
-	// FluentBitConfigMapParserConfig is a constant for the Fluent Bit ConfigMap's section regarding Parsers for common container types
+	// FluentBitConfigMapParser is a constant for the Fluent Bit ConfigMap's section regarding Parsers for common container types
 	FluentBitConfigMapParser = "parsers.conf"
 	// PrometheusConfigMapAlertingRules is a constant for the Prometheus alerting rules tag in provider-specific monitoring configuration
 	PrometheusConfigMapAlertingRules = "alerting_rules"
@@ -267,7 +267,7 @@ const (
 	// GrafanaConfigMapOperatorDashboard is a constant for the Grafana operator dashboard tag in provider-specific monitoring configuration
 	GrafanaConfigMapOperatorDashboard = "dashboard_operators"
 
-	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
+	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still

@@ -27,7 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/pkg/version"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,19 +61,19 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		},
 		nil,
 		errors.ToExecute("Create botanist", func() error {
-			return utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+			return retryutils.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(o)
 				if err != nil {
-					return utilretry.MinorError(err)
+					return retryutils.MinorError(err)
 				}
-				return utilretry.Ok()
+				return retryutils.Ok()
 			})
 		}),
 		errors.ToExecute("Check required extensions", func() error {
 			return botanist.RequiredExtensionsExist()
 		}),
 		errors.ToExecute("Check version constraint", func() error {
-			enableEtcdEncryption, err = utils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+			enableEtcdEncryption, err = versionutils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 			return err
 		}),
 	)

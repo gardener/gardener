@@ -2770,7 +2770,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionMinimumReclaim(ref commo
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.",
+				Description: "KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"memoryAvailable": {
@@ -6307,7 +6307,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"caBundle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.",
+							Description: "CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7664,7 +7664,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfigEvictionMinimumReclaim(ref common
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.",
+				Description: "KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"memoryAvailable": {
