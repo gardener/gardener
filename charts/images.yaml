@@ -99,6 +99,17 @@ images:
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
   tag: v1.10.1
+  targetVersion: "< 1.16"
+- name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/dashboard
+  tag: v2.0.0-beta8
+  targetVersion: ">= 1.16"
+- name: kubernetes-dashboard-metrics-scraper
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/metrics-scraper
+  tag: v1.0.1
+  targetVersion: ">= 1.16"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller

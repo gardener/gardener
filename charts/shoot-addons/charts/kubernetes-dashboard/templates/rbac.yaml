@@ -1,15 +1,33 @@
-{{- if .Values.rbac.create }}
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: Role
 metadata:
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
   labels:
-    app: {{ template "kubernetes-dashboard.name" . }}
-    chart: {{ template "kubernetes-dashboard.chart" . }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
-  name: {{ template "kubernetes-dashboard.fullname" . }}
-  namespace: kube-system
+    k8s-app: kubernetes-dashboard
 rules:
+{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
+# Allow Dashboard to get, update and delete Dashboard exclusive secrets.
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["kubernetes-dashboard-key-holder", "kubernetes-dashboard-certs", "kubernetes-dashboard-csrf"]
+  verbs: ["get", "update", "delete"]
+  # Allow Dashboard to get and update 'kubernetes-dashboard-settings' config map.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["kubernetes-dashboard-settings"]
+  verbs: ["get", "update"]
+  # Allow Dashboard to get metrics.
+- apiGroups: [""]
+  resources: ["services"]
+  resourceNames: ["heapster", "dashboard-metrics-scraper"]
+  verbs: ["proxy"]
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["heapster", "http:heapster:", "https:heapster:", "dashboard-metrics-scraper", "http:dashboard-metrics-scraper"]
+  verbs: ["get"]
+{{- else }}
 # Allow Dashboard to create 'kubernetes-dashboard-key-holder' secret.
 - apiGroups:
   - ""
@@ -17,7 +35,6 @@ rules:
   - secrets
   verbs:
   - create
-
 # Allow Dashboard to create,get,update 'kubernetes-dashboard-settings' config map.
 - apiGroups:
   - ""
@@ -29,7 +46,6 @@ rules:
   - create
   - get
   - update
-
 # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
 - apiGroups:
   - ""
@@ -37,29 +53,55 @@ rules:
   - secrets
   resourceNames:
   - kubernetes-dashboard-key-holder
-  - {{ template "kubernetes-dashboard.fullname" . }}
+  - kubernetes-dashboard
   verbs:
   - get
   - update
   - delete
+{{- end }}
 
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
   labels:
-    app: {{ template "kubernetes-dashboard.name" . }}
-    chart: {{ template "kubernetes-dashboard.chart" . }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
-  name: {{ template "kubernetes-dashboard.fullname" . }}
-  namespace: kube-system
+    k8s-app: kubernetes-dashboard
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ template "kubernetes-dashboard.fullname" . }}
+  name: kubernetes-dashboard
 subjects:
-  - kind: ServiceAccount
-    name: {{ template "kubernetes-dashboard.fullname" . }}
-    namespace: kube-system
-{{- end -}}
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
+
+{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: kubernetes-dashboard
+  labels:
+    k8s-app: kubernetes-dashboard
+rules:
+# Allow Metrics Scraper to get metrics from the Metrics server
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubernetes-dashboard
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
+{{- end }}

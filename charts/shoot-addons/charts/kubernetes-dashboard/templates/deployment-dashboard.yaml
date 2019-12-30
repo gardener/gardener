@@ -1,24 +1,18 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: {{ template "kubernetes-dashboard.fullname" . }}
-  namespace: kube-system
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
   labels:
     garden.sapcloud.io/role: optional-addon
-    app: {{ template "kubernetes-dashboard.name" . }}
-    chart: {{ template "kubernetes-dashboard.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
     origin: gardener
+    k8s-app: kubernetes-dashboard
 spec:
   revisionHistoryLimit: 0
   replicas: 1
   selector:
     matchLabels:
-      app: {{ template "kubernetes-dashboard.name" . }}
-      heritage: "{{ .Release.Service }}"
-      release: "{{ .Release.Name }}"
-      chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      k8s-app: kubernetes-dashboard
   strategy:
     rollingUpdate:
       maxSurge: 0
@@ -26,33 +20,33 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         garden.sapcloud.io/role: optional-addon
         origin: gardener
-        app: {{ template "kubernetes-dashboard.name" . }}
-        heritage: "{{ .Release.Service }}"
-        release: "{{ .Release.Name }}"
-        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        k8s-app: kubernetes-dashboard
     spec:
       securityContext:
+        {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsUser: 1001
+        runAsGroup: 2001
+        {{- else }}
         runAsUser: 65534
         fsGroup: 65534
-      serviceAccountName: {{ template "kubernetes-dashboard.fullname" . }}
+        {{- end }}
       containers:
-      - name: {{ .Chart.Name }}
+      - name: kubernetes-dashboard
         image: {{ index .Values.images "kubernetes-dashboard" }}
-        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        imagePullPolicy: IfNotPresent
         args:
-          - --auto-generate-certificates
-          - --authentication-mode={{ .Values.authenticationMode }}
-{{- if .Values.extraArgs }}
-{{ toYaml .Values.extraArgs | indent 10 }}
-{{- end }}
+        - --auto-generate-certificates
+        - --authentication-mode={{ .Values.authenticationMode }}
+        {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
+        - --namespace={{ include "kubernetes-dashboard.namespace" . }}
+        {{- end }}
         ports:
-        - name: https
-          containerPort: 8443
+        - containerPort: 8443
           protocol: TCP
         volumeMounts:
         - name: kubernetes-dashboard-certs
@@ -75,3 +69,4 @@ spec:
           secretName: kubernetes-dashboard-certs
       - name: tmp-volume
         emptyDir: {}
+      serviceAccountName: kubernetes-dashboard

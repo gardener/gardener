@@ -344,12 +344,22 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 	if err != nil {
 		return nil, err
 	}
-	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
+	kubernetesDashboardImagesToInject := []string{common.KubernetesDashboardImageName}
+
+	k8sVersionLessThan116, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.16")
+	if err != nil {
+		return nil, err
+	}
+	if !k8sVersionLessThan116 {
+		kubernetesDashboardImagesToInject = append(kubernetesDashboardImagesToInject, common.KubernetesDashboardMetricsScraperImageName)
+	}
+
+	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, kubernetesDashboardImagesToInject...)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
+	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
 	if err != nil {
 		return nil, err
 	}
