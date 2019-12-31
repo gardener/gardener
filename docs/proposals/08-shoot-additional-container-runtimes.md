@@ -92,22 +92,22 @@ Since each operating system distribution has different methods of installing sof
         
     3. Docker-monitor daemon and rotate log should be replaced with equivalent conatinerd services. __TBD__ 
 
-2. Validate workers additional runtime configurations.  
+2. Validate workers additional runtime configurations.  __TBD__
 3. Add support for each additional container runtime in the cluster.   
     1. In order to install each additional available runtime in the cluster we should:
         1. Install the runtime binaries in each Worker's pool nodes that specified the runtime support.
         2. Apply the relevant RuntimeClass to the cluster.
         
-    2. The installation above should be done by a new kind of extension: RuntimeContainer resource. For each runtime container type (Kata-container/gvisor) a dedicate extension controller will be created. 
+    2. The installation above should be done by a new kind of extension: ContainerRuntime resource. For each container runtime type (Kata-container/gvisor) a dedicate extension controller will be created. 
         1. A label for each container runtime support will be added to every node that belongs to the worker pool. This should be done similar
            to the way labels created today for each node, through kubelet execution parameters (_kubelet.flags: --node-labels). When creating the OperatingSystemConfig (original) for the worker each container runtime support should be mapped to a label on the node.
            For Example:
            label: container.runtime.kata-containers=true (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.kata-container)
            label: container.runtime.gvisor=true (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.gvisor)
-        2. During the Shoot reconciliation (Similar steps to the Extensions today) Gardener will create new RuntimeContainer resource if a container runtime exist in at least one worker spec:
+        2. During the Shoot reconciliation (Similar steps to the Extensions today) Gardener will create new ContainerRuntime resource if a container runtime exist in at least one worker spec:
             ```yaml
-            apiVersion: runtimecontainer.gardener.cloud/v1alpha1
-            kind: RuntimeContainer
+            apiVersion: containerruntime.gardener.cloud/v1alpha1
+            kind: ContainerRuntime
             metadata:
               name: kata-containers-runtime-extention
               namespace: shoot--foo--bar
@@ -115,16 +115,16 @@ Since each operating system distribution has different methods of installing sof
               type: kata-containers
             ```   
    
-            Gardener will wait that all RuntimeContainers extensions will be reconciled by the appropriate extensions controllers.
+            Gardener will wait that all ContainerRuntimes extensions will be reconciled by the appropriate extensions controllers.
         3. Each runtime extension controller will be responsible to reconcile it's RuntimeContainer resource type.
            rc-kata-containers extension controller will reconcile RuntimeContainer resource from type kata-container and rc-gvisor will reconcile RuntimeContainer resource from gvisor.
            Reconciliation process by container runtime extension controllers:
            1. Runtime extension controller from specific type should apply a chart which responsible for the installation of the runtime container in the cluster:
                 1. DaemonSet which will run a privileged pod on each node with the label: container.runtime.<type of the resource>:true The pod will be responsible for:
-                    1. Download the runtime container binaries (From the web or from the extension package   __TBD__) and copy them to the relevant path in the host OS.
+                    1. Copy the runtime container binaries (From extension package ) to the relevant path in the host OS.
                     2. Add the relevant container runtime plugin section to the containerd configuration file (/etc/containerd/config.toml).
                     3. Restart containerd in the node. 
-                3. RuntimeClass in the cluster to support the runtime class. for example:
+                3. RuntimeClasses in the cluster to support the runtime class. for example:
                    ```yaml
                    apiVersion: node.k8s.io/v1beta1
                    kind: RuntimeClass
