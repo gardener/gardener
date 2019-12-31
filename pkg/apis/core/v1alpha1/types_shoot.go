@@ -800,6 +800,8 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
+	// Runtimes is a list of availability container runtimes for this worker pool.
+	ContainerRuntimes []string `json:"containerRuntimes,omitempty"`
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	// +optional
 	Kubernetes *WorkerKubernetes `json:"kubernetes,omitempty"`
@@ -879,6 +881,16 @@ var (
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
 )
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Extension relevant types                                                                     //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Extension contains type and provider information for Shoot extensions.
+type ContainerRuntimeExtension struct {
+	// Type is the type of the runtime extension resource.
+	Type string `json:"type"`
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Other/miscellaneous constants and types                                                      //

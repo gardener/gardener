@@ -66,6 +66,11 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencore
 		return nil, fmt.Errorf("Cannot calculate required extensions for shoot %s: %v", shoot.Name, err)
 	}
 
+	containerRuntimes, err := calculateContainerRuntimes(k8sGardenClient.Client(), shoot, seedNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot calculate required container runtimes for shoot %s: %v", shoot.Name, err)
+	}
+
 	shootObj := &Shoot{
 		Info:         shoot,
 		Secret:       secret,
@@ -80,7 +85,8 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencore
 		HibernationEnabled:     gardencorev1alpha1helper.HibernationIsEnabled(shoot),
 		WantsClusterAutoscaler: false,
 
-		Extensions: extensions,
+		Extensions:           extensions,
+		ContainerRuntimesMap: containerRuntimes,
 	}
 	shootObj.OperatingSystemConfigsMap = make(map[string]OperatingSystemConfigs, len(shootObj.GetWorkerNames()))
 
@@ -113,6 +119,14 @@ func calculateExtensions(gardenClient client.Client, shoot *gardencorev1alpha1.S
 		return nil, err
 	}
 	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
+}
+
+func calculateContainerRuntimes(gardenClient client.Client, shoot *gardencorev1alpha1.Shoot, seedNamespace string) (map[string]ContainerRuntime, error) {
+	var controllerRegistrations = &gardencorev1alpha1.ControllerRegistrationList{}
+	if err := gardenClient.List(context.TODO(), controllerRegistrations); err != nil {
+		return nil, err
+	}
+	return MergeContainerRuntimeExtensions(controllerRegistrations.Items, shoot.Spec.Provider.Workers, seedNamespace)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
@@ -331,6 +345,85 @@ func MergeExtensions(registrations []gardencorev1alpha1.ControllerRegistration, 
 		requiredExtensions = make(map[string]Extension)
 	)
 	// Extensions enabled by default for all Shoot clusters.
+	for _, reg := range registrations {
+		for _, res := range reg.Spec.Resources {
+			if res.Kind != extensionsv1alpha1.ExtensionResource {
+				continue
+			}
+
+			var timeout time.Duration
+			if res.ReconcileTimeout != nil {
+				timeout = res.ReconcileTimeout.Duration
+			} else {
+				timeout = ExtensionDefaultTimeout
+			}
+
+			typeToExtension[res.Type] = Extension{
+				Extension: extensionsv1alpha1.Extension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      res.Type,
+						Namespace: namespace,
+					},
+					Spec: extensionsv1alpha1.ExtensionSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type: res.Type,
+						},
+					},
+				},
+				Timeout: timeout,
+			}
+
+			if res.GloballyEnabled != nil && *res.GloballyEnabled {
+				requiredExtensions[res.Type] = typeToExtension[res.Type]
+			}
+		}
+	}
+
+	// Extensions defined in Shoot resource.
+	for _, extension := range extensions {
+		obj, ok := typeToExtension[extension.Type]
+		if ok {
+			if extension.ProviderConfig != nil {
+				providerConfig := extension.ProviderConfig.RawExtension
+				obj.Spec.ProviderConfig = &providerConfig
+			}
+			requiredExtensions[extension.Type] = obj
+			continue
+		}
+	}
+
+	return requiredExtensions, nil
+}
+
+// MergeContainerRuntimeExtensions merges the given controller registrations with the worker's container runtime extensions, expecting that each type in container runtime extensions is also represented in the registration.
+func MergeContainerRuntimeExtensions(registrations []gardencorev1alpha1.ControllerRegistration, workers []gardencorev1alpha1.Worker, namespace string) (map[string]ContainerRuntime, error) {
+	var (
+		typeToControllerRegistration        = make(map[string]gardencorev1alpha1.ControllerRegistration)
+		requiredContainerRuntimeExtenstions = make(map[string]ContainerRuntime)
+	)
+
+	for _, reg := range registrations {
+		for _, res := range reg.Spec.Resources {
+			if res.Kind == "ContainerRuntime" {
+				typeToControllerRegistration[res.Type] = reg
+			}
+		}
+	}
+
+	for _, worker := range workers {
+		for _, cr := range worker.ContainerRuntimes {
+			if _, ok := typeToControllerRegistration[cr]; ok {
+				requiredContainerRuntimeExtenstions[cr] = extensionsv1alpha1.ContainerRuntime{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec:       extensionsv1alpha1.ExtensionSpec{},
+					Status:     extensionsv1alpha1.ExtensionStatus{},
+				}
+			}
+		}
+	}
+
+	// ContanerExtensions enabled by default for all Shoot clusters.
 	for _, reg := range registrations {
 		for _, res := range reg.Spec.Resources {
 			if res.Kind != extensionsv1alpha1.ExtensionResource {

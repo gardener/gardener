@@ -1234,7 +1234,7 @@ type Worker struct {
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
 	// Runtimes is a list of availability container runtimes for this worker pool.
-	Runtimes []string `json:"runtimes,omitempty"`
+	ContainerRuntimes []string `json:"containerRuntimes,omitempty"`
 }
 
 var (

@@ -3540,6 +3540,11 @@ func (in *Worker) DeepCopyInto(out *Worker) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Runtimes != nil {
+		in, out := &in.Runtimes, &out.Runtimes
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

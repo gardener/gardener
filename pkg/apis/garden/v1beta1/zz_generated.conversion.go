@@ -4917,6 +4917,7 @@ func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker,
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	// WARNING: in.Kubelet requires manual conversion: does not exist in peer-type
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	// WARNING: in.Runtimes requires manual conversion: does not exist in peer-type
 	return nil
 }
 

@@ -45,6 +45,7 @@ type Shoot struct {
 
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
 	Extensions                map[string]Extension
+	ContainerRuntimesMap      map[string]ContainerRuntimes
 	InfrastructureStatus      []byte
 	ControlPlaneStatus        []byte
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
@@ -73,6 +74,12 @@ type OperatingSystemConfigData struct {
 // Extension contains information about the extension api resouce as well as configuration information.
 type Extension struct {
 	extensionsv1alpha1.Extension
+	Timeout time.Duration
+}
+
+// Extension contains information about the extension api resouce as well as configuration information.
+type ContainerRuntime struct {
+	extensionsv1alpha1.ContainerRuntime
 	Timeout time.Duration
 }
 
