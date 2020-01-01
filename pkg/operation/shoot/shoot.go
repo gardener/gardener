@@ -398,8 +398,8 @@ func MergeExtensions(registrations []gardencorev1alpha1.ControllerRegistration, 
 // MergeContainerRuntimeExtensions merges the given controller registrations with the worker's container runtime extensions, expecting that each type in container runtime extensions is also represented in the registration.
 func MergeContainerRuntimeExtensions(registrations []gardencorev1alpha1.ControllerRegistration, workers []gardencorev1alpha1.Worker, namespace string) (map[string]ContainerRuntime, error) {
 	var (
-		typeToControllerRegistration        = make(map[string]gardencorev1alpha1.ControllerRegistration)
-		requiredContainerRuntimeExtenstions = make(map[string]ContainerRuntime)
+		typeToControllerRegistration       = make(map[string]gardencorev1alpha1.ControllerRegistration)
+		requiredContainerRuntimeExtensions = make(map[string]ContainerRuntime)
 	)
 
 	for _, reg := range registrations {
@@ -413,63 +413,24 @@ func MergeContainerRuntimeExtensions(registrations []gardencorev1alpha1.Controll
 	for _, worker := range workers {
 		for _, cr := range worker.ContainerRuntimes {
 			if _, ok := typeToControllerRegistration[cr]; ok {
-				requiredContainerRuntimeExtenstions[cr] = extensionsv1alpha1.ContainerRuntime{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{},
-					Spec:       extensionsv1alpha1.ExtensionSpec{},
-					Status:     extensionsv1alpha1.ExtensionStatus{},
+				requiredContainerRuntimeExtensions[cr] = ContainerRuntime{
+					ContainerRuntime: extensionsv1alpha1.ContainerRuntime{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      cr,
+							Namespace: namespace,
+						},
+						Spec: extensionsv1alpha1.ContainerRuntimeSpec{
+							DefaultSpec: extensionsv1alpha1.DefaultSpec{
+								Type: cr,
+							},
+						},
+						Status: extensionsv1alpha1.ContainerRuntimeStatus{},
+					},
 				}
 			}
 		}
 	}
 
-	// ContanerExtensions enabled by default for all Shoot clusters.
-	for _, reg := range registrations {
-		for _, res := range reg.Spec.Resources {
-			if res.Kind != extensionsv1alpha1.ExtensionResource {
-				continue
-			}
-
-			var timeout time.Duration
-			if res.ReconcileTimeout != nil {
-				timeout = res.ReconcileTimeout.Duration
-			} else {
-				timeout = ExtensionDefaultTimeout
-			}
-
-			typeToExtension[res.Type] = Extension{
-				Extension: extensionsv1alpha1.Extension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      res.Type,
-						Namespace: namespace,
-					},
-					Spec: extensionsv1alpha1.ExtensionSpec{
-						DefaultSpec: extensionsv1alpha1.DefaultSpec{
-							Type: res.Type,
-						},
-					},
-				},
-				Timeout: timeout,
-			}
-
-			if res.GloballyEnabled != nil && *res.GloballyEnabled {
-				requiredExtensions[res.Type] = typeToExtension[res.Type]
-			}
-		}
-	}
-
-	// Extensions defined in Shoot resource.
-	for _, extension := range extensions {
-		obj, ok := typeToExtension[extension.Type]
-		if ok {
-			if extension.ProviderConfig != nil {
-				providerConfig := extension.ProviderConfig.RawExtension
-				obj.Spec.ProviderConfig = &providerConfig
-			}
-			requiredExtensions[extension.Type] = obj
-			continue
-		}
-	}
-
-	return requiredExtensions, nil
+	return requiredContainerRuntimeExtensions, nil
 }

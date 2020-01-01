@@ -77,7 +77,7 @@ type Extension struct {
 	Timeout time.Duration
 }
 
-// Extension contains information about the extension api resouce as well as configuration information.
+// Extension contains information about the extension api resource as well as configuration information.
 type ContainerRuntime struct {
 	extensionsv1alpha1.ContainerRuntime
 	Timeout time.Duration
