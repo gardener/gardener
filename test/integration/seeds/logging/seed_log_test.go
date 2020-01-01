@@ -23,11 +23,12 @@ import (
 	"path/filepath"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -40,12 +41,11 @@ import (
 )
 
 var (
-	kubeconfig       = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-	shootName        = flag.String("shoot-name", "", "the name of the shoot we want to test")
-	shootNamespace   = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix = flag.String("prefix", "", "prefix to use for test shoots")
-	logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	logsCount        = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
+	kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+	shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+	shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+	logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	logsCount      = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
 )
 
 const (
@@ -116,7 +116,7 @@ var _ = Describe("Seed logging testing", func() {
 		}
 
 		if StringSet(*shootName) {
-			shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 			gardenTestOperation, err = NewGardenTestOperationWithShoot(ctx, k8sGardenClient, seedLogTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 

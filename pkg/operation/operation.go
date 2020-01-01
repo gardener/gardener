@@ -27,10 +27,11 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -51,12 +52,12 @@ import (
 )
 
 // New creates a new operation object with a Shoot resource object.
-func New(shoot *gardencorev1alpha1.Shoot, config *config.ControllerManagerConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
-	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot, shootBackup)
+func New(shoot *gardencorev1alpha1.Shoot, config *config.GardenletConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1alpha1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot)
 }
 
 func newOperation(
-	config *config.ControllerManagerConfiguration,
+	config *config.GardenletConfiguration,
 	logger *logrus.Entry,
 	k8sGardenClient kubernetes.Interface,
 	k8sGardenCoreInformers gardencoreinformers.Interface,
@@ -66,7 +67,6 @@ func newOperation(
 	namespace string,
 	seedName *string,
 	shoot *gardencorev1alpha1.Shoot,
-	shootBackup *config.ShootBackup,
 ) (*Operation, error) {
 
 	secrets := make(map[string]*corev1.Secret)
@@ -112,7 +112,6 @@ func newOperation(
 		K8sGardenClient:        k8sGardenClient,
 		K8sGardenCoreInformers: k8sGardenCoreInformers,
 		ChartApplierGarden:     kubernetes.NewChartApplier(renderer, applier),
-		ShootBackup:            shootBackup,
 	}
 
 	if shoot != nil {
@@ -151,16 +150,10 @@ func (o *Operation) InitializeSeedClients() error {
 		return nil
 	}
 
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret,
-		kubernetes.WithClientConnectionOptions(o.Config.SeedClientConnection),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
+	k8sSeedClient, err := seed.GetSeedClient(context.TODO(), o.K8sGardenClient.Client(), o.Config.SeedClientConnection.ClientConnectionConfiguration, o.Config.SeedSelector == nil, o.Seed.Info.Name)
 	if err != nil {
 		return err
 	}
-
 	o.K8sSeedClient = k8sSeedClient
 
 	renderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
@@ -197,7 +190,7 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardencorev1alpha1.GardenerName,
-		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection),
+		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.ShootScheme,
 		}),
@@ -243,7 +236,7 @@ func (o *Operation) InitializeMonitoringClient() error {
 
 	// Read the CA.
 	tlsSecret := &corev1.Secret{}
-	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, "prometheus-tls"), tlsSecret); err != nil {
+	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, common.PrometheusTLS), tlsSecret); err != nil {
 		return err
 	}
 
@@ -440,9 +433,47 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 // ComputeGrafanaHosts computes the host for both grafanas.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{
+		o.ComputeGrafanaOperatorsHostDeprecated(),
+		o.ComputeGrafanaUsersHostDeprecated(),
 		o.ComputeGrafanaOperatorsHost(),
 		o.ComputeGrafanaUsersHost(),
 	}
+}
+
+// ComputeKibanaHosts computes the hosts for kibana.
+func (o *Operation) ComputeKibanaHosts() []string {
+	return []string{
+		o.ComputeKibanaHostDeprecated(),
+		o.ComputeKibanaHost(),
+	}
+}
+
+// ComputePrometheusHosts computes the hosts for prometheus.
+func (o *Operation) ComputePrometheusHosts() []string {
+	return []string{
+		o.ComputePrometheusHostDeprecated(),
+		o.ComputePrometheusHost(),
+	}
+}
+
+// ComputeAlertManagerHosts computes the host for alert manager.
+func (o *Operation) ComputeAlertManagerHosts() []string {
+	return []string{
+		o.ComputeAlertManagerHostDeprecated(),
+		o.ComputeAlertManagerHost(),
+	}
+}
+
+// ComputeGrafanaOperatorsHostDeprecated computes the host for users Grafana.
+// TODO: timuthy - remove in the future. Old Grafana host is retained for migration reasons.
+func (o *Operation) ComputeGrafanaOperatorsHostDeprecated() string {
+	return o.ComputeIngressHostDeprecated(common.GrafanaOperatorsPrefix)
+}
+
+// ComputeGrafanaUsersHostDeprecated computes the host for operators Grafana.
+// TODO: timuthy - remove in the future. Old Grafana host is retained for migration reasons.
+func (o *Operation) ComputeGrafanaUsersHostDeprecated() string {
+	return o.ComputeIngressHostDeprecated(common.GrafanaUsersPrefix)
 }
 
 // ComputeGrafanaOperatorsHost computes the host for users Grafana.
@@ -455,22 +486,47 @@ func (o *Operation) ComputeGrafanaUsersHost() string {
 	return o.ComputeIngressHost(common.GrafanaUsersPrefix)
 }
 
+// ComputeAlertManagerHostDeprecated computes the host for alert manager.
+// TODO: timuthy - remove in the future. Old AlertManager host is retained for migration reasons.
+func (o *Operation) ComputeAlertManagerHostDeprecated() string {
+	return o.ComputeIngressHostDeprecated(common.AlertManagerPrefix)
+}
+
 // ComputeAlertManagerHost computes the host for alert manager.
 func (o *Operation) ComputeAlertManagerHost() string {
-	return o.ComputeIngressHost("a")
+	return o.ComputeIngressHost(common.AlertManagerPrefix)
+}
+
+// ComputePrometheusHostDeprecated computes the host for prometheus.
+// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
+func (o *Operation) ComputePrometheusHostDeprecated() string {
+	return o.ComputeIngressHostDeprecated(common.PrometheusPrefix)
 }
 
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
-	return o.ComputeIngressHost("p")
+	return o.ComputeIngressHost(common.PrometheusPrefix)
+}
+
+// ComputeKibanaHostDeprecated computes the host for kibana.
+// TODO: timuthy - remove in the future. Old Kibana host is retained for migration reasons.
+func (o *Operation) ComputeKibanaHostDeprecated() string {
+	return o.ComputeIngressHostDeprecated(common.KibanaPrefix)
 }
 
 // ComputeKibanaHost computes the host for kibana.
 func (o *Operation) ComputeKibanaHost() string {
-	return o.ComputeIngressHost("k")
+	return o.ComputeIngressHost(common.KibanaPrefix)
+}
+
+// ComputeIngressHostDeprecated computes the host for a given prefix.
+// TODO: timuthy - remove in the future. Only retained for migration reasons.
+func (o *Operation) ComputeIngressHostDeprecated(prefix string) string {
+	return o.Seed.GetIngressFQDNDeprecated(prefix, o.Shoot.Info.Name, o.Garden.Project.Name)
 }
 
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
-	return o.Seed.GetIngressFQDN(prefix, o.Shoot.Info.Name, o.Garden.Project.Name)
+	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shoot.TechnicalIDPrefix, "", 1)
+	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.Info.Spec.DNS.IngressDomain)
 }

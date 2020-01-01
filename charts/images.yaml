@@ -4,6 +4,11 @@
 # the respective tag can be used. The syntax must be as described in the
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
 images:
+# Gardenlet
+- name: gardenlet
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/gardenlet
+
 # Seed bootstrap
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
@@ -94,10 +99,21 @@ images:
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
   tag: v1.10.1
+  targetVersion: "< 1.16"
+- name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/dashboard
+  tag: v2.0.0-beta8
+  targetVersion: ">= 1.16"
+- name: kubernetes-dashboard-metrics-scraper
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/metrics-scraper
+  tag: v1.0.1
+  targetVersion: ">= 1.16"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.26.1"
+  tag: "0.22.0"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
@@ -120,7 +136,7 @@ images:
 - name: fluentd-es
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluentd-es
-  tag: "0.19.0"
+  tag: "v0.20.0"
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
@@ -140,7 +156,7 @@ images:
 - name: curator-es
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/curator-es
-  tag: "0.19.0"
+  tag: "v0.20.0"
 - name: kibana-oss
   sourceRepository: github.com/elastic/kibana-docker
   repository: docker.elastic.co/kibana/kibana-oss

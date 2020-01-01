@@ -22,8 +22,8 @@ import (
 
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,7 +43,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		credentialsUsers    = b.Secrets["monitoring-ingress-credentials-users"]
 		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
-		prometheusHost      = b.ComputePrometheusHost()
 		alertingRules       = strings.Builder{}
 		scrapeConfigs       = strings.Builder{}
 		operatorsDashboards = strings.Builder{}
@@ -71,6 +70,23 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	prometheusTLSOverride := common.PrometheusTLS
+	if b.ControlPlaneWildcardCert != nil {
+		prometheusTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
+		{
+			"hostName":   b.ComputePrometheusHostDeprecated(),
+			"secretName": common.PrometheusTLS,
+		},
+		{
+			"hostName":   b.ComputePrometheusHost(),
+			"secretName": prometheusTLSOverride,
+		},
+	}
+
 	var (
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -81,7 +97,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
-				"host":            prometheusHost,
+				"hosts":           hosts,
 			},
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
@@ -107,10 +123,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
 					"elasticsearch": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.Logging),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
 					"hvpa": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.HVPA),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
 					},
 				},
 			},
@@ -203,10 +219,28 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				}
 			}
 		}
+
+		alertManagerTLSOverride := common.AlertManagerTLS
+		if b.ControlPlaneWildcardCert != nil {
+			alertManagerTLSOverride = b.ControlPlaneWildcardCert.GetName()
+		}
+
+		hosts := []map[string]interface{}{
+			// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
+			{
+				"hostName":   b.ComputeAlertManagerHostDeprecated(),
+				"secretName": common.AlertManagerTLS,
+			},
+			{
+				"hostName":   b.ComputeAlertManagerHost(),
+				"secretName": alertManagerTLSOverride,
+			},
+		}
+
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuthUsers,
-				"host":            b.Seed.GetIngressFQDN("au", b.Shoot.Info.Name, b.Garden.Project.Name),
+				"hosts":           hosts,
 			},
 			"replicas":     b.Shoot.GetReplicas(1),
 			"storage":      b.Seed.GetValidVolumeSize("1Gi"),
@@ -305,10 +339,26 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 }
 
 func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain string) error {
+	grafanaTLSOverride := common.GrafanaTLS
+	if b.ControlPlaneWildcardCert != nil {
+		grafanaTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		{
+			"hostName":   b.ComputeIngressHostDeprecated(subDomain),
+			"secretName": common.GrafanaTLS,
+		},
+		{
+			"hostName":   b.ComputeIngressHost(subDomain),
+			"secretName": grafanaTLSOverride,
+		},
+	}
+
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
-			"host":            b.Seed.GetIngressFQDN(subDomain, b.Shoot.Info.Name, b.Garden.Project.Name),
+			"hosts":           hosts,
 		},
 		"replicas": b.Shoot.GetReplicas(1),
 		"role":     role,

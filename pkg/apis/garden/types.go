@@ -550,7 +550,7 @@ type SeedSpec struct {
 	IngressDomain string
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef corev1.SecretReference
+	SecretRef *corev1.SecretReference
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks
 	// Taints describes taints on the seed.
@@ -589,7 +589,9 @@ type SeedStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
 	Conditions []Condition
 	// Gardener holds information about the Gardener which last acted on the Seed.
-	Gardener Gardener
+	Gardener *Gardener
+	// KubernetesVersion is the Kubernetes version of the seed cluster.
+	KubernetesVersion *string
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
@@ -849,7 +851,6 @@ type ShootStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener
 	// LastOperation holds information about the last operation on the Shoot.
-	// +optional
 	LastOperation *LastOperation
 	// LastErrors holds information about the last occurred error(s) during an operation.
 	LastErrors []LastError
@@ -1290,7 +1291,8 @@ const (
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
-	// Enabled is true if the Shoot's desired state is hibernated, false otherwise.
+	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
+	// If it is false or nil, the Shoot's desired state is to be awaken.
 	Enabled *bool
 	// Schedules determines the hibernation schedules.
 	Schedules []HibernationSchedule
@@ -1787,8 +1789,13 @@ const (
 )
 
 const (
-	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
-	SeedAvailable ConditionType = "Available"
+	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
+	// bootstrapped.
+	SeedBootstrapped ConditionType = "Bootstrapped"
+	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
+	SeedExtensionsReady ConditionType = "ExtensionsReady"
+	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
+	SeedGardenletReady ConditionType = "GardenletReady"
 
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"

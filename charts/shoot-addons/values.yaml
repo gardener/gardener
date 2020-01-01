@@ -2,6 +2,7 @@ kubernetes-dashboard:
   enabled: false
   images:
     kubernetes-dashboard: image-repository:image-tag
+    kubernetes-dashboard-metrics-scraper: image-repository:image-tag
 nginx-ingress:
   enabled: false
   images:

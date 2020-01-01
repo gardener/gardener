@@ -18,12 +18,12 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -138,7 +138,7 @@ func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.
 func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
 	var (
-		lastError  *gardencorev1alpha1.LastError
+		lastError  *gardencorev1beta1.LastError
 		extensions = &extensionsv1alpha1.ExtensionList{}
 	)
 
@@ -172,7 +172,7 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 					lastError = lastErr
 				}
 
-				return retry.MinorError(common.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
+				return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
 			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for extension delete")
 				if lastError != nil {

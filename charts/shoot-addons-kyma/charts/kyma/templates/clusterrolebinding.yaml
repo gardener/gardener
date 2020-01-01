@@ -1,0 +1,15 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kyma-initializer
+  labels:
+    app: kyma-initializer
+subjects:
+- kind: ServiceAccount
+  name: kyma-initializer
+  namespace: kyma-installer
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

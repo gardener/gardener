@@ -25,15 +25,9 @@ import (
 // ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
 type ControllerManagerConfiguration struct {
 	metav1.TypeMeta
-	// ClientConnection specifies the kubeconfig file and the client connection settings
+	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// for the proxy server to use when communicating with the garden apiserver.
-	ClientConnection componentbaseconfig.ClientConnectionConfiguration
-	// SeedClientConnection specifies the client connection settings for the proxy server
-	// to use when communicating with the seed apiserver.
-	SeedClientConnection componentbaseconfig.ClientConnectionConfiguration
-	// ShootClientConnection specifies the client connection settings for the proxy server
-	// to use when communicating with the shoot apiserver.
-	ShootClientConnection componentbaseconfig.ClientConnectionConfiguration
+	GardenClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration
 	// LeaderElection defines the configuration of leader election client.
@@ -46,8 +40,6 @@ type ControllerManagerConfiguration struct {
 	KubernetesLogLevel klog.Level
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
-	// ShootBackup contains configuration settings for the etcd backups.
-	ShootBackup *ShootBackup
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
@@ -57,53 +49,26 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
-	// BackupBucket defines the configuration of the BackupBucket controller.
-	BackupBucket *BackupBucketControllerConfiguration
-	// BackupEntry defines the configuration of the BackupEntry controller.
-	BackupEntry *BackupEntryControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	ControllerRegistration *ControllerRegistrationControllerConfiguration
-	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
-	ControllerInstallation *ControllerInstallationControllerConfiguration
 	// Plant defines the configuration of the Plant controller.
-	Plant *PlantConfiguration
-	// SecretBinding defines the configuration of the SecretBinding controller.
-	SecretBinding *SecretBindingControllerConfiguration
+	Plant *PlantControllerConfiguration
 	// Project defines the configuration of the Project controller.
 	Project *ProjectControllerConfiguration
 	// Quota defines the configuration of the Quota controller.
 	Quota *QuotaControllerConfiguration
+	// SecretBinding defines the configuration of the SecretBinding controller.
+	SecretBinding *SecretBindingControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
-	// Shoot defines the configuration of the Shoot controller.
-	Shoot ShootControllerConfiguration
-	// ShootCare defines the configuration of the ShootCare controller.
-	ShootCare ShootCareControllerConfiguration
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration
 	// ShootQuota defines the configuration of the ShootQuota controller.
 	ShootQuota ShootQuotaControllerConfiguration
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration
-}
-
-// BackupBucketControllerConfiguration defines the configuration of the BackupBucket
-// controller.
-type BackupBucketControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	ConcurrentSyncs int
-}
-
-// BackupEntryControllerConfiguration defines the configuration of the BackupEntry
-// controller.
-type BackupEntryControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	ConcurrentSyncs int
-	// DeletionGracePeriodHours holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
-	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
-	DeletionGracePeriodHours *int
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -122,30 +87,14 @@ type ControllerRegistrationControllerConfiguration struct {
 	ConcurrentSyncs int
 }
 
-// ControllerInstallationControllerConfiguration defines the configuration of the
-// ControllerInstallation controller.
-type ControllerInstallationControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int
-}
-
-// PlantConfiguration defines the configuration of the
-// PlantConfiguration controller.
-type PlantConfiguration struct {
+// PlantControllerConfiguration defines the configuration of the
+// PlantControllerConfiguration controller.
+type PlantControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
-}
-
-// SecretBindingControllerConfiguration defines the configuration of the
-// SecretBinding controller.
-type SecretBindingControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int
 }
 
 // ProjectControllerConfiguration defines the configuration of the
@@ -163,63 +112,26 @@ type QuotaControllerConfiguration struct {
 	ConcurrentSyncs int
 }
 
-// SeedControllerConfiguration defines the configuration of the Seed controller.
+// SecretBindingControllerConfiguration defines the configuration of the
+// SecretBinding controller.
+type SecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// SeedControllerConfiguration defines the configuration of the
+// Seed controller.
 type SeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
-	// ReserveExcessCapacity indicates whether the Seed controller should reserve
-	// excess capacity for Shoot control planes in the Seeds. This is done via
-	// PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or
-	// the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API
-	// group enabled. It defaults to true.
-	ReserveExcessCapacity *bool
+	// MonitorPeriod is the duration after the seed controller will mark the `GardenletReady`
+	// condition in `Seed` resources as `Unknown` in case the gardenlet did not send heartbeats.
+	// +optional
+	MonitorPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
-}
-
-// ShootControllerConfiguration defines the configuration of the CloudProfile
-// controller.
-type ShootControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int
-	// ReconcileInMaintenanceOnly determines whether Shoot reconciliations happen only
-	// during its maintenance time window.
-	ReconcileInMaintenanceOnly *bool
-	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
-	// Shoot (via annotation) is respected or not. Defaults to false.
-	RespectSyncPeriodOverwrite *bool
-	// RetryDuration is the maximum duration how often a reconciliation will be retried
-	// in case of errors.
-	RetryDuration metav1.Duration
-	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	RetrySyncPeriod *metav1.Duration
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration
-}
-
-// ShootCareControllerConfiguration defines the configuration of the ShootCare
-// controller.
-type ShootCareControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int
-	// SyncPeriod is the duration how often the existing resources are reconciled (how
-	// often the health check of Shoot clusters is performed (only if no operation is
-	// already running on them).
-	SyncPeriod metav1.Duration
-	// ConditionThresholds defines the condition threshold per condition type.
-	ConditionThresholds []ConditionThreshold
-}
-
-// ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
-type ConditionThreshold struct {
-	// Type is the type of the condition to define the threshold for.
-	Type string
-	// Duration is the duration how long the condition can stay in the progressing state.
-	Duration metav1.Duration
 }
 
 // ShootMaintenanceControllerConfiguration defines the configuration of the
@@ -302,12 +214,6 @@ type TLSServer struct {
 	ServerCertPath string
 	// ServerKeyPath is the path to the private key file.
 	ServerKeyPath string
-}
-
-// ShootBackup holds information about backup settings.
-type ShootBackup struct {
-	// Schedule defines the cron schedule according to which a backup is taken from etcd.
-	Schedule string
 }
 
 const (

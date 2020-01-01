@@ -20,7 +20,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
@@ -106,7 +107,7 @@ func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodL
 func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 	// This code is limited to 1.13.0-1.13.3 (1.13.4 contains the Kubernetes fix).
 	// For more details see https://github.com/kubernetes/kubernetes/pull/73394.
-	needsRemovalOfStaleCondition, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13.0, <= 1.13.3")
+	needsRemovalOfStaleCondition, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13.0, <= 1.13.3")
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 		var conditions []corev1.NodeCondition
 
 		for _, condition := range node.Status.Conditions {
-			if condition.Type != corev1.NodeOutOfDisk {
+			if condition.Type != health.NodeOutOfDisk {
 				conditions = append(conditions, condition)
 			}
 		}

@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -34,13 +34,13 @@ func (d *DefaultSpec) GetExtensionType() string {
 type DefaultStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
-	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
-	LastError *gardencorev1alpha1.LastError `json:"lastError,omitempty"`
+	LastError *gardencorev1beta1.LastError `json:"lastError,omitempty"`
 	// LastOperation holds information about the last operation on the resource.
 	// +optional
-	LastOperation *gardencorev1alpha1.LastOperation `json:"lastOperation,omitempty"`
+	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// State can be filled by the operating controller with what ever data it needs.
@@ -49,12 +49,12 @@ type DefaultStatus struct {
 }
 
 // GetConditions implements Status.
-func (d *DefaultStatus) GetConditions() []gardencorev1alpha1.Condition {
+func (d *DefaultStatus) GetConditions() []gardencorev1beta1.Condition {
 	return d.Conditions
 }
 
 // SetConditions implements Status.
-func (d *DefaultStatus) SetConditions(c []gardencorev1alpha1.Condition) {
+func (d *DefaultStatus) SetConditions(c []gardencorev1beta1.Condition) {
 	d.Conditions = c
 }
 

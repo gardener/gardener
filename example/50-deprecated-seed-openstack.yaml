@@ -8,9 +8,10 @@ spec:
   cloud:
     profile: openstack
     region: europe-1
-  secretRef:
-    name: seed-openstack
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-openstack
+#   namespace: garden
   ingressDomain: dev.openstack.seed.example.com
   networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16

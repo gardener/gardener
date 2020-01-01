@@ -1,9 +1,8 @@
 # How to create log parser for container into fluent-bit
 
-
 If our log message is parsed correctly, it has to be showed in Kibana like this:
 
-```
+```jsonc
 {
   "_source": {
     "kubernetes": {
@@ -19,8 +18,10 @@ If our log message is parsed correctly, it has to be showed in Kibana like this:
   },
 }
 ```
+
 Otherwise it will looks like this:
-```
+
+```jsonc
 {
   "_source": {
     "log": "2019-01-16 16:09:59.826 [INFO][66] health.go 150: Overall health summary=u0026health.HealthReport{Live:true, Ready:true}\n",
@@ -34,28 +35,29 @@ Otherwise it will looks like this:
 }
 ```
 
+## Lets make a custom parser now
 
-### Lets make a custom parser now
-
-- First of all we need to know how does the log for the specific container look like (for example lets take a log from the `alertmanager` : 
+- First of all we need to know how does the log for the specific container look like (for example lets take a log from the `alertmanager` :
 `level=info ts=2019-01-28T12:33:49.362015626Z caller=main.go:175 build_context="(go=go1.11.2, user=root@4ecc17c53d26, date=20181109-15:40:48)`)
 
 - We can see that this log contains 4 subfields(severity=info, timestamp=2019-01-28T12:33:49.362015626Z, source=main.go:175 and the actual message).
 So we have to write a regex which matches this log in 4 groups(We can use https://regex101.com/ like helping tool). So for this purpose our regex
 looks like this:
-```
+
+```text
 ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
 ```
 
 - Now we have to create correct time format for the timestamp(We can use this site for this purpose: http://ruby-doc.org/stdlib-2.4.1/libdoc/time/rdoc/Time.html#method-c-strptime).
-So our timestamp matches correctly the following format: 
-```
+So our timestamp matches correctly the following format:
+
+```text
 %Y-%m-%dT%H:%M:%S.%L
 ```
 
-- It's a time to apply our new regex into fluent-bit configuration. Go to fluent-bit-configmap.yaml and create new filter using the 
-following template:
-```
+- It's a time to apply our new regex into fluent-bit configuration. Go to fluent-bit-configmap.yaml and create new filter using the following template:
+
+```text
 [FILTER]
         Name                parser
         Match               kubernetes.<< pod-name >>*<< container-name >>*
@@ -63,7 +65,8 @@ following template:
         Parser              << parser-name >>
         Reserve_Data        True
 ```
-```
+
+```text
 EXAMPLE
 [FILTER]
         Name                parser
@@ -72,8 +75,10 @@ EXAMPLE
         Parser              alermanagerParser
         Reserve_Data        True
 ```
+
 - Now lets check if there is already exists parser with such a regex and time format that we need. if not, let`s create one:
-```
+
+```text
 [PARSER]
         Name        << parser-name >>
         Format      regex
@@ -81,7 +86,8 @@ EXAMPLE
         Time_Key    time
         Time_Format << time-format >>
 ```
-```
+
+```text
 EXAMPLE
 [PARSER]
         Name        alermanagerParser
@@ -90,6 +96,7 @@ EXAMPLE
         Time_Key    time
         Time_Format %Y-%m-%dT%H:%M:%S.%L
 ```
-```
+
+```text
 Follow your development setup to validate that parsers are working correctly.
 ```

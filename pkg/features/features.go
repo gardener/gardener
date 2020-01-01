@@ -15,7 +15,7 @@
 package features
 
 import (
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/component-base/featuregate"
 )
 
 const (
@@ -29,15 +29,15 @@ const (
 	// Logging enables logging stack for clusters.
 	// owner @mvladev, @ialidzhikov
 	// alpha: v0.13.0
-	Logging utilfeature.Feature = "Logging"
+	Logging featuregate.Feature = "Logging"
 
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
 	// alpha: v0.1.0
-	HVPA utilfeature.Feature = "HVPA"
+	HVPA featuregate.Feature = "HVPA"
 
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
 	// alpha: v0.1.0
-	HVPAForShootedSeed utilfeature.Feature = "HVPAForShootedSeed"
+	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 )

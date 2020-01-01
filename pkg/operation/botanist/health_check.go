@@ -25,13 +25,14 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
@@ -297,7 +298,7 @@ func (b *HealthChecker) CheckSystemComponents(
 	// was already reconciled by this version (otherwise it does not exist yet)
 	// TODO: This code can be removed in a future version.
 	requiredSystemComponentDaemonSets := common.RequiredSystemComponentDaemonSets.Union(nil)
-	gardenerVersionLessThan0310, err := utils.CompareVersions(gardenerVersion, "<", "0.31")
+	gardenerVersionLessThan0310, err := version.CompareVersions(gardenerVersion, "<", "0.31")
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +575,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1alpha1.Condition, extensionsCondition []extensionCondition) *gardencorev1alpha1.Condition {
 	for _, cond := range extensionsCondition {
-		if cond.condition.Status == gardencorev1alpha1.ConditionFalse {
+		if cond.condition.Status == gardencorev1beta1.ConditionFalse || cond.condition.Status == gardencorev1beta1.ConditionUnknown {
 			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), cond.condition.Message)
 			return &c
 		}
@@ -598,7 +599,7 @@ func (b *Botanist) checkControlPlane(
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
-	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
+	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
@@ -929,7 +930,7 @@ func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts
 }
 
 type extensionCondition struct {
-	condition     gardencorev1alpha1.Condition
+	condition     gardencorev1beta1.Condition
 	extensionType string
 	extensionName string
 }
@@ -966,11 +967,11 @@ func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]extensionCo
 
 			for _, condition := range acc.GetExtensionStatus().GetConditions() {
 				switch condition.Type {
-				case gardencorev1alpha1.ShootControlPlaneHealthy:
+				case gardencorev1beta1.ShootControlPlaneHealthy:
 					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, extensionCondition{condition, kind, name})
-				case gardencorev1alpha1.ShootEveryNodeReady:
+				case gardencorev1beta1.ShootEveryNodeReady:
 					conditionsEveryNodeReady = append(conditionsEveryNodeReady, extensionCondition{condition, kind, name})
-				case gardencorev1alpha1.ShootSystemComponentsHealthy:
+				case gardencorev1beta1.ShootSystemComponentsHealthy:
 					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, extensionCondition{condition, kind, name})
 				}
 			}

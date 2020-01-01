@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
@@ -131,6 +132,8 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			"shoot-core":                   {false, b.generateCoreAddonsChart},
 			"shoot-core-namespaces":        {true, b.generateCoreNamespacesChart},
 			"addons":                       {false, b.generateOptionalAddonsChart},
+			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+			"addons-kyma": {false, b.generateTemporaryKymaAddonsChart},
 		}
 	)
 
@@ -342,12 +345,22 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 	if err != nil {
 		return nil, err
 	}
-	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
+	kubernetesDashboardImagesToInject := []string{common.KubernetesDashboardImageName}
+
+	k8sVersionLessThan116, err := versionutils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.16")
+	if err != nil {
+		return nil, err
+	}
+	if !k8sVersionLessThan116 {
+		kubernetesDashboardImagesToInject = append(kubernetesDashboardImagesToInject, common.KubernetesDashboardMetricsScraperImageName)
+	}
+
+	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, kubernetesDashboardImagesToInject...)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
+	nginxIngressConfig, err := b.GenerateNginxIngressConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -359,5 +372,14 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
+	})
+}
+
+// generateTemporaryKymaAddonsChart renders the gardener-resource-manager chart for the kyma addon. After that it
+// creates a ManagedResource CRD that references the rendered manifests and creates it.
+// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+func (b *Botanist) generateTemporaryKymaAddonsChart() (*chartrenderer.RenderedChart, error) {
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
+		"kyma": common.GenerateAddonConfig(nil, metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, common.ShootExperimentalAddonKyma)),
 	})
 }

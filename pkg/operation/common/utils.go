@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 
 	jsoniter "github.com/json-iterator/go"
-	errors2 "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -360,7 +359,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		},
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-tls",
+				Name:      AlertManagerTLS,
 				Namespace: namespace,
 			},
 		},
@@ -601,12 +600,4 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 		return nil, err
 	}
 	return secret, nil
-}
-
-// WrapWithLastError is wrapper function for gardencorev1alpha1.LastError
-func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error {
-	if err == nil || lastError == nil {
-		return err
-	}
-	return errors2.Wrapf(err, "last error: %s", lastError.Description)
 }

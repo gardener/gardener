@@ -52,20 +52,16 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
-	. "github.com/gardener/gardener/test/integration/framework"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -132,7 +128,7 @@ func validateFlags() {
 var _ = Describe("Scheduler testing", func() {
 	var (
 		gardenerTestOperation         *GardenerTestOperation
-		shoot                         *gardencorev1alpha1.Shoot
+		shoot                         *gardencorev1beta1.Shoot
 		schedulerOperationsTestLogger *logrus.Logger
 		cleanupNeeded                 bool
 		shootYamlPath                 = "/example/90-shoot.yaml"
@@ -265,7 +261,7 @@ var _ = Describe("Scheduler testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// retrieve valid shoot
-		alreadyScheduledShoot := &gardencorev1alpha1.Shoot{}
+		alreadyScheduledShoot := &gardencorev1beta1.Shoot{}
 		err = schedulerGardenerTest.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, alreadyScheduledShoot)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -273,7 +269,7 @@ var _ = Describe("Scheduler testing", func() {
 		Expect(err).To(HaveOccurred())
 
 		// double check that invalid seed is not set
-		currentShoot := &gardencorev1alpha1.Shoot{}
+		currentShoot := &gardencorev1beta1.Shoot{}
 		err = schedulerGardenerTest.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, currentShoot)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(*currentShoot.Spec.SeedName).NotTo(Equal(invalidSeed.Name))

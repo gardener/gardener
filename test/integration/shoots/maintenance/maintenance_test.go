@@ -59,19 +59,17 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 )
 
 var (
@@ -99,15 +97,15 @@ var (
 	shootMaintenanceTest          *ShootMaintenanceTest
 
 	shootGardenerTest                 *ShootGardenerTest
-	intialShootForCreation            gardencorev1alpha1.Shoot
+	intialShootForCreation            gardencorev1beta1.Shoot
 	shootMaintenanceTestLogger        *logrus.Logger
 	shootCleanupNeeded                bool
 	cloudProfileCleanupNeeded         bool
 	testMachineImageVersion           = "0.0.1-beta"
-	testKubernetesVersion             = gardencorev1alpha1.ExpirableVersion{Version: "0.0.1"}
-	testHighestPatchKubernetesVersion = gardencorev1alpha1.ExpirableVersion{Version: "0.0.5"}
+	testKubernetesVersion             = gardencorev1beta1.ExpirableVersion{Version: "0.0.1"}
+	testHighestPatchKubernetesVersion = gardencorev1beta1.ExpirableVersion{Version: "0.0.5"}
 	expirationDateInTheFuture         = metav1.Time{Time: time.Now().Add(time.Second * 20)}
-	testMachineImage                  = gardencorev1alpha1.ShootMachineImage{
+	testMachineImage                  = gardencorev1beta1.ShootMachineImage{
 		Version: testMachineImageVersion,
 	}
 	shootYamlPath = "/example/90-shoot.yaml"
@@ -199,7 +197,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 	CAfterSuite(func(ctx context.Context) {
 		if cloudProfileCleanupNeeded {
 			// retrieve the cloud profile because the machine images & the kubernetes version might got changed during test execution
-			err := shootMaintenanceTest.CleanupCloudProfile(ctx, testMachineImage, []gardencorev1alpha1.ExpirableVersion{testKubernetesVersion, testHighestPatchKubernetesVersion})
+			err := shootMaintenanceTest.CleanupCloudProfile(ctx, testMachineImage, []gardencorev1beta1.ExpirableVersion{testKubernetesVersion, testHighestPatchKubernetesVersion})
 			Expect(err).NotTo(HaveOccurred())
 			shootMaintenanceTestLogger.Infof("Cleaned Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
 		}
@@ -286,7 +284,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		}()
 
 		// set test specific shoot settings
-		integrationTestShoot.Spec.Maintenance.AutoUpdate = &gardencorev1alpha1.MaintenanceAutoUpdate{MachineImageVersion: false}
+		integrationTestShoot.Spec.Maintenance.AutoUpdate = &gardencorev1beta1.MaintenanceAutoUpdate{MachineImageVersion: false}
 
 		// reset machine image from latest version to dummy version
 		intialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
@@ -383,7 +381,7 @@ func prepareCloudProfile(ctx context.Context) {
 	found, image, err := helper.DetermineMachineImageForName(shootMaintenanceTest.CloudProfile, shootMaintenanceTest.ShootMachineImage.Name)
 	Expect(err).To(BeNil())
 	Expect(found).To(Equal(true))
-	imageVersions := append(image.Versions, gardencorev1alpha1.ExpirableVersion{Version: testMachineImageVersion})
+	imageVersions := append(image.Versions, gardencorev1beta1.ExpirableVersion{Version: testMachineImageVersion})
 	updatedCloudProfileImages, err := helper.SetMachineImageVersionsToMachineImage(shootMaintenanceTest.CloudProfile.Spec.MachineImages, shootMaintenanceTest.ShootMachineImage.Name, imageVersions)
 	Expect(err).To(BeNil())
 	// need one image in Cloud Profile to be updated with one additional version
@@ -395,7 +393,7 @@ func prepareCloudProfile(ctx context.Context) {
 	Expect(err).To(BeNil())
 }
 
-func prepareShoot() *gardencorev1alpha1.Shoot {
+func prepareShoot() *gardencorev1beta1.Shoot {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
 		// locally, we need find the example shoot

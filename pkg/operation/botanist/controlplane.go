@@ -25,15 +25,17 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -438,7 +440,7 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 
 // waitUntilControlPlaneDeleted waits until the control plane resource with the following name has been deleted.
 func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
-	var lastError *gardencorev1alpha1.LastError
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
@@ -455,7 +457,7 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 		}
 
 		b.Logger.Infof("Waiting for control plane to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
+		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {
@@ -658,11 +660,11 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer() error {
-	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
-		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	var (
@@ -704,7 +706,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	)
 
-	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	enableEtcdEncryption, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {
 		return err
 	}
@@ -955,7 +957,7 @@ func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupV
 	auditGroupVersion := schemaVersion.GroupVersion().String()
 
 	if auditGroupVersion == "audit.k8s.io/v1" {
-		return utils.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
+		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
 	}
 	return true, nil
 }
@@ -1039,11 +1041,11 @@ func (b *Botanist) DeployKubeScheduler() error {
 // data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
 func (b *Botanist) DeployETCD(ctx context.Context) error {
-	hvpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
-		hvpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	etcdConfig := map[string]interface{}{

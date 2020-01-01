@@ -124,6 +124,21 @@ func (mr *MockPodInterfaceMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPodInterface)(nil).Get), arg0, arg1)
 }
 
+// GetEphemeralContainers mocks base method
+func (m *MockPodInterface) GetEphemeralContainers(arg0 string, arg1 v10.GetOptions) (*v1.EphemeralContainers, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEphemeralContainers", arg0, arg1)
+	ret0, _ := ret[0].(*v1.EphemeralContainers)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEphemeralContainers indicates an expected call of GetEphemeralContainers
+func (mr *MockPodInterfaceMockRecorder) GetEphemeralContainers(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEphemeralContainers", reflect.TypeOf((*MockPodInterface)(nil).GetEphemeralContainers), arg0, arg1)
+}
+
 // GetLogs mocks base method
 func (m *MockPodInterface) GetLogs(arg0 string, arg1 *v1.PodLogOptions) *rest.Request {
 	m.ctrl.T.Helper()
@@ -186,6 +201,21 @@ func (m *MockPodInterface) Update(arg0 *v1.Pod) (*v1.Pod, error) {
 func (mr *MockPodInterfaceMockRecorder) Update(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPodInterface)(nil).Update), arg0)
+}
+
+// UpdateEphemeralContainers mocks base method
+func (m *MockPodInterface) UpdateEphemeralContainers(arg0 string, arg1 *v1.EphemeralContainers) (*v1.EphemeralContainers, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEphemeralContainers", arg0, arg1)
+	ret0, _ := ret[0].(*v1.EphemeralContainers)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateEphemeralContainers indicates an expected call of UpdateEphemeralContainers
+func (mr *MockPodInterfaceMockRecorder) UpdateEphemeralContainers(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEphemeralContainers", reflect.TypeOf((*MockPodInterface)(nil).UpdateEphemeralContainers), arg0, arg1)
 }
 
 // UpdateStatus mocks base method

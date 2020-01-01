@@ -1,0 +1,78 @@
+---
+apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+kind: GardenletConfiguration
+gardenClientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 100
+  burst: 130
+seedClientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 25
+  burst: 50
+shootClientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 25
+  burst: 50
+controllers:
+  backupBucket:
+    concurrentSyncs: 20
+  backupEntry:
+    concurrentSyncs: 20
+    deletionGracePeriodHours: 0
+  controllerInstallation:
+    concurrentSyncs: 20
+  controllerInstallationCare:
+    concurrentSyncs: 20
+    syncPeriod: 30s
+  shoot:
+    concurrentSyncs: 20
+    syncPeriod: 1h
+    retryDuration: 24h
+#    `respectSyncPeriodOverwrite` specifies whether Shoot owners can
+#    mark their Shoots ignored (no reconciliation) or change their sync period.
+#    respectSyncPeriodOverwrite: true
+#    `reconcileInMaintenanceOnly` specifies whether Shoot reconciliations
+#    can only happen during their maintenance time window or not.
+#    reconcileInMaintenanceOnly: true
+  shootCare:
+    concurrentSyncs: 5
+    syncPeriod: 30s
+    conditionThresholds:
+    - type: APIServerAvailable
+      duration: 1m
+    - type: ControlPlaneHealthy
+      duration: 1m
+    - type: SystemComponentsHealthy
+      duration: 1m
+    - type: EveryNodeReady
+      duration: 5m
+  seed:
+    concurrentSyncs: 5
+    syncPeriod: 1m
+    reserveExcessCapacity: false
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+  resourceLock: configmaps
+# `discovery` allows specifying options for the cached discovery client.
+# discovery:
+#   discoveryCacheDir: /tmp/cache-dir
+#   httpCacheDir: /tmp/http-cache-dir
+#   ttl: 10s
+logLevel: info
+kubernetesLogLevel: 0
+featureGates:
+  Logging: true
+  HVPA: true
+  HVPAForShootedSeed: true
+seedSelector: {} # selects all seeds, only use for development purposes
+# seedConfig:
+#   metadata:
+#     name: my-seed
+#   spec:
+#     <Check out the `spec` in the `50-seed.yaml` file to see what's possible to configure here>

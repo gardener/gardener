@@ -158,17 +158,6 @@ func (s *Shoot) GetServiceNetwork() string {
 	return ""
 }
 
-// GetMachineImages returns the name of the used machine image.
-func (s *Shoot) GetMachineImages() []*gardencorev1alpha1.ShootMachineImage {
-	var workerMachineImages []*gardencorev1alpha1.ShootMachineImage
-	for _, worker := range s.Info.Spec.Provider.Workers {
-		if worker.Machine.Image != nil {
-			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
-		}
-	}
-	return workerMachineImages
-}
-
 // KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
 func (s *Shoot) KubernetesDashboardEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubernetesDashboard != nil && s.Info.Spec.Addons.KubernetesDashboard.Enabled
@@ -224,6 +213,9 @@ func (s *Shoot) IPVSEnabled() bool {
 		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1alpha1.ProxyModeIPVS
 }
 
+// TechnicalIDPrefix is a prefix used for a shoot's technical id.
+const TechnicalIDPrefix = "shoot--"
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) string {
@@ -235,7 +227,7 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1alpha1.Shoot) str
 	}
 
 	// New clusters shall be created with the new technical id (double hyphens).
-	return fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)
+	return fmt.Sprintf("%s%s--%s", TechnicalIDPrefix, projectName, shoot.Name)
 }
 
 // ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
@@ -280,7 +272,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	case len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].SecretName != nil:
 		secret := &corev1.Secret{}
 		if err := client.Get(ctx, kutil.Key(shoot.Namespace, *shoot.Spec.DNS.Providers[0].SecretName), secret); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get dns provider secret \"%s\": %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
 		}
 		externalDomain.SecretData = secret.Data
 		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type

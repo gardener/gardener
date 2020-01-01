@@ -257,7 +257,8 @@ type Extension struct {
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
-	// Enabled is true if the Shoot's desired state is hibernated, false otherwise.
+	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
+	// If it is false or nil, the Shoot's desired state is to be awaken.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 	// Schedules determine the hibernation schedules.
@@ -652,7 +653,7 @@ type KubeletConfigEviction struct {
 	NodeFSInodesFree *string `json:"nodeFSInodesFree,omitempty"`
 }
 
-// KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.
+// KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.
 type KubeletConfigEvictionMinimumReclaim struct {
 	// MemoryAvailable is the threshold for the memory reclaim on the host server.
 	// +optional

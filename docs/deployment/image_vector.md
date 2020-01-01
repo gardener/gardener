@@ -1,7 +1,7 @@
 # Image Vector
 
-Gardener is deploying several different container images into the seed and the shoot clusters.
-The image repositories and tags are defined in a [central image vector file](`../../charts/images.yaml`).
+The Gardenlet is deploying several different container images into the seed and the shoot clusters.
+The image repositories and tags are defined in a [central image vector file](../../charts/images.yaml).
 Obviously, the image versions defined there must fit together with the deployment manifests (e.g., some command-line flags do only exist in certain versions).
 
 ## Example
@@ -21,7 +21,7 @@ images:
 ...
 ```
 
-That means that Gardener will use the `pause-container` in with tag `3.0` for all seed/shoot clusters with Kubernetes version `1.11.x`, and tag `3.1` for all clusters with Kubernetes `>= 1.12`.
+That means that the Gardenlet will use the `pause-container` in with tag `3.0` for all seed/shoot clusters with Kubernetes version `1.11.x`, and tag `3.1` for all clusters with Kubernetes `>= 1.12`.
 
 ## Overwrite image vector
 
@@ -31,7 +31,7 @@ In these cases you might want to overwrite certain images, e.g., point the `paus
 
 :warning: If you specify an image that does not fit to the resource manifest then the seed/shoot reconciliation might fail.
 
-In order to overwrite the images you must provide a similar file to Gardener:
+In order to overwrite the images you must provide a similar file to Gardenlet:
 
 ```yaml
 images:
@@ -48,14 +48,14 @@ images:
 ...
 ```
 
-During deployment of the gardener-controller-manager create a `ConfigMap` containing the above content and mount it as a volume into the gardener-controller-manager pod.
+During deployment of the gardenlet create a `ConfigMap` containing the above content and mount it as a volume into the gardenlet pod.
 Next, specify the environment variable `IMAGEVECTOR_OVERWRITE` whose value must be the path to the file you just mounted:
 
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: gardener-controller-manager-images-overwrite
+  name: gardenlet-images-overwrite
   namespace: garden
 data:
   images_overwrite.yaml: |
@@ -65,24 +65,24 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gardener-controller-manager
+  name: gardenlet
   namespace: garden
 spec:
   template:
     ...
     spec:
       containers:
-      - name: gardener-controller-manager
+      - name: gardenlet
         env:
         - name: IMAGEVECTOR_OVERWRITE
           value: /charts/images_overwrite.yaml
         volumeMounts:
-        - name: gardener-controller-manager-images-overwrite
+        - name: gardenlet-images-overwrite
           mountPath: /charts/images_overwrite.yaml
         ...
       volumes:
-      - name: gardener-controller-manager-images-overwrite
+      - name: gardenlet-images-overwrite
         configMap:
-          name: gardener-controller-manager-images-overwrite
+          name: gardenlet-images-overwrite
   ...
 ```

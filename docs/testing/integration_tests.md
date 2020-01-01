@@ -131,7 +131,7 @@ The command requires a garden kubeconfig, Shoot name and Shoot namespace.
 ```console
 go test \
   -mod=vendor \
-  ./test/integration/shoots/applciation \
+  ./test/integration/shoots/application \
   -kubecfg $HOME/.kube/config \
   -shoot-name $SHOOT_NAME \
   -shoot-namespace "garden-dev" \
@@ -146,12 +146,11 @@ Seed logging tests are meant to test the logging functionality for Seed clusters
 Below are the flags used for running the logging tests:
 
 ```go
-kubeconfig       = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-shootName        = flag.String("shoot-name", "", "the name of the shoot we want to test")
-shootNamespace   = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
-testShootsPrefix = flag.String("prefix", "", "prefix to use for test shoots")
-logLevel         = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-logsCount        = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
+kubeconfig     = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+shootName      = flag.String("shoot-name", "", "the name of the shoot we want to test")
+shootNamespace = flag.String("shoot-namespace", "", "the namespace name that the shoot resides in")
+logLevel       = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+logsCount      = flag.Uint64("logs-count", 10000, "the logs count to be logged by the logger application")
 ```
 
 #### Example Run
@@ -180,8 +179,9 @@ Currently the gardener tests consists of:
 
 The gardener RBAC test is meant to test if RBAC is enabled on the gardener cluster.
 This is tested by:
+
 1. Check if the RBAC API-Resource is available
-2. Check if a service account in a project namespace can access the `garden` project.
+1. Check if a service account in a project namespace can access the `garden` project.
 
 #### Example Run
 

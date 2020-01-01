@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	errors2 "github.com/pkg/errors"
 
@@ -50,7 +49,7 @@ var (
 	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey)`)
 	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
 	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used)`)
+	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|not available in the current hardware cluster)`)
 )
 
 // DetermineError determines the Garden error code for the given error message.
@@ -86,7 +85,7 @@ type Coder interface {
 // ExtractErrorCodes extracts all error codes from the given error by using utils.Errors
 func ExtractErrorCodes(err error) []gardencorev1alpha1.ErrorCode {
 	var codes []gardencorev1alpha1.ErrorCode
-	for _, err := range utils.Errors(err) {
+	for _, err := range utilerrors.Errors(err) {
 		if coder, ok := err.(Coder); ok {
 			codes = append(codes, coder.Code())
 		}
@@ -113,7 +112,7 @@ type WrappedLastErrors struct {
 func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 	var lastErrors []gardencorev1alpha1.LastError
 
-	for _, partError := range utils.Errors(err) {
+	for _, partError := range utilerrors.Errors(err) {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),

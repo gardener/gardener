@@ -17,12 +17,12 @@
 package resources
 
 import (
+	"sync"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
-	"sync"
 )
 
 type Clients struct {
@@ -42,7 +42,7 @@ func NewClients(config restclient.Config, scheme *runtime.Scheme) *Clients {
 		codecfactory:   serializer.NewCodecFactory(scheme),
 		parametercodec: runtime.NewParameterCodec(scheme),
 	}
-	client.config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: client.codecfactory}
+	client.config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: client.codecfactory}
 	return client
 }
 
@@ -74,7 +74,7 @@ func (c *Clients) GetClient(gv schema.GroupVersion) (restclient.Interface, error
 		}
 
 		if config.UserAgent == "" {
-			config.UserAgent = rest.DefaultKubernetesUserAgent()
+			config.UserAgent = restclient.DefaultKubernetesUserAgent()
 		}
 
 		client, err = restclient.RESTClientFor(&config)

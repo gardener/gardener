@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to deploy the Gardenlet (primary "seed" agent)
+name: gardenlet
+version: 0.1.0

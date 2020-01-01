@@ -15,10 +15,10 @@
 package maintenance
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestShootMaintenance(t *testing.T) {

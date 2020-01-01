@@ -25,8 +25,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	"github.com/robfig/cron"
@@ -136,7 +138,7 @@ func ValidateShoot(shoot *garden.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, ValidateShootSpec(&shoot.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -146,6 +148,12 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if metav1.HasAnnotation(oldShoot.ObjectMeta, common.ShootExperimentalAddonKyma) && !metav1.HasAnnotation(newShoot.ObjectMeta, common.ShootExperimentalAddonKyma) {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations", common.ShootExperimentalAddonKyma), "experimental kyma addon can not be removed/uninstalled - please delete your cluster if you want to get rid of it"))
+	}
+
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.DeletionTimestamp != nil, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 
@@ -153,7 +161,7 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
+func ValidateShootSpec(meta metav1.ObjectMeta, spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
@@ -178,6 +186,17 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
+	}
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {
+		kubernetesGeq114Less116, err := versionutils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.16")
+		if err != nil {
+			kubernetesGeq114Less116 = false
+		}
+		if !kubernetesGeq114Less116 {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("kubernetes", "version"), "experimental kyma addon needs Kubernetes >= 1.14 and < 1.16"))
+		}
 	}
 
 	return allErrs
@@ -767,16 +786,16 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.AWS.Networks.K8SNetworks, newSpec.Cloud.AWS.Networks.K8SNetworks, awsPath.Child("networks"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.VPC, oldSpec.Cloud.AWS.Networks.VPC, awsPath.Child("networks", "vpc"))...)
 
-		if shouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Internal, oldSpec.Cloud.AWS.Networks.Internal) {
+		if ShouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Internal, oldSpec.Cloud.AWS.Networks.Internal) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Internal, oldSpec.Cloud.AWS.Networks.Internal, awsPath.Child("networks", "internal"))...)
 		}
-		if shouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Public, oldSpec.Cloud.AWS.Networks.Public) {
+		if ShouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Public, oldSpec.Cloud.AWS.Networks.Public) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Public, oldSpec.Cloud.AWS.Networks.Public, awsPath.Child("networks", "public"))...)
 		}
-		if shouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Workers, oldSpec.Cloud.AWS.Networks.Workers) {
+		if ShouldEnforceImmutability(newSpec.Cloud.AWS.Networks.Workers, oldSpec.Cloud.AWS.Networks.Workers) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks.Workers, oldSpec.Cloud.AWS.Networks.Workers, awsPath.Child("networks", "workers"))...)
 		}
-		if shouldEnforceImmutability(newSpec.Cloud.AWS.Zones, oldSpec.Cloud.AWS.Zones) {
+		if ShouldEnforceImmutability(newSpec.Cloud.AWS.Zones, oldSpec.Cloud.AWS.Zones) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Zones, oldSpec.Cloud.AWS.Zones, awsPath.Child("zones"))...)
 		}
 	}
@@ -797,7 +816,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		} else if len(oldSpec.Cloud.Azure.Zones) == 0 && len(newSpec.Cloud.Azure.Zones) > 0 {
 			allErrs = append(allErrs, field.ErrorList{field.Invalid(azurePath.Child("zones"), newSpec.Cloud.Azure.Zones, "Can't move from non zoned cluster to zoned cluster")}...)
 		} else {
-			if shouldEnforceImmutability(newSpec.Cloud.Azure.Zones, oldSpec.Cloud.Azure.Zones) {
+			if ShouldEnforceImmutability(newSpec.Cloud.Azure.Zones, oldSpec.Cloud.Azure.Zones) {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Zones, oldSpec.Cloud.Azure.Zones, azurePath.Child("zones"))...)
 			}
 		}
@@ -813,7 +832,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks.Internal, oldSpec.Cloud.GCP.Networks.Internal, gcpPath.Child("networks", "internal"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks.Workers, oldSpec.Cloud.GCP.Networks.Workers, gcpPath.Child("networks", "workers"))...)
 
-		if shouldEnforceImmutability(newSpec.Cloud.GCP.Zones, oldSpec.Cloud.GCP.Zones) {
+		if ShouldEnforceImmutability(newSpec.Cloud.GCP.Zones, oldSpec.Cloud.GCP.Zones) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Zones, oldSpec.Cloud.GCP.Zones, gcpPath.Child("zones"))...)
 		}
 	}
@@ -827,7 +846,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks.Router, oldSpec.Cloud.OpenStack.Networks.Router, openStackPath.Child("networks", "router"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks.Workers, oldSpec.Cloud.OpenStack.Networks.Workers, openStackPath.Child("networks", "workers"))...)
 
-		if shouldEnforceImmutability(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones) {
+		if ShouldEnforceImmutability(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones, openStackPath.Child("zones"))...)
 		}
 	}
@@ -840,10 +859,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, validateK8SNetworksImmutability(oldSpec.Cloud.Alicloud.Networks.K8SNetworks, newSpec.Cloud.Alicloud.Networks.K8SNetworks, alicloudPath.Child("networks"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks.VPC, oldSpec.Cloud.Alicloud.Networks.VPC, alicloudPath.Child("networks", "vpc"))...)
 
-		if shouldEnforceImmutability(newSpec.Cloud.Alicloud.Networks.Workers, oldSpec.Cloud.Alicloud.Networks.Workers) {
+		if ShouldEnforceImmutability(newSpec.Cloud.Alicloud.Networks.Workers, oldSpec.Cloud.Alicloud.Networks.Workers) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks.Workers, oldSpec.Cloud.Alicloud.Networks.Workers, alicloudPath.Child("networks", "workers"))...)
 		}
-		if shouldEnforceImmutability(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones) {
+		if ShouldEnforceImmutability(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones) {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones, alicloudPath.Child("zones"))...)
 		}
 	}
@@ -857,7 +876,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Zones, oldSpec.Cloud.Packet.Zones, packetPath.Child("zones"))...)
 	}
 
-	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
+	seedGotAssigned := oldSpec.SeedName == nil && newSpec.SeedName != nil
+
+	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
@@ -915,37 +936,46 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, v
 	if oldConfig != nil {
 		oldMode = *oldConfig.Mode
 	}
-	if ok, _ := utils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
+	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
 	return allErrs
 }
 
-func validateDNSUpdate(new, old *garden.DNS, fldPath *field.Path) field.ErrorList {
+func validateDNSUpdate(new, old *garden.DNS, seedGotAssigned bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if new != nil && old != nil && new.Domain != old.Domain {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+	if old != nil && new == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
 	}
 
-	providersNew := 0
-	if new != nil {
-		providersNew = len(new.Providers)
-	}
+	if new != nil && old != nil {
+		if old.Domain != nil && new.Domain != old.Domain {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+		}
 
-	providersOld := 0
-	if old != nil {
-		providersOld = len(old.Providers)
-	}
-	if providersNew != providersOld {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
-		return allErrs
-	}
+		// allow to finalize DNS configuration during seed assignment. this is required because
+		// some decisions about the DNS setup can only be taken once the target seed is clarified.
+		if !seedGotAssigned {
+			providersNew := 0
+			if new != nil {
+				providersNew = len(new.Providers)
+			}
 
-	if new != nil {
-		for i, provider := range new.Providers {
-			if provider.Type != old.Providers[i].Type {
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
+			providersOld := 0
+			if old != nil {
+				providersOld = len(old.Providers)
+			}
+
+			if providersNew != providersOld {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
+				return allErrs
+			}
+
+			for i, provider := range new.Providers {
+				if provider.Type != old.Providers[i].Type {
+					allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
+				}
 			}
 		}
 	}
@@ -962,7 +992,7 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 
 	// Forbid Kubernetes version downgrade
-	downgrade, err := utils.CompareVersions(new, "<", old)
+	downgrade, err := versionutils.CompareVersions(new, "<", old)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
 	}
@@ -977,7 +1007,7 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 	nextMinorVersion := oldVersion.IncMinor().IncMinor()
 
-	skippingMinorVersion, err := utils.CompareVersions(new, ">=", nextMinorVersion.String())
+	skippingMinorVersion, err := versionutils.CompareVersions(new, ">=", nextMinorVersion.String())
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
 	}
@@ -1096,7 +1126,7 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
-			geqKubernetes111, err := utils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
+			geqKubernetes111, err := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
 			if err != nil {
 				geqKubernetes111 = false
 			}
@@ -1185,7 +1215,7 @@ func ValidateClusterAutoscaler(autoScaler garden.ClusterAutoscaler, fldPath *fie
 func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	k8sVersionLessThan112, err := utils.CompareVersions(kubernetesVersion, "<", "1.12")
+	k8sVersionLessThan112, err := versionutils.CompareVersions(kubernetesVersion, "<", "1.12")
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, kubernetesVersion, err.Error()))
 	}
@@ -1390,7 +1420,7 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-// ValidateWorker validates the worker object.
+// ValidateKubeletConfig validates the KubeletConfig object.
 func ValidateKubeletConfig(kubeletConfig garden.KubeletConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

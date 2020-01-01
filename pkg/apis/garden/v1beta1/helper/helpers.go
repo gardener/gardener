@@ -25,6 +25,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -500,7 +501,7 @@ func KubernetesVersionExistsInCloudProfile(cloudProfile gardenv1beta1.CloudProfi
 		return false, gardenv1beta1.KubernetesVersion{}, err
 	}
 	for _, version := range versions {
-		ok, err := utils.CompareVersions(version.Version, "=", currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, "=", currentVersion)
 		if err != nil {
 			return false, gardenv1beta1.KubernetesVersion{}, err
 		}
@@ -526,7 +527,7 @@ func determineNextKubernetesVersions(cloudProfile gardenv1beta1.CloudProfile, cu
 		return false, []string{}, []gardenv1beta1.KubernetesVersion{}, err
 	}
 	for _, version := range versions {
-		ok, err := utils.CompareVersions(version.Version, operator, currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, operator, currentVersion)
 		if err != nil {
 			return false, []string{}, []gardenv1beta1.KubernetesVersion{}, err
 		}

@@ -563,7 +563,6 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Seed holds certain properties about a Seed cluster.
-// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAME:.metadata.name,DOMAIN:.spec.ingressDomain,CLOUDPROFILE:.spec.cloud.profile,REGION:.spec.cloud.profile,READY:.status.conditions[?(@.type == 'Available')].status
 type Seed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -598,7 +597,8 @@ type SeedSpec struct {
 	IngressDomain string `json:"ingressDomain"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks `json:"networks"`
 	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
@@ -621,14 +621,17 @@ type SeedSpec struct {
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
 type SeedStatus struct {
-	// Gardener holds information about the Gardener which last acted on the Shoot.
-	// +optional
-	Gardener Gardener `json:"gardener,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
 	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// Gardener holds information about the Gardener which last acted on the Seed.
+	// +optional
+	Gardener *Gardener `json:"gardener,omitempty"`
+	// KubernetesVersion is the Kubernetes version of the seed cluster.
+	// +optional
+	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	// +optional
@@ -754,7 +757,6 @@ type SecretBindingList struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.cloud.seed,DOMAIN:.spec.dns.domain,VERSION:.spec.kubernetes.version,CONTROL:.status.conditions[?(@.type == 'ControlPlaneHealthy')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status,SYSTEM:.status.conditions[?(@.type == 'SystemComponentsHealthy')].status,LATEST:.status.lastOperation.state
 type Shoot struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -1425,7 +1427,8 @@ const (
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
-	// Enabled is true if the Shoot's desired state is hibernated, false otherwise.
+	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
+	// If it is false or nil, the Shoot's desired state is to be awaken.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 	// Schedules determine the hibernation schedules.
@@ -1982,8 +1985,13 @@ const (
 )
 
 const (
-	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
-	SeedAvailable gardencorev1alpha1.ConditionType = "Available"
+	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
+	// bootstrapped.
+	SeedBootstrapped gardencorev1alpha1.ConditionType = "Bootstrapped"
+	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
+	SeedExtensionsReady gardencorev1alpha1.ConditionType = "ExtensionsReady"
+	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
+	SeedGardenletReady gardencorev1alpha1.ConditionType = "GardenletReady"
 
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
 	ShootControlPlaneHealthy gardencorev1alpha1.ConditionType = "ControlPlaneHealthy"

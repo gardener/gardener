@@ -86,3 +86,27 @@ func TryUpdateSeed(g gardencore.Interface, backoff wait.Backoff, meta metav1.Obj
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }
+
+// TryUpdateSeedStatus tries to update the status of the seed matching the given <meta>.
+// It retries with the given <backoff> characteristics as long as it gets Conflict errors.
+// The transformation function is applied to the current state of the Seed object. If the transformation
+// yields a semantically equal Seed (regarding Status), no update is done and the operation returns normally.
+func TryUpdateSeedStatus(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error)) (*gardencorev1alpha1.Seed, error) {
+	return tryUpdateSeed(g, backoff, meta, transform, func(g gardencore.Interface, seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
+		return g.CoreV1alpha1().Seeds().UpdateStatus(seed)
+	}, func(cur, updated *gardencorev1alpha1.Seed) bool {
+		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
+	})
+}
+
+// TryUpdateSeedConditions tries to update the status of the seed matching the given <meta>.
+// It retries with the given <backoff> characteristics as long as it gets Conflict errors.
+// The transformation function is applied to the current state of the Seed object. If the transformation
+// yields a semantically equal Seed (regarding conditions), no update is done and the operation returns normally.
+func TryUpdateSeedConditions(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error)) (*gardencorev1alpha1.Seed, error) {
+	return tryUpdateSeed(g, backoff, meta, transform, func(g gardencore.Interface, seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
+		return g.CoreV1alpha1().Seeds().UpdateStatus(seed)
+	}, func(cur, updated *gardencorev1alpha1.Seed) bool {
+		return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
+	})
+}

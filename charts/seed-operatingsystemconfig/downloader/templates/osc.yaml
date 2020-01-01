@@ -28,6 +28,8 @@ spec:
       RestartSec=30
       EnvironmentFile=/etc/environment
       ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
+      [Install]
+      WantedBy=multi-user.target
   files:
   - path: /var/lib/cloud-config-downloader/credentials/server
     permissions: 0644

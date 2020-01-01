@@ -96,8 +96,8 @@ Following this convention, the created resource would look like this:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: shoot--dev--d065849-a1-cpu-worker-z1-3db65
-  namespace: shoot--dev--d065849-a1
+  name: shoot--foo--bar-cpu-worker-z1-3db65
+  namespace: shoot--foo--bar
   labels:
     garden.sapcloud.io/purpose: machineclass
 type: Opaque
@@ -164,8 +164,8 @@ for the first availability zone `eu-west-1b`, and
 apiVersion: v1
 kind: Secret
 metadata:
-  name: shoot--dev--d065849-a1-cpu-worker-z2-5z6as
-  namespace: shoot--dev--d065849-a1
+  name: shoot--foo--bar-cpu-worker-z2-5z6as
+  namespace: shoot--foo--bar
   labels:
     garden.sapcloud.io/purpose: machineclass
 type: Opaque

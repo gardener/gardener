@@ -17,7 +17,12 @@ package seed_test
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/seed"
@@ -46,6 +51,54 @@ var _ = Describe("seed", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#GetWildcardCertificate", func() {
+		It("should return no wildcard certificate secret", func() {
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}))
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
+
+		It("should return a wildcard certificate secret", func() {
+			secretList := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{},
+				},
+			}
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
+				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+					*secrets = *secretList
+					return nil
+				})
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*secret).To(Equal(secretList.Items[0]))
+		})
+
+		It("should return an error because more than one wildcard secrets is found", func() {
+			secretList := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{},
+					{},
+				},
+			}
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
+				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+					*secrets = *secretList
+					return nil
+				})
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).To(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
 	})
 
 	Describe("#GetFluentdReplicaCount", func() {

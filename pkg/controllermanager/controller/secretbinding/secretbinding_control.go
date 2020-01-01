@@ -25,7 +25,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
@@ -126,7 +126,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1alpha1.SecretBi
 			return nil
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootAssociations(secretBinding, c.shootLister)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(secretBinding, c.shootLister)
 		if err != nil {
 			secretBindingLogger.Error(err.Error())
 			return err

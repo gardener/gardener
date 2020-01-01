@@ -17,6 +17,7 @@ To accomplish these tasks reliably and to offer a certain quality of service, Ga
 Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our [blog post on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/).
 
 ----
+
 ## K8s Conformance Test Coverage
 
 Conformance test results of latest stable Gardener release, transparently visible at the CNCF test grid:
@@ -34,11 +35,11 @@ Conformance test results of latest stable Gardener release, transparently visibl
 
 Besides the conformance tests, over 400 additional e2e tests are executed on a daily basis. Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
 
-## To start using or developing the Gardener locally
+## Start using or developing the Gardener locally
 
 See our documentation in the `/docs` repository, please [find the index here](docs/README.md).
 
-## Setting up your own Gardener landscape in the cloud
+## Setting up your own Gardener landscape in the Cloud
 
 The quickest way to test drive Gardener is to install it virtually onto an existing Kubernetes cluster, just like you would install any other Kubernetes-ready application. Launch your automatic installer [here](https://gardener.cloud/installer/)
 
@@ -59,6 +60,6 @@ Please find further resources about out project here:
 * [Our landing page gardener.cloud](https://gardener.cloud/)
 * ["Gardener, the Kubernetes Botanist" blog on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/)
 * [SAP news article about "Project Gardener"](https://news.sap.com/2018/11/hasso-plattner-founders-award-finalist-profile-project-gardener/)
-* [Introduction movie: "Gardener - Planting the Seeds of Success in the Cloud"](https://www.sap-tv.com/m/video/40962/gardener-planting-the-seeds-of-success-in-the-cloud)
+* [Introduction movie: "Gardener - Planting the Seeds of Success in the Cloud"](https://www.sap-tv.com/video/40962/gardener-planting-the-seeds-of-success-in-the-cloud)
 * ["Thinking Cloud Native" talk at EclipseCon 2018](https://www.youtube.com/watch?v=bfw22WPg99A)
 * [Blog - "Showcase of Gardener at OSCON 2018"](https://blogs.sap.com/2018/07/26/showcase-of-gardener-at-oscon/)

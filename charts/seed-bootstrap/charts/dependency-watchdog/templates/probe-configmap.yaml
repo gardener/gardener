@@ -12,9 +12,9 @@ data:
     - name: shoot-kube-apiserver
       probe:
         external:
-          kubeconfigSecretName: kubecfg
+          kubeconfigSecretName: dependency-watchdog-external-probe
         internal:
-          kubeconfigSecretName: kubecfg-internal
+          kubeconfigSecretName: dependency-watchdog-internal-probe
       dependantScales:
       - scaleRef:
           apiVersion: {{ include "deploymentversion" . }}

@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilsretry "github.com/gardener/gardener/pkg/utils/retry"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -301,15 +301,15 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Client, seed *gardencorev1alpha1.Seed, logger *logrus.Entry) error {
 	var lastError *gardencorev1alpha1.LastError
 
-	if err := utilsretry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+	if err := retryutils.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
 		backupBucketName := string(seed.UID)
 		bb := &gardencorev1alpha1.BackupBucket{}
 
 		if err := gardenClient.Get(ctx, kutil.Key(backupBucketName), bb); err != nil {
 			if apierrors.IsNotFound(err) {
-				return utilsretry.Ok()
+				return retryutils.Ok()
 			}
-			return utilsretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 
 		if lastErr := bb.Status.LastError; lastErr != nil {
@@ -318,7 +318,7 @@ func waitUntilBackupBucketDeleted(ctx context.Context, gardenClient client.Clien
 		}
 
 		logger.Infof("Waiting for backupBucket to be deleted...")
-		return utilsretry.MinorError(common.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
+		return retryutils.MinorError(gardencorev1alpha1helper.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {

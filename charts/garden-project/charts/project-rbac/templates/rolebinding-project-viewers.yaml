@@ -2,10 +2,10 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  name: garden.sapcloud.io:system:project-viewer
+  name: gardener.cloud:system:project-viewer
   namespace: {{ .Release.Namespace }}
   ownerReferences:
-  - apiVersion: garden.sapcloud.io/v1beta1
+  - apiVersion: core.gardener.cloud/v1alpha1
     kind: Project
     blockOwnerDeletion: false
     controller: true
@@ -14,7 +14,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: garden.sapcloud.io:system:project-viewer
+  name: gardener.cloud:system:project-viewer
 {{- if .Values.project.viewers }}
 subjects:
 {{ toYaml .Values.project.viewers }}

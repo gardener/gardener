@@ -878,7 +878,7 @@ func (in *CloudProfile) DeepCopyObject() runtime.Object {
 func (in *CloudProfileList) DeepCopyInto(out *CloudProfileList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CloudProfile, len(*in))
@@ -2933,7 +2933,7 @@ func (in *Project) DeepCopyObject() runtime.Object {
 func (in *ProjectList) DeepCopyInto(out *ProjectList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Project, len(*in))
@@ -3122,7 +3122,7 @@ func (in *Quota) DeepCopyObject() runtime.Object {
 func (in *QuotaList) DeepCopyInto(out *QuotaList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Quota, len(*in))
@@ -3239,7 +3239,7 @@ func (in *SecretBinding) DeepCopyObject() runtime.Object {
 func (in *SecretBindingList) DeepCopyInto(out *SecretBindingList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]SecretBinding, len(*in))
@@ -3338,7 +3338,7 @@ func (in *SeedCloud) DeepCopy() *SeedCloud {
 func (in *SeedList) DeepCopyInto(out *SeedList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Seed, len(*in))
@@ -3414,7 +3414,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	*out = *in
 	out.Cloud = in.Cloud
 	out.Provider = in.Provider
-	out.SecretRef = in.SecretRef
+	if in.SecretRef != nil {
+		in, out := &in.SecretRef, &out.SecretRef
+		*out = new(v1.SecretReference)
+		**out = **in
+	}
 	in.Networks.DeepCopyInto(&out.Networks)
 	if in.Taints != nil {
 		in, out := &in.Taints, &out.Taints
@@ -3456,7 +3460,16 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	out.Gardener = in.Gardener
+	if in.Gardener != nil {
+		in, out := &in.Gardener, &out.Gardener
+		*out = new(Gardener)
+		**out = **in
+	}
+	if in.KubernetesVersion != nil {
+		in, out := &in.KubernetesVersion, &out.KubernetesVersion
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -3591,7 +3604,7 @@ func (in *Shoot) DeepCopyObject() runtime.Object {
 func (in *ShootList) DeepCopyInto(out *ShootList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Shoot, len(*in))

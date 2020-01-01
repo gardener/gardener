@@ -15,10 +15,11 @@
 package validation
 
 import (
+	"strconv"
+
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"strconv"
 )
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
@@ -45,14 +46,17 @@ func getPercentValue(intOrStringValue intstr.IntOrString) (int, bool) {
 	return value, true
 }
 
-func shouldEnforceImmutability(new, old []string) bool {
+// ShouldEnforceImmutability compares the given slices and returns if a immutability should be enforced.
+// It mainly checks if the order of the same elements in `new` and `old` is the same, i.e. only an addition
+// of elements to `new` is allowed.
+func ShouldEnforceImmutability(new, old []string) bool {
 	sizeDelta := len(new) - len(old)
 	if sizeDelta > 0 {
 		newA := new[:len(new)-sizeDelta]
 		if equal(newA, old) {
 			return false
 		}
-		return shouldEnforceImmutability(newA, old)
+		return ShouldEnforceImmutability(newA, old)
 	}
 	return sizeDelta < 0 || sizeDelta == 0
 }

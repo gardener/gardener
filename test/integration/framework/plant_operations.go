@@ -19,26 +19,20 @@ import (
 	"fmt"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-
-	"k8s.io/client-go/util/retry"
-
-	v1 "k8s.io/api/core/v1"
-
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/sirupsen/logrus"
-
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewPlantTest creates a new plantGardenerTest object, given an already created plant (created after parsing a plant YAML) and a path to a kubeconfig of an external cluster
-func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1alpha1.Plant, logger *logrus.Logger) (*PlantTest, error) {
+func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1beta1.Plant, logger *logrus.Logger) (*PlantTest, error) {
 	if len(kubeconfig) == 0 {
 		return nil, fmt.Errorf("Please specify the kubeconfig path correctly")
 	}
@@ -65,12 +59,12 @@ func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant
 }
 
 // CreatePlantSecret creates a new Secret for the Plant
-func (s *PlantTest) CreatePlantSecret(ctx context.Context, kubeConfigContent []byte) (*v1.Secret, error) {
+func (s *PlantTest) CreatePlantSecret(ctx context.Context, kubeConfigContent []byte) (*corev1.Secret, error) {
 	if len(s.kubeconfigPathExternalCluster) == 0 {
 		return nil, fmt.Errorf("Path to kubeconfig of external cluster not set")
 	}
 
-	plantSecret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: s.Plant.Namespace}}
+	plantSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: s.Plant.Namespace}}
 	plantSecret.ObjectMeta.GenerateName = "test-secret-plant-"
 
 	plantSecret.Data = make(map[string][]byte)
@@ -85,9 +79,9 @@ func (s *PlantTest) CreatePlantSecret(ctx context.Context, kubeConfigContent []b
 }
 
 // UpdatePlantSecret updates the Secret of the Plant
-func (s *PlantTest) UpdatePlantSecret(ctx context.Context, updatedPlantSecret *v1.Secret) error {
+func (s *PlantTest) UpdatePlantSecret(ctx context.Context, updatedPlantSecret *corev1.Secret) error {
 	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		existingSecret := &v1.Secret{}
+		existingSecret := &corev1.Secret{}
 		if err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: updatedPlantSecret.Namespace, Name: updatedPlantSecret.Name}, existingSecret); err != nil {
 			return err
 		}
@@ -100,8 +94,8 @@ func (s *PlantTest) UpdatePlantSecret(ctx context.Context, updatedPlantSecret *v
 }
 
 // GetPlantSecret retrieves the Secret of the Plant. Returns the Secret.
-func (s *PlantTest) GetPlantSecret(ctx context.Context) (*v1.Secret, error) {
-	secret := &v1.Secret{}
+func (s *PlantTest) GetPlantSecret(ctx context.Context) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
 	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
 		Namespace: s.Plant.Namespace,
 		Name:      s.Plant.Spec.SecretRef.Name,
@@ -114,8 +108,8 @@ func (s *PlantTest) GetPlantSecret(ctx context.Context) (*v1.Secret, error) {
 }
 
 // GetPlant gets the test plant
-func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1alpha1.Plant, error) {
-	plant := &gardencorev1alpha1.Plant{}
+func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1beta1.Plant, error) {
+	plant := &gardencorev1beta1.Plant{}
 	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
 		Namespace: s.Plant.Namespace,
 		Name:      s.Plant.Name,
@@ -128,7 +122,7 @@ func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1alpha1.Plant, er
 }
 
 // CreatePlant Creates a plant from a plant Object
-func (s *PlantTest) CreatePlant(ctx context.Context, secret *v1.Secret) error {
+func (s *PlantTest) CreatePlant(ctx context.Context, secret *corev1.Secret) error {
 	fmt.Println(secret.Name)
 	plantToBeCreated := s.Plant.DeepCopy()
 	plantToBeCreated.Name = ""
@@ -168,67 +162,67 @@ func (s *PlantTest) DeletePlant(ctx context.Context) error {
 
 // WaitForPlantToBeCreated waits for the plant to be created
 func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
-	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+	return retryutils.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return utilretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 
 		s.Logger.Infof("Plant %s has been created", s.Plant.Name)
-		return utilretry.Ok()
+		return retryutils.Ok()
 	})
 }
 
 // WaitForPlantToBeDeleted waits for the plant to be deleted
 func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
-	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+	return retryutils.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.ObjectMeta.Namespace, Name: s.Plant.ObjectMeta.Name}, plant)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return utilretry.Ok()
+				return retryutils.Ok()
 			}
-			return utilretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 		s.Logger.Infof("Waiting for plant %s to be deleted", s.Plant.ObjectMeta.Name)
-		return utilretry.MinorError(fmt.Errorf("plant %q is still present", s.Plant.Name))
+		return retryutils.MinorError(fmt.Errorf("plant %q is still present", s.Plant.Name))
 
 	})
 }
 
 // WaitForPlantToBeReconciledSuccessfully waits for the plant to be reconciled with a status indicating success
 func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) error {
-	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+	return retryutils.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return utilretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 
 		if plantCreationSuccessful(&plant.Status) {
-			return utilretry.Ok()
+			return retryutils.Ok()
 		}
 
 		s.Logger.Infof("Waiting for Plant %s to be successfully reconciled", s.Plant.Name)
-		return utilretry.MinorError(fmt.Errorf("plant %q was not successfully reconciled", s.Plant.Name))
+		return retryutils.MinorError(fmt.Errorf("plant %q was not successfully reconciled", s.Plant.Name))
 	})
 }
 
 // WaitForPlantToBeReconciledWithUnknownStatus waits for the plant to be reconciled, setting the expected status 'unknown'
 func (s *PlantTest) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context) error {
-	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		plant := &gardencorev1alpha1.Plant{}
+	return retryutils.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
+		plant := &gardencorev1beta1.Plant{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return utilretry.SevereError(err)
+			return retryutils.SevereError(err)
 		}
 
 		if plantReconciledWithStatusUnknown(&plant.Status) {
-			return utilretry.Ok()
+			return retryutils.Ok()
 		}
 
 		s.Logger.Infof("Waiting for Plant %s to be reconciled with status : 'unknown'", s.Plant.Name)
-		return utilretry.MinorError(fmt.Errorf("plant %q was not reconciled with status 'unknown'", s.Plant.Name))
+		return retryutils.MinorError(fmt.Errorf("plant %q was not reconciled with status 'unknown'", s.Plant.Name))
 	})
 }
