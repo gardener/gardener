@@ -31,8 +31,8 @@ type ContainerRuntime struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ExtensionSpec   `json:"spec"`
-	Status            ExtensionStatus `json:"status"`
+	Spec              ContainerRuntimeSpec   `json:"spec"`
+	Status            ContainerRuntimeStatus `json:"status"`
 }
 
 // GetExtensionSpec implements Object.
