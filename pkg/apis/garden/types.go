@@ -1655,10 +1655,10 @@ type Worker struct {
 	Annotations map[string]string
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
-	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
-	// Runtimes is a list of availability container runtimes for this worker pool.
+	// Container runtimes is a list of availability container runtimes for this worker pool.
 	ContainerRuntimes []string
-	Kubernetes        *WorkerKubernetes
+	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
+	Kubernetes *WorkerKubernetes
 	// Labels is a map of key/value pairs for labels for all the `Node` objects in this worker pool.
 	Labels map[string]string
 	// Name is the name of the worker group.
