@@ -959,7 +959,9 @@ spec:
               format: int32
               type: integer
           type: object
+      {{- if semverCompare ">= 1.12" .Capabilities.KubeVersion.GitVersion }}
       type: object
+      {{- end }}
   versions:
   - name: v1alpha1
     served: true
