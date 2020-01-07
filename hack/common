@@ -54,7 +54,6 @@ k8s_env() {
 k8s_username() {
     case $(k8s_env) in
         $KIND)
-            echo "kubernetes-admin"
             ;;
         $DOCKER_FOR_DESKTOP)
             echo "$(k8s_nodename)"
