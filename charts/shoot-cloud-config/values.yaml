@@ -1,6 +1,7 @@
 # images:
 #   hyperkube: image-repository
 # bootstrapToken: hugo
+# kubernetesVersion: v1.17.0
 # configFilePath: /var/lib/cloud-config-downloader/downloads/cloud_config
 # workers:
 # - name: cpu-worker

@@ -52,14 +52,18 @@ spec:
         operator: Exists
       containers:
       - name: kube-controller-manager
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "kube-controller-manager" }}
         imagePullPolicy: IfNotPresent
         command:
+        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
         {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - controller-manager
         {{- else }}
         - kube-controller-manager
+        {{- end }}
+        {{- else }}
+        - /usr/local/bin/kube-controller-manager
         {{- end }}
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s

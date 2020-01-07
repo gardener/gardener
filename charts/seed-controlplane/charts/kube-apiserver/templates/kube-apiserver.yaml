@@ -63,14 +63,18 @@ spec:
           mountPath: /lib/modules
       containers:
       - name: kube-apiserver
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "kube-apiserver" }}
         imagePullPolicy: IfNotPresent
         command:
+        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
         {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - apiserver
         {{- else }}
         - kube-apiserver
+        {{- end }}
+        {{- else }}
+        - /usr/local/bin/kube-apiserver
         {{- end }}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml

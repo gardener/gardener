@@ -865,7 +865,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 	defaultValues["admissionPlugins"] = admissionPlugins
 
 	values, err := b.InjectSeedShootImages(defaultValues,
-		common.HyperkubeImageName,
+		common.KubeAPIServerImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
 		common.AlpineIptablesImageName,
@@ -996,7 +996,7 @@ func (b *Botanist) DeployKubeControllerManager() error {
 		}
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.KubeControllerManagerImageName)
 	if err != nil {
 		return err
 	}
@@ -1029,7 +1029,7 @@ func (b *Botanist) DeployKubeScheduler() error {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.KubeSchedulerImageName)
 	if err != nil {
 		return err
 	}

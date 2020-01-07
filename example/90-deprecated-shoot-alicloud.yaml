@@ -81,7 +81,7 @@ spec:
   #   scaleDownDelayAfterFailure: 10m
   #   scaleDownDelayAfterDelete: 10s
   #   scanInterval: 10s
-    version: 1.16.0 # specify "major.minor" to get latest patch version
+    version: 1.17.0 # specify "major.minor" to get latest patch version
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   admissionPlugins:

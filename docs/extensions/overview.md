@@ -99,8 +99,7 @@ spec:
     spec:
       containers:
       - command:
-        - /hyperkube
-        - controller-manager
+        - /usr/local/bin/kube-controller-manager
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
         - --controllers=*,bootstrapsigner,tokencleaner

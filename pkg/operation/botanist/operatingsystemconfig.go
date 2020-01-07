@@ -147,7 +147,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	}
 	originalConfig["caBundle"] = caBundle
 
-	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName)
 }
 
 func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1alpha1.MachineType, machineImage *gardencorev1alpha1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1alpha1.Worker) (*shoot.OperatingSystemConfigs, error) {
@@ -399,9 +399,10 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	}
 
 	config := map[string]interface{}{
-		"bootstrapToken": kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data),
-		"configFilePath": common.CloudConfigFilePath,
-		"workers":        workers,
+		"bootstrapToken":    kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data),
+		"configFilePath":    common.CloudConfigFilePath,
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"workers":           workers,
 	}
 
 	config, err = b.InjectShootShootImages(config, common.HyperkubeImageName)
