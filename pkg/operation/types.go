@@ -19,9 +19,9 @@ import (
 	"crypto/x509"
 	"net/http"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -39,14 +39,14 @@ import (
 type Operation struct {
 	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
-	GardenerInfo              *gardencorev1alpha1.Gardener
+	GardenerInfo              *gardencorev1beta1.Gardener
 	Secrets                   map[string]*corev1.Secret
 	CheckSums                 map[string]string
 	ImageVector               imagevector.ImageVector
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed
 	Shoot                     *shoot.Shoot
-	ShootedSeed               *gardencorev1alpha1helper.ShootedSeed
+	ShootedSeed               *gardencorev1beta1helper.ShootedSeed
 	K8sGardenClient           kubernetes.Interface
 	K8sGardenCoreInformers    gardencoreinformers.Interface
 	K8sSeedClient             kubernetes.Interface

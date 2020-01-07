@@ -19,11 +19,9 @@ import (
 	"net/http"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -293,14 +291,14 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 }
 
 var (
-	trueSeedConditionTypes = []gardencorev1alpha1.ConditionType{
-		gardencorev1alpha1.SeedGardenletReady,
-		gardencorev1alpha1.SeedBootstrapped,
+	trueSeedConditionTypes = []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.SeedGardenletReady,
+		gardencorev1beta1.SeedBootstrapped,
 	}
 )
 
 // CheckSeed checks if the Seed is up-to-date and if its extensions have been successfully bootstrapped.
-func CheckSeed(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Gardener) error {
+func CheckSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener) error {
 	if seed.Status.ObservedGeneration < seed.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", seed.Status.ObservedGeneration, seed.Generation)
 	}
@@ -310,11 +308,11 @@ func CheckSeed(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Garde
 
 	for _, trueConditionType := range trueSeedConditionTypes {
 		conditionType := string(trueConditionType)
-		condition := helper.GetCondition(seed.Status.Conditions, trueConditionType)
+		condition := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, trueConditionType)
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(gardencorev1alpha1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(conditionType, string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -360,13 +358,13 @@ func CheckExtensionObject(obj extensionsv1alpha1.Object) error {
 // * No gardener.cloud/operation is set
 // * No lastError is in the status
 // * A last operation is state succeeded is present
-func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
+func CheckBackupBucket(obj *gardencorev1beta1.BackupBucket) error {
 	status := obj.Status
 	if status.ObservedGeneration != obj.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", status.ObservedGeneration, obj.Generation)
 	}
 
-	op, ok := obj.GetAnnotations()[v1alpha1constants.GardenerOperation]
+	op, ok := obj.GetAnnotations()[v1beta1constants.GardenerOperation]
 	if ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
 	}
@@ -380,7 +378,7 @@ func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
 		return fmt.Errorf("backup bucket did not record a last operation yet")
 	}
 
-	if lastOp.GetState() != gardencorev1alpha1.LastOperationStateSucceeded {
+	if lastOp.GetState() != gardencorev1beta1.LastOperationStateSucceeded {
 		return fmt.Errorf("backup bucket state is not succeeded but %v", lastOp.GetState())
 	}
 	return nil
@@ -390,10 +388,10 @@ func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
 var Now = time.Now
 
 // ConditionerFunc to update a condition with type and message
-type conditionerFunc func(conditionType string, message string) gardencorev1alpha1.Condition
+type conditionerFunc func(conditionType string, message string) gardencorev1beta1.Condition
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
-func CheckAPIServerAvailability(condition gardencorev1alpha1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1alpha1.Condition {
+func CheckAPIServerAvailability(condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1beta1.Condition {
 	now := Now()
 	response := restClient.Get().AbsPath("/healthz").Do()
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
@@ -419,5 +417,5 @@ func CheckAPIServerAvailability(condition gardencorev1alpha1.Condition, restClie
 	}
 
 	message := fmt.Sprintf("API server /healthz endpoint responded with success status code. %s", responseDurationText)
-	return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
 }

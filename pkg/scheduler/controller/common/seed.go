@@ -15,16 +15,16 @@
 package common
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // VerifySeedReadiness verifies whether the seed is ready.
-func VerifySeedReadiness(seed *gardencorev1alpha1.Seed) bool {
-	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1alpha1.ConditionTrue {
+func VerifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
-	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1alpha1.ConditionTrue {
+	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
 	return true

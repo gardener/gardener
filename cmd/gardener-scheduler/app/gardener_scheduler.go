@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
@@ -134,7 +134,7 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 // Gardener scheduler.
 type GardenerScheduler struct {
 	Config                 *config.SchedulerConfiguration
-	Identity               *gardencorev1alpha1.Gardener
+	Identity               *gardencorev1beta1.Gardener
 	GardenerNamespace      string
 	K8sGardenClient        kubernetes.Interface
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory

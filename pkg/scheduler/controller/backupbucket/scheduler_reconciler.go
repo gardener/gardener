@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,7 +43,7 @@ func (c *SchedulerController) backupBucketAdd(obj interface{}) {
 		return
 	}
 
-	newBackupBucket := obj.(*gardencorev1alpha1.BackupBucket)
+	newBackupBucket := obj.(*gardencorev1beta1.BackupBucket)
 
 	if newBackupBucket.DeletionTimestamp != nil {
 		logger.Logger.Infof("Ignoring backupBucket '%s' because it has been marked for deletion", newBackupBucket.Name)
@@ -77,7 +77,7 @@ func newReconciler(ctx context.Context, gardenClient client.Client, recorder rec
 }
 
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	bb := &gardencorev1alpha1.BackupBucket{}
+	bb := &gardencorev1beta1.BackupBucket{}
 	if err := r.client.Get(r.ctx, request.NamespacedName, bb); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[SCHEDULER BACKUPBUCKET RECONCILE] %s - skipping because BackupBucket has been deleted", request.NamespacedName)
@@ -90,26 +90,26 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, r.scheduleBackupBucket(bb)
 }
 
-func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
+func (r *reconciler) scheduleBackupBucket(obj *gardencorev1beta1.BackupBucket) error {
 	var (
 		backupBucket    = obj.DeepCopy()
 		schedulerLogger = r.logger.WithField("backupbucket", backupBucket.Name)
 	)
 
-	if backupBucket.Spec.Seed != nil {
+	if backupBucket.Spec.SeedName != nil {
 		// If the BackupBucket manifest already specifies a desired Seed cluster,
 		// we should check its availability. If its not available we will try to reschedule it again.
-		schedulerLogger.Infof("BackupBucket is already scheduled on seed %s", *backupBucket.Spec.Seed)
-		seed := &gardencorev1alpha1.Seed{}
-		if err := r.client.Get(r.ctx, kutil.Key(*backupBucket.Spec.Seed), seed); err != nil {
+		schedulerLogger.Infof("BackupBucket is already scheduled on seed %s", *backupBucket.Spec.SeedName)
+		seed := &gardencorev1beta1.Seed{}
+		if err := r.client.Get(r.ctx, kutil.Key(*backupBucket.Spec.SeedName), seed); err != nil {
 			return err
 		}
 
 		if common.VerifySeedReadiness(seed) {
-			schedulerLogger.Infof("Seed %s is available, ignoring further reconciliation.", *backupBucket.Spec.Seed)
+			schedulerLogger.Infof("Seed %s is available, ignoring further reconciliation.", *backupBucket.Spec.SeedName)
 			return nil
 		}
-		schedulerLogger.Infof("Seed %s is not available, we will schedule it on another seed", *backupBucket.Spec.Seed)
+		schedulerLogger.Infof("Seed %s is not available, we will schedule it on another seed", *backupBucket.Spec.SeedName)
 	}
 	// If no Seed is referenced, we try to determine an adequate one.
 	seed, err := r.determineSeed(backupBucket)
@@ -139,13 +139,13 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1alpha1.BackupBucket) 
 // 4. If failed find seed in step 3, then select a seed with matching cloud provider.
 // 5. If still not found then, select any of remaining seed.
 // 6. Return error if none of the above step found seed.
-func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket) (*gardencorev1alpha1.Seed, error) {
+func (r *reconciler) determineSeed(backupBucket *gardencorev1beta1.BackupBucket) (*gardencorev1beta1.Seed, error) {
 	var (
-		candidatesWithMatchingProvider    = make([]*gardencorev1alpha1.Seed, 0)
-		candidatesWithoutMatchingProvider = make([]*gardencorev1alpha1.Seed, 0)
+		candidatesWithMatchingProvider    = make([]*gardencorev1beta1.Seed, 0)
+		candidatesWithoutMatchingProvider = make([]*gardencorev1beta1.Seed, 0)
 	)
 
-	seeds := &gardencorev1alpha1.SeedList{}
+	seeds := &gardencorev1beta1.SeedList{}
 	if err := r.client.List(r.ctx, seeds); err != nil {
 		return nil, err
 	}
@@ -180,25 +180,25 @@ func (r *reconciler) determineSeed(backupBucket *gardencorev1alpha1.BackupBucket
 }
 
 // updateBackupBucketToBeScheduledOntoSeed sets the seed name where the backupBucket should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.
-func (r *reconciler) updateBackupBucketToBeScheduledOntoSeed(backupBucket *gardencorev1alpha1.BackupBucket, seedName string) error {
+func (r *reconciler) updateBackupBucketToBeScheduledOntoSeed(backupBucket *gardencorev1beta1.BackupBucket, seedName string) error {
 	return kutil.TryUpdate(r.ctx, retry.DefaultBackoff, r.client, backupBucket, func() error {
-		if backupBucket.Spec.Seed != nil {
-			alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("backupBucket has already a seed assigned when trying to schedule the backupBucket to %s", *backupBucket.Spec.Seed))
+		if backupBucket.Spec.SeedName != nil {
+			alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("backupBucket has already a seed assigned when trying to schedule the backupBucket to %s", *backupBucket.Spec.SeedName))
 			return &alreadyScheduledErr
 		}
-		backupBucket.Spec.Seed = &seedName
+		backupBucket.Spec.SeedName = &seedName
 		return nil
 	})
 }
 
-func (r *reconciler) reportFailedScheduling(backupBucket *gardencorev1alpha1.BackupBucket, err error) {
-	r.reportEvent(backupBucket, corev1.EventTypeWarning, gardencorev1alpha1.EventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", backupBucket.Name, err)
+func (r *reconciler) reportFailedScheduling(backupBucket *gardencorev1beta1.BackupBucket, err error) {
+	r.reportEvent(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", backupBucket.Name, err)
 }
 
-func (r *reconciler) reportSuccessfulScheduling(backupBucket *gardencorev1alpha1.BackupBucket, seedName string) {
-	r.reportEvent(backupBucket, corev1.EventTypeNormal, gardencorev1alpha1.EventSchedulingSuccessful, "Scheduled to seed '%s'", seedName)
+func (r *reconciler) reportSuccessfulScheduling(backupBucket *gardencorev1beta1.BackupBucket, seedName string) {
+	r.reportEvent(backupBucket, corev1.EventTypeNormal, gardencorev1beta1.EventSchedulingSuccessful, "Scheduled to seed '%s'", seedName)
 }
 
-func (r *reconciler) reportEvent(obj *gardencorev1alpha1.BackupBucket, eventType, eventReason, messageFmt string, args ...interface{}) {
+func (r *reconciler) reportEvent(obj *gardencorev1beta1.BackupBucket, eventType, eventReason, messageFmt string, args ...interface{}) {
 	r.recorder.Eventf(obj, eventType, eventReason, messageFmt, args...)
 }

@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -69,24 +69,24 @@ func (c *Controller) reconcileSeedHeartbeatKey(key string) error {
 // HeartbeatControlInterface implements the control logic for heart beats for Seeds. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type HeartbeatControlInterface interface {
-	Beat(seed *gardencorev1alpha1.Seed, key string) error
+	Beat(seed *gardencorev1beta1.Seed, key string) error
 }
 
 // NewDefaultHeartbeatControl returns a new instance of the default implementation HeartbeatControlInterface that
 // implements the documented semantics for heartbeating for Seeds. You should use an instance returned from NewDefaultHeartbeatControl()
 // for any scenario other than testing.
-func NewDefaultHeartbeatControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, identity *gardencorev1alpha1.Gardener, config *config.GardenletConfiguration) HeartbeatControlInterface {
+func NewDefaultHeartbeatControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, identity *gardencorev1beta1.Gardener, config *config.GardenletConfiguration) HeartbeatControlInterface {
 	return &defaultHeartbeatControl{k8sGardenClient, k8sGardenCoreInformers, identity, config}
 }
 
 type defaultHeartbeatControl struct {
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.Interface
-	identity               *gardencorev1alpha1.Gardener
+	identity               *gardencorev1beta1.Gardener
 	config                 *config.GardenletConfiguration
 }
 
-func (c *defaultHeartbeatControl) Beat(seedObj *gardencorev1alpha1.Seed, key string) error {
+func (c *defaultHeartbeatControl) Beat(seedObj *gardencorev1beta1.Seed, key string) error {
 	var (
 		seed       = seedObj.DeepCopy()
 		seedLogger = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
@@ -95,19 +95,19 @@ func (c *defaultHeartbeatControl) Beat(seedObj *gardencorev1alpha1.Seed, key str
 	seedLogger.Debugf("[SEED HEARTBEAT] %s", key)
 
 	// Initialize conditions based on the current status.
-	var conditionGardenletReady = gardencorev1alpha1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1alpha1.SeedGardenletReady)
+	var conditionGardenletReady = gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
 
 	if _, err := seedpkg.GetSeedClient(context.TODO(), c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil, seed.Name); err != nil {
 		// If this returns an error then there is a problem with the connectivity to the seed's api server.
-		conditionGardenletReady = gardencorev1alpha1helper.UpdatedCondition(conditionGardenletReady, gardencorev1alpha1.ConditionFalse, "GardenletNotReady", fmt.Sprintf("error talking to the seed apiserver: %+v", err.Error()))
+		conditionGardenletReady = gardencorev1beta1helper.UpdatedCondition(conditionGardenletReady, gardencorev1beta1.ConditionFalse, "GardenletNotReady", fmt.Sprintf("error talking to the seed apiserver: %+v", err.Error()))
 	} else {
-		conditionGardenletReady = gardencorev1alpha1helper.UpdatedCondition(conditionGardenletReady, gardencorev1alpha1.ConditionTrue, "GardenletReady", "Gardenlet is posting ready status.")
+		conditionGardenletReady = gardencorev1beta1helper.UpdatedCondition(conditionGardenletReady, gardencorev1beta1.ConditionTrue, "GardenletReady", "Gardenlet is posting ready status.")
 	}
 
 	// Update Seed status
 	_, err := kutil.TryUpdateSeedConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta,
-		func(seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
-			seed.Status.Conditions = gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, conditionGardenletReady)
+		func(seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+			seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, conditionGardenletReady)
 			return seed, nil
 		},
 	)

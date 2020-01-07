@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -62,7 +62,7 @@ func (c *Controller) reconcileControllerInstallationCareKey(key string) error {
 
 	var installed bool
 	for _, condition := range controllerInstallation.Status.Conditions {
-		if condition.Type == gardencorev1alpha1.ControllerInstallationInstalled && condition.Status == gardencorev1alpha1.ConditionTrue {
+		if condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status == gardencorev1beta1.ConditionTrue {
 			installed = true
 			break
 		}
@@ -84,7 +84,7 @@ func (c *Controller) reconcileControllerInstallationCareKey(key string) error {
 // CareControlInterface implements the control logic for caring for ControllerInstallations. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type CareControlInterface interface {
-	Care(controllerInstallation *gardencorev1alpha1.ControllerInstallation, key string) error
+	Care(controllerInstallation *gardencorev1beta1.ControllerInstallation, key string) error
 }
 
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
@@ -99,14 +99,14 @@ type defaultCareControl struct {
 	config          *config.GardenletConfiguration
 }
 
-func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1alpha1.ControllerInstallation, key string) error {
+func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.ControllerInstallation, key string) error {
 	var (
 		ctx = context.TODO()
 
 		controllerInstallation       = controllerInstallationObj.DeepCopy()
 		controllerInstallationLogger = logger.NewFieldLogger(logger.Logger, "controllerinstallation-care", controllerInstallation.Name)
 
-		conditionControllerInstallationHealthy = gardencorev1alpha1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1alpha1.ControllerInstallationHealthy)
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
 	)
 
 	controllerInstallationLogger.Debugf("[CONTROLLERINSTALLATION CARE] %s", key)
@@ -118,22 +118,22 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1alpha1.
 	}
 
 	managedResource := &resourcesv1alpha1.ManagedResource{}
-	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1alpha1constants.GardenNamespace, controllerInstallation.Name), managedResource); err != nil {
+	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, controllerInstallation.Name), managedResource); err != nil {
 		controllerInstallationLogger.Errorf(err.Error())
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	if err := resourceshealth.CheckManagedResource(managedResource); err != nil {
-		conditionControllerInstallationHealthy = gardencorev1alpha1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1alpha1.ConditionFalse, "ControllerNotHealthy", err.Error())
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy", err.Error())
 	} else {
-		conditionControllerInstallationHealthy = gardencorev1alpha1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1alpha1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
 	}
 
 	if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = gardencorev1alpha1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy)
+		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
+			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy)
 			return controllerInstallation, nil
-		}, func(cur, updated *gardencorev1alpha1.ControllerInstallation) bool {
+		}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
 			return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
 		},
 	); err != nil {
@@ -144,10 +144,10 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1alpha1.
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 
-func (c *defaultCareControl) updateControllerInstallationStatus(controllerInstallation *gardencorev1alpha1.ControllerInstallation, conditions ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.ControllerInstallation, error) {
+func (c *defaultCareControl) updateControllerInstallationStatus(controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
 	newControllerInstallation, err := kutil.TryUpdateControllerInstallationStatus(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-		func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = gardencorev1alpha1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
+		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
+			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 			return controllerInstallation, nil
 		})
 

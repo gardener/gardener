@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -111,8 +111,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 		}
 	}
 
-	oldPurpose = oldShoot.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
-	newPurpose = newShoot.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
+	oldPurpose = oldShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
+	newPurpose = newShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
 	if oldPurpose != newPurpose {
 		return true
 	}

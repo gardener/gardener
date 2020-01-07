@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -126,11 +126,11 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		numberOfAlertingSecrets             = 0
 	)
 
-	selector, err := labels.Parse(v1alpha1constants.DeprecatedGardenRole)
+	selector, err := labels.Parse(v1beta1constants.DeprecatedGardenRole)
 	if err != nil {
 		return nil, err
 	}
-	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1alpha1constants.GardenNamespace).List(selector)
+	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1beta1constants.GardenNamespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
-		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleDefaultDomain {
+		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleDefaultDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
@@ -153,7 +153,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
-		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleInternalDomain {
+		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleInternalDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
@@ -167,7 +167,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 
 		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleOpenVPNDiffieHellman {
+		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleOpenVPNDiffieHellman {
 			openvpnDiffieHellman := secret
 			key := "dh2048.pem"
 			if _, ok := secret.Data[key]; !ok {
@@ -180,19 +180,19 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 
 		// Retrieving basic auth secret for aggregate monitoring with a label
 		// indicating the Garden role global-monitoring.
-		if secret.Labels[v1alpha1constants.DeprecatedGardenRole] == common.GardenRoleGlobalMonitoring {
+		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleGlobalMonitoring {
 			monitoringSecret := secret
 			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
 			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
 		}
 	}
 
-	selectorGardenRole, err := labels.Parse(v1alpha1constants.GardenRole)
+	selectorGardenRole, err := labels.Parse(v1beta1constants.GardenRole)
 	if err != nil {
 		return nil, err
 	}
 
-	secretsGardenRole, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1alpha1constants.GardenNamespace).List(selectorGardenRole)
+	secretsGardenRole, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1beta1constants.GardenNamespace).List(selectorGardenRole)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
-		if secret.Labels[v1alpha1constants.GardenRole] == common.GardenRoleAlerting {
+		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleAlerting {
 			authType := string(secret.Data["auth_type"])
 			if authType != "smtp" && authType != "none" && authType != "basic" && authType != "certificate" {
 				return nil, fmt.Errorf("Invalid or missing field 'auth_type' in secret %s", secret.Name)
@@ -214,12 +214,12 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 	}
 
 	// Check if an internal domain secret is required
-	seeds, err := k8sGardenCoreInformers.Core().V1alpha1().Seeds().Lister().List(labels.Everything())
+	seeds, err := k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 	for _, seed := range seeds {
-		if helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+		if gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
 			continue
 		}
 
@@ -263,12 +263,12 @@ func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfSh
 	}
 
 	internalConfigMap := &corev1.ConfigMap{}
-	err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(v1alpha1constants.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
+	err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(v1beta1constants.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      common.ControllerManagerInternalConfigMapName,
-				Namespace: v1alpha1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}
 		return kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), configMap, func() error {
@@ -333,7 +333,7 @@ func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamesp
 	}
 	if err := kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
-			v1alpha1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
+			v1beta1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
 		}
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = basicAuth.SecretData()

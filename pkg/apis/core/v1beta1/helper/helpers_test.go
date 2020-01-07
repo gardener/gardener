@@ -493,6 +493,28 @@ var _ = Describe("helper", func() {
 			true),
 	)
 
+	var (
+		unmanagedType = "unmanaged"
+		differentType = "foo"
+	)
+
+	DescribeTable("#ShootUsesUnmanagedDNS",
+		func(dns *gardencorev1beta1.DNS, expectation bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: dns,
+				},
+			}
+			Expect(ShootUsesUnmanagedDNS(shoot)).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no dns providers", &gardencorev1beta1.DNS{}, false),
+		Entry("dns providers but no type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{}}}, false),
+		Entry("dns providers but different type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &differentType}}}, false),
+		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
+
 	Describe("#ShootMachineImageVersionExists", func() {
 		var (
 			constraint        gardencorev1beta1.MachineImage

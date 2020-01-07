@@ -15,7 +15,7 @@
 package backupbucket
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
@@ -32,7 +32,7 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 
 func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	var (
-		newBackupBucket    = newObj.(*gardencorev1alpha1.BackupBucket)
+		newBackupBucket    = newObj.(*gardencorev1beta1.BackupBucket)
 		backupBucketLogger = logger.NewFieldLogger(logger.Logger, "backupbucket", newBackupBucket.Name)
 	)
 

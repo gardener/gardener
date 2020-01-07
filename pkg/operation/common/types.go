@@ -17,7 +17,7 @@ package common
 import (
 	"time"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -494,18 +494,18 @@ var (
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGardenerResourceManager,
-		v1alpha1constants.DeploymentNameKubeAPIServer,
-		v1alpha1constants.DeploymentNameKubeControllerManager,
-		v1alpha1constants.DeploymentNameKubeScheduler,
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeScheduler,
 		MachineControllerManagerDeploymentName,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameETCDMain,
-		v1alpha1constants.StatefulSetNameETCDEvents,
+		v1beta1constants.StatefulSetNameETCDMain,
+		v1beta1constants.StatefulSetNameETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
@@ -525,10 +525,10 @@ var (
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGrafanaOperators,
-		v1alpha1constants.DeploymentNameGrafanaUsers,
-		v1alpha1constants.DeploymentNameKubeStateMetricsSeed,
-		v1alpha1constants.DeploymentNameKubeStateMetricsShoot,
+		v1beta1constants.DeploymentNameGrafanaOperators,
+		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
@@ -538,11 +538,11 @@ var (
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameElasticSearch,
+		v1beta1constants.StatefulSetNameElasticSearch,
 	)
 
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameKibana,
+		v1beta1constants.DeploymentNameKibana,
 	)
 )

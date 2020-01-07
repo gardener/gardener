@@ -15,7 +15,7 @@
 package kubernetes_test
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 
 	. "github.com/onsi/ginkgo"
@@ -30,7 +30,7 @@ var _ = Describe("kubernetes", func() {
 			plugins := GetAdmissionPluginsForVersion("not-1-a-semver-version")
 
 			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1alpha1.AdmissionPlugin{Name: plugin}))
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
@@ -40,7 +40,7 @@ var _ = Describe("kubernetes", func() {
 			plugins := GetAdmissionPluginsForVersion("1.7.4")
 
 			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1alpha1.AdmissionPlugin{Name: plugin}))
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
@@ -50,7 +50,7 @@ var _ = Describe("kubernetes", func() {
 			plugins := GetAdmissionPluginsForVersion("1.10.99")
 
 			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1alpha1.AdmissionPlugin{Name: plugin}))
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
@@ -60,7 +60,7 @@ var _ = Describe("kubernetes", func() {
 			plugins := GetAdmissionPluginsForVersion("1.11.23")
 
 			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1alpha1.AdmissionPlugin{Name: plugin}))
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
@@ -70,7 +70,7 @@ var _ = Describe("kubernetes", func() {
 			plugins := GetAdmissionPluginsForVersion("1.14.0")
 
 			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardencorev1alpha1.AdmissionPlugin{Name: plugin}))
+				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 	})

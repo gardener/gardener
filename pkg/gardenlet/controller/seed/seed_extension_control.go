@@ -17,9 +17,9 @@ package seed
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,7 +32,7 @@ import (
 )
 
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
-	controllerInstallation, ok := obj.(*gardencorev1alpha1.ControllerInstallation)
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok {
 		return
 	}
@@ -73,7 +73,7 @@ type ExtensionCheckControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileExtensionCheckFor(seed *gardencorev1alpha1.Seed) error
+	ReconcileExtensionCheckFor(seed *gardencorev1beta1.Seed) error
 }
 
 // NewDefaultExtensionCheckControl returns a new instance of the default implementation ExtensionCheckControlInterface that
@@ -97,13 +97,13 @@ type defaultExtensionCheckControl struct {
 	recorder                     record.EventRecorder
 }
 
-func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencorev1alpha1.Seed) error {
+func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencorev1beta1.Seed) error {
 	var (
 		seed                         = obj.DeepCopy()
-		conditionSeedExtensionsReady = gardencorev1alpha1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1alpha1.SeedExtensionsReady)
+		conditionSeedExtensionsReady = gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)
 	)
 
-	conditionSeedExtensionsReady = gardencorev1alpha1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1alpha1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
+	conditionSeedExtensionsReady = gardencorev1beta1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1beta1.ConditionTrue, "AllExtensionsReady", "All extensions installed into the seed cluster are ready and healthy.")
 
 	controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
 	if err != nil {
@@ -116,16 +116,16 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 		}
 
 		if len(controllerInstallation.Status.Conditions) == 0 {
-			conditionSeedExtensionsReady = gardencorev1alpha1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1alpha1.ConditionFalse, "NotAllExtensionsInstalled", fmt.Sprintf("Extension %q has not yet been installed", controllerInstallation.Name))
+			conditionSeedExtensionsReady = gardencorev1beta1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1beta1.ConditionFalse, "NotAllExtensionsInstalled", fmt.Sprintf("Extension %q has not yet been installed", controllerInstallation.Name))
 			break
 		}
 
 		var (
 			allRequiredConditionsHealthy = true
-			requiredConditions           = map[gardencorev1alpha1.ConditionType]struct{}{
-				gardencorev1alpha1.ControllerInstallationValid:     {},
-				gardencorev1alpha1.ControllerInstallationInstalled: {},
-				gardencorev1alpha1.ControllerInstallationHealthy:   {},
+			requiredConditions           = map[gardencorev1beta1.ConditionType]struct{}{
+				gardencorev1beta1.ControllerInstallationValid:     {},
+				gardencorev1beta1.ControllerInstallationInstalled: {},
+				gardencorev1beta1.ControllerInstallationHealthy:   {},
 			}
 		)
 
@@ -134,8 +134,8 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 				continue
 			}
 
-			if condition.Status != gardencorev1alpha1.ConditionTrue {
-				conditionSeedExtensionsReady = gardencorev1alpha1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1alpha1.ConditionFalse, "NotAllExtensionsReady", fmt.Sprintf("Condition %q for extension %q is %s: %s", condition.Type, condition.Status, controllerInstallation.Name, condition.Message))
+			if condition.Status != gardencorev1beta1.ConditionTrue {
+				conditionSeedExtensionsReady = gardencorev1beta1helper.UpdatedCondition(conditionSeedExtensionsReady, gardencorev1beta1.ConditionFalse, "NotAllExtensionsReady", fmt.Sprintf("Condition %q for extension %q is %s: %s", condition.Type, condition.Status, controllerInstallation.Name, condition.Message))
 				allRequiredConditionsHealthy = false
 				break
 			}
@@ -147,8 +147,8 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 	}
 
 	_, err = kutil.TryUpdateSeedConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta,
-		func(seed *gardencorev1alpha1.Seed) (*gardencorev1alpha1.Seed, error) {
-			seed.Status.Conditions = gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, conditionSeedExtensionsReady)
+		func(seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+			seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, conditionSeedExtensionsReady)
 			return seed, nil
 		},
 	)

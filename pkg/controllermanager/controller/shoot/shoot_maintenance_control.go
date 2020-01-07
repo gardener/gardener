@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -45,8 +45,8 @@ func (c *Controller) shootMaintenanceAdd(obj interface{}) {
 }
 
 func (c *Controller) shootMaintenanceUpdate(oldObj, newObj interface{}) {
-	newShoot, ok1 := newObj.(*gardencorev1alpha1.Shoot)
-	oldShoot, ok2 := oldObj.(*gardencorev1alpha1.Shoot)
+	newShoot, ok1 := newObj.(*gardencorev1beta1.Shoot)
+	oldShoot, ok2 := oldObj.(*gardencorev1beta1.Shoot)
 	if !ok1 || !ok2 {
 		return
 	}
@@ -57,7 +57,7 @@ func (c *Controller) shootMaintenanceUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *Controller) shootMaintenanceDelete(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1alpha1.Shoot)
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if shoot == nil || !ok {
 		return
 	}
@@ -100,7 +100,7 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 }
 
 // newRandomTimeWindow computes a new random time window either for today or the next day (depending on <today>).
-func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1alpha1.Shoot) {
+func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1beta1.Shoot) {
 	var (
 		now             = time.Now()
 		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
@@ -115,7 +115,7 @@ func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1alph
 // MaintenanceControlInterface implements the control logic for maintaining Shoots. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type MaintenanceControlInterface interface {
-	Maintain(shoot *gardencorev1alpha1.Shoot, key string) error
+	Maintain(shoot *gardencorev1beta1.Shoot, key string) error
 }
 
 // NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
@@ -131,12 +131,12 @@ type defaultMaintenanceControl struct {
 	recorder               record.EventRecorder
 }
 
-func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot, key string) error {
+func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, key string) error {
 	var (
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 		handleError = func(msg string) {
-			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1alpha1.ShootEventMaintenanceError, "%s", msg)
+			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventMaintenanceError, "%s", msg)
 			shootLogger.Error(msg)
 		}
 	)
@@ -148,7 +148,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 		return err
 	}
 
-	updatedMachineImages, err := MaintainMachineImages(shootObj, cloudProfile, gardencorev1alpha1helper.GetMachineImagesFor(shoot))
+	updatedMachineImages, err := MaintainMachineImages(shootObj, cloudProfile, gardencorev1beta1helper.GetMachineImagesFor(shoot))
 	if err != nil {
 		// continue execution to allow the kubernetes version update
 		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
@@ -161,7 +161,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 	}
 
 	// Update the Shoot resource object.
-	_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+	_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		if !apiequality.Semantic.DeepEqual(shootObj.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}
@@ -171,7 +171,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 		s.Annotations[common.ShootOperation] = common.ShootOperationReconcile
 
 		if updatedMachineImages != nil {
-			gardencorev1alpha1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
+			gardencorev1beta1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
 		}
 		if updatedKubernetesVersion != nil {
 			s.Spec.Kubernetes.Version = *updatedKubernetesVersion
@@ -185,19 +185,19 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1alpha1.Shoot,
 	}
 	msg := "Completed; updated the Shoot specification successfully."
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", msg)
-	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1alpha1.ShootEventMaintenanceDone, "%s", msg)
+	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventMaintenanceDone, "%s", msg)
 
 	return nil
 }
 
 // MaintainKubernetesVersion determines if a shoots kubernetes version has to be maintained and in case returns the target version
-func MaintainKubernetesVersion(shoot *gardencorev1alpha1.Shoot, profile *gardencorev1alpha1.CloudProfile) (*string, error) {
+func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (*string, error) {
 	shouldBeUpdated, err := shouldKubernetesVersionBeUpdated(shoot, profile)
 	if err != nil {
 		return nil, err
 	}
 	if shouldBeUpdated {
-		newerPatchVersionFound, latestPatchVersion, err := gardencorev1alpha1helper.DetermineLatestKubernetesPatchVersion(profile, shoot.Spec.Kubernetes.Version)
+		newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.DetermineLatestKubernetesPatchVersion(profile, shoot.Spec.Kubernetes.Version)
 		if err != nil {
 			return nil, fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
 		}
@@ -208,8 +208,8 @@ func MaintainKubernetesVersion(shoot *gardencorev1alpha1.Shoot, profile *gardenc
 	return nil, nil
 }
 
-func shouldKubernetesVersionBeUpdated(shoot *gardencorev1alpha1.Shoot, profile *gardencorev1alpha1.CloudProfile) (bool, error) {
-	versionExistsInCloudProfile, offeredVersion, err := gardencorev1alpha1helper.KubernetesVersionExistsInCloudProfile(profile, shoot.Spec.Kubernetes.Version)
+func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (bool, error) {
+	versionExistsInCloudProfile, offeredVersion, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return false, err
 	}
@@ -221,18 +221,18 @@ func shouldKubernetesVersionBeUpdated(shoot *gardencorev1alpha1.Shoot, profile *
 	return shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion || ExpirationDateExpired(offeredVersion.ExpirationDate), nil
 }
 
-func mustMaintainNow(shoot *gardencorev1alpha1.Shoot) bool {
+func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 	return hasMaintainNowAnnotation(shoot) || common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
 }
 
-func hasMaintainNowAnnotation(shoot *gardencorev1alpha1.Shoot) bool {
+func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[common.ShootOperation]
 	return ok && operation == common.ShootOperationMaintain
 }
 
 // MaintainMachineImages determines if a shoots machine images have to be maintained and in case returns the target images
-func MaintainMachineImages(shoot *gardencorev1alpha1.Shoot, cloudProfile *gardencorev1alpha1.CloudProfile, shootCurrentImages []*gardencorev1alpha1.ShootMachineImage) ([]*gardencorev1alpha1.ShootMachineImage, error) {
-	var shootMachineImagesForUpdate []*gardencorev1alpha1.ShootMachineImage
+func MaintainMachineImages(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, shootCurrentImages []*gardencorev1beta1.ShootMachineImage) ([]*gardencorev1beta1.ShootMachineImage, error) {
+	var shootMachineImagesForUpdate []*gardencorev1beta1.ShootMachineImage
 	for _, shootImage := range shootCurrentImages {
 		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, shootImage)
 		if err != nil {
@@ -252,20 +252,20 @@ func MaintainMachineImages(shoot *gardencorev1alpha1.Shoot, cloudProfile *garden
 	return shootMachineImagesForUpdate, nil
 }
 
-func determineMachineImage(cloudProfile *gardencorev1alpha1.CloudProfile, shootMachineImage *gardencorev1alpha1.ShootMachineImage) (gardencorev1alpha1.MachineImage, error) {
-	machineImagesFound, machineImageFromCloudProfile, err := gardencorev1alpha1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
+func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
+	machineImagesFound, machineImageFromCloudProfile, err := gardencorev1beta1helper.DetermineMachineImageForName(cloudProfile, shootMachineImage.Name)
 	if err != nil {
-		return gardencorev1alpha1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: %s", err.Error())
+		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: %s", err.Error())
 	}
 	if !machineImagesFound {
-		return gardencorev1alpha1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name '%s' (specified in shoot) could be found in the cloudProfile '%s'", shootMachineImage.Name, cloudProfile.Name)
+		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name '%s' (specified in shoot) could be found in the cloudProfile '%s'", shootMachineImage.Name, cloudProfile.Name)
 	}
 
 	return machineImageFromCloudProfile, nil
 }
 
-func shouldMachineImageBeUpdated(shoot *gardencorev1alpha1.Shoot, machineImage *gardencorev1alpha1.MachineImage, shootMachineImage *gardencorev1alpha1.ShootMachineImage) (bool, *gardencorev1alpha1.ShootMachineImage, error) {
-	versionExistsInCloudProfile, _ := gardencorev1alpha1helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
+func shouldMachineImageBeUpdated(shoot *gardencorev1beta1.Shoot, machineImage *gardencorev1beta1.MachineImage, shootMachineImage *gardencorev1beta1.ShootMachineImage) (bool, *gardencorev1beta1.ShootMachineImage, error) {
+	versionExistsInCloudProfile, _ := gardencorev1beta1helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
 	if !versionExistsInCloudProfile || shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || ForceMachineImageUpdateRequired(shootMachineImage, *machineImage) {
 		shootMachineImage, err := updateToLatestMachineImageVersion(*machineImage)
 		if err != nil {
@@ -279,8 +279,8 @@ func shouldMachineImageBeUpdated(shoot *gardencorev1alpha1.Shoot, machineImage *
 }
 
 // updateToLatestMachineImageVersion returns the latest machine image and requiring an image update
-func updateToLatestMachineImageVersion(machineImage gardencorev1alpha1.MachineImage) (*gardencorev1alpha1.ShootMachineImage, error) {
-	_, latestMachineImage, err := gardencorev1alpha1helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
+func updateToLatestMachineImageVersion(machineImage gardencorev1beta1.MachineImage) (*gardencorev1beta1.ShootMachineImage, error) {
+	_, latestMachineImage, err := gardencorev1beta1helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
 	}
@@ -288,7 +288,7 @@ func updateToLatestMachineImageVersion(machineImage gardencorev1alpha1.MachineIm
 }
 
 // ForceMachineImageUpdateRequired checks if the shoots current machine image has to be forcefully updated
-func ForceMachineImageUpdateRequired(shootCurrentImage *gardencorev1alpha1.ShootMachineImage, imageCloudProvider gardencorev1alpha1.MachineImage) bool {
+func ForceMachineImageUpdateRequired(shootCurrentImage *gardencorev1beta1.ShootMachineImage, imageCloudProvider gardencorev1beta1.MachineImage) bool {
 	for _, image := range imageCloudProvider.Versions {
 		if shootCurrentImage.Version != image.Version {
 			continue

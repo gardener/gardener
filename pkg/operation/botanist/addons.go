@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -191,7 +191,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				// TODO: resolve conformance test issue before changing:
 				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
 				"domain": map[string]interface{}{
-					"clusterDomain": gardencorev1alpha1.DefaultDomain,
+					"clusterDomain": gardencorev1beta1.DefaultDomain,
 				},
 			},
 		}
@@ -211,7 +211,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		}
 		metricsServerConfig = map[string]interface{}{
 			"tls": map[string]interface{}{
-				"caBundle": b.Secrets[v1alpha1constants.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
+				"caBundle": b.Secrets[v1beta1constants.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
 			},
 			"secret": map[string]interface{}{
 				"data": b.Secrets["metrics-server"].Data,
@@ -333,7 +333,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, error) {
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
 		"labels": map[string]string{
-			v1alpha1constants.GardenerPurpose: metav1.NamespaceSystem,
+			v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
 		},
 	})
 }

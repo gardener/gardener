@@ -15,13 +15,13 @@
 package seed
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Seed is an object containing information about a Seed cluster.
 type Seed struct {
-	Info   *gardencorev1alpha1.Seed
+	Info   *gardencorev1beta1.Seed
 	Secret *corev1.Secret
 
 	reserveExcessCapacity bool

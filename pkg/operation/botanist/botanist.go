@@ -20,8 +20,8 @@ import (
 	"sort"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -64,7 +64,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
 func (b *Botanist) RequiredExtensionsExist() error {
-	controllerInstallationList := &gardencorev1alpha1.ControllerInstallationList{}
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 	if err := b.K8sGardenClient.Client().List(context.TODO(), controllerInstallationList); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (b *Botanist) RequiredExtensionsExist() error {
 			continue
 		}
 
-		controllerRegistration := &gardencorev1alpha1.ControllerRegistration{}
+		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 		if err := b.K8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 	}
 	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = machineImagesSet
 
-	if !helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+	if !helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
 		if b.Garden.InternalDomain.Provider != "unmanaged" {
 			if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
 				requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()

@@ -52,9 +52,9 @@ type SchedulerController struct {
 // event recording. It creates a new NewGardenerScheduler.
 func NewGardenerScheduler(ctx context.Context, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.SchedulerConfiguration, recorder record.EventRecorder) *SchedulerController {
 	var (
-		gardencorev1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
-		backupBucketInformer       = gardencorev1alpha1Informer.BackupBuckets()
-		backupBuckerQueue          = workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.BackupBucket.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-backup-bucket-scheduler")
+		gardencorev1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
+		backupBucketInformer      = gardencorev1beta1Informer.BackupBuckets()
+		backupBuckerQueue         = workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.BackupBucket.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-backup-bucket-scheduler")
 	)
 
 	schedulerController := &SchedulerController{

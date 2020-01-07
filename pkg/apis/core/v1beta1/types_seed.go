@@ -157,6 +157,10 @@ type SeedTaint struct {
 }
 
 const (
+	// SeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
+	// using this seed won't get any DNS providers, DNS records, and no DNS extension controller is required to
+	// be installed here. This is useful for environment where DNS is not required.
+	SeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
 	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
 	// may only be used by shoots in the `garden` namespace.
 	SeedTaintProtected = "seed.gardener.cloud/protected"
