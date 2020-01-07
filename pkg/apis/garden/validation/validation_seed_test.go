@@ -340,6 +340,54 @@ var _ = Describe("Seed Validation Tests", func() {
 			}))
 		})
 
+		Context("nodes cidr", func() {
+			var oldSeed *garden.Seed
+
+			BeforeEach(func() {
+				oldSeed = seed.DeepCopy()
+			})
+
+			It("should allow adding a nodes CIDR", func() {
+				oldSeed.Spec.Networks.Nodes = nil
+
+				nodesCIDR := "10.1.0.0/16"
+				newSeed := prepareSeedForUpdate(oldSeed)
+				newSeed.Spec.Networks.Nodes = &nodesCIDR
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid removing the nodes CIDR", func() {
+				newSeed := prepareSeedForUpdate(oldSeed)
+				newSeed.Spec.Networks.Nodes = nil
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networks.nodes"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should forbid changing the nodes CIDR", func() {
+				newSeed := prepareSeedForUpdate(oldSeed)
+
+				differentNodesCIDR := "12.1.0.0/16"
+				newSeed.Spec.Networks.Nodes = &differentNodesCIDR
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networks.nodes"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+		})
+
 		Context("#validateSeedBackupUpdate", func() {
 			It("should allow adding backup profile", func() {
 				seed.Spec.Backup = nil

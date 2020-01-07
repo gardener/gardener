@@ -82,6 +82,12 @@ type InfrastructureStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
 
+	// NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
+	// This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
+	// be statically defined in the Shoot resource but must be computed dynamically.
+	// +optional
+	NodesCIDR *string `json:"nodesCIDR,omitempty"`
+
 	// ProviderStatus contains provider-specific output for this infrastructure.
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`

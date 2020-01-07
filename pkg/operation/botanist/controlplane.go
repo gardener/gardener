@@ -613,7 +613,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 	}
 
 	var shootCIDRNetworks []string
-	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
 	if v := b.Shoot.Info.Spec.Networking.Pods; v != nil {
@@ -706,7 +706,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	)
 
-	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		shootNetworks["nodes"] = *v
 	}
 	defaultValues["shootNetworks"] = shootNetworks

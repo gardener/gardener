@@ -186,7 +186,7 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *garden.SeedSpec, fldPath *
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Pods, oldSeedSpec.Networks.Pods, fldPath.Child("networks", "pods"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Services, oldSeedSpec.Networks.Services, fldPath.Child("networks", "services"))...)
-	if newSeedSpec.Networks.Nodes != nil && oldSeedSpec.Networks.Nodes != nil {
+	if oldSeedSpec.Networks.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Nodes, oldSeedSpec.Networks.Nodes, fldPath.Child("networks", "nodes"))...)
 	}
 

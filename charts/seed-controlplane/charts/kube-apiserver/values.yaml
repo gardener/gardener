@@ -7,7 +7,7 @@ probeCredentials: base64(user:pass)
 shootNetworks:
   services: 10.0.1.0/24
   pods: 192.168.0.0/1
-  nodes: 172.16.0.0/20
+# nodes: 172.16.0.0/20
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true

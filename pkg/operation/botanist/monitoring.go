@@ -151,7 +151,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 	)
 
-	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		networks["nodes"] = *v
 	}
 	prometheusConfig["networks"] = networks

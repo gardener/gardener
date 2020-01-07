@@ -783,6 +783,11 @@ func (in *InfrastructureSpec) DeepCopy() *InfrastructureSpec {
 func (in *InfrastructureStatus) DeepCopyInto(out *InfrastructureStatus) {
 	*out = *in
 	in.DefaultStatus.DeepCopyInto(&out.DefaultStatus)
+	if in.NodesCIDR != nil {
+		in, out := &in.NodesCIDR, &out.NodesCIDR
+		*out = new(string)
+		**out = **in
+	}
 	if in.ProviderStatus != nil {
 		in, out := &in.ProviderStatus, &out.ProviderStatus
 		*out = new(runtime.RawExtension)

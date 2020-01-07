@@ -243,7 +243,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		networkPolicyConfig       = map[string]interface{}{}
 	)
 
-	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		vpnShootConfig["nodeNetwork"] = *v
 		shootInfo["nodeNetwork"] = *v
 	}

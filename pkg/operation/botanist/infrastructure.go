@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // InfrastructureDefaultTimeout is the default timeout and defines how long Gardener should wait
@@ -110,6 +111,17 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 		if infrastructure.Status.ProviderStatus != nil {
 			b.Shoot.InfrastructureStatus = infrastructure.Status.ProviderStatus.Raw
 		}
+		if infrastructure.Status.NodesCIDR != nil {
+			shootCopy := b.Shoot.Info.DeepCopy()
+			if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootCopy, func() error {
+				shootCopy.Spec.Networking.Nodes = infrastructure.Status.NodesCIDR
+				return nil
+			}); err != nil {
+				return retry.SevereError(err)
+			}
+			b.Shoot.Info = shootCopy
+		}
+
 		return retry.Ok()
 	}); err != nil {
 		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed to create infrastructure: %v", err))

@@ -50,22 +50,33 @@ func NewTaskIDs(ids ...TaskIDer) TaskIDs {
 
 // Insert inserts the TaskIDs of all TaskIDers into
 // this TaskIDs.
-func (t TaskIDs) Insert(iders ...TaskIDer) {
+func (t TaskIDs) Insert(iders ...TaskIDer) TaskIDs {
 	for _, ider := range iders {
 		for _, id := range ider.TaskIDs() {
 			t[id] = struct{}{}
 		}
 	}
+	return t
+}
+
+// InsertIf inserts the TaskIDs of all TaskIDers into
+// this TaskIDs if the given condition evaluates to true.
+func (t TaskIDs) InsertIf(condition bool, iders ...TaskIDer) TaskIDs {
+	if condition {
+		return t.Insert(iders...)
+	}
+	return t
 }
 
 // Delete deletes the TaskIDs of all TaskIDers from
 // this TaskIDs.
-func (t TaskIDs) Delete(iders ...TaskIDer) {
+func (t TaskIDs) Delete(iders ...TaskIDer) TaskIDs {
 	for _, ider := range iders {
 		for _, id := range ider.TaskIDs() {
 			delete(t, id)
 		}
 	}
+	return t
 }
 
 // Len returns the amount of TaskIDs this contains.
