@@ -66,7 +66,7 @@ images:
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -116,7 +116,7 @@ images:
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
