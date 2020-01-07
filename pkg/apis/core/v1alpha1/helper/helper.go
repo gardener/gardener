@@ -302,12 +302,7 @@ func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
 		return nil, nil
 	}
 
-	var addresses []string
-	for _, addr := range strings.Split(cidrs, ";") {
-		addresses = append(addresses, addr)
-	}
-
-	return addresses, nil
+	return strings.Split(cidrs, ";"), nil
 }
 
 func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1alpha1.ShootNetworks, error) {

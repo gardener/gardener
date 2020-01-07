@@ -187,9 +187,6 @@ func (c *Controller) deleteShoot(shoot *gardencorev1alpha1.Shoot, logger *logrus
 
 	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1alpha1(), c.identity, c.secrets, c.imageVector)
 	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err != nil {
 		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", err.Error())))
 	}
 

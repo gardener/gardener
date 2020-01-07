@@ -461,10 +461,6 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 	return nil
 }
 
-func objectReferenceToString(o corev1.ObjectReference) string {
-	return fmt.Sprintf("%s/%s/%s/%s", o.APIVersion, o.Kind, o.Namespace, o.Name)
-}
-
 func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1alpha1.ControllerInstallation) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
