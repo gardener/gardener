@@ -892,7 +892,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	if oldSpec.Networking.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Services, oldSpec.Networking.Services, fldPath.Child("networking", "services"))...)
 	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
+	if oldSpec.Networking.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
+	}
 
 	return allErrs
 }
@@ -906,7 +908,9 @@ func validateK8SNetworksImmutability(oldNetworks, newNetworks garden.K8SNetworks
 	if oldNetworks.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Services, oldNetworks.Services, fldPath.Child("services"))...)
 	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Nodes, oldNetworks.Nodes, fldPath.Child("nodes"))...)
+	if oldNetworks.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Nodes, oldNetworks.Nodes, fldPath.Child("nodes"))...)
+	}
 
 	return allErrs
 }

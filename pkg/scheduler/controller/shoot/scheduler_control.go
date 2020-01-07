@@ -27,8 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
-	schedulerutils "github.com/gardener/gardener/pkg/scheduler/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -301,7 +301,16 @@ func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {
 
 func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	var (
-		errs          = schedulerutils.ValidateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Networking.Nodes, shoot.Spec.Networking.Pods, shoot.Spec.Networking.Services, field.NewPath(""))
+		errs = cidrvalidation.ValidateNetworkDisjointedness(
+			field.NewPath(""),
+			shoot.Spec.Networking.Nodes,
+			shoot.Spec.Networking.Pods,
+			shoot.Spec.Networking.Services,
+			seed.Spec.Networks.Nodes,
+			seed.Spec.Networks.Pods,
+			seed.Spec.Networks.Services,
+		)
+
 		errorMessages []string
 	)
 

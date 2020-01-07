@@ -452,7 +452,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 							Raw: []byte(networkingProviderConfig),
 						},
 					},
-					Nodes:    networkingNodesCIDR,
+					Nodes:    &networkingNodesCIDR,
 					Pods:     &networkingPodsCIDR,
 					Services: &networkingServicesCIDR,
 				},

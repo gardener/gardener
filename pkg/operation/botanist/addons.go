@@ -220,12 +220,12 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		vpnShootConfig = map[string]interface{}{
 			"podNetwork":     b.Shoot.GetPodNetwork(),
 			"serviceNetwork": b.Shoot.GetServiceNetwork(),
-			"nodeNetwork":    b.Shoot.Info.Spec.Networking.Nodes,
 			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},
 		}
+
 		shootInfo = map[string]interface{}{
 			"projectName":       b.Garden.Project.Name,
 			"shootName":         b.Shoot.Info.Name,
@@ -234,7 +234,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.GetPodNetwork(),
 			"serviceNetwork":    b.Shoot.GetServiceNetwork(),
-			"nodeNetwork":       b.Shoot.Info.Spec.Networking.Nodes,
 			"maintenanceBegin":  b.Shoot.Info.Spec.Maintenance.TimeWindow.Begin,
 			"maintenanceEnd":    b.Shoot.Info.Spec.Maintenance.TimeWindow.End,
 		}
@@ -243,6 +242,11 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		nodeProblemDetectorConfig = map[string]interface{}{}
 		networkPolicyConfig       = map[string]interface{}{}
 	)
+
+	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+		vpnShootConfig["nodeNetwork"] = *v
+		shootInfo["nodeNetwork"] = *v
+	}
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
 	if proxyConfig != nil {

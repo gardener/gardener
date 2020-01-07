@@ -5945,7 +5945,7 @@ func schema_pkg_apis_garden_v1beta1_SeedNetworks(ref common.ReferenceCallback) c
 						},
 					},
 				},
-				Required: []string{"nodes", "pods", "services"},
+				Required: []string{"pods", "services"},
 			},
 		},
 		Dependencies: []string{

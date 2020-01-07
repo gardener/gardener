@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package cidr
 
 import (
 	"net"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 
@@ -31,25 +30,21 @@ func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks
 		pathPods     = fldPath.Child("pods")
 	)
 
-	if nodes := k8sNetworks.Nodes; nodes != nil {
-		if networksIntersect(seedNetworks.Nodes, *nodes) {
-			allErrs = append(allErrs, field.Invalid(pathNodes, *nodes, "shoot node network intersects with seed node network"))
-		}
-	} else {
-		allErrs = append(allErrs, field.Required(pathNodes, "nodes is required"))
+	if shootNodes != nil && seedNodes != nil && NetworksIntersect(*shootNodes, *seedNodes) {
+		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, "shoot node network intersects with seed node network"))
 	}
 
-	if services := k8sNetworks.Services; services != nil {
-		if networksIntersect(seedNetworks.Services, *services) {
-			allErrs = append(allErrs, field.Invalid(pathServices, *services, "shoot service network intersects with seed service network"))
+	if shootServices != nil {
+		if NetworksIntersect(seedServices, *shootServices) {
+			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed service network"))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
 	}
 
-	if pods := k8sNetworks.Pods; pods != nil {
-		if networksIntersect(seedNetworks.Pods, *pods) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *pods, "shoot pod network intersects with seed pod network"))
+	if shootPods != nil {
+		if NetworksIntersect(seedPods, *shootPods) {
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed pod network"))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
@@ -58,7 +53,8 @@ func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks
 	return allErrs
 }
 
-func networksIntersect(cidr1, cidr2 string) bool {
+// NetworksIntersect returns true if the given network CIDRs intersect.
+func NetworksIntersect(cidr1, cidr2 string) bool {
 	_, net1, err1 := net.ParseCIDR(cidr1)
 	_, net2, err2 := net.ParseCIDR(cidr2)
 	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)

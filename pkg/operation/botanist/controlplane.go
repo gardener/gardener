@@ -612,12 +612,15 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		excludeNets = append(excludeNets, addr)
 	}
 
-	shootCIDRNetworks := []string{b.Shoot.Info.Spec.Networking.Nodes}
-	if b.Shoot.Info.Spec.Networking.Pods != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *b.Shoot.Info.Spec.Networking.Pods)
+	var shootCIDRNetworks []string
+	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
-	if b.Shoot.Info.Spec.Networking.Services != nil {
-		shootCIDRNetworks = append(shootCIDRNetworks, *b.Shoot.Info.Spec.Networking.Services)
+	if v := b.Shoot.Info.Spec.Networking.Pods; v != nil {
+		shootCIDRNetworks = append(shootCIDRNetworks, *v)
+	}
+	if v := b.Shoot.Info.Spec.Networking.Services; v != nil {
+		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
 	shootNetworkValues, err := common.ExceptNetworks(shootCIDRNetworks, excludeNets...)
 	if err != nil {
@@ -625,14 +628,18 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 	}
 	values["clusterNetworks"] = shootNetworkValues
 
-	seedNetworks := b.Seed.Info.Spec.Networks
-	allCIDRNetworks := append([]string{seedNetworks.Nodes, seedNetworks.Pods, seedNetworks.Services}, shootCIDRNetworks...)
+	allCIDRNetworks := []string{b.Seed.Info.Spec.Networks.Pods, b.Seed.Info.Spec.Networks.Services}
+	if v := b.Seed.Info.Spec.Networks.Nodes; v != nil {
+		allCIDRNetworks = append(allCIDRNetworks, *v)
+	}
+	allCIDRNetworks = append(allCIDRNetworks, shootCIDRNetworks...)
 	allCIDRNetworks = append(allCIDRNetworks, excludeNets...)
 
 	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), allCIDRNetworks...)
 	if err != nil {
 		return err
 	}
+
 	globalNetworkPoliciesValues["privateNetworks"] = privateNetworks
 	values["global-network-policies"] = globalNetworkPoliciesValues
 
@@ -669,19 +676,14 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		minReplicas int32 = 1
 		maxReplicas int32 = 4
 
+		shootNetworks = map[string]interface{}{
+			"services": b.Shoot.GetServiceNetwork(),
+			"pods":     b.Shoot.GetPodNetwork(),
+		}
+
 		defaultValues = map[string]interface{}{
-			"etcdServicePort":   2379,
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"shootNetworks": map[string]interface{}{
-				"service": b.Shoot.GetServiceNetwork(),
-				"pod":     b.Shoot.GetPodNetwork(),
-				"node":    b.Shoot.Info.Spec.Networking.Nodes,
-			},
-			"seedNetworks": map[string]interface{}{
-				"service": b.Seed.Info.Spec.Networks.Services,
-				"pod":     b.Seed.Info.Spec.Networks.Pods,
-				"node":    b.Seed.Info.Spec.Networks.Nodes,
-			},
+			"etcdServicePort":           2379,
+			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
@@ -703,6 +705,11 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			},
 		}
 	)
+
+	if v := b.Shoot.Info.Spec.Networking.Nodes; v != nil {
+		shootNetworks["nodes"] = *v
+	}
+	defaultValues["shootNetworks"] = shootNetworks
 
 	enableEtcdEncryption, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {

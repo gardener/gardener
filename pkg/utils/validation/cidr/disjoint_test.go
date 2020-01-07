@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package cidr_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/garden"
-	. "github.com/gardener/gardener/plugin/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -31,12 +30,6 @@ var _ = Describe("utils", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
-
-			seedNetworks = garden.SeedNetworks{
-				Pods:     seedPodsCIDR,
-				Services: seedServicesCIDR,
-				Nodes:    seedNodesCIDR,
-			}
 		)
 
 		It("should pass the validation", func() {
@@ -44,15 +37,17 @@ var _ = Describe("utils", func() {
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.242.0.0/17"
 				nodesCIDR    = "10.241.0.0/16"
-
-				validK8sNetworks = garden.K8SNetworks{
-					Pods:     &podsCIDR,
-					Services: &servicesCIDR,
-					Nodes:    &nodesCIDR,
-				}
 			)
 
-			errorList := ValidateNetworkDisjointedness(seedNetworks, validK8sNetworks, field.NewPath(""))
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+			)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -62,15 +57,17 @@ var _ = Describe("utils", func() {
 				podsCIDR     = seedPodsCIDR
 				servicesCIDR = seedServicesCIDR
 				nodesCIDR    = seedNodesCIDR
-
-				validK8sNetworks = garden.K8SNetworks{
-					Pods:     &podsCIDR,
-					Services: &servicesCIDR,
-					Nodes:    &nodesCIDR,
-				}
 			)
 
-			errorList := ValidateNetworkDisjointedness(seedNetworks, validK8sNetworks, field.NewPath(""))
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
@@ -85,26 +82,26 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should fail due to missing fields", func() {
-			var (
-				validK8sNetworks = garden.K8SNetworks{
-					Pods:     nil,
-					Services: nil,
-					Nodes:    nil,
-				}
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				nil,
+				nil,
+				nil,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
 			)
 
-			errorList := ValidateNetworkDisjointedness(seedNetworks, validK8sNetworks, field.NewPath(""))
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("[].nodes"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("[].services"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("[].pods"),
-			}))))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("[].services"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("[].pods"),
+				})),
+			))
 		})
 	})
 })

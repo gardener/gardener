@@ -3089,7 +3089,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"type", "nodes"},
+				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -4235,7 +4235,7 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"nodes", "pods", "services"},
+				Required: []string{"pods", "services"},
 			},
 		},
 		Dependencies: []string{
@@ -7983,7 +7983,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"type", "nodes"},
+				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -9143,7 +9143,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 						},
 					},
 				},
-				Required: []string{"nodes", "pods", "services"},
+				Required: []string{"pods", "services"},
 			},
 		},
 		Dependencies: []string{

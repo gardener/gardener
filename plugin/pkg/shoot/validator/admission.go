@@ -32,6 +32,7 @@ import (
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -596,7 +597,15 @@ func validateAWS(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -649,7 +658,15 @@ func validateAzure(c *validationContext) field.ErrorList {
 		path    = field.NewPath("spec", "cloud", "azure")
 	)
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -699,7 +716,15 @@ func validateGCP(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -753,7 +778,15 @@ func validatePacket(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -807,7 +840,15 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	if ok, validFloatingPools := validateFloatingPoolConstraints(c.cloudProfile.Spec.OpenStack.Constraints.FloatingPools, c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, c.oldShoot.Spec.Cloud.OpenStack.FloatingPoolName); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("floatingPoolName"), c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, validFloatingPools))
@@ -864,7 +905,15 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -918,7 +967,15 @@ func validateProvider(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, garden.K8SNetworks{Nodes: &c.shoot.Spec.Networking.Nodes, Pods: c.shoot.Spec.Networking.Pods, Services: c.shoot.Spec.Networking.Services}, path.Child("networking"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Networking.Nodes,
+			c.shoot.Spec.Networking.Pods,
+			c.shoot.Spec.Networking.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)

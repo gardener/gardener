@@ -6,7 +6,7 @@ kubernetesVersion: 1.15.1
 domain: crazy-botany.core.my-custom-domain.com
 podNetwork: 100.96.0.0/11
 serviceNetwork: 100.64.0.0/13
-nodeNetwork: 10.250.0.0/16
+#nodeNetwork: 10.250.0.0/16
 maintenanceBegin: 210000+0000
 maintenanceEnd: 220000+0000
 extensions: shoot-dns-service,foo-bar
