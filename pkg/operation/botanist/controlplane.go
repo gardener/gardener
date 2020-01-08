@@ -231,6 +231,14 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.DeployKubeAPIServerService(); err != nil {
+		return err
+	}
+
+	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
+		return err
+	}
+
 	for _, deployment := range []string{
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -285,6 +293,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
 		if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+			return err
+		}
+	}
+
+	if !b.Shoot.DisableDNS {
+		if err := c.Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

@@ -85,7 +85,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	var (
 		defaultTimeout     = 30 * time.Second
 		defaultInterval    = 5 * time.Second
-		dnsEnabled         = !gardencorev1beta1helper.TaintsHave(botanist.Seed.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)
+		dnsEnabled         = !o.Shoot.DisableDNS
 		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
 		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 		allowBackup        = o.Seed.Info.Spec.Backup != nil
@@ -112,12 +112,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service in the Seed cluster",
-			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server service in the Seed cluster has reported readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -125,20 +125,20 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:   flow.TaskFn(botanist.DeploySecrets),
 			Dependencies: func() flow.TaskIDs {
 				taskIDs := flow.NewTaskIDs(deployNamespace)
-				if !dnsEnabled {
+				if !dnsEnabled && !o.Shoot.HibernationEnabled {
 					taskIDs.Insert(waitUntilKubeAPIServerServiceIsReady)
 				}
 				return taskIDs
 			}(),
 		})
-		_ = g.Add(flow.Task{
+		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS && !o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS),
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInfrastructure = g.Add(flow.Task{
@@ -208,7 +208,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, deployInternalDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
