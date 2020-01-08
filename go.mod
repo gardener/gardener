@@ -13,7 +13,6 @@ require (
 	github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
 	github.com/gardener/gardener-resource-manager v0.8.1
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
-	github.com/gardener/machine-controller-manager v0.25.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
 	github.com/golang/mock v1.3.1
@@ -55,7 +54,6 @@ require (
 
 replace (
 	github.com/gardener/gardener-extensions => github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
-	github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.25.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.0.0-20190918155943-95b840bb6a1f // kubernetes-1.16.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190918161926-8f644eb6e783 // kubernetes-1.16.0

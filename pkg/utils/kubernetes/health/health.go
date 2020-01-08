@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -45,15 +44,6 @@ func checkConditionState(conditionType string, expected, actual, reason, message
 }
 
 func getDeploymentCondition(conditions []appsv1.DeploymentCondition, conditionType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			return &condition
-		}
-	}
-	return nil
-}
-
-func getMachineDeploymentCondition(conditions []machinev1alpha1.MachineDeploymentCondition, conditionType machinev1alpha1.MachineDeploymentConditionType) *machinev1alpha1.MachineDeploymentCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			return &condition
@@ -220,65 +210,6 @@ func CheckNode(node *corev1.Node) error {
 	for _, falseConditionType := range falseNodeConditionTypes {
 		conditionType := string(falseConditionType)
 		condition := getNodeCondition(node.Status.Conditions, falseConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-var (
-	trueMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentAvailable,
-	}
-
-	trueOptionalMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentProgressing,
-	}
-
-	falseMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentReplicaFailure,
-		machinev1alpha1.MachineDeploymentFrozen,
-	}
-)
-
-// CheckMachineDeployment checks whether the given MachineDeployment is healthy.
-// A MachineDeployment is considered healthy if its controller observed its current revision and if
-// its desired number of replicas is equal to its updated replicas.
-func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error {
-	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
-	}
-
-	for _, trueConditionType := range trueMachineDeploymentConditionTypes {
-		conditionType := string(trueConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueConditionType)
-		if condition == nil {
-			return requiredConditionMissing(conditionType)
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	for _, trueOptionalConditionType := range trueOptionalMachineDeploymentConditionTypes {
-		conditionType := string(trueOptionalConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	for _, falseConditionType := range falseMachineDeploymentConditionTypes {
-		conditionType := string(falseConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, falseConditionType)
 		if condition == nil {
 			continue
 		}

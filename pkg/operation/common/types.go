@@ -191,14 +191,8 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
-	// MachineControllerManagerDeploymentName is the name of the machine-controller-manager deployment.
-	MachineControllerManagerDeploymentName = "machine-controller-manager"
-
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
-
-	// CalicoKubeControllersDeploymentName is the name of calico-kube-controllers deployment.
-	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
@@ -208,9 +202,6 @@ const (
 
 	// MetricsServerDeploymentName is the name of the metrics-server deployment.
 	MetricsServerDeploymentName = "metrics-server"
-
-	// CalicoNodeDaemonSetName is the name of the calico-node daemon set.
-	CalicoNodeDaemonSetName = "calico-node"
 
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
@@ -498,7 +489,6 @@ var (
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameKubeScheduler,
-		MachineControllerManagerDeploymentName,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
@@ -510,7 +500,6 @@ var (
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
 	RequiredSystemComponentDeployments = sets.NewString(
-		CalicoKubeControllersDeploymentName,
 		CoreDNSDeploymentName,
 		VPNShootDeploymentName,
 		MetricsServerDeploymentName,
@@ -518,7 +507,6 @@ var (
 
 	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
 	RequiredSystemComponentDaemonSets = sets.NewString(
-		CalicoNodeDaemonSetName,
 		KubeProxyDaemonSetName,
 		NodeProblemDetectorDaemonSetName,
 	)

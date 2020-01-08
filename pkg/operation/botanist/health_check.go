@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -127,21 +126,10 @@ func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition,
 	return nil
 }
 
-func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, objects []*corev1.Node) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, objects []*corev1.Node, workerGroupName string) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckNode(object); err != nil {
-			c := b.FailedCondition(condition, "NodeUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
-			return &c
-		}
-	}
-
-	return nil
-}
-
-func (b *HealthChecker) checkMachineDeployments(condition gardencorev1beta1.Condition, objects []*machinev1alpha1.MachineDeployment) *gardencorev1beta1.Condition {
-	for _, object := range objects {
-		if err := health.CheckMachineDeployment(object); err != nil {
-			c := b.FailedCondition(condition, "MachineDeploymentUnhealthy", fmt.Sprintf("Machine deployment %s is unhealthy: %v", object.Name, err))
+			c := b.FailedCondition(condition, "NodeUnhealthy", fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy: %v", object.Name, workerGroupName, err))
 			return &c
 		}
 	}
@@ -177,24 +165,10 @@ func shootHibernatedCondition(condition gardencorev1beta1.Condition) gardencorev
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
 }
 
-func isRollingUpdateOngoing(machineDeploymentLister kutil.MachineDeploymentLister) (bool, error) {
-	machineDeployments, err := machineDeploymentLister.List(labels.Everything())
-	if err != nil {
-		return false, err
-	}
-
-	for _, machineDeployment := range machineDeployments {
-		if machineDeployment.Status.Replicas != machineDeployment.Status.UpdatedReplicas {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(
 	shoot *gardencorev1beta1.Shoot,
-	machineDeploymentLister kutil.MachineDeploymentLister,
+	workerLister kutil.WorkerLister,
 ) (sets.String, error) {
 	shootWantsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
@@ -203,12 +177,22 @@ func computeRequiredControlPlaneDeployments(
 
 	requiredControlPlaneDeployments := sets.NewString(common.RequiredControlPlaneDeployments.UnsortedList()...)
 	if shootWantsClusterAutoscaler {
-		rollingUpdateOngoing, err := isRollingUpdateOngoing(machineDeploymentLister)
+		workers, err := workerLister.List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
 
-		if !rollingUpdateOngoing {
+		// if worker resource is processing (during maintenance), there might be a rolling update in progress
+		// during rolling updates, the autoscaler deployment is scaled down & therefore not required
+		rollingUpdateMightBeOngoing := false
+		for _, worker := range workers {
+			if worker.Status.LastOperation != nil && worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
+				rollingUpdateMightBeOngoing = true
+				break
+			}
+		}
+
+		if !rollingUpdateMightBeOngoing {
 			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 		}
 	}
@@ -233,10 +217,10 @@ func (b *HealthChecker) CheckControlPlane(
 	condition gardencorev1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
-	machineDeploymentLister kutil.MachineDeploymentLister,
+	workerLister kutil.WorkerLister,
 ) (*gardencorev1beta1.Condition, error) {
 
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, machineDeploymentLister)
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, workerLister)
 	if err != nil {
 		return nil, err
 	}
@@ -414,40 +398,34 @@ func (b *Botanist) checkAlerts(checker *HealthChecker, condition gardencorev1bet
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, reason, message.String())
 }
 
-// CheckClusterNodes checks whether cluster nodes in the given listers are complete and healthy.
+// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
+// Additional checks are executed in the provider extension
 func (b *HealthChecker) CheckClusterNodes(
-	namespace string,
+	workers []gardencorev1beta1.Worker,
 	condition gardencorev1beta1.Condition,
 	nodeLister kutil.NodeLister,
-	machineDeploymentLister kutil.MachineDeploymentLister,
 ) (*gardencorev1beta1.Condition, error) {
-	nodeList, err := nodeLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	if exitCondition := b.checkNodes(condition, nodeList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	machineDeploymentList, err := machineDeploymentLister.MachineDeployments(namespace).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	desiredMachines := 0
-	for _, machineDeployment := range machineDeploymentList {
-		if machineDeployment.DeletionTimestamp == nil {
-			desiredMachines += int(machineDeployment.Spec.Replicas)
+	for _, worker := range workers {
+		requirement, err := labels.NewRequirement("worker.gardener.cloud/pool", selection.Equals, []string{worker.Name})
+		if err != nil {
+			return nil, err
 		}
-	}
+		nodeList, err := nodeLister.List(labels.NewSelector().Add(*requirement))
+		if err != nil {
+			return nil, err
+		}
 
-	if registeredNodes := len(nodeList); registeredNodes < desiredMachines {
-		c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in the cluster (%d/%d).", registeredNodes, desiredMachines))
-		return &c, nil
-	}
-	if exitCondition := b.checkMachineDeployments(condition, machineDeploymentList); exitCondition != nil {
-		return exitCondition, nil
+		if exitCondition := b.checkNodes(condition, nodeList, worker.Name); exitCondition != nil {
+			return exitCondition, nil
+		}
+
+		if len(nodeList) < int(worker.Minimum) {
+			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodeList), worker.Minimum))
+			return &c, nil
+		} else if len(nodeList) > int(worker.Maximum) {
+			c := b.FailedCondition(condition, "TooManyNodes", fmt.Sprintf("Too many worker nodes registered in worker pool '%s' - exceeds maximum desired machine count. (%d/%d).", worker.Name, len(nodeList), worker.Maximum))
+			return &c, nil
+		}
 	}
 	return nil, nil
 }
@@ -588,11 +566,11 @@ func (b *Botanist) checkControlPlane(
 	condition gardencorev1beta1.Condition,
 	seedDeploymentLister kutil.DeploymentLister,
 	seedStatefulSetLister kutil.StatefulSetLister,
-	machineDeploymentLister kutil.MachineDeploymentLister,
+	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []extensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
 
-	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, machineDeploymentLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
@@ -643,11 +621,9 @@ func (b *Botanist) checkClusterNodes(
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	shootNodeLister kutil.NodeLister,
-	seedMachineDeploymentLister kutil.MachineDeploymentLister,
 	extensionConditions []extensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-
-	if exitCondition, err := checker.CheckClusterNodes(b.Shoot.SeedNamespace, condition, shootNodeLister, seedMachineDeploymentLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckClusterNodes(b.Shoot.Info.Spec.Provider.Workers, condition, shootNodeLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
@@ -760,14 +736,14 @@ func makeNodeLister(clientset kubernetes.Interface, options metav1.ListOptions) 
 	})
 }
 
-func makeMachineDeploymentLister(c client.Client, namespace string) kutil.MachineDeploymentLister {
+func makeWorkerLister(c client.Client, namespace string) kutil.WorkerLister {
 	var (
 		once  sync.Once
-		items []*machinev1alpha1.MachineDeployment
+		items []*extensionsv1alpha1.Worker
 		err   error
 
 		onceBody = func() {
-			list := &machinev1alpha1.MachineDeploymentList{}
+			list := &extensionsv1alpha1.WorkerList{}
 			if err := c.List(context.TODO(), list, client.InNamespace(namespace)); err != nil {
 				return
 			}
@@ -779,7 +755,7 @@ func makeMachineDeploymentLister(c client.Client, namespace string) kutil.Machin
 		}
 	)
 
-	return kutil.NewMachineDeploymentLister(func() ([]*machinev1alpha1.MachineDeployment, error) {
+	return kutil.NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
 		once.Do(onceBody)
 		return items, err
 	})
@@ -829,9 +805,9 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}
 
 	var (
-		seedDeploymentLister        = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
-		seedStatefulSetLister       = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
-		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
+		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
+		seedWorkerLister      = makeWorkerLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 
 		checker = NewHealthChecker(thresholdMappings)
 	)
@@ -840,7 +816,6 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	if err != nil {
 		b.Logger.Errorf("error getting extension conditions: %+v", err)
 	}
-
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
@@ -848,7 +823,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
@@ -868,12 +843,12 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	go func() {
 		defer wg.Done()
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedMachineDeploymentLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	go func() {
 		defer wg.Done()
-		newNodes, err := b.checkClusterNodes(checker, nodes, shootNodeLister, seedMachineDeploymentLister, extensionConditionsEveryNodeReady)
+		newNodes, err := b.checkClusterNodes(checker, nodes, shootNodeLister, extensionConditionsEveryNodeReady)
 		nodes = newConditionOrError(nodes, newNodes, err)
 	}()
 	go func() {
