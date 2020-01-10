@@ -24,13 +24,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -553,33 +554,33 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
-	Context("MachineDeploymentLister", func() {
+	Context("WorkerLister", func() {
 		var (
 			aLabels = map[string]string{"label": "a"}
 			bLabels = map[string]string{"label": "b"}
 
-			n1AMachineDeployment = &machinev1alpha1.MachineDeployment{
+			n1AWorker = &extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "n1",
 					Name:      "a",
 					Labels:    aLabels,
 				},
 			}
-			n1BMachineDeployment = &machinev1alpha1.MachineDeployment{
+			n1BWorker = &extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "n1",
 					Name:      "b",
 					Labels:    bLabels,
 				},
 			}
-			n2AMachineDeployment = &machinev1alpha1.MachineDeployment{
+			n2AWorker = &extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "n2",
 					Name:      "a",
 					Labels:    aLabels,
 				},
 			}
-			n2BMachineDeployment = &machinev1alpha1.MachineDeployment{
+			n2BWorker = &extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "n2",
 					Name:      "b",
@@ -587,12 +588,12 @@ var _ = Describe("kubernetes", func() {
 				},
 			}
 
-			machineDeployments = []*machinev1alpha1.MachineDeployment{n1AMachineDeployment, n1BMachineDeployment, n2AMachineDeployment, n2BMachineDeployment}
+			machineDeployments = []*extensionsv1alpha1.Worker{n1AWorker, n1BWorker, n2AWorker, n2BWorker}
 		)
 
 		DescribeTable("#List",
-			func(source []*machinev1alpha1.MachineDeployment, selector labels.Selector, expected []*machinev1alpha1.MachineDeployment) {
-				lister := NewMachineDeploymentLister(func() ([]*machinev1alpha1.MachineDeployment, error) {
+			func(source []*extensionsv1alpha1.Worker, selector labels.Selector, expected []*extensionsv1alpha1.Worker) {
+				lister := NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
 					return source, nil
 				})
 
@@ -602,44 +603,44 @@ var _ = Describe("kubernetes", func() {
 			},
 			Entry("everything", machineDeployments, labels.Everything(), machineDeployments),
 			Entry("nothing", machineDeployments, labels.Nothing(), nil),
-			Entry("a labels", machineDeployments, labels.SelectorFromSet(labels.Set(aLabels)), []*machinev1alpha1.MachineDeployment{n1AMachineDeployment, n2AMachineDeployment}),
-			Entry("b labels", machineDeployments, labels.SelectorFromSet(labels.Set(bLabels)), []*machinev1alpha1.MachineDeployment{n1BMachineDeployment, n2BMachineDeployment}))
+			Entry("a labels", machineDeployments, labels.SelectorFromSet(labels.Set(aLabels)), []*extensionsv1alpha1.Worker{n1AWorker, n2AWorker}),
+			Entry("b labels", machineDeployments, labels.SelectorFromSet(labels.Set(bLabels)), []*extensionsv1alpha1.Worker{n1BWorker, n2BWorker}))
 
-		Context("MachineDeployments", func() {
+		Context("Workers", func() {
 			DescribeTable("#List",
-				func(source []*machinev1alpha1.MachineDeployment, namespace string, selector labels.Selector, expected []*machinev1alpha1.MachineDeployment) {
-					lister := NewMachineDeploymentLister(func() ([]*machinev1alpha1.MachineDeployment, error) {
+				func(source []*extensionsv1alpha1.Worker, namespace string, selector labels.Selector, expected []*extensionsv1alpha1.Worker) {
+					lister := NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
 						return source, nil
 					})
 
-					actual, err := lister.MachineDeployments(namespace).List(selector)
+					actual, err := lister.Workers(namespace).List(selector)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(actual).To(Equal(expected))
 				},
-				Entry("everything in n1", machineDeployments, "n1", labels.Everything(), []*machinev1alpha1.MachineDeployment{n1AMachineDeployment, n1BMachineDeployment}),
+				Entry("everything in n1", machineDeployments, "n1", labels.Everything(), []*extensionsv1alpha1.Worker{n1AWorker, n1BWorker}),
 				Entry("nothing in n1", machineDeployments, "n1", labels.Nothing(), nil),
-				Entry("a labels in n1", machineDeployments, "n1", labels.SelectorFromSet(labels.Set(aLabels)), []*machinev1alpha1.MachineDeployment{n1AMachineDeployment}),
-				Entry("b labels in n1", machineDeployments, "n1", labels.SelectorFromSet(labels.Set(bLabels)), []*machinev1alpha1.MachineDeployment{n1BMachineDeployment}),
-				Entry("everything in n2", machineDeployments, "n2", labels.Everything(), []*machinev1alpha1.MachineDeployment{n2AMachineDeployment, n2BMachineDeployment}),
+				Entry("a labels in n1", machineDeployments, "n1", labels.SelectorFromSet(labels.Set(aLabels)), []*extensionsv1alpha1.Worker{n1AWorker}),
+				Entry("b labels in n1", machineDeployments, "n1", labels.SelectorFromSet(labels.Set(bLabels)), []*extensionsv1alpha1.Worker{n1BWorker}),
+				Entry("everything in n2", machineDeployments, "n2", labels.Everything(), []*extensionsv1alpha1.Worker{n2AWorker, n2BWorker}),
 				Entry("nothing in n2", machineDeployments, "n2", labels.Nothing(), nil),
-				Entry("a labels in n2", machineDeployments, "n2", labels.SelectorFromSet(labels.Set(aLabels)), []*machinev1alpha1.MachineDeployment{n2AMachineDeployment}),
-				Entry("b labels in n2", machineDeployments, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*machinev1alpha1.MachineDeployment{n2BMachineDeployment}))
+				Entry("a labels in n2", machineDeployments, "n2", labels.SelectorFromSet(labels.Set(aLabels)), []*extensionsv1alpha1.Worker{n2AWorker}),
+				Entry("b labels in n2", machineDeployments, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*extensionsv1alpha1.Worker{n2BWorker}))
 
 			DescribeTable("#Get",
-				func(source []*machinev1alpha1.MachineDeployment, namespace, name string, machineDeploymentMatcher, errMatcher types.GomegaMatcher) {
-					lister := NewMachineDeploymentLister(func() ([]*machinev1alpha1.MachineDeployment, error) {
+				func(source []*extensionsv1alpha1.Worker, namespace, name string, machineDeploymentMatcher, errMatcher types.GomegaMatcher) {
+					lister := NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
 						return source, nil
 					})
 
-					actual, err := lister.MachineDeployments(namespace).Get(name)
+					actual, err := lister.Workers(namespace).Get(name)
 					Expect(err).To(errMatcher)
 					Expect(actual).To(machineDeploymentMatcher)
 				},
-				Entry("a in n1", machineDeployments, "n1", "a", Equal(n1AMachineDeployment), Not(HaveOccurred())),
-				Entry("b in n1", machineDeployments, "n1", "b", Equal(n1BMachineDeployment), Not(HaveOccurred())),
+				Entry("a in n1", machineDeployments, "n1", "a", Equal(n1AWorker), Not(HaveOccurred())),
+				Entry("b in n1", machineDeployments, "n1", "b", Equal(n1BWorker), Not(HaveOccurred())),
 				Entry("c in n1", machineDeployments, "n1", "c", BeNil(), HaveOccurred()),
-				Entry("a in n2", machineDeployments, "n2", "a", Equal(n2AMachineDeployment), Not(HaveOccurred())),
-				Entry("b in n2", machineDeployments, "n2", "b", Equal(n2BMachineDeployment), Not(HaveOccurred())),
+				Entry("a in n2", machineDeployments, "n2", "a", Equal(n2AWorker), Not(HaveOccurred())),
+				Entry("b in n2", machineDeployments, "n2", "b", Equal(n2BWorker), Not(HaveOccurred())),
 				Entry("c in n2", machineDeployments, "n2", "c", BeNil(), HaveOccurred()))
 		})
 	})

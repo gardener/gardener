@@ -26,7 +26,6 @@ import (
 	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -76,7 +75,6 @@ func init() {
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		machinev1alpha1.AddToScheme,
 		dnsscheme.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 		resourcesscheme.AddToScheme,
