@@ -102,7 +102,7 @@ func NewSeedController(
 		k8sGardenCoreInformers:  gardenCoreInformerFactory,
 		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, config, secretLister, shootLister),
 		heartbeatControl:        NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1beta1Informer, identity, config),
-		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient, controllerInstallationLister, recorder),
+		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient.GardenCore(), controllerInstallationLister, metav1.Now),
 		config:                  config,
 		recorder:                recorder,
 		seedLister:              seedLister,
