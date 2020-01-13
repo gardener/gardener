@@ -178,7 +178,9 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		dnsEnabled              = !gardencorev1beta1helper.TaintsHave(botanist.Seed.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)
+		dnsEnabled              = !o.Shoot.DisableDNS
+		managedExternalDNS      = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS      = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -223,10 +225,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
 		})
+		deployInternalDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Deploying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS && cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
+		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord),
 		})
 
 		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
