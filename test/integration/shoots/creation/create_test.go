@@ -243,7 +243,7 @@ func prepareShoot() *gardencorev1beta1.Shoot {
 	}
 
 	if networkingNodes != nil && len(*networkingNodes) > 0 {
-		shootObject.Spec.Networking.Nodes = *networkingNodes
+		shootObject.Spec.Networking.Nodes = networkingNodes
 	}
 
 	// set ProviderConfigs

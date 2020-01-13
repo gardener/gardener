@@ -88,7 +88,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardencorev1alpha1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardencorev1alpha1.ShootNetworks{
@@ -148,7 +148,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardenv1beta1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardenv1beta1.ShootNetworks{
@@ -209,7 +209,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardenv1beta1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardenv1beta1.ShootNetworks{
@@ -244,7 +244,7 @@ var _ = Describe("roundtripper seed migration", func() {
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardencorev1alpha1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardencorev1alpha1.ShootNetworks{

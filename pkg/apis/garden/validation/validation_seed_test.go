@@ -40,6 +40,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			region := "some-region"
 			pods := "10.240.0.0/16"
 			services := "10.241.0.0/16"
+			nodesCIDR := "10.250.0.0/16"
 			seed = &garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed-1",
@@ -65,7 +66,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						{Key: garden.SeedTaintProtected},
 					},
 					Networks: garden.SeedNetworks{
-						Nodes:    "10.250.0.0/16",
+						Nodes:    &nodesCIDR,
 						Pods:     "100.96.0.0/11",
 						Services: "100.64.0.0/13",
 						ShootDefaults: &garden.ShootNetworks{
@@ -118,7 +119,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    invalidCIDR,
+				Nodes:    &invalidCIDR,
 				Pods:     "300.300.300.300/300",
 				Services: invalidCIDR,
 				ShootDefaults: &garden.ShootNetworks{
@@ -252,12 +253,14 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid Seed with overlapping networks", func() {
 			shootDefaultPodCIDR := "10.0.1.128/28"     // 10.0.1.128 -> 10.0.1.13
 			shootDefaultServiceCIDR := "10.0.1.144/30" // 10.0.1.144 -> 10.0.1.17
+
+			nodesCIDR := "10.0.0.0/8" // 10.0.0.0 -> 10.255.255.25
 			// Pods CIDR overlaps with Nodes network
 			// Services CIDR overlaps with Nodes and Pods
 			// Shoot default pod CIDR overlaps with services
 			// Shoot default pod CIDR overlaps with shoot default pod CIDR
 			seed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    "10.0.0.0/8",   // 10.0.0.0 -> 10.255.255.25
+				Nodes:    &nodesCIDR,     // 10.0.0.0 -> 10.255.255.25
 				Pods:     "10.0.1.0/24",  // 10.0.1.0 -> 10.0.1.25
 				Services: "10.0.1.64/26", // 10.0.1.64 -> 10.0.1.17
 				ShootDefaults: &garden.ShootNetworks{
@@ -300,9 +303,11 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		It("should fail updating immutable fields", func() {
+			nodesCIDR := "10.1.0.0/16"
+
 			newSeed := prepareSeedForUpdate(seed)
 			newSeed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    "10.1.0.0/16",
+				Nodes:    &nodesCIDR,
 				Pods:     "10.2.0.0/16",
 				Services: "10.3.1.64/26",
 			}
@@ -333,6 +338,54 @@ var _ = Describe("Seed Validation Tests", func() {
 				"Field":  Equal("spec.backup.provider"),
 				"Detail": Equal(`field is immutable`),
 			}))
+		})
+
+		Context("nodes cidr", func() {
+			var oldSeed *garden.Seed
+
+			BeforeEach(func() {
+				oldSeed = seed.DeepCopy()
+			})
+
+			It("should allow adding a nodes CIDR", func() {
+				oldSeed.Spec.Networks.Nodes = nil
+
+				nodesCIDR := "10.1.0.0/16"
+				newSeed := prepareSeedForUpdate(oldSeed)
+				newSeed.Spec.Networks.Nodes = &nodesCIDR
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid removing the nodes CIDR", func() {
+				newSeed := prepareSeedForUpdate(oldSeed)
+				newSeed.Spec.Networks.Nodes = nil
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networks.nodes"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should forbid changing the nodes CIDR", func() {
+				newSeed := prepareSeedForUpdate(oldSeed)
+
+				differentNodesCIDR := "12.1.0.0/16"
+				newSeed.Spec.Networks.Nodes = &differentNodesCIDR
+
+				errorList := ValidateSeedUpdate(newSeed, oldSeed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networks.nodes"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
 		})
 
 		Context("#validateSeedBackupUpdate", func() {

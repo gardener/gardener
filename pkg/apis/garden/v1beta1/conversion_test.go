@@ -213,7 +213,7 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:    nodesCIDR,
+							Nodes:    &nodesCIDR,
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},
@@ -245,7 +245,7 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -304,7 +304,7 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -356,7 +356,7 @@ var _ = Describe("Machine Image Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:    nodesCIDR,
+							Nodes:    &nodesCIDR,
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 							ShootDefaults: &ShootNetworks{

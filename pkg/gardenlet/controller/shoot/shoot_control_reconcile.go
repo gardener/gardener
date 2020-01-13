@@ -89,6 +89,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
 		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 		allowBackup        = o.Seed.Info.Spec.Backup != nil
+		staticNodesCIDR    = o.Shoot.Info.Spec.Networking.Nodes != nil
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -99,11 +100,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Deploying Shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
@@ -151,6 +147,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilInfrastructureReady),
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying network policies",
+			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+		})
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name: "Deploying backup entry",
 			Fn:   flow.TaskFn(botanist.DeployBackupEntryInGarden).DoIf(allowBackup),
@@ -188,7 +189,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
 			Fn:           flow.SimpleTaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -278,7 +279,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",

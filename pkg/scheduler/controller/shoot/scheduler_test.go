@@ -61,7 +61,7 @@ var _ = Describe("Scheduler_Control", func() {
 					Region: region,
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
-					Nodes:    "10.10.0.0/16",
+					Nodes:    makeStrPtr("10.10.0.0/16"),
 					Pods:     "10.20.0.0/16",
 					Services: "10.30.0.0/16",
 				},
@@ -91,7 +91,7 @@ var _ = Describe("Scheduler_Control", func() {
 					Type: providerType,
 				},
 				Networking: gardencorev1beta1.Networking{
-					Nodes:    "10.40.0.0/16",
+					Nodes:    makeStrPtr("10.40.0.0/16"),
 					Pods:     makeStrPtr("10.50.0.0/16"),
 					Services: makeStrPtr("10.60.0.0/16"),
 				},

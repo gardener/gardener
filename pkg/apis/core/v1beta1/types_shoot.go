@@ -703,7 +703,8 @@ type Networking struct {
 	// +optional
 	Pods *string `json:"pods,omitempty"`
 	// Nodes is the CIDR of the entire node network.
-	Nodes string `json:"nodes"`
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
 	// Services is the CIDR of the service network.
 	// +optional
 	Services *string `json:"services,omitempty"`

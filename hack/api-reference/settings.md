@@ -555,5 +555,5 @@ Required.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>6e6e11d6a</code>.
+on git commit <code>79c676930</code>.
 </em></p>

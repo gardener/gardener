@@ -88,13 +88,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
+		networks = map[string]interface{}{
+			"pods":     b.Shoot.GetPodNetwork(),
+			"services": b.Shoot.GetServiceNetwork(),
+		}
+
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"networks": map[string]interface{}{
-				"pods":     b.Shoot.GetPodNetwork(),
-				"services": b.Shoot.GetServiceNetwork(),
-				"nodes":    b.Shoot.Info.Spec.Networking.Nodes,
-			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"hosts":           hosts,
@@ -150,6 +150,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
+
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
+		networks["nodes"] = *v
+	}
+	prometheusConfig["networks"] = networks
 
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig,
 		common.PrometheusImageName,

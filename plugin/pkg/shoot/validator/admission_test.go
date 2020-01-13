@@ -153,7 +153,7 @@ var _ = Describe("validator", func() {
 					Networks: garden.SeedNetworks{
 						Pods:     seedPodsCIDR,
 						Services: seedServicesCIDR,
-						Nodes:    seedNodesCIDR,
+						Nodes:    &seedNodesCIDR,
 					},
 					SecretRef: &corev1.SecretReference{
 						Name:      seedSecret.Name,
@@ -183,7 +183,7 @@ var _ = Describe("validator", func() {
 						Version: "1.6.4",
 					},
 					Networking: garden.Networking{
-						Nodes:    *k8sNetworks.Nodes,
+						Nodes:    k8sNetworks.Nodes,
 						Pods:     k8sNetworks.Pods,
 						Services: k8sNetworks.Services,
 					},
@@ -2717,7 +2717,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Networking.Nodes = seedNodesCIDR
+				shoot.Spec.Networking.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

@@ -3165,7 +3165,7 @@ func autoConvert_v1alpha1_Networking_To_garden_Networking(in *Networking, out *g
 	out.Type = in.Type
 	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
-	out.Nodes = in.Nodes
+	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
 	return nil
 }
@@ -3179,7 +3179,7 @@ func autoConvert_garden_Networking_To_v1alpha1_Networking(in *garden.Networking,
 	out.Type = in.Type
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
-	out.Nodes = in.Nodes
+	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
 	return nil
 }
@@ -3828,7 +3828,7 @@ func Convert_garden_SeedList_To_v1alpha1_SeedList(in *garden.SeedList, out *Seed
 }
 
 func autoConvert_v1alpha1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
-	out.Nodes = in.Nodes
+	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Pods = in.Pods
 	out.Services = in.Services
 	out.ShootDefaults = (*garden.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
@@ -3836,7 +3836,7 @@ func autoConvert_v1alpha1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, 
 }
 
 func autoConvert_garden_SeedNetworks_To_v1alpha1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
-	out.Nodes = in.Nodes
+	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Pods = in.Pods
 	out.Services = in.Services
 	out.ShootDefaults = (*ShootNetworks)(unsafe.Pointer(in.ShootDefaults))

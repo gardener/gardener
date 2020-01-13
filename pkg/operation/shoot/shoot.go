@@ -142,7 +142,8 @@ func (s *Shoot) GetNodeCount() int32 {
 	return nodeCount
 }
 
-// GetPodNetwork returns the pod network CIDR for the Shoot cluster.
+// GetPodNetwork returns the pod network CIDR for the Shoot cluster. If no CIDR was specified then an
+// empty string is returned.
 func (s *Shoot) GetPodNetwork() string {
 	if val := s.Info.Spec.Networking.Pods; val != nil {
 		return *val
@@ -150,12 +151,23 @@ func (s *Shoot) GetPodNetwork() string {
 	return ""
 }
 
-// GetServiceNetwork returns the service network CIDR for the Shoot cluster.
+// GetServiceNetwork returns the service network CIDR for the Shoot cluster. If no CIDR was specified then an
+// empty string is returned.
 func (s *Shoot) GetServiceNetwork() string {
 	if val := s.Info.Spec.Networking.Services; val != nil {
 		return *val
 	}
 	return ""
+}
+
+// GetNodeNetwork returns the nodes network CIDR for the Shoot cluster. If the infrastructure extension
+// controller has generated a nodes network then this CIDR will take priority. Otherwise, the nodes network
+// CIDR specified in the shoot will be returned (if possible). If no CIDR was specified then nil is returned.
+func (s *Shoot) GetNodeNetwork() *string {
+	if val := s.Info.Spec.Networking.Nodes; val != nil {
+		return val
+	}
+	return nil
 }
 
 // KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.

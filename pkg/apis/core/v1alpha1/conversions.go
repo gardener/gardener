@@ -1058,7 +1058,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.AWS.Networks.VPC.ID = infrastructureConfig.Networks.VPC.ID
 		out.Spec.Cloud.AWS.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.AWS.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.AWS.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.AWS.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage
@@ -1160,7 +1160,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.Azure.Networks.ServiceEndpoints = infrastructureConfig.Networks.ServiceEndpoints
 		out.Spec.Cloud.Azure.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.Azure.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.Azure.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.Azure.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage
@@ -1266,7 +1266,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.GCP.Networks.Workers = []string{infrastructureConfig.Networks.Worker}
 		out.Spec.Cloud.GCP.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.GCP.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.GCP.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.GCP.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage
@@ -1370,7 +1370,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.OpenStack.Networks.Workers = []string{infrastructureConfig.Networks.Worker}
 		out.Spec.Cloud.OpenStack.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.OpenStack.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.OpenStack.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.OpenStack.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage
@@ -1487,7 +1487,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.Alicloud.Networks.VPC.ID = infrastructureConfig.Networks.VPC.ID
 		out.Spec.Cloud.Alicloud.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.Alicloud.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.Alicloud.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.Alicloud.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage
@@ -1549,7 +1549,7 @@ func Convert_v1alpha1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conv
 		out.Spec.Cloud.Packet.Zones = nil
 		out.Spec.Cloud.Packet.Networks.Pods = in.Spec.Networking.Pods
 		out.Spec.Cloud.Packet.Networks.Services = in.Spec.Networking.Services
-		out.Spec.Cloud.Packet.Networks.Nodes = &in.Spec.Networking.Nodes
+		out.Spec.Cloud.Packet.Networks.Nodes = in.Spec.Networking.Nodes
 
 		if data, ok := in.Annotations[garden.MigrationShootGlobalMachineImage]; ok {
 			var machineImage garden.ShootMachineImage

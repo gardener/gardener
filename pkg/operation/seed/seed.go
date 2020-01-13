@@ -555,11 +555,15 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
-	privateNetworks, err := common.ToExceptNetworks(
-		common.AllPrivateNetworkBlocks(),
-		seed.Info.Spec.Networks.Nodes,
+	networks := []string{
 		seed.Info.Spec.Networks.Pods,
-		seed.Info.Spec.Networks.Services)
+		seed.Info.Spec.Networks.Services,
+	}
+	if v := seed.Info.Spec.Networks.Nodes; v != nil {
+		networks = append(networks, *v)
+	}
+
+	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), networks...)
 	if err != nil {
 		return err
 	}
