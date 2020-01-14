@@ -176,6 +176,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 	var (
 		nonTerminatingNamespace = namespace.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
+		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
 		dnsEnabled              = !o.Shoot.DisableDNS
@@ -217,7 +218,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
-			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed, waitUntilControlPlaneReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -227,12 +228,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedInternalDNS),
 			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedExternalDNS),
 			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
 		})
 		initializeShootClients = g.Add(flow.Task{
