@@ -106,6 +106,20 @@ BackupBucketProvider
 </tr>
 <tr>
 <td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>secretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
@@ -1859,6 +1873,20 @@ BackupBucketProvider
 </tr>
 <tr>
 <td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>secretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
@@ -1901,6 +1929,20 @@ string
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>lastOperation</code></br>
@@ -5628,12 +5670,15 @@ definition in the documentation of your provider extension.</p>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.AdmissionPlugin">AdmissionPlugin</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.Extension">Extension</a>, 
 <a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
 <a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedBackup">SeedBackup</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage</a>, 
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
@@ -5808,6 +5853,20 @@ string
 </td>
 <td>
 <p>Provider is a provider name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
 </td>
 </tr>
 <tr>
@@ -7165,5 +7224,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>5f32ae02c</code>.
+on git commit <code>5b69a02f5</code>.
 </em></p>

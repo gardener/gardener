@@ -28,6 +28,8 @@ metadata:
   name: foo
 spec:
   type: azure
+  providerConfig:
+    <some-optional-provider-specific-backupbucket-configuration>
   region: eu-west-1
   secretRef:
     name: backupprovider

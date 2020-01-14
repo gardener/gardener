@@ -50,6 +50,9 @@ type BackupBucketList struct {
 type BackupBucketSpec struct {
 	// Provider hold the details of cloud provider of the object store.
 	Provider BackupBucketProvider `json:"provider"`
+	// ProviderConfig is the configuration passed to BackupBucket resource.
+	// +optional
+	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// Seed holds the name of the seed allocated to BackupBucket for running controller.
@@ -59,6 +62,9 @@ type BackupBucketSpec struct {
 
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.
 type BackupBucketStatus struct {
+	// ProviderStatus is the configuration passed to BackupBucket resource.
+	// +optional
+	ProviderStatus *ProviderConfig `json:"providerStatus,omitempty"`
 	// LastOperation holds information about the last operation on the BackupBucket.
 	// +optional
 	LastOperation *LastOperation `json:"lastOperation,omitempty"`

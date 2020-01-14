@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,6 +86,7 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 		})
 		f = g.Compile()
 	)
+
 	return f.Run(flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: a.reportBackupBucketProgress,
@@ -161,12 +163,18 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		},
 	}
 
+	var providerConfig *runtime.RawExtension
+	if a.backupBucket.Spec.ProviderConfig != nil {
+		providerConfig = &a.backupBucket.Spec.ProviderConfig.RawExtension
+	}
+
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: a.backupBucket.Spec.Provider.Type,
+				Type:           a.backupBucket.Spec.Provider.Type,
+				ProviderConfig: providerConfig,
 			},
 			Region: a.backupBucket.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
@@ -200,6 +208,11 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
 	}
 
+	var (
+		generatedSecretRef *corev1.SecretReference
+		providerStatus     *gardencorev1beta1.ProviderConfig
+	)
+
 	if backupBucket.Status.GeneratedSecretRef != nil {
 		generatedSecret, err := common.GetSecretFromSecretRef(ctx, a.seedClient, backupBucket.Status.GeneratedSecretRef)
 		if err != nil {
@@ -227,11 +240,22 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 			return err
 		}
 
+		generatedSecretRef = &corev1.SecretReference{
+			Name:      coreGeneratedSecret.Name,
+			Namespace: coreGeneratedSecret.Namespace,
+		}
+	}
+
+	if backupBucket.Status.ProviderStatus != nil {
+		providerStatus = &gardencorev1beta1.ProviderConfig{
+			RawExtension: *backupBucket.Status.ProviderStatus,
+		}
+	}
+
+	if generatedSecretRef != nil || providerStatus != nil {
 		return kutil.CreateOrUpdate(ctx, a.gardenClient, a.backupBucket, func() error {
-			a.backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
-				Name:      coreGeneratedSecret.Name,
-				Namespace: coreGeneratedSecret.Namespace,
-			}
+			a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
+			a.backupBucket.Status.ProviderStatus = providerStatus
 			return nil
 		})
 	}

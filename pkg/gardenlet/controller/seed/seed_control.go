@@ -375,11 +375,12 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 				Type:   string(seed.Spec.Backup.Provider),
 				Region: region,
 			},
+			ProviderConfig: seed.Spec.Backup.ProviderConfig,
 			SecretRef: corev1.SecretReference{
 				Name:      seed.Spec.Backup.SecretRef.Name,
 				Namespace: seed.Spec.Backup.SecretRef.Namespace,
 			},
-			SeedName: &seed.Name, // In future this will be moved to scheduler.
+			SeedName: &seed.Name, // In future this will be moved to gardener-scheduler.
 		}
 		return nil
 	})

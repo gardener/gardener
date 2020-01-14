@@ -339,14 +339,14 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.Info.Spec.Provider.Type),
+				Type:           string(b.Shoot.Info.Spec.Provider.Type),
+				ProviderConfig: providerConfig,
 			},
 			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
 			},
-			ProviderConfig: providerConfig,
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: b.Shoot.InfrastructureStatus,
 			},

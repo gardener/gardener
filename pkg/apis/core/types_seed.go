@@ -85,6 +85,8 @@ type SeedStatus struct {
 type SeedBackup struct {
 	// Provider is a provider name.
 	Provider string
+	// ProviderConfig is the configuration passed to BackupBucket resource.
+	ProviderConfig *ProviderConfig
 	// Region is a region name.
 	Region *string
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for

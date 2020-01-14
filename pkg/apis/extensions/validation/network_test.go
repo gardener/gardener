@@ -37,11 +37,11 @@ var _ = Describe("Network validation tests", func() {
 			},
 			Spec: extensionsv1alpha1.NetworkSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "provider",
+					Type:           "provider",
+					ProviderConfig: &runtime.RawExtension{},
 				},
-				PodCIDR:        "10.20.30.40/26",
-				ServiceCIDR:    "10.30.40.50/26",
-				ProviderConfig: &runtime.RawExtension{},
+				PodCIDR:     "10.20.30.40/26",
+				ServiceCIDR: "10.30.40.50/26",
 			},
 		}
 	})

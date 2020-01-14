@@ -38,14 +38,14 @@ var _ = Describe("Infrastructure validation tests", func() {
 			},
 			Spec: extensionsv1alpha1.InfrastructureSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "provider",
+					Type:           "provider",
+					ProviderConfig: &runtime.RawExtension{},
 				},
 				Region: "region",
 				SecretRef: corev1.SecretReference{
 					Name: "test",
 				},
-				ProviderConfig: &runtime.RawExtension{},
-				SSHPublicKey:   []byte("key"),
+				SSHPublicKey: []byte("key"),
 			},
 		}
 	})

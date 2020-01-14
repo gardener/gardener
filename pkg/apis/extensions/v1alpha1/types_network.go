@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ Object = (*Network)(nil)
@@ -67,19 +66,12 @@ type NetworkSpec struct {
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services.
 	ServiceCIDR string `json:"serviceCIDR"`
-	// ProviderConfig contains plugin-specific configuration.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // NetworkStatus is the status for an Network resource.
 type NetworkStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
-
-	// ProviderStatus contains plugin-specific output.
-	// +optional
-	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }
 
 // GetExtensionType returns the type of this Network resource.

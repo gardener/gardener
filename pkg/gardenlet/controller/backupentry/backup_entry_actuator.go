@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -194,15 +195,29 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
+	var (
+		backupBucketProviderConfig *runtime.RawExtension
+		backupBucketProviderStatus *runtime.RawExtension
+	)
+
+	if bb.Spec.ProviderConfig != nil {
+		backupBucketProviderConfig = &bb.Spec.ProviderConfig.RawExtension
+	}
+	if bb.Status.ProviderStatus != nil {
+		backupBucketProviderStatus = &bb.Status.ProviderStatus.RawExtension
+	}
+
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: bb.Spec.Provider.Type,
+				Type:           bb.Spec.Provider.Type,
+				ProviderConfig: backupBucketProviderConfig,
 			},
-			BucketName: a.backupEntry.Spec.BucketName,
-			Region:     bb.Spec.Provider.Region,
+			BackupBucketProviderStatus: backupBucketProviderStatus,
+			BucketName:                 a.backupEntry.Spec.BucketName,
+			Region:                     bb.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      extensionSecret.Name,
 				Namespace: extensionSecret.Namespace,

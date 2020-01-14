@@ -16,6 +16,8 @@ spec:
 # If you don't want to have backups then don't specify the `.spec.backup` key.
   backup:
     provider: <provider-name> # e.g., aws, azure, gcp, ...
+  # providerConfig:
+  #   <some-provider-specific-config-for-the-backup-buckets>
     region: europe-1
     secretRef:
       name: backup-secret
