@@ -204,7 +204,16 @@ func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, client k
 
 // DashboardAvailable checks if the kubernetes dashboard is available
 func (o *GardenerTestOperation) DashboardAvailable(ctx context.Context) error {
-	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Spec.DNS.Domain)
+	k8sVersionLessThan116, err := versionutils.CompareVersions(o.Shoot.Spec.Kubernetes.Version, "<", "1.16")
+	if err != nil {
+		return err
+	}
+
+	namespace := metav1.NamespaceSystem
+	if !k8sVersionLessThan116 {
+		namespace = "kubernetes-dashboard"
+	}
+	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Spec.DNS.Domain, namespace)
 	dashboardToken, err := o.getAdminToken(ctx)
 	if err != nil {
 		return err
