@@ -293,6 +293,24 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
 
+		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability 4) using shoot default networks", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			shoot.Spec.Networking.Pods = nil
+			shoot.Spec.Networking.Services = nil
+
+			seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{
+				Pods:     makeStrPtr("10.50.0.0/16"),
+				Services: makeStrPtr("10.60.0.0/16"),
+			}
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seedName))
+		})
+
 		It("should find the best seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
 			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
