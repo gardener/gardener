@@ -114,8 +114,6 @@ const (
 	GardenPurpose = "garden.sapcloud.io/purpose"
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
-	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
-	GardenPurposeMachineClass = "machineclass"
 
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
