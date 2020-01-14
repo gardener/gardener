@@ -301,24 +301,32 @@ func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {
 
 func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	var (
-		errs = cidrvalidation.ValidateNetworkDisjointedness(
-			field.NewPath(""),
-			shoot.Spec.Networking.Nodes,
-			shoot.Spec.Networking.Pods,
-			shoot.Spec.Networking.Services,
-			seed.Spec.Networks.Nodes,
-			seed.Spec.Networks.Pods,
-			seed.Spec.Networks.Services,
-		)
+		shootPodsNetwork     = shoot.Spec.Networking.Pods
+		shootServicesNetwork = shoot.Spec.Networking.Services
 
 		errorMessages []string
 	)
 
-	for _, e := range errs {
+	if shootPodsNetwork == nil {
+		shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
+	}
+	if shootServicesNetwork == nil {
+		shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+	}
+
+	for _, e := range cidrvalidation.ValidateNetworkDisjointedness(
+		field.NewPath(""),
+		shoot.Spec.Networking.Nodes,
+		shootPodsNetwork,
+		shootServicesNetwork,
+		seed.Spec.Networks.Nodes,
+		seed.Spec.Networks.Pods,
+		seed.Spec.Networks.Services,
+	) {
 		errorMessages = append(errorMessages, e.ErrorBody())
 	}
 
-	return len(errs) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
+	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
 }
 
 // ignore seed if it disables DNS and shoot has DNS but not unmanaged
