@@ -125,6 +125,9 @@ const (
 	// GardenerOperationMigrate is a constant for the value of the operation annotation describing a migration
 	// operation.
 	GardenerOperationMigrate = "migrate"
+	// GardenerOperationRestore is a constant for the value of the operation annotation describing a restoration
+	// operation.
+	GardenerOperationRestore = "restore"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	// +deprecated
