@@ -135,7 +135,7 @@ type GardenletControllerConfiguration struct {
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
 	// ShootStateSync defines the configuration of the ShootStateController controller
 	// +optional
-	ShootStateSync *ShootStateSyncControllerConfiguration `json:"extensionsSync,omitempty"`
+	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket

@@ -70,7 +70,7 @@ func NewFederatedSeedController(k8sGardenClient kubernetes.Interface, gardenCore
 	}
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
-		seedShootStateSyncController: make(map[string]*shootstate.SyncController),
+		controllers: make(map[string]*shootStateSyncController),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -127,7 +127,7 @@ func (c *Controller) seedDelete(obj interface{}) {
 	c.federatedSeedControllerManager.removeController(seed.GetName())
 }
 
-// Run starts the Seed Controller
+// Run starts the FederatedSeed Controller
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
@@ -190,12 +190,22 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 }
 
 type federatedSeedControllerManager struct {
-	seedShootStateSyncController map[string]*shootstate.SyncController
-	lock                         sync.RWMutex
+	controllers map[string]*shootStateSyncController
+	lock        sync.RWMutex
+}
+
+type shootStateSyncController struct {
+	controller *shootstate.SyncController
+	cancelFunc context.CancelFunc
+}
+
+func (s *shootStateSyncController) Stop() {
+	s.cancelFunc()
+	s.controller.Stop()
 }
 
 func (f *federatedSeedControllerManager) createControllers(ctx context.Context, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
-	if _, found := f.seedShootStateSyncController[seedName]; found {
+	if _, found := f.controllers[seedName]; found {
 		logger.Logger.Infof("Controllers are already started for seed %s", seedName)
 		return nil
 	}
@@ -214,36 +224,41 @@ func (f *federatedSeedControllerManager) createControllers(ctx context.Context, 
 	extensionsInformers := extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
 	shootStateSyncController := shootstate.NewSyncController(ctx, k8sGardenClient, k8sSeedClient, extensionsClient, extensionsInformers, config, seedLogger, recorder)
 
+	childCtx, cancelFunc := context.WithCancel(ctx)
 	logger.Logger.Infof("Run ShootStateSync controller for seed: %s", seedName)
-	if err := shootStateSyncController.Run(ctx, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
+	if err := shootStateSyncController.Run(childCtx, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
 		logger.Logger.Infof("There was error running the ShootStateSync controller for seed: %s", seedName)
+		cancelFunc()
 		return err
 	}
 
-	f.addController(seedName, shootStateSyncController)
+	f.addController(seedName, shootStateSyncController, cancelFunc)
 	return nil
 }
 
-func (f *federatedSeedControllerManager) addController(seedName string, shootStateSyncController *shootstate.SyncController) {
+func (f *federatedSeedControllerManager) addController(seedName string, controller *shootstate.SyncController, cancelFunc context.CancelFunc) {
 	logger.Logger.Infof("Adding controllers for seed %s", seedName)
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	f.seedShootStateSyncController[seedName] = shootStateSyncController
+	f.controllers[seedName] = &shootStateSyncController{
+		controller: controller,
+		cancelFunc: cancelFunc,
+	}
 }
 
 func (f *federatedSeedControllerManager) removeController(seedName string) {
-	if controller, ok := f.seedShootStateSyncController[seedName]; ok {
+	if controller, ok := f.controllers[seedName]; ok {
 		logger.Logger.Infof("Removing controllers for seed %s", seedName)
 		controller.Stop()
 		f.lock.Lock()
 		defer f.lock.Unlock()
-		delete(f.seedShootStateSyncController, seedName)
+		delete(f.controllers, seedName)
 	}
 }
 
 func (f *federatedSeedControllerManager) ShutDownControllers() {
 	logger.Logger.Infof("Federated controllers are being stopped")
-	for _, controller := range f.seedShootStateSyncController {
+	for _, controller := range f.controllers {
 		controller.Stop()
 	}
 }
