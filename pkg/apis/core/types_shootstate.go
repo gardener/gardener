@@ -62,6 +62,8 @@ type GardenerResourceData struct {
 type ExtensionResourceState struct {
 	// Kind (type) of the extension custom resource
 	Kind string
+	// Name of the extension custom resource
+	Name *string
 	// Purpose of the extension custom resource
 	Purpose *string
 	// State of the extension resource

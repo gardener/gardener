@@ -2290,6 +2290,7 @@ func Convert_garden_Extension_To_v1alpha1_Extension(in *garden.Extension, out *E
 
 func autoConvert_v1alpha1_ExtensionResourceState_To_core_ExtensionResourceState(in *ExtensionResourceState, out *core.ExtensionResourceState, s conversion.Scope) error {
 	out.Kind = in.Kind
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	if err := Convert_v1alpha1_ProviderConfig_To_core_ProviderConfig(&in.State, &out.State, s); err != nil {
 		return err
@@ -2304,6 +2305,7 @@ func Convert_v1alpha1_ExtensionResourceState_To_core_ExtensionResourceState(in *
 
 func autoConvert_core_ExtensionResourceState_To_v1alpha1_ExtensionResourceState(in *core.ExtensionResourceState, out *ExtensionResourceState, s conversion.Scope) error {
 	out.Kind = in.Kind
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	if err := Convert_core_ProviderConfig_To_v1alpha1_ProviderConfig(&in.State, &out.State, s); err != nil {
 		return err

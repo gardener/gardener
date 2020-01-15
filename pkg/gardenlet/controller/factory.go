@@ -28,6 +28,8 @@ import (
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+
+	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
@@ -125,6 +127,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, secrets, imageVector, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
+		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
 
 	// Initialize the Controller metrics collection.
@@ -138,6 +141,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		shootController,
 	)
 
+	go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go controllerInstallationController.Run(ctx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)

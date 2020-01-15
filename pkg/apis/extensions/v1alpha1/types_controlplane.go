@@ -47,6 +47,11 @@ func (i *ControlPlane) GetExtensionStatus() Status {
 	return &i.Status
 }
 
+// GetExtensionPurpose implements Object.
+func (i *ControlPlaneSpec) GetExtensionPurpose() *string {
+	return (*string)(i.Purpose)
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ControlPlaneList is a list of ControlPlane resources.
