@@ -987,7 +987,7 @@ OperatingSystemConfigPurpose
 </td>
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
-gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
 cloud-config-downloader script already running on a bootstrapped VM.</p>
 </td>
 </tr>
@@ -2564,7 +2564,7 @@ OperatingSystemConfigPurpose
 </td>
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
-gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
 cloud-config-downloader script already running on a bootstrapped VM.</p>
 </td>
 </tr>
@@ -3204,5 +3204,5 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>f13d679ab</code>.
+on git commit <code>864ace2ad</code>.
 </em></p>

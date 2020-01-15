@@ -106,7 +106,7 @@ spec:
               type: array
             purpose:
               description: Purpose describes how the result of this OperatingSystemConfig
-                is used by Gardener. Either it gets sent to the machine-controller-manager
+                is used by Gardener. Either it gets sent to the Worker extension controller
                 to bootstrap a VM, or it is downloaded by the cloud-config-downloader
                 script already running on a bootstrapped VM.
               type: string

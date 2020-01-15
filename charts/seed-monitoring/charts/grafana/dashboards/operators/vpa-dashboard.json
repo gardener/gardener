@@ -526,11 +526,6 @@
             "selected": false,
             "text": "kube-scheduler",
             "value": "kube-scheduler"
-          },
-          {
-            "selected": false,
-            "text": "machine-controller-manager",
-            "value": "machine-controller-manager"
           }
         ],
         "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
