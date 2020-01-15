@@ -214,8 +214,13 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	// Check whether seed is protected or not. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
-	if shoot.Namespace != v1beta1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintProtected) {
+	changed, err := seedChanged(a)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	needCheckForProtectedSeed := changed || a.GetOperation() == admission.Create
+	// Check whether seed is protected or not only if the shoot.spec.seedName has been updated. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
+	if needCheckForProtectedSeed && shoot.Namespace != v1beta1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintProtected) {
 		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a protected seed"))
 	}
 
@@ -1361,4 +1366,29 @@ func getOldWorkerMachineImageOrDefault(workers []garden.Worker, name string, def
 		return oldWorker.Machine.Image
 	}
 	return defaultImage
+}
+
+func seedChanged(attr admission.Attributes) (bool, error) {
+	if attr.GetOperation() != admission.Update {
+		return false, nil
+	}
+	newShoot, ok := attr.GetObject().(*garden.Shoot)
+	if !ok {
+		return false, errors.New("could not convert resource into Shoot object")
+	}
+	oldShoot, ok := attr.GetOldObject().(*garden.Shoot)
+	if !ok {
+		return false, errors.New("could not convert old resource into Shoot object")
+	}
+
+	newSeedName := ""
+	if newShoot.Spec.SeedName != nil {
+		newSeedName = *newShoot.Spec.SeedName
+	}
+	oldSeedName := ""
+	if oldShoot.Spec.SeedName != nil {
+		oldSeedName = *oldShoot.Spec.SeedName
+	}
+
+	return newSeedName != oldSeedName, nil
 }

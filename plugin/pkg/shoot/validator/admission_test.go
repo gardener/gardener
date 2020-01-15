@@ -276,6 +276,30 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
+			It("update should pass because the Seed is now protected but the same while shoot has never been in garden namespace", func() {
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
+				oldShoot.Spec.SeedName = shoot.Spec.SeedName
+				shoot.Spec.Provider.Workers[0].Maximum += 1
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should fail because the new Seed specified in shoot manifest is protected while shoot is not in garden namespace", func() {
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("create should pass because shoot is not in garden namespace and seed is not protected", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -445,7 +469,7 @@ var _ = Describe("validator", func() {
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
 
-			It("should not testing length constraints for operations other than CREATE", func() {
+			It("should not test length constraints for operations other than CREATE", func() {
 				shortName := "short"
 				projectName := "too-long-long-long-label"
 				project.ObjectMeta = metav1.ObjectMeta{
