@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -44,7 +44,7 @@ import (
 var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
 
 // first hard, second soft
-func getEvictionMemoryAvailable(machineTypes []gardencorev1alpha1.MachineType, machineType string) (string, string) {
+func getEvictionMemoryAvailable(machineTypes []gardencorev1beta1.MachineType, machineType string) (string, string) {
 	memoryThreshold, _ := resource.ParseQuantity("8Gi")
 
 	for _, machtype := range machineTypes {
@@ -85,7 +85,7 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 		}
 
 		wg.Add(1)
-		go func(worker gardencorev1alpha1.Worker) {
+		go func(worker gardencorev1beta1.Worker) {
 			defer wg.Done()
 
 			downloaderConfig := b.generateDownloaderConfig(worker.Machine.Image.Name)
@@ -133,7 +133,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 		originalConfig = map[string]interface{}{
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-				"domain":     gardencorev1alpha1.DefaultDomain,
+				"domain":     gardencorev1beta1.DefaultDomain,
 				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		}
@@ -142,15 +142,15 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
 		caBundle = *cloudProfileCaBundle
 	}
-	if caCert, ok := b.Secrets[v1alpha1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
+	if caCert, ok := b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
 		caBundle = fmt.Sprintf("%s\n%s", caBundle, caCert)
 	}
 	originalConfig["caBundle"] = caBundle
 
-	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName)
 }
 
-func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1alpha1.MachineType, machineImage *gardencorev1alpha1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1alpha1.Worker) (*shoot.OperatingSystemConfigs, error) {
+func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
 	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 
 	downloaderConfig["secretName"] = secretName
@@ -163,7 +163,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		}
 	}
 
-	sshKey := b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
+	sshKey := b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
 
 	originalConfig["osc"] = map[string]interface{}{
 		"type":                 machineImage.Name,
@@ -277,7 +277,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 	}
 
 	var kubelet = map[string]interface{}{
-		"caCert":                  string(b.Secrets[v1alpha1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
+		"caCert":                  string(b.Secrets[v1beta1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
 		"evictionHard":            evictionHard,
 		"evictionSoft":            evictionSoft,
 		"evictionSoftGracePeriod": evictionSoftGracePeriod,
@@ -399,9 +399,10 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	}
 
 	config := map[string]interface{}{
-		"bootstrapToken": kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data),
-		"configFilePath": common.CloudConfigFilePath,
-		"workers":        workers,
+		"bootstrapToken":    kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data),
+		"configFilePath":    common.CloudConfigFilePath,
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"workers":           workers,
 	}
 
 	config, err = b.InjectShootShootImages(config, common.HyperkubeImageName)

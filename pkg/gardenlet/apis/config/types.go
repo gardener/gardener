@@ -17,7 +17,7 @@ package config
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,6 +111,8 @@ type GardenletControllerConfiguration struct {
 	Shoot *ShootControllerConfiguration
 	// ShootCare defines the configuration of the ShootCare controller.
 	ShootCare *ShootCareControllerConfiguration
+	// ShootStateSync defines the configuration of the ShootState controller
+	ShootStateSync *ShootStateSyncControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -208,6 +210,17 @@ type ConditionThreshold struct {
 	Duration *metav1.Duration
 }
 
+// ShootStateSyncControllerConfiguration defines the configuration of the
+// ShootStateController controller.
+type ShootStateSyncControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing extension resources are
+	// synced to the ShootState resource
+	SyncPeriod *metav1.Duration
+}
+
 // DiscoveryConfiguration defines the configuration of how to discover API groups.
 // It allows to set where to store caching data and to specify the TTL of that data.
 type DiscoveryConfiguration struct {
@@ -233,7 +246,7 @@ type LeaderElectionConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1alpha1.Seed
+	gardencorev1beta1.Seed
 }
 
 const (

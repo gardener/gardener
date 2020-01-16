@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
@@ -69,7 +69,7 @@ type Controller struct {
 // NewController instantiates a new ControllerInstallation controller.
 func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
 	var (
-		gardenCoreInformer = gardenCoreInformerFactory.Core().V1alpha1()
+		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
 		seedInformer = gardenCoreInformer.Seeds()
 		seedLister   = seedInformer.Lister()

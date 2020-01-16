@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -53,9 +53,9 @@ type Controller struct {
 // It creates and return a new Garden controller to control CloudProfiles.
 func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
-		cloudProfileInformer       = gardenCoreV1alpha1Informer.CloudProfiles()
-		shootLister                = gardenCoreV1alpha1Informer.Shoots().Lister()
+		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
+		cloudProfileInformer      = gardenCoreV1beta1Informer.CloudProfiles()
+		shootLister               = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	cloudProfileController := &Controller{

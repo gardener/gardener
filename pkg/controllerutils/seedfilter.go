@@ -15,8 +15,8 @@
 package controllerutils
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,7 +34,7 @@ func LabelsMatchFor(l map[string]string, labelSelector *metav1.LabelSelector) bo
 // SeedFilterFunc returns a filtering func for the seeds and the given label selector.
 func SeedFilterFunc(seedName string, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		seed, ok := obj.(*gardencorev1alpha1.Seed)
+		seed, ok := obj.(*gardencorev1beta1.Seed)
 		if !ok {
 			return false
 		}
@@ -48,7 +48,7 @@ func SeedFilterFunc(seedName string, labelSelector *metav1.LabelSelector) func(o
 // ShootFilterFunc returns a filtering func for the seeds and the given label selector.
 func ShootFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		shoot, ok := obj.(*gardencorev1alpha1.Shoot)
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
 		if !ok {
 			return false
 		}
@@ -74,7 +74,7 @@ func seedLabelsMatch(seedLister gardencorelisters.SeedLister, seedName string, l
 // ControllerInstallationFilterFunc returns a filtering func for the seeds and the given label selector.
 func ControllerInstallationFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		controllerInstallation, ok := obj.(*gardencorev1alpha1.ControllerInstallation)
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 		if !ok {
 			return false
 		}
@@ -88,33 +88,33 @@ func ControllerInstallationFilterFunc(seedName string, seedLister gardencorelist
 // BackupBucketFilterFunc returns a filtering func for the seeds and the given label selector.
 func BackupBucketFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		backupBucket, ok := obj.(*gardencorev1alpha1.BackupBucket)
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 		if !ok {
 			return false
 		}
-		if backupBucket.Spec.Seed == nil {
+		if backupBucket.Spec.SeedName == nil {
 			return false
 		}
 		if len(seedName) > 0 {
-			return *backupBucket.Spec.Seed == seedName
+			return *backupBucket.Spec.SeedName == seedName
 		}
-		return seedLabelsMatch(seedLister, *backupBucket.Spec.Seed, labelSelector)
+		return seedLabelsMatch(seedLister, *backupBucket.Spec.SeedName, labelSelector)
 	}
 }
 
 // BackupEntryFilterFunc returns a filtering func for the seeds and the given label selector.
 func BackupEntryFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		backupEntry, ok := obj.(*gardencorev1alpha1.BackupEntry)
+		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 		if !ok {
 			return false
 		}
-		if backupEntry.Spec.Seed == nil {
+		if backupEntry.Spec.SeedName == nil {
 			return false
 		}
 		if len(seedName) > 0 {
-			return *backupEntry.Spec.Seed == seedName
+			return *backupEntry.Spec.SeedName == seedName
 		}
-		return seedLabelsMatch(seedLister, *backupEntry.Spec.Seed, labelSelector)
+		return seedLabelsMatch(seedLister, *backupEntry.Spec.SeedName, labelSelector)
 	}
 }

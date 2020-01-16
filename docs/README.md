@@ -70,7 +70,7 @@
     * [`Infrastructure` resource](extensions/infrastructure.md)
     * [`Worker` resource](extensions/worker.md)
   * Network plugin providers
-    * `Network` resource (to-be-written)
+    * [`Network` resource](extensions/network.md)
   * Operating systems
     * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
   * Generic (non-essential) extensions

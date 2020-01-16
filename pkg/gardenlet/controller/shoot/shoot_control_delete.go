@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
@@ -45,7 +45,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *errors.ErrorContext) *gardencorev1alpha1helper.WrappedLastErrors {
+func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *errors.ErrorContext) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		namespace                            = &corev1.Namespace{}
@@ -90,7 +90,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		// Check if Seed object for shooted seed has been deleted
 		errors.ToExecute("Check if Seed object for shooted seed has been deleted", func() error {
 			if o.ShootedSeed != nil {
-				if err := c.k8sGardenClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.Info.Name), &gardencorev1alpha1.Seed{}); err != nil {
+				if err := c.k8sGardenClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.Info.Name), &gardencorev1beta1.Seed{}); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}
@@ -101,10 +101,10 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			return nil
 		}),
 		errors.ToExecute("Wait for seed deletion", func() error {
-			if o.Shoot.Info.Namespace == v1alpha1constants.GardenNamespace && o.ShootedSeed != nil {
+			if o.Shoot.Info.Namespace == v1beta1constants.GardenNamespace && o.ShootedSeed != nil {
 				// wait for seed object to be deleted before going on with shoot deletion
 				if err := retryutils.UntilTimeout(context.TODO(), time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
-					_, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().Get(o.Shoot.Info.Name, metav1.GetOptions{})
+					_, err = c.k8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(o.Shoot.Info.Name, metav1.GetOptions{})
 					if apierrors.IsNotFound(err) {
 						return retryutils.Ok()
 					}
@@ -129,7 +129,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		// to delete anymore.
 		errors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -145,7 +145,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		// cleaned up.
 		errors.ToExecute("Retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeControllerManager := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1alpha1constants.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
+			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -170,15 +170,18 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		if errors.WasCanceled(err) {
 			return nil
 		}
-		return gardencorev1alpha1helper.NewWrappedLastErrors(gardencorev1alpha1helper.FormatLastErrDescription(err), err)
+		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	var (
 		nonTerminatingNamespace = namespace.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
+		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		dnsEnabled              = !gardencorev1alpha1helper.TaintsHave(botanist.Seed.Info.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS)
+		dnsEnabled              = !o.Shoot.DisableDNS
+		managedExternalDNS      = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS      = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -215,7 +218,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
-			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf((o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed, waitUntilControlPlaneReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
@@ -223,10 +226,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
 		})
+		deployInternalDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Deploying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedInternalDNS),
+			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedExternalDNS),
+			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
+		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord),
 		})
 
 		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
@@ -270,7 +283,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
-			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources && !metav1.HasAnnotation(o.Shoot.Info.ObjectMeta, v1alpha1constants.AnnotationShootSkipCleanup)),
+			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources && !metav1.HasAnnotation(o.Shoot.Info.ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 
@@ -448,7 +461,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		ErrorContext:     errorContext,
 	}); err != nil {
 		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)
-		return gardencorev1alpha1helper.NewWrappedLastErrors(gardencorev1alpha1helper.FormatLastErrDescription(err), flow.Errors(err))
+		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
 	o.Logger.Infof("Successfully deleted Shoot %q", o.Shoot.Info.Name)
@@ -462,12 +475,12 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 	)
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if status.RetryCycleStartTime == nil ||
-				(status.LastOperation != nil && status.LastOperation.Type != gardencorev1alpha1.LastOperationTypeDelete) ||
+				(status.LastOperation != nil && status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete) ||
 				o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
 				o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
-				(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateFailed) {
+				(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed) {
 
 				shoot.Status.RetryCycleStartTime = &now
 			}
@@ -478,9 +491,9 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 
 			shoot.Status.Gardener = *o.GardenerInfo
 			shoot.Status.ObservedGeneration = o.Shoot.Info.Generation
-			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-				Type:           gardencorev1alpha1.LastOperationTypeDelete,
-				State:          gardencorev1alpha1.LastOperationStateProcessing,
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:           gardencorev1beta1.LastOperationTypeDelete,
+				State:          gardencorev1beta1.LastOperationStateProcessing,
 				Progress:       1,
 				Description:    "Deletion of Shoot cluster in progress.",
 				LastUpdateTime: now,
@@ -495,13 +508,12 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 
 func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) error {
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastErrors = nil
-			shoot.Status.LastError = nil
-			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-				Type:           gardencorev1alpha1.LastOperationTypeDelete,
-				State:          gardencorev1alpha1.LastOperationStateSucceeded,
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:           gardencorev1beta1.LastOperationTypeDelete,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				Progress:       100,
 				Description:    "Shoot cluster has been successfully deleted.",
 				LastUpdateTime: metav1.Now(),
@@ -529,45 +541,33 @@ func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) erro
 			return retryutils.SevereError(err)
 		}
 		lastOperation := shoot.Status.LastOperation
-		if !sets.NewString(shoot.Finalizers...).Has(gardencorev1alpha1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
+		if !sets.NewString(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 			return retryutils.Ok()
 		}
-		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1alpha1.GardenerName))
+		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))
 	})
 }
 
-func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, description string, lastErrors ...gardencorev1alpha1.LastError) error {
-	var (
-		state = gardencorev1alpha1.LastOperationStateFailed
-	)
-
-	// TODO: Remove this after LastError is removed from the ShootStatus API
-	var codes []gardencorev1alpha1.ErrorCode
-	for _, lastErr := range lastErrors {
-		codes = append(codes, lastErr.Codes...)
-	}
-	lastError := gardencorev1alpha1helper.LastError(description, codes...)
+func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, description string, lastErrors ...gardencorev1beta1.LastError) error {
+	state := gardencorev1beta1.LastOperationStateFailed
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 				description += " Operation will be retried."
-				state = gardencorev1alpha1.LastOperationStateError
+				state = gardencorev1beta1.LastOperationStateError
 			} else {
 				shoot.Status.RetryCycleStartTime = nil
 			}
 
 			shoot.Status.Gardener = *o.GardenerInfo
+			shoot.Status.LastErrors = lastErrors
 
 			if shoot.Status.LastOperation == nil {
-				shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{}
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 			}
 
-			shoot.Status.LastErrors = lastErrors
-			// TODO: Remove this after LastError is removed from the ShootStatus API
-			shoot.Status.LastError = lastError
-
-			shoot.Status.LastOperation.Type = gardencorev1alpha1.LastOperationTypeDelete
+			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
 			shoot.Status.LastOperation.State = state
 			shoot.Status.LastOperation.Description = description
 			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()

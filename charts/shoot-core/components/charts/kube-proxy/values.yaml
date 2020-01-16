@@ -6,7 +6,7 @@ kubernetesVersion: 1.11.2
 #  CustomResourceValidation: true
 #  RotateKubeletServerCertificate: false
 images:
-  hyperkube: image-repository
+  kube-proxy: image-repository
   alpine: image-repository
 podAnnotations: {}
 

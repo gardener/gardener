@@ -8,11 +8,11 @@ kube-proxy:
 # featureGates: {}
   podAnnotations: {}
   images:
-    hyperkube: image-repository
+    kube-proxy: image-repository
 vpn-shoot:
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16
-  nodeNetwork: 172.16.0.0/20
+# nodeNetwork: 172.16.0.0/20
   tlsAuth: dummy-b64-data
   diffieHellmanKey: LS0tLS1CRUdJTiBESCBQQVJBTUVURVJTLS0tLS0KTUlJQkNBS0NBUUVBN2NCWHhHOWFuNktSei9zQjV1aVNPVGY3RWcrdVdWa2hYTzRwZUtEVEFSek1ZYThiN1dSOApCL0F3K0F5VVh0QjN0WHRyemVDNU0zSUhudWhGd01vM0s0b1NPa0ZKeGF0TGxZS2VZMTVyK0t0NXZuT09UM0JXCmVONU9uV2xSNVdpN0daQldiYVFnWFZSNzlONHlzdDQzc1ZoSnVzNkJ5MGxONk9sYzl4RC95czlHSC95a0pWSWgKWi9OTHJ4QUM1bHhqd0NxSk1kOGhycnlDaHVEbHo1OTd2ZzZnWUZ1UlY2MFUvWVU0REs3MUY0SDdtSTA3YUdKOQpsK1NLOFRia0tXRjVJVEk3a1lXYmM0em10ZlhTWGFHak1oTTlvbVFVYVRIOWNzQjk2aHpGSmRlWjRYanh5YlJmClZjM3Q3WFA1cTdhZmVhS21NM0ZoU1hkZUhLQ1RxUXpRdXdJQkFnPT0KLS0tLS1FTkQgREggUEFSQU1FVEVSUy0tLS0tCg==
   podAnnotations: {}
@@ -36,7 +36,7 @@ shoot-info:
   domain: crazy-botany.core.my-custom-domain.com
   podNetwork: 100.96.0.0/11
   serviceNetwork: 100.64.0.0/13
-  nodeNetwork: 10.250.0.0/16
+# nodeNetwork: 10.250.0.0/16
   maintenanceBegin: 210000+0000
   maintenanceEnd: 220000+0000
   extensions: shoot-dns-service,foo-bar

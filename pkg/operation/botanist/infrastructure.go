@@ -19,10 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -37,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // InfrastructureDefaultTimeout is the default timeout and defines how long Gardener should wait
@@ -48,7 +47,7 @@ const InfrastructureDefaultTimeout = 5 * time.Minute
 func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	var (
 		lastOperation                       = b.Shoot.Info.Status.LastOperation
-		creationPhase                       = lastOperation != nil && lastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate
+		creationPhase                       = lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate
 		requestInfrastructureReconciliation = creationPhase || controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
 
 		infrastructure = &extensionsv1alpha1.Infrastructure{
@@ -68,7 +67,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
 		if requestInfrastructureReconciliation {
-			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		}
 
 		infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
@@ -76,9 +75,9 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 				Type: b.Shoot.Info.Spec.Provider.Type,
 			},
 			Region:       b.Shoot.Info.Spec.Region,
-			SSHPublicKey: b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
+			SSHPublicKey: b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
 			SecretRef: corev1.SecretReference{
-				Name:      v1alpha1constants.SecretNameCloudProvider,
+				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: infrastructure.Namespace,
 			},
 			ProviderConfig: providerConfig,
@@ -112,9 +111,20 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 		if infrastructure.Status.ProviderStatus != nil {
 			b.Shoot.InfrastructureStatus = infrastructure.Status.ProviderStatus.Raw
 		}
+		if infrastructure.Status.NodesCIDR != nil {
+			shootCopy := b.Shoot.Info.DeepCopy()
+			if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootCopy, func() error {
+				shootCopy.Spec.Networking.Nodes = infrastructure.Status.NodesCIDR
+				return nil
+			}); err != nil {
+				return retry.SevereError(err)
+			}
+			b.Shoot.Info = shootCopy
+		}
+
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("failed to create infrastructure: %v", err))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed to create infrastructure: %v", err))
 	}
 	return nil
 }
@@ -142,9 +152,9 @@ func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete infrastructure")
 		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil

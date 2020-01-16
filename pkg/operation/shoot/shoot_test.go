@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -52,7 +52,7 @@ var _ = Describe("shoot", func() {
 			c = mockclient.NewMockClient(ctrl)
 
 			shoot = &Shoot{
-				Info: &gardencorev1alpha1.Shoot{},
+				Info: &gardencorev1beta1.Shoot{},
 			}
 		})
 
@@ -67,21 +67,21 @@ var _ = Describe("shoot", func() {
 			})
 
 			It("should return false when KubeProxy.Mode is null", func() {
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1alpha1.KubeProxyConfig{}
+				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{}
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
 			})
 
 			It("should return false when KubeProxy.Mode is not IPVS", func() {
-				mode := gardencorev1alpha1.ProxyModeIPTables
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1alpha1.KubeProxyConfig{
+				mode := gardencorev1beta1.ProxyModeIPTables
+				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
 			})
 
 			It("should return true when KubeProxy.Mode is IPVS", func() {
-				mode := gardencorev1alpha1.ProxyModeIPVS
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1alpha1.KubeProxyConfig{
+				mode := gardencorev1beta1.ProxyModeIPVS
+				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
 				Expect(shoot.IPVSEnabled()).To(BeTrue())
@@ -99,15 +99,15 @@ var _ = Describe("shoot", func() {
 
 		Describe("#ConstructExternalClusterDomain", func() {
 			It("should return nil", func() {
-				Expect(ConstructExternalClusterDomain(&gardencorev1alpha1.Shoot{})).To(BeNil())
+				Expect(ConstructExternalClusterDomain(&gardencorev1beta1.Shoot{})).To(BeNil())
 			})
 
 			It("should return the constructed domain", func() {
 				var (
 					domain = "foo.bar.com"
-					shoot  = &gardencorev1alpha1.Shoot{
-						Spec: gardencorev1alpha1.ShootSpec{
-							DNS: &gardencorev1alpha1.DNS{
+					shoot  = &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							DNS: &gardencorev1beta1.DNS{
 								Domain: &domain,
 							},
 						},
@@ -138,7 +138,7 @@ var _ = Describe("shoot", func() {
 			It("returns nil because no external domain is used", func() {
 				var (
 					ctx   = context.TODO()
-					shoot = &gardencorev1alpha1.Shoot{}
+					shoot = &gardencorev1beta1.Shoot{}
 				)
 
 				externalDomain, err := ConstructExternalDomain(ctx, c, shoot, nil, nil)
@@ -155,14 +155,14 @@ var _ = Describe("shoot", func() {
 					dnsSecretData = map[string][]byte{"foo": []byte("bar")}
 					dnsSecretKey  = kutil.Key(namespace, dnsSecretName)
 
-					shoot = &gardencorev1alpha1.Shoot{
+					shoot = &gardencorev1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: namespace,
 						},
-						Spec: gardencorev1alpha1.ShootSpec{
-							DNS: &gardencorev1alpha1.DNS{
+						Spec: gardencorev1beta1.ShootSpec{
+							DNS: &gardencorev1beta1.DNS{
 								Domain: &domain,
-								Providers: []gardencorev1alpha1.DNSProvider{
+								Providers: []gardencorev1beta1.DNSProvider{
 									{
 										Type:       &provider,
 										SecretName: &dnsSecretName,
@@ -192,11 +192,11 @@ var _ = Describe("shoot", func() {
 				var (
 					ctx = context.TODO()
 
-					shoot = &gardencorev1alpha1.Shoot{
-						Spec: gardencorev1alpha1.ShootSpec{
-							DNS: &gardencorev1alpha1.DNS{
+					shoot = &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							DNS: &gardencorev1beta1.DNS{
 								Domain: &domain,
-								Providers: []gardencorev1alpha1.DNSProvider{
+								Providers: []gardencorev1beta1.DNSProvider{
 									{
 										Type: &provider,
 									},
@@ -222,11 +222,11 @@ var _ = Describe("shoot", func() {
 
 					shootSecretData = map[string][]byte{"foo": []byte("bar")}
 					shootSecret     = &corev1.Secret{Data: shootSecretData}
-					shoot           = &gardencorev1alpha1.Shoot{
-						Spec: gardencorev1alpha1.ShootSpec{
-							DNS: &gardencorev1alpha1.DNS{
+					shoot           = &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							DNS: &gardencorev1beta1.DNS{
 								Domain: &domain,
-								Providers: []gardencorev1alpha1.DNSProvider{
+								Providers: []gardencorev1beta1.DNSProvider{
 									{
 										Type: &provider,
 									},
@@ -246,22 +246,35 @@ var _ = Describe("shoot", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+
+		Describe("#UnfoldTechnicalID", func() {
+			DescribeTable("", func(technicalId string, projectNameMatcher types.GomegaMatcher, matcher types.GomegaMatcher) {
+				projectName, shootName := UnfoldTechnicalID(technicalId)
+				Expect(projectName).To(projectNameMatcher)
+				Expect(shootName).To(matcher)
+			},
+				Entry("returns empty strings for provided zero lenght string", "", BeEmpty(), BeEmpty()),
+				Entry("returns empty strings, invalid technicalID", "invalidstring", BeEmpty(), BeEmpty()),
+				Entry("valid technicalID", "shoot--project-name--shoot-name", Equal("project-name"), Equal("shoot-name")),
+				Entry("valid technicalID for deprecated project and shoot naming", "shoot-projectname-shootname", Equal("projectname"), Equal("shootname")),
+			)
+		})
 	})
 
 	Context("Extensions", func() {
 		var (
 			shootNamespace = "shoot--foo--bar"
 			extensionKind  = extensionsv1alpha1.ExtensionResource
-			providerConfig = gardencorev1alpha1.ProviderConfig{
+			providerConfig = gardencorev1beta1.ProviderConfig{
 				RawExtension: runtime.RawExtension{
 					Raw: []byte("key: value"),
 				},
 			}
 			fooExtensionType         = "foo"
 			fooReconciliationTimeout = metav1.Duration{Duration: 5 * time.Minute}
-			fooRegistration          = gardencorev1alpha1.ControllerRegistration{
-				Spec: gardencorev1alpha1.ControllerRegistrationSpec{
-					Resources: []gardencorev1alpha1.ControllerResource{
+			fooRegistration          = gardencorev1beta1.ControllerRegistration{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
 						{
 							Kind:             extensionKind,
 							Type:             fooExtensionType,
@@ -270,14 +283,14 @@ var _ = Describe("shoot", func() {
 					},
 				},
 			}
-			fooExtension = gardencorev1alpha1.Extension{
+			fooExtension = gardencorev1beta1.Extension{
 				Type:           fooExtensionType,
 				ProviderConfig: &providerConfig,
 			}
 			barExtensionType = "bar"
-			barRegistration  = gardencorev1alpha1.ControllerRegistration{
-				Spec: gardencorev1alpha1.ControllerRegistrationSpec{
-					Resources: []gardencorev1alpha1.ControllerResource{
+			barRegistration  = gardencorev1beta1.ControllerRegistration{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
 						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
@@ -286,24 +299,24 @@ var _ = Describe("shoot", func() {
 					},
 				},
 			}
-			barExtension = gardencorev1alpha1.Extension{
+			barExtension = gardencorev1beta1.Extension{
 				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
 			}
 		)
 		DescribeTable("#MergeExtensions",
-			func(registrations []gardencorev1alpha1.ControllerRegistration, extensions []gardencorev1alpha1.Extension, namespace string, conditionMatcher types.GomegaMatcher) {
+			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, conditionMatcher types.GomegaMatcher) {
 				ext, err := MergeExtensions(registrations, extensions, namespace)
 				Expect(ext).To(conditionMatcher)
 				Expect(err).To(BeNil())
 			},
 			Entry("No extensions", nil, nil, shootNamespace, BeEmpty()),
-			Entry("Extension w/o registration", nil, []gardencorev1alpha1.Extension{{Type: fooExtensionType}}, shootNamespace, BeEmpty()),
+			Entry("Extension w/o registration", nil, []gardencorev1beta1.Extension{{Type: fooExtensionType}}, shootNamespace, BeEmpty()),
 			Entry("Extensions w/ registration",
-				[]gardencorev1alpha1.ControllerRegistration{
+				[]gardencorev1beta1.ControllerRegistration{
 					fooRegistration,
 				},
-				[]gardencorev1alpha1.Extension{
+				[]gardencorev1beta1.Extension{
 					fooExtension,
 				},
 				shootNamespace,
@@ -325,7 +338,7 @@ var _ = Describe("shoot", func() {
 				),
 			),
 			Entry("Registration w/o extension",
-				[]gardencorev1alpha1.ControllerRegistration{
+				[]gardencorev1beta1.ControllerRegistration{
 					fooRegistration,
 				},
 				nil,
@@ -333,7 +346,7 @@ var _ = Describe("shoot", func() {
 				BeEmpty(),
 			),
 			Entry("Required extension registration, w/o extension",
-				[]gardencorev1alpha1.ControllerRegistration{
+				[]gardencorev1beta1.ControllerRegistration{
 					barRegistration,
 				},
 				nil,
@@ -356,12 +369,12 @@ var _ = Describe("shoot", func() {
 				),
 			),
 			Entry("Multuple registrations, w/ one extension",
-				[]gardencorev1alpha1.ControllerRegistration{
+				[]gardencorev1beta1.ControllerRegistration{
 					fooRegistration,
 					barRegistration,
 					{
-						Spec: gardencorev1alpha1.ControllerRegistrationSpec{
-							Resources: []gardencorev1alpha1.ControllerResource{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
 								{
 									Kind: "kind",
 									Type: "type",
@@ -370,7 +383,7 @@ var _ = Describe("shoot", func() {
 						},
 					},
 				},
-				[]gardencorev1alpha1.Extension{
+				[]gardencorev1beta1.Extension{
 					barExtension,
 				},
 				shootNamespace,

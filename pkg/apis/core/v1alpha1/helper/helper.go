@@ -302,12 +302,7 @@ func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
 		return nil, nil
 	}
 
-	var addresses []string
-	for _, addr := range strings.Split(cidrs, ";") {
-		addresses = append(addresses, addr)
-	}
-
-	return addresses, nil
+	return strings.Split(cidrs, ";"), nil
 }
 
 func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1alpha1.ShootNetworks, error) {
@@ -735,4 +730,15 @@ func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error
 		return err
 	}
 	return errors.Wrapf(err, "last error: %s", lastError.Description)
+}
+
+// GetExtensionResourceState returns the ExtensionResourceState for given kind from a list of ExtensionResourceState.
+// If resource with such kind, name and purpose can't be found, returns -1 and nil.
+func GetExtensionResourceState(extensionsResourcesStates []gardencorev1alpha1.ExtensionResourceState, kind string, name, purpose *string) (int, *gardencorev1alpha1.ExtensionResourceState) {
+	for i, obj := range extensionsResourcesStates {
+		if obj.Kind == kind && apiequality.Semantic.DeepEqual(obj.Name, name) && apiequality.Semantic.DeepEqual(obj.Purpose, purpose) {
+			return i, &extensionsResourcesStates[i]
+		}
+	}
+	return -1, nil
 }

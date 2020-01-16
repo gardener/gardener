@@ -4980,6 +4980,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Nodes is the CIDR of the entire node network.</p>
 </td>
 </tr>
@@ -5911,6 +5912,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Nodes is the CIDR of the node network.</p>
 </td>
 </tr>
@@ -7157,5 +7159,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>2ea956a7f</code>.
+on git commit <code>864ace2ad</code>.
 </em></p>

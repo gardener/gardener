@@ -20,7 +20,39 @@ images:
   sourceRepository: github.com/etcd-io/etcd
   repository: quay.io/coreos/etcd
   tag: v3.3.17
-- name: hyperkube
+- name: kube-apiserver
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-apiserver
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-apiserver
+  targetVersion: ">= 1.17"
+- name: kube-controller-manager
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-controller-manager
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-controller-manager
+  targetVersion: ">= 1.17"
+- name: kube-scheduler
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-scheduler
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-scheduler
+  targetVersion: ">= 1.17"
+- name: kube-proxy
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.17"
+- name: kube-proxy
+  sourceRepository: github.com/kubernetes/kubernetes
+  repository: k8s.gcr.io/kube-proxy
+  targetVersion: ">= 1.17"
+- name: hyperkube # used for kubectl + kubelet binaries on the worker nodes
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
 - name: cluster-autoscaler
@@ -34,7 +66,7 @@ images:
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -72,7 +104,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
   repository: k8s.gcr.io/metrics-server-amd64
-  tag: v0.3.3
+  tag: v0.3.6
   targetVersion: ">= 1.11"
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
@@ -84,7 +116,7 @@ images:
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns

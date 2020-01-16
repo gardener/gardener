@@ -24,26 +24,22 @@ metadata:
   name: shoot--foo--bar
 spec:
   cloudProfile:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: CloudProfile
     ...
   seed:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
     ...
   shoot:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     kind: Shoot
     ...
 ```
 
 The resource is written by Gardener before it starts the reconciliation flow of the shoot.
 
-:warning: Currently, we are still having the `core.gardener.cloud/v1alpha1.Shoot` resources.
-However, we have introduced a new `core.gardener.cloud/v1beta1.Shoot` resource which will replace the current `v1alpha1` version.
-Until we have changed our controllers we still work with `core.gardener.cloud/v1alpha1.Shoot`, but this will change.
-At a certain point we will switch to the new resource, i.e., the gardener-controller-manager will act upon them.
-This means that also the `Cluster` resource will then only contain the new resources.
+:warning: All Gardener components use the `core.gardener.cloud/v1beta1` version, i.e., the `Cluster` resource will contain the objects in this version.
 
 ## Important information that should be taken into account
 

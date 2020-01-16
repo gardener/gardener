@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -211,21 +211,21 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 	}
 
 	var domainSecrets []*corev1.Secret
-	deprecatedSelector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
+	deprecatedSelector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
-	secrets, err := secretLister.Secrets(v1alpha1constants.GardenNamespace).List(deprecatedSelector)
+	secrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(deprecatedSelector)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
 	domainSecrets = append(domainSecrets, secrets...)
 
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1alpha1constants.GardenRole, common.GardenRoleDefaultDomain))
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
-	secrets, err = secretLister.Secrets(v1alpha1constants.GardenNamespace).List(selector)
+	secrets, err = secretLister.Secrets(v1beta1constants.GardenNamespace).List(selector)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}

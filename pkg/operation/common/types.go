@@ -17,7 +17,7 @@ package common
 import (
 	"time"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -191,14 +191,8 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
-	// MachineControllerManagerDeploymentName is the name of the machine-controller-manager deployment.
-	MachineControllerManagerDeploymentName = "machine-controller-manager"
-
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
-
-	// CalicoKubeControllersDeploymentName is the name of calico-kube-controllers deployment.
-	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
@@ -208,9 +202,6 @@ const (
 
 	// MetricsServerDeploymentName is the name of the metrics-server deployment.
 	MetricsServerDeploymentName = "metrics-server"
-
-	// CalicoNodeDaemonSetName is the name of the calico-node daemon set.
-	CalicoNodeDaemonSetName = "calico-node"
 
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
@@ -338,7 +329,19 @@ const (
 	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
 	NodeProblemDetectorImageName = "node-problem-detector"
 
-	// HyperkubeImageName is the name of the Hyperkube image.
+	// KubeAPIServerImageName is the name of the kube-apiserver image.
+	KubeAPIServerImageName = "kube-apiserver"
+
+	// KubeControllerManagerImageName is the name of the kube-controller-manager image.
+	KubeControllerManagerImageName = "kube-controller-manager"
+
+	// KubeSchedulerImageName is the name of the kube-scheduler image.
+	KubeSchedulerImageName = "kube-scheduler"
+
+	// KubeProxyImageName is the name of the kube-proxy image.
+	KubeProxyImageName = "kube-proxy"
+
+	// HyperkubeImageName is the name of the hyperkube image (used for kubectl + kubelet on the worker nodes).
 	HyperkubeImageName = "hyperkube"
 
 	// MetricsServerImageName is the name of the MetricsServer image.
@@ -482,23 +485,21 @@ var (
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGardenerResourceManager,
-		v1alpha1constants.DeploymentNameKubeAPIServer,
-		v1alpha1constants.DeploymentNameKubeControllerManager,
-		v1alpha1constants.DeploymentNameKubeScheduler,
-		MachineControllerManagerDeploymentName,
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameETCDMain,
-		v1alpha1constants.StatefulSetNameETCDEvents,
+		v1beta1constants.StatefulSetNameETCDMain,
+		v1beta1constants.StatefulSetNameETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
 	RequiredSystemComponentDeployments = sets.NewString(
-		CalicoKubeControllersDeploymentName,
 		CoreDNSDeploymentName,
 		VPNShootDeploymentName,
 		MetricsServerDeploymentName,
@@ -506,17 +507,16 @@ var (
 
 	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
 	RequiredSystemComponentDaemonSets = sets.NewString(
-		CalicoNodeDaemonSetName,
 		KubeProxyDaemonSetName,
 		NodeProblemDetectorDaemonSetName,
 	)
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGrafanaOperators,
-		v1alpha1constants.DeploymentNameGrafanaUsers,
-		v1alpha1constants.DeploymentNameKubeStateMetricsSeed,
-		v1alpha1constants.DeploymentNameKubeStateMetricsShoot,
+		v1beta1constants.DeploymentNameGrafanaOperators,
+		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
@@ -526,11 +526,11 @@ var (
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameElasticSearch,
+		v1beta1constants.StatefulSetNameElasticSearch,
 	)
 
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameKibana,
+		v1beta1constants.DeploymentNameKibana,
 	)
 )

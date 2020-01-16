@@ -21,8 +21,8 @@ import (
 	"net/url"
 	"testing"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	"github.com/gardener/gardener/pkg/logger"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
@@ -60,12 +60,12 @@ func makeNodeWithProvider(provider string, withLabels map[string]string) corev1.
 	}
 }
 
-func hasConditonTrue(cond gardencorev1alpha1.Condition) bool {
-	return cond.Status == gardencorev1alpha1.ConditionTrue
+func hasConditonTrue(cond gardencorev1beta1.Condition) bool {
+	return cond.Status == gardencorev1beta1.ConditionTrue
 }
 
-func hasConditionUnknown(cond gardencorev1alpha1.Condition) bool {
-	return cond.Status == gardencorev1alpha1.ConditionUnknown
+func hasConditionUnknown(cond gardencorev1beta1.Condition) bool {
+	return cond.Status == gardencorev1beta1.ConditionUnknown
 }
 
 var _ = Describe("Plant", func() {
@@ -124,7 +124,7 @@ var _ = Describe("Plant", func() {
 
 		DescribeTable("checkAPIServerAvailablility", func(response *http.Response, matcher types.GomegaMatcher) {
 			var (
-				apiServerAvailable = gardencorev1alpha1helper.InitCondition(gardencorev1alpha1.PlantAPIServerAvailable)
+				apiServerAvailable = gardencorev1beta1helper.InitCondition(gardencorev1beta1.PlantAPIServerAvailable)
 				restMockClient     = mockrest.NewMockInterface(ctrl)
 				httpMockClient     = mockrest.NewMockHTTPClient(ctrl)
 				body               = mockio.NewMockReadCloser(ctrl)
@@ -153,7 +153,7 @@ var _ = Describe("Plant", func() {
 		DescribeTable("checkClusterNodes",
 			func(node *corev1.Node, caseMatcher types.GomegaMatcher) {
 				var (
-					conditionEveryNodeReady = gardencorev1alpha1helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
+					conditionEveryNodeReady = gardencorev1beta1helper.InitCondition(gardencorev1beta1.PlantEveryNodeReady)
 					runtimeClient           = mockclient.NewMockClient(ctrl)
 				)
 
@@ -178,7 +178,7 @@ var _ = Describe("Plant", func() {
 		DescribeTable("checkClusterNodes - returns correct condition on failure",
 			func(caseMatcher types.GomegaMatcher) {
 				var (
-					conditionEveryNodeReady = gardencorev1alpha1helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
+					conditionEveryNodeReady = gardencorev1beta1helper.InitCondition(gardencorev1beta1.PlantEveryNodeReady)
 					runtimeClient           = mockclient.NewMockClient(ctrl)
 				)
 

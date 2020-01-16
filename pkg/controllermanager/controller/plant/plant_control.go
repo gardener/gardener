@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"sync"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -93,8 +93,8 @@ func (c *Controller) plantAdd(obj interface{}) {
 
 // plantUpdate updates the plant resource
 func (c *Controller) plantUpdate(oldObj, newObj interface{}) {
-	old, ok1 := oldObj.(*gardencorev1alpha1.Plant)
-	new, ok2 := newObj.(*gardencorev1alpha1.Plant)
+	old, ok1 := oldObj.(*gardencorev1beta1.Plant)
+	new, ok2 := newObj.(*gardencorev1beta1.Plant)
 	if !ok1 || !ok2 {
 		return
 	}
@@ -143,7 +143,7 @@ func (c *Controller) reconcilePlantKey(ctx context.Context, key string) error {
 // ControlInterface implements the control logic for updating Plants. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	Reconcile(context.Context, *gardencorev1alpha1.Plant, string) error
+	Reconcile(context.Context, *gardencorev1beta1.Plant, string) error
 }
 
 // NewDefaultPlantControl returns a new instance of the default implementation ControlInterface that
@@ -158,7 +158,7 @@ func NewDefaultPlantControl(k8sGardenClient kubernetes.Interface, recorder recor
 	}
 }
 
-func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1alpha1.Plant, key string) error {
+func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1beta1.Plant, key string) error {
 	var (
 		plant  = obj.DeepCopy()
 		logger = logger.NewFieldLogger(logger.Logger, "plant", plant.Name)
@@ -171,7 +171,7 @@ func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1al
 	return c.reconcile(ctx, plant, key, logger)
 }
 
-func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1alpha1.Plant, key string, logger logrus.FieldLogger) error {
+func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, key string, logger logrus.FieldLogger) error {
 	logger.Infof("[PLANT RECONCILE] %s", plant.Name)
 
 	// Add Finalizers to Plant
@@ -186,8 +186,8 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	}
 
 	var (
-		conditionAPIServerAvailable = gardencorev1alpha1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantAPIServerAvailable)
-		conditionEveryNodeReady     = gardencorev1alpha1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1alpha1.PlantEveryNodeReady)
+		conditionAPIServerAvailable = gardencorev1beta1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1beta1.PlantAPIServerAvailable)
+		conditionEveryNodeReady     = gardencorev1beta1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1beta1.PlantEveryNodeReady)
 	)
 
 	kubeconfigSecret, err := c.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
@@ -232,16 +232,16 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	return c.updateStatus(ctx, plant, cloudInfo, conditionAPIServerAvailable, conditionEveryNodeReady)
 }
 
-func (c *defaultPlantControl) updateStatusToUnknown(ctx context.Context, plant *gardencorev1alpha1.Plant, message string, conditionAPIServerAvailable, conditionEveryNodeReady gardencorev1alpha1.Condition) error {
-	conditionAPIServerAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionAPIServerAvailable, gardencorev1alpha1.ConditionFalse, "APIServerDown", message)
-	conditionEveryNodeReady = gardencorev1alpha1helper.UpdatedCondition(conditionEveryNodeReady, gardencorev1alpha1.ConditionFalse, "Nodes not reachable", message)
+func (c *defaultPlantControl) updateStatusToUnknown(ctx context.Context, plant *gardencorev1beta1.Plant, message string, conditionAPIServerAvailable, conditionEveryNodeReady gardencorev1beta1.Condition) error {
+	conditionAPIServerAvailable = gardencorev1beta1helper.UpdatedCondition(conditionAPIServerAvailable, gardencorev1beta1.ConditionFalse, "APIServerDown", message)
+	conditionEveryNodeReady = gardencorev1beta1helper.UpdatedCondition(conditionEveryNodeReady, gardencorev1beta1.ConditionFalse, "Nodes not reachable", message)
 	return c.updateStatus(ctx, plant, &StatusCloudInfo{}, conditionAPIServerAvailable, conditionEveryNodeReady)
 }
 
-func (c *defaultPlantControl) updateStatus(ctx context.Context, plant *gardencorev1alpha1.Plant, cloudInfo *StatusCloudInfo, conditions ...gardencorev1alpha1.Condition) error {
+func (c *defaultPlantControl) updateStatus(ctx context.Context, plant *gardencorev1beta1.Plant, cloudInfo *StatusCloudInfo, conditions ...gardencorev1beta1.Condition) error {
 	updatePlant := plant.DeepCopy()
 	if updatePlant.Status.ClusterInfo == nil {
-		updatePlant.Status.ClusterInfo = &gardencorev1alpha1.ClusterInfo{}
+		updatePlant.Status.ClusterInfo = &gardencorev1beta1.ClusterInfo{}
 	}
 	updatePlant.Status.ClusterInfo.Cloud.Type = cloudInfo.CloudType
 	updatePlant.Status.ClusterInfo.Cloud.Region = cloudInfo.Region
@@ -254,7 +254,7 @@ func (c *defaultPlantControl) updateStatus(ctx context.Context, plant *gardencor
 	return nil
 }
 
-func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1alpha1.Plant, logger logrus.FieldLogger) error {
+func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1beta1.Plant, logger logrus.FieldLogger) error {
 	if err := c.removeFinalizerFromSecret(ctx, plant); err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1alp
 	return c.removeFinalizersFromPlant(ctx, plant)
 }
 
-func (c *defaultPlantControl) removeFinalizerFromSecret(ctx context.Context, plant *gardencorev1alpha1.Plant) error {
+func (c *defaultPlantControl) removeFinalizerFromSecret(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	secret, err := c.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -278,7 +278,7 @@ func (c *defaultPlantControl) removeFinalizerFromSecret(ctx context.Context, pla
 
 }
 
-func (c *defaultPlantControl) removeFinalizersFromPlant(ctx context.Context, plant *gardencorev1alpha1.Plant) error {
+func (c *defaultPlantControl) removeFinalizersFromPlant(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	if sets.NewString(plant.Finalizers...).Has(FinalizerName) {
 		finalizers := sets.NewString(plant.Finalizers...)
 		finalizers.Delete(FinalizerName)
@@ -290,7 +290,7 @@ func (c *defaultPlantControl) removeFinalizersFromPlant(ctx context.Context, pla
 	return nil
 }
 
-func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.Plant, key string, kubeconfigSecretValue []byte) (client.Client, *kubernetesclientset.Clientset, error) {
+func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1beta1.Plant, key string, kubeconfigSecretValue []byte) (client.Client, *kubernetesclientset.Clientset, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfigSecretValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%v:%v", "invalid kubconfig supplied resulted in: ", err)
@@ -315,7 +315,7 @@ func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.P
 	return plantClusterClient, discoveryClient, nil
 }
 
-func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *HealthChecker, logger logrus.FieldLogger, apiserverAvailability, everyNodeReady gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
+func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *HealthChecker, logger logrus.FieldLogger, apiserverAvailability, everyNodeReady gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
 	var wg sync.WaitGroup
 
 	wg.Add(2)

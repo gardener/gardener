@@ -119,7 +119,8 @@ type SeedDNS struct {
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes string `json:"nodes"`
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
 	// Pods is the CIDR of the pod network.
 	Pods string `json:"pods"`
 	// Services is the CIDR of the service network.

@@ -58,10 +58,6 @@ start-gardenlet:
 revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
-	# The machine-controller-manager repository references different version of the k8s.io packages which results in
-	# vendoring issues. To circumvent them and to avoid the necessity of copying their content into our repository we
-	# delete troubling files here (in fact, we are only requiring the types.go file).
-	@rm -f vendor/github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1/zz_generated.conversion.go
 
 .PHONY: build
 build:

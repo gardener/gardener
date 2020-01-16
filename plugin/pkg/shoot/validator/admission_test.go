@@ -19,13 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/gardener/gardener/test"
 
@@ -155,7 +153,7 @@ var _ = Describe("validator", func() {
 					Networks: garden.SeedNetworks{
 						Pods:     seedPodsCIDR,
 						Services: seedServicesCIDR,
-						Nodes:    seedNodesCIDR,
+						Nodes:    &seedNodesCIDR,
 					},
 					SecretRef: &corev1.SecretReference{
 						Name:      seedSecret.Name,
@@ -185,7 +183,7 @@ var _ = Describe("validator", func() {
 						Version: "1.6.4",
 					},
 					Networking: garden.Networking{
-						Nodes:    *k8sNetworks.Nodes,
+						Nodes:    k8sNetworks.Nodes,
 						Pods:     k8sNetworks.Pods,
 						Services: k8sNetworks.Services,
 					},
@@ -482,13 +480,7 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				shoot = *shootBase.DeepCopy()
 
-				// technical ID is used to determine the namespace in the seed
-				shoot.Status.TechnicalID = operationshoot.ComputeTechnicalID(projectName, &corev1alpha1.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: shoot.Name,
-					},
-				})
-
+				shoot.Status.TechnicalID = "some-id"
 				shoot.Status.LastOperation = &garden.LastOperation{
 					Type:     garden.LastOperationTypeReconcile,
 					State:    garden.LastOperationStateSucceeded,
@@ -498,7 +490,7 @@ var _ = Describe("validator", func() {
 				// set old shoot for update and add gardener finalizer to it
 				oldShoot = shoot.DeepCopy()
 				finalizers := sets.NewString(oldShoot.GetFinalizers()...)
-				finalizers.Insert(corev1alpha1.GardenerName)
+				finalizers.Insert(garden.GardenerName)
 				oldShoot.SetFinalizers(finalizers.UnsortedList())
 			})
 
@@ -614,7 +606,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should allow modifying the finalizers array", func() {
-				oldShoot.Finalizers = []string{corev1alpha1.GardenerName}
+				oldShoot.Finalizers = []string{garden.GardenerName}
 				shoot.Finalizers = []string{}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -2725,7 +2717,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Networking.Nodes = seedNodesCIDR
+				shoot.Spec.Networking.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

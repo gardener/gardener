@@ -129,16 +129,9 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.calico-node*calico-node*
-        Key_Name            log
-        Parser              caliconodeParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.alertmanager*alertmanager*
         Key_Name            log
-        Parser              alermanagerParser
+        Parser              alertmanagerParser
         Reserve_Data        True
 
     [FILTER]
@@ -209,7 +202,7 @@ data:
         Name                parser
         Match               kubernetes.prometheus*prometheus*
         Key_Name            log
-        Parser              alermanagerParser
+        Parser              alertmanagerParser
         Reserve_Data        True
 
     [FILTER]
@@ -305,14 +298,7 @@ data:
         Time_Format %Y-%m-%d %H:%M:%S.%L
 
     [PARSER]
-        Name        caliconodeParser
-        Format      regex
-        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+\[(?<severity>\w*)\]\[(?<pid>\d+)\]\s+(?<source>[^:]*):\s+(?<log>.*)
-        Time_Key    time
-        Time_Format %Y-%m-%d %H:%M:%S.%L
-
-    [PARSER]
-        Name        alermanagerParser
+        Name        alertmanagerParser
         Format      regex
         Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
         Time_Key    time

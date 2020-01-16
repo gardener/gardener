@@ -88,6 +88,29 @@ status:
 In order to support a new infrastructure provider you need to write a controller that watches all `Infrastructure`s with `.spec.type=<my-provider-name>`.
 You can take a look at the below referenced example implementation for the Azure provider.
 
+## Dynamic nodes network for shoot clusters
+
+Some environments do not allow end-users to statically define a CIDR for the network that shall be used for the shoot worker nodes.
+In these cases it is possible for the extension controllers to dynamically provision a network for the nodes (as part of their reconciliation loops), and to provide the CIDR in the `status` of the `Infrastructure` resource:
+
+```yaml
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Infrastructure
+metadata:
+  name: infrastructure
+  namespace: shoot--foo--bar
+spec:
+  ...
+status:
+  lastOperation: ...
+  providerStatus: ...
+  nodesCIDR: 10.250.0.0/16
+```
+
+Gardener will pick this `nodesCIDR` and use it to configure the VPN components to establish network connectivity between the control plane and the worker nodes.
+If the `Shoot` resource already specifies a nodes CIDR in `.spec.networking.nodes` and the extension controller provides also a value in `.status.nodesCIDR` in the `Infrastructure` resource then the latter one will always be considered with higher priority by Gardener.
+
 ## Non-provider specific information required for infrastructure creation
 
 Some providers might require further information that is not provider specific but already part of the shoot resource.

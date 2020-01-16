@@ -15,7 +15,7 @@
 package helper_test
 
 import (
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -492,7 +492,7 @@ var _ = Describe("helper", func() {
 		Entry("alertmanger wanted", &gardenv1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					v1alpha1constants.AnnotationShootOperatedBy: "test@gardener.cloud",
+					v1beta1constants.AnnotationShootOperatedBy: "test@gardener.cloud",
 				},
 			},
 		}, alertingSecrets, true),
@@ -505,7 +505,7 @@ var _ = Describe("helper", func() {
 		Entry("no alertmanager wanted due to invalid mail address", &gardenv1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					v1alpha1constants.AnnotationShootOperatedBy: "invalid-mail-address",
+					v1beta1constants.AnnotationShootOperatedBy: "invalid-mail-address",
 				},
 			},
 		}, alertingSecrets, false))
@@ -537,7 +537,7 @@ var _ = Describe("helper", func() {
 		BeforeEach(func() {
 			shoot = &gardenv1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   v1alpha1constants.GardenNamespace,
+					Namespace:   v1beta1constants.GardenNamespace,
 					Annotations: nil,
 				},
 			}
@@ -561,7 +561,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false,nil,nil because annotation is set with no usages", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "",
+				v1beta1constants.AnnotationShootUseAsSeed: "",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -572,7 +572,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true,nil,nil because annotation is set with normal usage", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true",
+				v1beta1constants.AnnotationShootUseAsSeed: "true",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -583,7 +583,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true,true,true because annotation is set with protected and visible usage", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,protected,visible",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,protected,visible",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -599,7 +599,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true,true,true because annotation is set with unprotected and invisible usage", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -616,7 +616,7 @@ var _ = Describe("helper", func() {
 
 		It("should return the min volume size because annotation is set properly", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible,minimumVolumeSize=20Gi",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,unprotected,invisible,minimumVolumeSize=20Gi",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -633,7 +633,7 @@ var _ = Describe("helper", func() {
 
 		It("should return a filled apiserver config", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=1,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=3",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=1,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=3",
 			}
 
 			shootedSeed, err := ReadShootedSeed(shoot)
@@ -659,7 +659,7 @@ var _ = Describe("helper", func() {
 
 		It("should fail due to maxReplicas not being specified", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=2",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=2",
 			}
 
 			_, err := ReadShootedSeed(shoot)
@@ -668,7 +668,7 @@ var _ = Describe("helper", func() {
 
 		It("should fail due to API server replicas being less than one", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=0",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.replicas=0",
 			}
 
 			_, err := ReadShootedSeed(shoot)
@@ -677,7 +677,7 @@ var _ = Describe("helper", func() {
 
 		It("should fail due to API server autoscaler minReplicas being less than one", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=0,apiServer.autoscaler.maxReplicas=1",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=0,apiServer.autoscaler.maxReplicas=1",
 			}
 
 			_, err := ReadShootedSeed(shoot)
@@ -686,7 +686,7 @@ var _ = Describe("helper", func() {
 
 		It("should fail due to API server autoscaler maxReplicas being less than one", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=0",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=0",
 			}
 
 			_, err := ReadShootedSeed(shoot)
@@ -695,7 +695,7 @@ var _ = Describe("helper", func() {
 
 		It("should fail due to API server autoscaler minReplicas being greater than maxReplicas", func() {
 			shoot.Annotations = map[string]string{
-				v1alpha1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=1,apiServer.autoscaler.minReplicas=2",
+				v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=1,apiServer.autoscaler.minReplicas=2",
 			}
 
 			_, err := ReadShootedSeed(shoot)

@@ -82,3 +82,4 @@ status:
 ```
 
 Hence, the only duty extensions have is to maintain the health status of their components in the extension resource they are managing.
+This can be accomplished using the [health check library for extensions](https://github.com/gardener/gardener-extensions/blob/master/docs/healthcheck-library.md).

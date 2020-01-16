@@ -892,7 +892,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	if oldSpec.Networking.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Services, oldSpec.Networking.Services, fldPath.Child("networking", "services"))...)
 	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
+	if oldSpec.Networking.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
+	}
 
 	return allErrs
 }
@@ -906,7 +908,9 @@ func validateK8SNetworksImmutability(oldNetworks, newNetworks garden.K8SNetworks
 	if oldNetworks.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Services, oldNetworks.Services, fldPath.Child("services"))...)
 	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Nodes, oldNetworks.Nodes, fldPath.Child("nodes"))...)
+	if oldNetworks.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworks.Nodes, oldNetworks.Nodes, fldPath.Child("nodes"))...)
+	}
 
 	return allErrs
 }
@@ -957,15 +961,8 @@ func validateDNSUpdate(new, old *garden.DNS, seedGotAssigned bool, fldPath *fiel
 		// allow to finalize DNS configuration during seed assignment. this is required because
 		// some decisions about the DNS setup can only be taken once the target seed is clarified.
 		if !seedGotAssigned {
-			providersNew := 0
-			if new != nil {
-				providersNew = len(new.Providers)
-			}
-
-			providersOld := 0
-			if old != nil {
-				providersOld = len(old.Providers)
-			}
+			providersNew := len(new.Providers)
+			providersOld := len(old.Providers)
 
 			if providersNew != providersOld {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))

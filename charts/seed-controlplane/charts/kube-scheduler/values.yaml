@@ -5,7 +5,7 @@ featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
 images:
-  hyperkube: image-repository
+  kube-scheduler: image-repository
 resources:
   requests:
     cpu: 23m

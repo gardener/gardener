@@ -98,9 +98,6 @@ github.com/gardener/gardener-resource-manager/pkg/health
 github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.25.0 => github.com/gardener/machine-controller-manager v0.25.0
-github.com/gardener/machine-controller-manager/pkg/apis/machine
-github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
 # github.com/go-logr/logr v0.1.0

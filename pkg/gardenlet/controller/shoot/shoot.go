@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
@@ -47,7 +47,7 @@ type Controller struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                        *config.GardenletConfiguration
-	identity                      *gardencorev1alpha1.Gardener
+	identity                      *gardencorev1beta1.Gardener
 	careControl                   CareControlInterface
 	controllerInstallationControl ControllerInstallationControlInterface
 	seedRegistrationControl       SeedRegistrationControlInterface
@@ -76,17 +76,17 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1alpha1.Gardener, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
+		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 
-		controllerInstallationInformer = gardenCoreV1alpha1Informer.ControllerInstallations()
+		controllerInstallationInformer = gardenCoreV1beta1Informer.ControllerInstallations()
 		controllerInstallationLister   = controllerInstallationInformer.Lister()
 
-		seedInformer = gardenCoreV1alpha1Informer.Seeds()
+		seedInformer = gardenCoreV1beta1Informer.Seeds()
 		seedLister   = seedInformer.Lister()
 
-		shootInformer = gardenCoreV1alpha1Informer.Shoots()
+		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 	)
 
@@ -96,9 +96,9 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 
 		config:                        config,
 		identity:                      identity,
-		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenCoreV1alpha1Informer, secrets, imageVector, identity, config),
-		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreV1alpha1Informer, recorder),
-		seedRegistrationControl:       NewDefaultSeedRegistrationControl(k8sGardenClient, gardenCoreV1alpha1Informer, imageVector, config, recorder),
+		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenCoreV1beta1Informer, secrets, imageVector, identity, config),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreV1beta1Informer, recorder),
+		seedRegistrationControl:       NewDefaultSeedRegistrationControl(k8sGardenClient, gardenCoreV1beta1Informer, imageVector, config, recorder),
 		recorder:                      recorder,
 		secrets:                       secrets,
 		imageVector:                   imageVector,
@@ -188,10 +188,10 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 		}
 
 		// Check if the status indicates that an operation is processing and mark it as "aborted".
-		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateProcessing {
+		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
 			newShoot := shoot.DeepCopy()
-			newShoot.Status.LastOperation.State = gardencorev1alpha1.LastOperationStateAborted
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+			newShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
+			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
@@ -255,7 +255,7 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
-	if shoot, ok := obj.(*gardencorev1alpha1.Shoot); ok && shootIsSeed(shoot) {
+	if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok && shootIsSeed(shoot) {
 		return c.shootSeedQueue
 	}
 	return c.shootQueue

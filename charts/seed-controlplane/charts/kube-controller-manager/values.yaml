@@ -8,7 +8,7 @@ featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
 images:
-  hyperkube: image-repository
+  kube-controller-manager: image-repository
 horizontalPodAutoscaler:
   downscaleDelay: 15m
   syncPeriod: 30s

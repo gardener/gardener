@@ -20,10 +20,10 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
@@ -80,29 +80,29 @@ func NewSeedController(
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	identity *gardencorev1alpha1.Gardener,
+	identity *gardencorev1beta1.Gardener,
 	config *config.GardenletConfiguration,
 	recorder record.EventRecorder,
 ) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
+		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
+		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		controllerInstallationInformer = gardenCoreV1alpha1Informer.ControllerInstallations()
-		seedInformer                   = gardenCoreV1alpha1Informer.Seeds()
+		controllerInstallationInformer = gardenCoreV1beta1Informer.ControllerInstallations()
+		seedInformer                   = gardenCoreV1beta1Informer.Seeds()
 
 		controllerInstallationLister = controllerInstallationInformer.Lister()
 		secretLister                 = corev1Informer.Secrets().Lister()
 		seedLister                   = seedInformer.Lister()
-		shootLister                  = gardenCoreV1alpha1Informer.Shoots().Lister()
+		shootLister                  = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:         k8sGardenClient,
 		k8sGardenCoreInformers:  gardenCoreInformerFactory,
 		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, config, secretLister, shootLister),
-		heartbeatControl:        NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1alpha1Informer, identity, config),
-		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient, controllerInstallationLister, recorder),
+		heartbeatControl:        NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1beta1Informer, identity, config),
+		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient.GardenCore(), controllerInstallationLister, metav1.Now),
 		config:                  config,
 		recorder:                recorder,
 		seedLister:              seedLister,
@@ -167,11 +167,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Register Seed object if desired
 	if c.config.SeedConfig != nil {
-		seed := &gardencorev1alpha1.Seed{ObjectMeta: metav1.ObjectMeta{Name: c.config.SeedConfig.Name}}
+		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: c.config.SeedConfig.Name}}
 		if _, err := controllerutil.CreateOrUpdate(ctx, c.k8sGardenClient.Client(), seed, func() error {
 			seed.Labels = utils.MergeStringMaps(map[string]string{
-				v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleSeed,
-				v1alpha1constants.GardenRole:           v1alpha1constants.GardenRoleSeed,
+				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
+				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
 			}, c.config.SeedConfig.Labels)
 			seed.Spec = c.config.SeedConfig.Seed.Spec
 			return nil

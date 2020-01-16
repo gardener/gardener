@@ -5,11 +5,9 @@ kubernetesVersion: 1.11.2
 securePort: 443
 probeCredentials: base64(user:pass)
 shootNetworks:
-  service: 10.0.1.0/24
-seedNetworks:
-  service: 10.0.0.0/24
-  pod: 192.168.0.0/1
-  node: 172.16.0.0/20
+  services: 10.0.1.0/24
+  pods: 192.168.0.0/1
+# nodes: 172.16.0.0/20
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true
@@ -56,7 +54,7 @@ admissionPlugins:
 #       namespace2: <node-selectors-labels>
 
 images:
-  hyperkube: image-repository
+  kube-apiserver: image-repository
   vpn-seed: image-repository:image-tag
   blackbox-exporter: image-repository:image-tag
 

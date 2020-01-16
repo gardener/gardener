@@ -17,9 +17,9 @@ package shoot
 import (
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -41,7 +41,7 @@ func (c *Controller) controllerInstallationEnqueue(obj interface{}) {
 }
 
 func (c *Controller) controllerInstallationAdd(obj interface{}) {
-	controllerInstallation, ok := obj.(*gardencorev1alpha1.ControllerInstallation)
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok {
 		return
 	}
@@ -56,8 +56,8 @@ func (c *Controller) controllerInstallationAdd(obj interface{}) {
 }
 
 func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {
-	old, ok1 := oldObj.(*gardencorev1alpha1.ControllerInstallation)
-	new, ok2 := newObj.(*gardencorev1alpha1.ControllerInstallation)
+	old, ok1 := oldObj.(*gardencorev1beta1.ControllerInstallation)
+	new, ok2 := newObj.(*gardencorev1beta1.ControllerInstallation)
 
 	if !ok1 || !ok2 {
 		return
@@ -105,7 +105,7 @@ func (c *Controller) reconcileControllerInstallationKey(key string) error {
 // It is implemented as an interface to allow for extensions that provide different semantics. Currently, there is only one
 // implementation.
 type ControllerInstallationControlInterface interface {
-	Reconcile(controllerInstallationObj *gardencorev1alpha1.ControllerInstallation) ([]*gardencorev1alpha1.Shoot, error)
+	Reconcile(controllerInstallationObj *gardencorev1beta1.ControllerInstallation) ([]*gardencorev1beta1.Shoot, error)
 }
 
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControllerInstallationControlInterface that
@@ -121,7 +121,7 @@ type defaultControllerInstallationControl struct {
 	recorder               record.EventRecorder
 }
 
-func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationObj *gardencorev1alpha1.ControllerInstallation) ([]*gardencorev1alpha1.Shoot, error) {
+func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationObj *gardencorev1beta1.ControllerInstallation) ([]*gardencorev1beta1.Shoot, error) {
 	controllerInstallation := controllerInstallationObj.DeepCopy()
 
 	controllerRegistration, err := c.k8sGardenCoreInformers.ControllerRegistrations().Lister().Get(controllerInstallation.Spec.RegistrationRef.Name)
@@ -139,7 +139,7 @@ func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationO
 		return nil, err
 	}
 
-	var shootsRequiringEnqueueing []*gardencorev1alpha1.Shoot
+	var shootsRequiringEnqueueing []*gardencorev1beta1.Shoot
 	for _, shoot := range shootList {
 		if seed := shoot.Spec.SeedName; seed == nil || *seed != controllerInstallation.Spec.SeedRef.Name {
 			continue
@@ -154,8 +154,8 @@ func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationO
 	return shootsRequiringEnqueueing, nil
 }
 
-func (c *defaultControllerInstallationControl) isDependentOnResource(resources map[string]string, shoot *gardencorev1alpha1.Shoot) bool {
-	var machineImages []*gardencorev1alpha1.ShootMachineImage
+func (c *defaultControllerInstallationControl) isDependentOnResource(resources map[string]string, shoot *gardencorev1beta1.Shoot) bool {
+	var machineImages []*gardencorev1beta1.ShootMachineImage
 	for _, worker := range shoot.Spec.Provider.Workers {
 		if worker.Machine.Image != nil {
 			machineImages = append(machineImages, worker.Machine.Image)
@@ -175,7 +175,7 @@ func (c *defaultControllerInstallationControl) isDependentOnResource(resources m
 	return false
 }
 
-func specHashesChanged(new, old *gardencorev1alpha1.ControllerInstallation) bool {
+func specHashesChanged(new, old *gardencorev1beta1.ControllerInstallation) bool {
 	var (
 		oldSeedHash, newSeedHash                 string
 		oldRegistrationHash, newRegistrationHash string

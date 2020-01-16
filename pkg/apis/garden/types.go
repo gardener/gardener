@@ -635,7 +635,7 @@ const SeedVolumeProviderPurposeEtcdMain = "etcd-main"
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes string
+	Nodes *string
 	// Pods is the CIDR of the pod network.
 	Pods string
 	// Services is the CIDR of the service network.
@@ -889,7 +889,7 @@ type Networking struct {
 	// Pods is the CIDR of the pod network.
 	Pods *string
 	// Nodes is the CIDR of the entire node network.
-	Nodes string
+	Nodes *string
 	// Services is the CIDR of the service network.
 	Services *string
 }

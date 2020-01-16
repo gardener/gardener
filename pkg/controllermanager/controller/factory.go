@@ -17,7 +17,7 @@ package controller
 import (
 	"context"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -66,15 +66,15 @@ func NewGardenControllerFactory(k8sGardenClient kubernetes.Interface, gardenCore
 func (f *GardenControllerFactory) Run(ctx context.Context) {
 	var (
 		// Garden core informers
-		cloudProfileInformer           = f.k8sGardenCoreInformers.Core().V1alpha1().CloudProfiles().Informer()
-		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerRegistrations().Informer()
-		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerInstallations().Informer()
-		quotaInformer                  = f.k8sGardenCoreInformers.Core().V1alpha1().Quotas().Informer()
-		plantInformer                  = f.k8sGardenCoreInformers.Core().V1alpha1().Plants().Informer()
-		projectInformer                = f.k8sGardenCoreInformers.Core().V1alpha1().Projects().Informer()
-		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1alpha1().SecretBindings().Informer()
-		seedInformer                   = f.k8sGardenCoreInformers.Core().V1alpha1().Seeds().Informer()
-		shootInformer                  = f.k8sGardenCoreInformers.Core().V1alpha1().Shoots().Informer()
+		cloudProfileInformer           = f.k8sGardenCoreInformers.Core().V1beta1().CloudProfiles().Informer()
+		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
+		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
+		quotaInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Quotas().Informer()
+		plantInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Plants().Informer()
+		projectInformer                = f.k8sGardenCoreInformers.Core().V1beta1().Projects().Informer()
+		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Informer()
+		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
+		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
 		// Kubernetes core informers
 		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
 		csrInformer       = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
@@ -95,7 +95,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
 	runtime.Must(err)
 
-	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, v1alpha1constants.GardenNamespace, secrets))
+	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.

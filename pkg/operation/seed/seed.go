@@ -21,11 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -67,7 +66,7 @@ var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretCon
 
 // New takes a <k8sGardenClient>, the <k8sGardenCoreInformers> and a <seed> manifest, and creates a new Seed representation.
 // It will add the CloudProfile and identify the cloud provider.
-func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, seed *gardencorev1alpha1.Seed) (*Seed, error) {
+func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, seed *gardencorev1beta1.Seed) (*Seed, error) {
 	seedObj := &Seed{Info: seed}
 
 	if seed.Spec.SecretRef != nil {
@@ -127,7 +126,7 @@ func GetSeedClient(ctx context.Context, gardenClient client.Client, clientConnec
 		)
 	}
 
-	seed := &gardencorev1alpha1.Seed{}
+	seed := &gardencorev1beta1.Seed{}
 	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
 		return nil, err
 	}
@@ -250,7 +249,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
 func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1alpha1constants.GardenNamespace)
+	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +275,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 		}
 	}
 
-	secrets, err := secretsutils.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1alpha1constants.GardenNamespace)
+	secrets, err := secretsutils.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +310,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: v1alpha1constants.GardenNamespace,
+			Name: v1beta1constants.GardenNamespace,
 		},
 	}
 	if err = k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -319,7 +318,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 
 	if _, err := kutil.TryUpdateNamespace(k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", v1alpha1constants.GardenNamespace)
+		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", v1beta1constants.GardenNamespace)
 		return ns, nil
 	}); err != nil {
 		return err
@@ -395,7 +394,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 
 	if loggingEnabled {
 		existingSecrets := &corev1.SecretList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1alpha1constants.GardenNamespace)); err != nil {
+		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 			return err
 		}
 
@@ -424,18 +423,18 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		// Read extension provider specific configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
-			client.InNamespace(v1alpha1constants.GardenNamespace),
-			client.MatchingLabels{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelLogging}); err != nil {
+			client.InNamespace(v1beta1constants.GardenNamespace),
+			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
 			return err
 		}
 
 		// Read all filters and parsers coming from the extension provider configurations
 		for _, cm := range existingConfigMaps.Items {
-			filters.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.FluentBitConfigMapKubernetesFilter]))
-			parsers.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.FluentBitConfigMapParser]))
+			filters.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]))
+			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 	} else {
-		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1alpha1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -444,7 +443,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if !hvpaEnabled {
-		if err := common.DeleteHvpa(k8sSeedClient, v1alpha1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -452,7 +451,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	var vpaPodAnnotations map[string]interface{}
 
 	existingSecrets := &corev1.SecretList{}
-	if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1alpha1constants.GardenNamespace)); err != nil {
+	if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 		return err
 	}
 
@@ -476,9 +475,9 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 
 	// Cleanup legacy external admission controller (no longer needed).
 	objects := []runtime.Object{
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1alpha1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller-tls", Namespace: v1alpha1constants.GardenNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller-tls", Namespace: v1beta1constants.GardenNamespace}},
 	}
 	for _, object := range objects {
 		if err = k8sSeedClient.Client().Delete(context.TODO(), object, kubernetes.DefaultDeleteOptions...); err != nil && !apierrors.IsNotFound(err) {
@@ -513,7 +512,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		}
 	} else {
 		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1alpha1constants.GardenNamespace); err != nil {
+		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
 	}
@@ -556,11 +555,15 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
-	privateNetworks, err := common.ToExceptNetworks(
-		common.AllPrivateNetworkBlocks(),
-		seed.Info.Spec.Networks.Nodes,
+	networks := []string{
 		seed.Info.Spec.Networks.Pods,
-		seed.Info.Spec.Networks.Services)
+		seed.Info.Spec.Networks.Services,
+	}
+	if v := seed.Info.Spec.Networks.Nodes; v != nil {
+		networks = append(networks, *v)
+	}
+
+	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), networks...)
 	if err != nil {
 		return err
 	}
@@ -582,7 +585,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		kibanaTLSOverride = wildcardCert.GetName()
 	}
 
-	err = chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1alpha1constants.GardenNamespace, chartName, nil, map[string]interface{}{
+	err = chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
 			"images": chart.ImageMapToValues(images),
@@ -663,7 +666,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"privateNetworks": privateNetworks,
 		},
 		"gardenerResourceManager": map[string]interface{}{
-			"resourceClass": v1alpha1constants.SeedResourceManagerClass,
+			"resourceClass": v1beta1constants.SeedResourceManagerClass,
 		},
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
@@ -706,7 +709,7 @@ func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
 // As fluentd HPA manages the number of replicas, we have to make sure to do not override HPA scaling.
 func GetFluentdReplicaCount(k8sSeedClient kubernetes.Interface) (int32, error) {
 	statefulSet := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.Client().Get(context.TODO(), kutil.Key(v1alpha1constants.GardenNamespace, common.FluentdEsStatefulSetName), statefulSet); err != nil {
+	if err := k8sSeedClient.Client().Get(context.TODO(), kutil.Key(v1beta1constants.GardenNamespace, common.FluentdEsStatefulSetName), statefulSet); err != nil {
 		if apierrors.IsNotFound(err) {
 			// the stateful set is still not created, return the default replicas
 			return 1, nil
@@ -840,12 +843,12 @@ func deleteDependencyWatchdogFromNS(crClient client.Client, ns string) error {
 		kind     string
 		name     string
 	}{
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1alpha1constants.VPANameDependencyWatchdog},
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscalerCheckpoint", v1alpha1constants.VPANameDependencyWatchdog},
-		{"apps", "v1", "Deployment", v1alpha1constants.DeploymentNameDependencyWatchdog},
-		{"", "v1", "ConfigMap", v1alpha1constants.ConfigMapNameDependencyWatchdog},
-		{"rbac.authorization.k8s.io", "v1", "RoleBinding", v1alpha1constants.RoleBindingNameDependencyWatchdog},
-		{"", "v1", "ServiceAccount", v1alpha1constants.ServiceAccountNameDependencyWatchdog},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1beta1constants.VPANameDependencyWatchdog},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscalerCheckpoint", v1beta1constants.VPANameDependencyWatchdog},
+		{"apps", "v1", "Deployment", v1beta1constants.DeploymentNameDependencyWatchdog},
+		{"", "v1", "ConfigMap", v1beta1constants.ConfigMapNameDependencyWatchdog},
+		{"rbac.authorization.k8s.io", "v1", "RoleBinding", v1beta1constants.RoleBindingNameDependencyWatchdog},
+		{"", "v1", "ServiceAccount", v1beta1constants.ServiceAccountNameDependencyWatchdog},
 		{"", "v1", "Secret", common.DeprecatedKubecfgInternalProbeSecretName},
 	} {
 		u := &unstructured.Unstructured{}

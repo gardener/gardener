@@ -170,6 +170,14 @@ var _ = Describe("Accessor", func() {
 					})
 				})
 
+				Describe("#GetState", func() {
+					It("should get the extensions state", func() {
+						state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
+						acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{State: state})
+						Expect(acc.GetState()).To(Equal(state))
+					})
+				})
+
 				Describe("#Set Conditions", func() {
 					It("should set the conditions", func() {
 						var (

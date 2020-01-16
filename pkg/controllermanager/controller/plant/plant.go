@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -65,7 +65,7 @@ func NewController(k8sGardenClient kubernetes.Interface,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreInformer = gardenCoreInformerFactory.Core().V1alpha1()
+		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 		kubeInfomer        = kubeInformerFactory.Core().V1()
 
 		plantInformer = gardenCoreInformer.Plants()

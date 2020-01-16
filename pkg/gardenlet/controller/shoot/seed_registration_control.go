@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -69,7 +69,7 @@ func (c *Controller) seedRegistrationAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	if namespace != v1alpha1constants.GardenNamespace {
+	if namespace != v1beta1constants.GardenNamespace {
 		return
 	}
 
@@ -77,11 +77,11 @@ func (c *Controller) seedRegistrationAdd(obj interface{}) {
 }
 
 func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {
-	oldShoot, ok := oldObj.(*gardencorev1alpha1.Shoot)
+	oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return
 	}
-	newShoot, ok := newObj.(*gardencorev1alpha1.Shoot)
+	newShoot, ok := newObj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return
 	}
@@ -104,7 +104,7 @@ func (c *Controller) reconcileShootedSeedRegistrationKey(req reconcile.Request) 
 		return reconcile.Result{}, err
 	}
 
-	shootedSeedConfig, err := gardencorev1alpha1helper.ReadShootedSeed(shoot)
+	shootedSeedConfig, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -116,7 +116,7 @@ func (c *Controller) reconcileShootedSeedRegistrationKey(req reconcile.Request) 
 // It is implemented as an interface to allow for extensions that provide different semantics. Currently, there is only one
 // implementation.
 type SeedRegistrationControlInterface interface {
-	Reconcile(shootObj *gardencorev1alpha1.Shoot, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed) (reconcile.Result, error)
+	Reconcile(shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error)
 }
 
 // NewDefaultSeedRegistrationControl returns a new instance of the default implementation SeedRegistrationControlInterface that
@@ -134,7 +134,7 @@ type defaultSeedRegistrationControl struct {
 	recorder               record.EventRecorder
 }
 
-func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1alpha1.Shoot, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed) (reconcile.Result, error) {
+func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error) {
 	var (
 		ctx         = context.TODO()
 		shoot       = shootObj.DeepCopy()
@@ -142,7 +142,7 @@ func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1alpha1.
 	)
 
 	if shoot.DeletionTimestamp == nil && shootedSeedConfig != nil {
-		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded {
+		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 			shootLogger.Infof("[SHOOTED SEED REGISTRATION] Waiting for shoot %s to be reconciled before registering it as seed", shoot.Name)
 			return reconcile.Result{
 				RequeueAfter: 10 * time.Second,
@@ -194,8 +194,8 @@ func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1alpha1.
 	return reconcile.Result{}, nil
 }
 
-func getShootSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot) (*corev1.Secret, error) {
-	shootSecretBinding := &gardencorev1alpha1.SecretBinding{}
+func getShootSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
+	shootSecretBinding := &gardencorev1beta1.SecretBinding{}
 	if err := k8sGardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
 		return nil, err
 	}
@@ -204,8 +204,8 @@ func getShootSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, s
 	return shootSecret, err
 }
 
-func applySeedBackupConfig(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot, shootSecret *corev1.Secret, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed) (*gardencorev1alpha1.SeedBackup, error) {
-	var backupProfile *gardencorev1alpha1.SeedBackup
+func applySeedBackupConfig(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (*gardencorev1beta1.SeedBackup, error) {
+	var backupProfile *gardencorev1beta1.SeedBackup
 	if shootedSeedConfig.Backup != nil {
 		backupProfile = shootedSeedConfig.Backup.DeepCopy()
 
@@ -216,7 +216,7 @@ func applySeedBackupConfig(ctx context.Context, k8sGardenClient kubernetes.Inter
 		if len(backupProfile.SecretRef.Name) == 0 || len(backupProfile.SecretRef.Namespace) == 0 {
 			var (
 				backupSecretName      = fmt.Sprintf("backup-%s", shoot.Name)
-				backupSecretNamespace = v1alpha1constants.GardenNamespace
+				backupSecretNamespace = v1beta1constants.GardenNamespace
 			)
 
 			backupSecret := &corev1.Secret{
@@ -228,7 +228,7 @@ func applySeedBackupConfig(ctx context.Context, k8sGardenClient kubernetes.Inter
 
 			if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), backupSecret, func() error {
 				backupSecret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(shoot, gardencorev1alpha1.SchemeGroupVersion.WithKind("Shoot")),
+					*metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 				}
 				backupSecret.Type = corev1.SecretTypeOpaque
 				backupSecret.Data = shootSecret.Data
@@ -245,7 +245,7 @@ func applySeedBackupConfig(ctx context.Context, k8sGardenClient kubernetes.Inter
 	return backupProfile, nil
 }
 
-func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot, shootSecret *corev1.Secret, secretName, secretNamespace string) error {
+func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, secretName, secretNamespace string) error {
 	shootKubeconfigSecret := &corev1.Secret{}
 	if err := k8sGardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, fmt.Sprintf("%s.kubeconfig", shoot.Name)), shootKubeconfigSecret); err != nil {
 		return err
@@ -260,7 +260,7 @@ func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 
 	return kutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), seedSecret, func() error {
 		seedSecret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			*metav1.NewControllerRef(shoot, gardencorev1alpha1.SchemeGroupVersion.WithKind("Shoot")),
+			*metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 		}
 		seedSecret.Type = corev1.SecretTypeOpaque
 		seedSecret.Data = shootSecret.Data
@@ -269,7 +269,7 @@ func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 	})
 }
 
-func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed, secretRef *corev1.SecretReference) (*gardencorev1alpha1.SeedSpec, error) {
+func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, secretRef *corev1.SecretReference) (*gardencorev1beta1.SeedSpec, error) {
 	shootSecret, err := getShootSecret(ctx, k8sGardenClient, shoot)
 	if err != nil {
 		return nil, err
@@ -286,52 +286,52 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 		}
 	}
 
-	var taints []gardencorev1alpha1.SeedTaint
+	var taints []gardencorev1beta1.SeedTaint
 	if shootedSeedConfig.DisableDNS != nil && *shootedSeedConfig.DisableDNS {
-		taints = append(taints, gardencorev1alpha1.SeedTaint{Key: gardencorev1alpha1.SeedTaintDisableDNS})
+		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableDNS})
 	}
 	if shootedSeedConfig.Protected != nil && *shootedSeedConfig.Protected {
-		taints = append(taints, gardencorev1alpha1.SeedTaint{Key: gardencorev1alpha1.SeedTaintProtected})
+		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintProtected})
 	}
 	if shootedSeedConfig.Visible != nil && !*shootedSeedConfig.Visible {
-		taints = append(taints, gardencorev1alpha1.SeedTaint{Key: gardencorev1alpha1.SeedTaintInvisible})
+		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintInvisible})
 	}
 
-	var volume *gardencorev1alpha1.SeedVolume
+	var volume *gardencorev1beta1.SeedVolume
 	if shootedSeedConfig.MinimumVolumeSize != nil {
 		minimumSize, err := resource.ParseQuantity(*shootedSeedConfig.MinimumVolumeSize)
 		if err != nil {
 			return nil, err
 		}
-		volume = &gardencorev1alpha1.SeedVolume{
+		volume = &gardencorev1beta1.SeedVolume{
 			MinimumSize: &minimumSize,
 		}
 	}
 
-	return &gardencorev1alpha1.SeedSpec{
-		Provider: gardencorev1alpha1.SeedProvider{
+	return &gardencorev1beta1.SeedSpec{
+		Provider: gardencorev1beta1.SeedProvider{
 			Type:   shoot.Spec.Provider.Type,
 			Region: shoot.Spec.Region,
 		},
-		DNS: gardencorev1alpha1.SeedDNS{
+		DNS: gardencorev1beta1.SeedDNS{
 			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain)),
 		},
 		SecretRef: secretRef,
-		Networks: gardencorev1alpha1.SeedNetworks{
+		Networks: gardencorev1beta1.SeedNetworks{
 			Pods:          *shoot.Spec.Networking.Pods,
 			Services:      *shoot.Spec.Networking.Services,
 			Nodes:         shoot.Spec.Networking.Nodes,
+			BlockCIDRs:    shootedSeedConfig.BlockCIDRs,
 			ShootDefaults: shootedSeedConfig.ShootDefaults,
 		},
-		BlockCIDRs: shootedSeedConfig.BlockCIDRs,
-		Taints:     taints,
-		Backup:     backupProfile,
-		Volume:     volume,
+		Taints: taints,
+		Backup: backupProfile,
+		Volume: volume,
 	}, nil
 }
 
 // registerAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func registerAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed) error {
+func registerAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) error {
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
@@ -339,10 +339,10 @@ func registerAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, s
 	var (
 		secretRef = &corev1.SecretReference{
 			Name:      fmt.Sprintf("seed-%s", shoot.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		}
 
-		seed = &gardencorev1alpha1.Seed{
+		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: shoot.Name,
 			},
@@ -356,8 +356,8 @@ func registerAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, s
 
 	_, err = controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), seed, func() error {
 		seed.Labels = utils.MergeStringMaps(shoot.Labels, map[string]string{
-			v1alpha1constants.DeprecatedGardenRole: v1alpha1constants.GardenRoleSeed,
-			v1alpha1constants.GardenRole:           v1alpha1constants.GardenRoleSeed,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
+			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
 		})
 		seed.Spec = *seedSpec
 		return nil
@@ -366,8 +366,8 @@ func registerAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, s
 }
 
 // deregisterAsSeed de-registers a Shoot cluster as a Seed in the Garden cluster.
-func deregisterAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot) error {
-	seed, err := k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().Get(shoot.Name, metav1.GetOptions{})
+func deregisterAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
+	seed, err := k8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(shoot.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -375,7 +375,7 @@ func deregisterAsSeed(ctx context.Context, k8sGardenClient kubernetes.Interface,
 		return err
 	}
 
-	if err := k8sGardenClient.GardenCore().CoreV1alpha1().Seeds().Delete(seed.Name, nil); client.IgnoreNotFound(err) != nil {
+	if err := k8sGardenClient.GardenCore().CoreV1beta1().Seeds().Delete(seed.Name, nil); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -407,7 +407,7 @@ const (
 	gardenletKubeconfigSecretName          = "gardenlet-kubeconfig"
 )
 
-func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot, shootedSeedConfig *gardencorev1alpha1helper.ShootedSeed, imageVector imagevector.ImageVector, cfg *config.GardenletConfiguration) error {
+func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, imageVector imagevector.ImageVector, cfg *config.GardenletConfiguration) error {
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, shoot.Namespace, fmt.Sprintf("%s.kubeconfig", shoot.Name),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.SeedScheme,
@@ -419,7 +419,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 
 	// create bootstrap token and bootstrap kubeconfig in case there is no existing gardenlet kubeconfig yet
 	var bootstrapKubeconfigValues map[string]interface{}
-	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1alpha1constants.GardenNamespace, gardenletKubeconfigSecretName), &corev1.Secret{}); err != nil {
+	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, gardenletKubeconfigSecretName), &corev1.Secret{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -472,7 +472,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 
 		bootstrapKubeconfigValues = map[string]interface{}{
 			"name":       gardenletKubeconfigBootstrapSecretName,
-			"namespace":  v1alpha1constants.GardenNamespace,
+			"namespace":  v1beta1constants.GardenNamespace,
 			"kubeconfig": string(bootstrapKubeconfig),
 		}
 	}
@@ -513,7 +513,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 	if shootedSeedConfig.WithSecretRef {
 		secretRef = &corev1.SecretReference{
 			Name:      fmt.Sprintf("seed-%s", shoot.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		}
 	}
 
@@ -551,7 +551,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 						"bootstrapKubeconfig":  bootstrapKubeconfigValues,
 						"kubeconfigSecret": map[string]interface{}{
 							"name":      gardenletKubeconfigSecretName,
-							"namespace": v1alpha1constants.GardenNamespace,
+							"namespace": v1beta1constants.GardenNamespace,
 						},
 					},
 					"seedClientConnection":  externalConfig.SeedClientConnection.ClientConnectionConfiguration,
@@ -563,7 +563,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,
 					"featureGates":          externalConfig.FeatureGates,
 					"seedConfig": &configv1alpha1.SeedConfig{
-						Seed: gardencorev1alpha1.Seed{
+						Seed: gardencorev1beta1.Seed{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:   shoot.Name,
 								Labels: shoot.Labels,
@@ -576,15 +576,15 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		},
 	}
 
-	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1alpha1constants.GardenNamespace}}
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.GardenNamespace}}
 	if err := k8sSeedClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
-	return chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1alpha1constants.GardenNamespace, "gardenlet", values, nil)
+	return chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", values, nil)
 }
 
-func deleteGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1alpha1.Shoot) error {
+func deleteGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, shoot.Namespace, fmt.Sprintf("%s.kubeconfig", shoot.Name),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.SeedScheme,
@@ -601,16 +601,16 @@ func deleteGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 	vpa.SetAPIVersion("autoscaling.k8s.io/v1beta2")
 	vpa.SetKind("VerticalPodAutoscaler")
 	vpa.SetName("gardenlet-vpa")
-	vpa.SetNamespace(v1alpha1constants.GardenNamespace)
+	vpa.SetNamespace(v1beta1constants.GardenNamespace)
 
 	for _, obj := range []runtime.Object{
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-configmap", Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-imagevector-overwrite", Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenletKubeconfigBootstrapSecretName, Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenletKubeconfigSecretName, Namespace: v1alpha1constants.GardenNamespace}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1alpha1constants.GardenNamespace}},
-		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1alpha1constants.GardenNamespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-configmap", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-imagevector-overwrite", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenletKubeconfigBootstrapSecretName, Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenletKubeconfigSecretName, Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
+		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
 		vpa,
 	} {
 		if err := k8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {

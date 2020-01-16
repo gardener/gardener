@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
@@ -52,8 +52,8 @@ func (c *Controller) shootAdd(obj interface{}) {
 
 func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 	var (
-		oldShoot        = oldObj.(*gardencorev1alpha1.Shoot)
-		newShoot        = newObj.(*gardencorev1alpha1.Shoot)
+		oldShoot        = oldObj.(*gardencorev1beta1.Shoot)
+		newShoot        = newObj.(*gardencorev1beta1.Shoot)
 		oldShootJSON, _ = json.Marshal(oldShoot)
 		newShootJSON, _ = json.Marshal(newShoot)
 		shootLogger     = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
@@ -90,7 +90,7 @@ func (c *Controller) respectSyncPeriodOverwrite() bool {
 	return controllerutils.BoolPtrDerefOr(c.config.Controllers.Shoot.RespectSyncPeriodOverwrite, false)
 }
 
-func (c *Controller) checkSeedAndSyncClusterResource(shoot *gardencorev1alpha1.Shoot, o *operation.Operation) error {
+func (c *Controller) checkSeedAndSyncClusterResource(shoot *gardencorev1beta1.Shoot, o *operation.Operation) error {
 	seedName := shoot.Spec.SeedName
 	if seedName == nil || o.Seed == nil {
 		return nil
@@ -135,12 +135,12 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	return c.reconcileShoot(shoot, log)
 }
 
-func (c *Controller) updateShootStatusError(shoot *gardencorev1alpha1.Shoot, message string) error {
+func (c *Controller) updateShootStatusError(shoot *gardencorev1beta1.Shoot, message string) error {
 	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
-		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
-			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-				Type:           gardencorev1alpha1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
-				State:          gardencorev1alpha1.LastOperationStateError,
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:           gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
+				State:          gardencorev1beta1.LastOperationStateError,
 				Progress:       0,
 				Description:    message,
 				LastUpdateTime: metav1.Now(),
@@ -150,12 +150,12 @@ func (c *Controller) updateShootStatusError(shoot *gardencorev1alpha1.Shoot, mes
 	return err
 }
 
-func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1alpha1.Shoot, message string) error {
+func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1beta1.Shoot, message string) error {
 	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
-		func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
-			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
-				Type:           gardencorev1alpha1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
-				State:          gardencorev1alpha1.LastOperationStateProcessing,
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:           gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
+				State:          gardencorev1beta1.LastOperationStateProcessing,
 				Progress:       0,
 				Description:    message,
 				LastUpdateTime: metav1.Now(),
@@ -165,7 +165,7 @@ func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1alpha1.Shoot
 	return err
 }
 
-func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1alpha1.Shoot) time.Duration {
+func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) time.Duration {
 	syncPeriod := common.SyncPeriodOfShoot(c.respectSyncPeriodOverwrite(), c.config.Controllers.Shoot.SyncPeriod.Duration, shoot)
 	if !c.reconcileInMaintenanceOnly() {
 		return syncPeriod
@@ -180,15 +180,12 @@ func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1alpha1.Shoot)
 	return syncPeriod
 }
 
-func (c *Controller) deleteShoot(shoot *gardencorev1alpha1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
-	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
+func (c *Controller) deleteShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
+	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
 
-	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1alpha1(), c.identity, c.secrets, c.imageVector)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", err.Error())))
 	}
@@ -209,8 +206,8 @@ func (c *Controller) deleteShoot(shoot *gardencorev1alpha1.Shoot, logger *logrus
 			return nil
 		},
 		func(errorID string, err error) error {
-			lastErr := gardencorev1alpha1helper.LastErrorWithTaskID(fmt.Sprintf("Could not check and sync Shoot with Seed: %v", err), errorID)
-			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, lastErr.Description)
+			lastErr := gardencorev1beta1helper.LastErrorWithTaskID(fmt.Sprintf("Could not check and sync Shoot with Seed: %v", err), errorID)
+			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 			return utilerrors.WithSuppressed(err, c.updateShootStatusDeleteError(o, lastErr.Description, *lastErr))
 		},
 		utilerrors.ToExecute("Check and sync Shoot with Seed", func() error {
@@ -248,25 +245,25 @@ func (c *Controller) deleteShoot(shoot *gardencorev1alpha1.Shoot, logger *logrus
 	}
 
 	// Trigger regular shoot deletion flow.
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1alpha1.EventDeleting, "Deleting Shoot cluster")
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
 	if err := c.updateShootStatusDeleteStart(o); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := c.runDeleteShootFlow(o, errorContext); err != nil {
-		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, err.Description)
+		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Description)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusDeleteError(o, err.Description, err.LastErrors...))
 	}
 
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1alpha1.EventDeleted, "Deleted Shoot cluster")
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, "Deleted Shoot cluster")
 	return c.finalizeShootDeletion(shoot, o)
 }
 
-func (c *Controller) finalizeShootDeletion(shoot *gardencorev1alpha1.Shoot, o *operation.Operation) (reconcile.Result, error) {
+func (c *Controller) finalizeShootDeletion(shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
 	if len(o.Shoot.Info.Status.UID) > 0 {
 		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
-			lastErr := gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
-			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1alpha1.EventDeleteError, lastErr.Description)
+			lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
+			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusDeleteError(o, lastErr.Description, *lastErr))
 		}
 	}
@@ -274,9 +271,9 @@ func (c *Controller) finalizeShootDeletion(shoot *gardencorev1alpha1.Shoot, o *o
 	return reconcile.Result{}, c.updateShootStatusDeleteSuccess(o)
 }
 
-func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
+func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
 	var (
-		operationType                              = gardencorev1alpha1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
 		failed                                     = common.IsShootFailed(shoot)
 		ignored                                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -288,13 +285,13 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, logger *log
 		allowedToUpdate                            = !failedOrIgnored && reconcileAllowed
 	)
 	// need retry logic, because the scheduler is acting on it at the same time and cached object might not be up to date
-	updatedShoot, err := kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(curShoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+	updatedShoot, err := kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(curShoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		finalizers := sets.NewString(curShoot.Finalizers...)
-		if finalizers.Has(gardencorev1alpha1.GardenerName) {
+		if finalizers.Has(gardencorev1beta1.GardenerName) {
 			return curShoot, nil
 		}
 
-		finalizers.Insert(gardencorev1alpha1.GardenerName)
+		finalizers.Insert(gardencorev1beta1.GardenerName)
 		curShoot.Finalizers = finalizers.UnsortedList()
 
 		return curShoot, nil
@@ -319,7 +316,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, logger *log
 		"allowedToUpdate":                            allowedToUpdate,
 	}).Info("Checking if Shoot can be reconciled")
 
-	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1alpha1(), c.identity, c.secrets, c.imageVector)
+	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		if failedOrIgnored {
 			// do not set error from operation initialization in Shoot status if Shoot would not be reconciled anyways
@@ -332,7 +329,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, logger *log
 
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
-		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1alpha1.EventOperationPending, message)
+		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
 		if !allowedToUpdate {
 			o.Logger.WithError(err).Infof("Not allowed to update shoot with error")
 			return reconcile.Result{}, err
@@ -359,17 +356,17 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1alpha1.Shoot, logger *log
 		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("shoot %s/%s has not yet been scheduled on a Seed", shoot.Namespace, shoot.Name), c.updateShootStatusProcessing(shoot, message))
 	}
 
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1alpha1.EventReconciling, "Reconciling Shoot cluster state")
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
 	if err := c.updateShootStatusReconcileStart(o, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := c.runReconcileShootFlow(o, operationType); err != nil {
-		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1alpha1.EventReconcileError, err.Description)
+		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Description)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusReconcileError(o, operationType, err.Description, err.LastErrors...))
 	}
 
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1alpha1.EventReconciled, "Reconciled Shoot cluster state")
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
 	if err := c.updateShootStatusReconcileSuccess(o, operationType); err != nil {
 		return reconcile.Result{}, err
 	}

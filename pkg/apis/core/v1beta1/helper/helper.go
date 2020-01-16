@@ -186,6 +186,7 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
+	DisableDNS        *bool
 	Protected         *bool
 	Visible           *bool
 	MinimumVolumeSize *string
@@ -193,6 +194,8 @@ type ShootedSeed struct {
 	BlockCIDRs        []string
 	ShootDefaults     *gardencorev1beta1.ShootNetworks
 	Backup            *gardencorev1beta1.SeedBackup
+	NoGardenlet       bool
+	WithSecretRef     bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -266,6 +269,16 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		shootedSeed.MinimumVolumeSize = &size
 	}
 
+	if _, ok := flags["disable-dns"]; ok {
+		shootedSeed.DisableDNS = &trueVar
+	}
+	if _, ok := flags["no-gardenlet"]; ok {
+		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["with-secret-ref"]; ok {
+		shootedSeed.WithSecretRef = true
+	}
+
 	if _, ok := flags["protected"]; ok {
 		shootedSeed.Protected = &trueVar
 	}
@@ -288,12 +301,7 @@ func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
 		return nil, nil
 	}
 
-	var addresses []string
-	for _, addr := range strings.Split(cidrs, ";") {
-		addresses = append(addresses, addr)
-	}
-
-	return addresses, nil
+	return strings.Split(cidrs, ";"), nil
 }
 
 func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1beta1.ShootNetworks, error) {
@@ -544,6 +552,22 @@ func ShootWantsBasicAuthentication(shoot *gardencorev1beta1.Shoot) bool {
 		return true
 	}
 	return *kubeAPIServerConfig.EnableBasicAuthentication
+}
+
+// ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
+func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
+}
+
+// GetMachineImagesFor returns a list of all machine images for a given shoot.
+func GetMachineImagesFor(shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.ShootMachineImage {
+	var workerMachineImages []*gardencorev1beta1.ShootMachineImage
+	for _, worker := range shoot.Spec.Provider.Workers {
+		if worker.Machine.Image != nil {
+			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
+		}
+	}
+	return workerMachineImages
 }
 
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and

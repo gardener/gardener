@@ -1,4 +1,4 @@
-# New `core.gardener.cloud/v1alpha1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core
+# New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Meanwhile, we have progressed a lot and are about to remove the [`CloudBotanist`
 The only missing aspect that will allow providers to really maintain their code out of the core is to design new APIs.
 
 This proposal describes how the new `Shoot`, `Seed` etc. APIs will be re-designed to cope with the changes made with extensibility.
-We already have the new `core.gardener.cloud/v1alpha1` API group that will be the new default soon.
+We already have the new `core.gardener.cloud/v1beta1` API group that will be the new default soon.
 
 ## Motivation
 
@@ -44,12 +44,12 @@ In order to achieve the same, we have to provide proper APIs.
 ## Proposal
 
 In GEP-1 we already have proposed a first version for new `CloudProfile` and `Shoot` resources.
-In order to deprecate the existing/old `garden.sapcloud.io/v1beta1` API group (and remove it, eventually) we should move all existing resources to the new `core.gardener.cloud/v1alpha1` API group.
+In order to deprecate the existing/old `garden.sapcloud.io/v1beta1` API group (and remove it, eventually) we should move all existing resources to the new `core.gardener.cloud/v1beta1` API group.
 
 ### `CloudProfile` resource
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: CloudProfile
 metadata:
   name: cloudprofile1
@@ -224,7 +224,7 @@ data:
   # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Seed
 metadata:
   name: seed1
@@ -286,7 +286,7 @@ Every member will have a role that is either `admin` or `viewer`.
 This will allow us to add new roles without changing the API.
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Project
 metadata:
   name: example
@@ -340,7 +340,7 @@ data:
   # https://github.com/gardener/external-dns-management/tree/master/examples
 
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: SecretBinding
 metadata:
   name: secretbinding1
@@ -358,7 +358,7 @@ quotas: []
 Special note: No modifications needed compared to the current `garden.sapcloud.io/v1beta1.Quota` resource.
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Quota
 metadata:
   name: trial-quota
@@ -399,7 +399,7 @@ data:
   # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: BackupBucket
 metadata:
   name: <seed-provider-type>-<region>-<seed-uid>
@@ -446,13 +446,13 @@ data:
   # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: BackupEntry
 metadata:
   name: shoot--core--crazy-botany--3ef42
   namespace: garden-core
   ownerReferences:
-  - apiVersion: core.gardener.cloud/v1alpha1
+  - apiVersion: core.gardener.cloud/v1beta1
     blockOwnerDeletion: false
     controller: true
     kind: Shoot
@@ -479,7 +479,7 @@ Special notes:
 * Moved remaining control plane configuration to new `.spec.provider.controlplane` section.
 
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: crazy-botany
@@ -726,7 +726,7 @@ data:
   kubeconfig: base64(kubeconfig-for-plant-cluster)
 
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Plant
 metadata:
   name: crazy-plant

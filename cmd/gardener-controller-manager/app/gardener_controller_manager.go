@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -83,7 +83,7 @@ func NewOptions() (*Options, error) {
 	if err := controllermanagerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardencorev1alpha1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gardencorev1beta1.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 
@@ -333,8 +333,8 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Start HTTP server
 	var (
-		projectInformer = g.K8sGardenCoreInformers.Core().V1alpha1().Projects()
-		shootInformer   = g.K8sGardenCoreInformers.Core().V1alpha1().Shoots()
+		projectInformer = g.K8sGardenCoreInformers.Core().V1beta1().Projects()
+		shootInformer   = g.K8sGardenCoreInformers.Core().V1beta1().Shoots()
 
 		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
 			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), shootInformer.Lister()),

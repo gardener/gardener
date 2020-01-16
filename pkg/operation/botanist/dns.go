@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -125,7 +125,7 @@ func (b *Botanist) waitUntilDNSProviderReady(ctx context.Context, name string) e
 		b.Logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", name, status, message)
 		return retry.MinorError(fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", name, status, message))
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}
 
 	return nil
@@ -180,7 +180,7 @@ func (b *Botanist) waitUntilDNSEntryReady(ctx context.Context, name string) erro
 		b.Logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", name, status, message)
 		return retry.MinorError(fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", name, status, message))
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}
 
 	return nil

@@ -20,10 +20,8 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -58,10 +56,10 @@ type actuator struct {
 	gardenClient client.Client
 	seedClient   client.Client
 	logger       logrus.FieldLogger
-	backupEntry  *gardencorev1alpha1.BackupEntry
+	backupEntry  *gardencorev1beta1.BackupEntry
 }
 
-func newActuator(gardenClient, seedClient client.Client, be *gardencorev1alpha1.BackupEntry, logger logrus.FieldLogger) Actuator {
+func newActuator(gardenClient, seedClient client.Client, be *gardencorev1beta1.BackupEntry, logger logrus.FieldLogger) Actuator {
 	return &actuator{
 		logger:       logger.WithField("backupentry", be.Name),
 		backupEntry:  be,
@@ -139,7 +137,7 @@ func makeDescription(stats *flow.Stats) string {
 }
 
 // waitUntilCoreBackupBucketReconciled waits until core.BackupBucket resource reconciled from seed.
-func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1alpha1.BackupBucket) error {
+func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *gardencorev1beta1.BackupBucket) error {
 	if err := retry.UntilTimeout(ctx, defaultInterval, defaultTimeout, func(ctx context.Context) (bool, error) {
 		if err := a.gardenClient.Get(ctx, kutil.Key(a.backupEntry.Spec.BucketName), bb); err != nil {
 			return retry.SevereError(err)
@@ -151,14 +149,14 @@ func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for BackupBucket object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for BackupBucket object to become ready: %v", err))
 	}
 	return nil
 }
 
 // deployBackupEntryExtension deploys the BackupEntry extension resource in Seed with the required secret.
 func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
-	bb := &gardencorev1alpha1.BackupBucket{}
+	bb := &gardencorev1beta1.BackupBucket{}
 	if err := a.waitUntilCoreBackupBucketReconciled(ctx, bb); err != nil {
 		a.logger.Errorf("associated BackupBucket %s is not ready yet with err: %v", a.backupEntry.Spec.BucketName, err)
 		return err
@@ -178,7 +176,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupEntrySecretName(a.backupEntry.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 
@@ -197,7 +195,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -228,7 +226,7 @@ func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) 
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
 	}
 	return nil
 }
@@ -272,9 +270,9 @@ func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) err
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupEntry object to be deleted")
 		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 	return nil
 }
@@ -284,7 +282,7 @@ func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
 	extensionSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupEntrySecretName(a.backupEntry.Name),
-			Namespace: v1alpha1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, extensionSecret))

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -53,16 +53,16 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelMonitoring}); err != nil {
+		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
 		return err
 	}
 
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
-		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.PrometheusConfigMapAlertingRules]))
-		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.PrometheusConfigMapScrapeConfig]))
-		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapOperatorDashboard]))
-		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapUserDashboard]))
+		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
+		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
+		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]))
+		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]))
 	}
 
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(common.GardenRoleAlerting))
@@ -88,13 +88,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
+		networks = map[string]interface{}{
+			"pods":     b.Shoot.GetPodNetwork(),
+			"services": b.Shoot.GetServiceNetwork(),
+		}
+
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"networks": map[string]interface{}{
-				"pods":     b.Shoot.GetPodNetwork(),
-				"services": b.Shoot.GetServiceNetwork(),
-				"nodes":    b.Shoot.Info.Spec.Networking.Nodes,
-			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"hosts":           hosts,
@@ -150,6 +150,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
+
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
+		networks["nodes"] = *v
+	}
+	prometheusConfig["networks"] = networks
 
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig,
 		common.PrometheusImageName,
@@ -378,7 +383,7 @@ func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain st
 func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	alertManagerStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1constants.StatefulSetNameAlertManager,
+			Name:      v1beta1constants.StatefulSetNameAlertManager,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
@@ -388,7 +393,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 
 	prometheusStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1constants.StatefulSetNamePrometheus,
+			Name:      v1beta1constants.StatefulSetNamePrometheus,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}

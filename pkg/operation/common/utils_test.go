@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -210,89 +210,89 @@ var _ = Describe("common", func() {
 	)
 
 	DescribeTable("#RespectSyncPeriodOverwrite",
-		func(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot, match gomegatypes.GomegaMatcher) {
+		func(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot)).To(match)
 		},
 
 		Entry("respect overwrite",
 			true,
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			BeTrue()),
 		Entry("don't respect overwrite",
 			false,
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			BeFalse()),
 		Entry("don't respect overwrite but garden namespace",
 			false,
-			&gardencorev1alpha1.Shoot{ObjectMeta: kutil.ObjectMeta(v1alpha1constants.GardenNamespace, "foo")},
+			&gardencorev1beta1.Shoot{ObjectMeta: kutil.ObjectMeta(v1beta1constants.GardenNamespace, "foo")},
 			BeTrue()),
 	)
 
 	DescribeTable("#ShouldIgnoreShoot",
-		func(respectSyncPeriodOverwrite bool, shoot *gardencorev1alpha1.Shoot, match gomegatypes.GomegaMatcher) {
+		func(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)).To(match)
 		},
 
 		Entry("respect overwrite with annotation",
 			true,
-			&gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{ShootIgnore: "true"}}},
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{ShootIgnore: "true"}}},
 			BeTrue()),
 		Entry("respect overwrite with wrong annotation",
 			true,
-			&gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{ShootIgnore: "foo"}}},
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{ShootIgnore: "foo"}}},
 			BeFalse()),
 		Entry("respect overwrite with no annotation",
 			true,
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			BeFalse()),
 	)
 
 	DescribeTable("#IsShootFailed",
-		func(shoot *gardencorev1alpha1.Shoot, match gomegatypes.GomegaMatcher) {
+		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(IsShootFailed(shoot)).To(match)
 		},
 
 		Entry("no last operation",
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			BeFalse()),
 		Entry("with last operation but not in failed state",
-			&gardencorev1alpha1.Shoot{
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateSucceeded,
+			&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
 					},
 				},
 			},
 			BeFalse()),
 		Entry("with last operation in failed state but not at latest generation",
-			&gardencorev1alpha1.Shoot{
+			&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateFailed,
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateFailed,
 					},
 				},
 			},
 			BeFalse()),
 		Entry("with last operation in failed state and matching generation but not latest gardener version",
-			&gardencorev1alpha1.Shoot{
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateFailed,
+			&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateFailed,
 					},
-					Gardener: gardencorev1alpha1.Gardener{
+					Gardener: gardencorev1beta1.Gardener{
 						Version: version.Get().GitVersion + "foo",
 					},
 				},
 			},
 			BeFalse()),
 		Entry("with last operation in failed state and matching generation and latest gardener version",
-			&gardencorev1alpha1.Shoot{
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateFailed,
+			&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateFailed,
 					},
-					Gardener: gardencorev1alpha1.Gardener{
+					Gardener: gardencorev1beta1.Gardener{
 						Version: version.Get().GitVersion,
 					},
 				},
@@ -301,32 +301,32 @@ var _ = Describe("common", func() {
 	)
 
 	DescribeTable("#IsObservedAtLatestGenerationAndSucceeded",
-		func(shoot *gardencorev1alpha1.Shoot, match gomegatypes.GomegaMatcher) {
+		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(IsObservedAtLatestGenerationAndSucceeded(shoot)).To(match)
 		},
 
 		Entry("not at observed generation",
-			&gardencorev1alpha1.Shoot{
+			&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 			},
 			BeFalse()),
 		Entry("last operation state not succeeded",
-			&gardencorev1alpha1.Shoot{
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateError,
+			&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateError,
 					},
 				},
 			},
 			BeFalse()),
 		Entry("observed at latest generation and no last operation state",
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			BeFalse()),
 		Entry("observed at latest generation and last operation state succeeded",
-			&gardencorev1alpha1.Shoot{
-				Status: gardencorev1alpha1.ShootStatus{
-					LastOperation: &gardencorev1alpha1.LastOperation{
-						State: gardencorev1alpha1.LastOperationStateSucceeded,
+			&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
 					},
 				},
 			},
@@ -334,24 +334,24 @@ var _ = Describe("common", func() {
 	)
 
 	DescribeTable("#SyncPeriodOfShoot",
-		func(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1alpha1.Shoot, expected time.Duration) {
+		func(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1beta1.Shoot, expected time.Duration) {
 			Expect(SyncPeriodOfShoot(respectSyncPeriodOverwrite, defaultMinSyncPeriod, shoot)).To(Equal(expected))
 		},
 
 		Entry("don't respect overwrite",
 			false,
 			1*time.Second,
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			1*time.Second),
 		Entry("respect overwrite but no overwrite",
 			true,
 			1*time.Second,
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			1*time.Second),
 		Entry("respect overwrite but overwrite invalid",
 			true,
 			1*time.Second,
-			&gardencorev1alpha1.Shoot{
+			&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{ShootSyncPeriod: "foo"},
 				},
@@ -360,7 +360,7 @@ var _ = Describe("common", func() {
 		Entry("respect overwrite but overwrite too short",
 			true,
 			2*time.Second,
-			&gardencorev1alpha1.Shoot{
+			&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{ShootSyncPeriod: (1 * time.Second).String()},
 				},
@@ -369,7 +369,7 @@ var _ = Describe("common", func() {
 		Entry("respect overwrite with longer overwrite",
 			true,
 			2*time.Second,
-			&gardencorev1alpha1.Shoot{
+			&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{ShootSyncPeriod: (3 * time.Second).String()},
 				},
@@ -390,34 +390,34 @@ var _ = Describe("common", func() {
 	})
 
 	DescribeTable("#EffectiveShootMaintenanceTimeWindow",
-		func(shoot *gardencorev1alpha1.Shoot, window *utils.MaintenanceTimeWindow) {
+		func(shoot *gardencorev1beta1.Shoot, window *utils.MaintenanceTimeWindow) {
 			Expect(EffectiveShootMaintenanceTimeWindow(shoot)).To(Equal(window))
 		},
 
 		Entry("no maintenance section",
-			&gardencorev1alpha1.Shoot{},
+			&gardencorev1beta1.Shoot{},
 			utils.AlwaysTimeWindow),
 		Entry("no time window",
-			&gardencorev1alpha1.Shoot{
-				Spec: gardencorev1alpha1.ShootSpec{
-					Maintenance: &gardencorev1alpha1.Maintenance{},
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{},
 				},
 			},
 			utils.AlwaysTimeWindow),
 		Entry("invalid time window",
-			&gardencorev1alpha1.Shoot{
-				Spec: gardencorev1alpha1.ShootSpec{
-					Maintenance: &gardencorev1alpha1.Maintenance{
-						TimeWindow: &gardencorev1alpha1.MaintenanceTimeWindow{},
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{},
 					},
 				},
 			},
 			utils.AlwaysTimeWindow),
 		Entry("valid time window",
-			&gardencorev1alpha1.Shoot{
-				Spec: gardencorev1alpha1.ShootSpec{
-					Maintenance: &gardencorev1alpha1.Maintenance{
-						TimeWindow: &gardencorev1alpha1.MaintenanceTimeWindow{
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 							Begin: "010000+0000",
 							End:   "020000+0000",
 						},

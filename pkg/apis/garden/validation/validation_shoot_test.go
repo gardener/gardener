@@ -1380,7 +1380,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 
 				It("should pass if no vnet cidr is specified and default is applied", func() {
-					shoot.Spec.Networking.Nodes = "10.250.3.0/24"
+					nodesCIDR := "10.250.3.0/24"
+
+					shoot.Spec.Networking.Nodes = &nodesCIDR
 					shoot.Spec.Cloud.Azure.Networks = garden.AzureNetworks{
 						Workers: "10.250.3.0/24",
 					}

@@ -83,7 +83,7 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:    nodesCIDR,
+							Nodes:    &nodesCIDR,
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},
@@ -137,7 +137,7 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -196,7 +196,7 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -248,7 +248,7 @@ var _ = Describe("Conversion", func() {
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:    nodesCIDR,
+							Nodes:    &nodesCIDR,
 							Pods:     podsCIDR,
 							Services: servicesCIDR,
 						},

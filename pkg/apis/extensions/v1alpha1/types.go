@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Status is the status of an Object.
@@ -34,6 +35,8 @@ type Status interface {
 	// GetLastError retrieves the LastError of a status.
 	// LastError may be nil.
 	GetLastError() LastError
+	// GetState retrieves the State of the extension
+	GetState() *runtime.RawExtension
 }
 
 // LastOperation is the last operation on an object.
@@ -66,6 +69,9 @@ type LastError interface {
 type Spec interface {
 	// GetExtensionType retrieves the extension type.
 	GetExtensionType() string
+
+	// GetExtensionPurpose retrieves the extension purpose.
+	GetExtensionPurpose() *string
 }
 
 // Object is an extension object resource.

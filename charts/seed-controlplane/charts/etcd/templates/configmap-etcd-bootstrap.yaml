@@ -5,7 +5,9 @@ metadata:
   name: etcd-bootstrap-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: etcd
+    garden.sapcloud.io/role: controlplane
+    app: etcd-statefulset
+    role: {{ .Values.role }}
 data:
   bootstrap.sh: |-
     #!/bin/sh

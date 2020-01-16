@@ -17,7 +17,7 @@ package v1alpha1
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,6 +133,9 @@ type GardenletControllerConfiguration struct {
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
+	// ShootStateSync defines the configuration of the ShootStateController controller
+	// +optional
+	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -191,6 +194,17 @@ type SeedControllerConfiguration struct {
 	// +optional
 	ReserveExcessCapacity *bool `json:"reserveExcessCapacity,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
+type ShootStateSyncControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
@@ -278,7 +292,7 @@ type LeaderElectionConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1alpha1.Seed `json:",inline"`
+	gardencorev1beta1.Seed `json:",inline"`
 }
 
 const (

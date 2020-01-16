@@ -90,6 +90,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.ShootCare == nil {
 		obj.Controllers.ShootCare = &ShootCareControllerConfiguration{}
 	}
+	if obj.Controllers.ShootStateSync == nil {
+		obj.Controllers.ShootStateSync = &ShootStateSyncControllerConfiguration{}
+	}
 
 	if obj.Discovery == nil {
 		obj.Discovery = &DiscoveryConfiguration{}
@@ -267,6 +270,19 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 
 // SetDefaults_ShootCareControllerConfiguration sets defaults for the shoot care controller.
 func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
+	}
+
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: time.Minute}
+		obj.SyncPeriod = &v
+	}
+}
+
+// SetDefaults_ShootStateSyncControllerConfiguration sets defaults for the shoot state controller.
+func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.ConcurrentSyncs = &v
