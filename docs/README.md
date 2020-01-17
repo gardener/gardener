@@ -15,6 +15,7 @@
 ## Usage
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
+* [Cluster purposes](usage/shoot_purposes.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Gardener configuration and usage](usage/configuration.md)

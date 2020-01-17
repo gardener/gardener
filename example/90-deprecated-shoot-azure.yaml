@@ -5,6 +5,7 @@ metadata:
   name: johndoe-azure
   namespace: garden-dev
 spec:
+  purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
   cloud:
     profile: azure
     region: westeurope

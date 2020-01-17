@@ -4157,6 +4157,7 @@ func autoConvert_v1alpha1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *gard
 	if err := Convert_v1alpha1_Provider_To_garden_Provider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.Purpose = (*garden.ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
 	out.SecretBindingName = in.SecretBindingName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
@@ -4197,6 +4198,7 @@ func autoConvert_garden_ShootSpec_To_v1alpha1_ShootSpec(in *garden.ShootSpec, ou
 	if err := Convert_garden_Provider_To_v1alpha1_Provider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.Purpose = (*ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
 	out.SecretBindingName = in.SecretBindingName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))

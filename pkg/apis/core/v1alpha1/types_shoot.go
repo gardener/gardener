@@ -82,6 +82,9 @@ type ShootSpec struct {
 	Monitoring *Monitoring `json:"monitoring,omitempty"`
 	// Provider contains all provider-specific and provider-relevant information.
 	Provider Provider `json:"provider"`
+	// Purpose is the purpose class for this cluster.
+	// +optional
+	Purpose *ShootPurpose `json:"purpose,omitempty"`
 	// Region is a name of a region.
 	Region string `json:"region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
@@ -909,4 +912,20 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+)
+
+// ShootPurpose is a type alias for string.
+type ShootPurpose string
+
+const (
+	// ShootPurposeEvaluation is a constant for the evaluation purpose.
+	ShootPurposeEvaluation ShootPurpose = "evaluation"
+	// ShootPurposeTesting is a constant for the testing purpose.
+	ShootPurposeTesting ShootPurpose = "testing"
+	// ShootPurposeDevelopment is a constant for the development purpose.
+	ShootPurposeDevelopment ShootPurpose = "development"
+	// ShootPurposeProduction is a constant for the production purpose.
+	ShootPurposeProduction ShootPurpose = "production"
+	// ShootPurposeInfrastructure is a constant for the infrastructure purpose.
+	ShootPurposeInfrastructure ShootPurpose = "infrastructure"
 )

@@ -321,6 +321,16 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		}
 	}
 
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "elasticsearch-logging-elasticsearch-logging-0",
+			Namespace: namespace,
+		},
+	}
+	if err := k8sClient.Delete(ctx, pvc); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+		return err
+	}
+
 	return nil
 }
 
@@ -366,6 +376,12 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-config",
+				Namespace: namespace,
+			},
+		},
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-db-alertmanager-0",
 				Namespace: namespace,
 			},
 		},

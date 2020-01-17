@@ -4768,6 +4768,13 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider"),
 						},
 					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose class for this cluster.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a name of a region.",
@@ -9660,6 +9667,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains all provider-specific and provider-relevant information.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider"),
+						},
+					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose class for this cluster.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"region": {

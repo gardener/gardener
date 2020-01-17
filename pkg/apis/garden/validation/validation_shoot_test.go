@@ -53,6 +53,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			serviceCIDR = "100.64.0.0/13"
 			invalidCIDR = "invalid-cidr"
 			vpcCIDR     = "10.0.0.0/8"
+			purpose     = garden.ShootPurposeEvaluation
 			addon       = garden.Addon{
 				Enabled: true,
 			}
@@ -209,6 +210,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					CloudProfileName:  "aws-profile",
 					Region:            "eu-west-1",
 					SecretBindingName: "my-secret",
+					Purpose:           &purpose,
 					DNS: &garden.DNS{
 						Providers: []garden.DNSProvider{
 							{
@@ -367,6 +369,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 			))
 		})
+
+		DescribeTable("purpose validation",
+			func(purpose garden.ShootPurpose, namespace string, matcher gomegatypes.GomegaMatcher) {
+				shootCopy := shoot.DeepCopy()
+				shootCopy.Namespace = namespace
+				shootCopy.Spec.Purpose = &purpose
+				errorList := ValidateShoot(shootCopy)
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("evaluation purpose", garden.ShootPurposeEvaluation, "dev", BeEmpty()),
+			Entry("testing purpose", garden.ShootPurposeTesting, "dev", BeEmpty()),
+			Entry("development purpose", garden.ShootPurposeDevelopment, "dev", BeEmpty()),
+			Entry("production purpose", garden.ShootPurposeProduction, "dev", BeEmpty()),
+			Entry("infrastructure purpose in garden namespace", garden.ShootPurposeInfrastructure, "garden", BeEmpty()),
+			Entry("infrastructure purpose in other namespace", garden.ShootPurposeInfrastructure, "dev", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.purpose"),
+			})))),
+			Entry("unknown purpose", garden.ShootPurpose("foo"), "dev", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.purpose"),
+			})))),
+		)
 
 		It("should forbid unsupported addon configuration", func() {
 			shoot.Spec.Addons.Kube2IAM.Roles = []garden.Kube2IAMRole{

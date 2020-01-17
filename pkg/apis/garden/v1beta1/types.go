@@ -810,6 +810,9 @@ type ShootSpec struct {
 	// Monitoring contains information about custom monitoring configurations for the shoot.
 	// +optional
 	Monitoring *Monitoring `json:"monitoring,omitempty"`
+	// Purpose is the purpose class for this cluster.
+	// +optional
+	Purpose *ShootPurpose `json:"purpose,omitempty"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -2029,3 +2032,19 @@ type K8SNetworks struct {
 	// +optional
 	Services *string `json:"services,omitempty"`
 }
+
+// ShootPurpose is a type alias for string.
+type ShootPurpose string
+
+const (
+	// ShootPurposeEvaluation is a constant for the evaluation purpose.
+	ShootPurposeEvaluation ShootPurpose = "evaluation"
+	// ShootPurposeTesting is a constant for the testing purpose.
+	ShootPurposeTesting ShootPurpose = "testing"
+	// ShootPurposeDevelopment is a constant for the development purpose.
+	ShootPurposeDevelopment ShootPurpose = "development"
+	// ShootPurposeProduction is a constant for the production purpose.
+	ShootPurposeProduction ShootPurpose = "production"
+	// ShootPurposeInfrastructure is a constant for the infrastructure purpose.
+	ShootPurposeInfrastructure ShootPurpose = "infrastructure"
+)

@@ -3418,6 +3418,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		*out = new(Monitoring)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Purpose != nil {
+		in, out := &in.Purpose, &out.Purpose
+		*out = new(ShootPurpose)
+		**out = **in
+	}
 	return
 }
 
