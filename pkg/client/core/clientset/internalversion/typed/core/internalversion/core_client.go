@@ -27,9 +27,15 @@ type CoreInterface interface {
 	RESTClient() rest.Interface
 	BackupBucketsGetter
 	BackupEntriesGetter
+	CloudProfilesGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	PlantsGetter
+	ProjectsGetter
+	QuotasGetter
+	SecretBindingsGetter
+	SeedsGetter
+	ShootsGetter
 	ShootStatesGetter
 }
 
@@ -46,6 +52,10 @@ func (c *CoreClient) BackupEntries(namespace string) BackupEntryInterface {
 	return newBackupEntries(c, namespace)
 }
 
+func (c *CoreClient) CloudProfiles() CloudProfileInterface {
+	return newCloudProfiles(c)
+}
+
 func (c *CoreClient) ControllerInstallations() ControllerInstallationInterface {
 	return newControllerInstallations(c)
 }
@@ -56,6 +66,26 @@ func (c *CoreClient) ControllerRegistrations() ControllerRegistrationInterface {
 
 func (c *CoreClient) Plants(namespace string) PlantInterface {
 	return newPlants(c, namespace)
+}
+
+func (c *CoreClient) Projects() ProjectInterface {
+	return newProjects(c)
+}
+
+func (c *CoreClient) Quotas(namespace string) QuotaInterface {
+	return newQuotas(c, namespace)
+}
+
+func (c *CoreClient) SecretBindings(namespace string) SecretBindingInterface {
+	return newSecretBindings(c, namespace)
+}
+
+func (c *CoreClient) Seeds() SeedInterface {
+	return newSeeds(c)
+}
+
+func (c *CoreClient) Shoots(namespace string) ShootInterface {
+	return newShoots(c, namespace)
 }
 
 func (c *CoreClient) ShootStates(namespace string) ShootStateInterface {

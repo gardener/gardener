@@ -16,23 +16,18 @@ package app
 
 import (
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
@@ -100,7 +95,6 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 type Options struct {
 	Recommended             *genericoptions.RecommendedOptions
 	CoreInformerFactory     gardencoreinformers.SharedInformerFactory
-	GardenInformerFactory   gardeninformers.SharedInformerFactory
 	KubeInformerFactory     kubeinformers.SharedInformerFactory
 	SettingsInformerFactory settingsinformer.SharedInformerFactory
 	StdOut                  io.Writer
@@ -111,19 +105,18 @@ type Options struct {
 func NewOptions(out, errOut io.Writer) *Options {
 	o := &Options{
 		Recommended: genericoptions.NewRecommendedOptions(
-			fmt.Sprintf("/registry/%s", garden.GroupName),
+			"/registry-gardener",
 			api.Codecs.LegacyCodec(
 				gardencorev1alpha1.SchemeGroupVersion,
-				gardenv1beta1.SchemeGroupVersion,
 				settingsv1alpha1.SchemeGroupVersion,
 			),
-			genericoptions.NewProcessInfo("gardener-apiserver", "garden")),
+			genericoptions.NewProcessInfo("gardener-apiserver", "garden"),
+		),
 		StdOut: out,
 		StdErr: errOut,
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
-		schema.GroupKind{Group: gardenv1beta1.GroupName},
 		schema.GroupKind{Group: gardencorev1alpha1.GroupName},
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
@@ -190,8 +183,7 @@ func (o *Options) config() (*apiserver.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
-	o.KubeInformerFactory = kubeInformerFactory
+	o.KubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
 
 	// Initialize admission plugins
 	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
@@ -200,33 +192,21 @@ func (o *Options) config() (*apiserver.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(coreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
-		o.CoreInformerFactory = coreInformerFactory
-
-		// garden client
-		gardenClient, err := gardenclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
-		if err != nil {
-			return nil, err
-		}
-		gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
-		o.GardenInformerFactory = gardenInformerFactory
+		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
 		// settings client
 		settingsClient, err := settingsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
 		if err != nil {
 			return nil, err
 		}
-
 		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
-				coreInformerFactory,
+				o.CoreInformerFactory,
 				coreClient,
-				gardenInformerFactory,
-				gardenClient,
 				o.SettingsInformerFactory,
-				kubeInformerFactory,
+				o.KubeInformerFactory,
 				kubeClient,
 				gardenerAPIServerConfig.Authorization.Authorizer,
 			),
@@ -257,7 +237,6 @@ func (o Options) run(stopCh <-chan struct{}) error {
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		o.CoreInformerFactory.Start(context.StopCh)
-		o.GardenInformerFactory.Start(context.StopCh)
 		o.KubeInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)
 		return nil
@@ -305,7 +284,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	resourceConfig := serverstorage.NewResourceConfig()
 	resourceConfig.EnableVersions(
 		gardencorev1alpha1.SchemeGroupVersion,
-		gardenv1beta1.SchemeGroupVersion,
 		settingsv1alpha1.SchemeGroupVersion,
 	)
 
@@ -328,14 +306,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 			nil,
 		),
 	}
-
-	// TODO: This can be removed once the already deprecated garden.sapcloud.io/v1beta1 API group is removed.
-	storageFactory.AddCohabitatingResources(gardencore.Resource("cloudprofiles"), garden.Resource("cloudprofiles"))
-	storageFactory.AddCohabitatingResources(gardencore.Resource("projects"), garden.Resource("projects"))
-	storageFactory.AddCohabitatingResources(gardencore.Resource("quotas"), garden.Resource("quotas"))
-	storageFactory.AddCohabitatingResources(gardencore.Resource("secretbindings"), garden.Resource("secretbindings"))
-	storageFactory.AddCohabitatingResources(gardencore.Resource("seeds"), garden.Resource("seeds"))
-	storageFactory.AddCohabitatingResources(gardencore.Resource("shoots"), garden.Resource("shoots"))
 
 	if len(o.Recommended.Etcd.EncryptionProviderConfigFilepath) != 0 {
 		transformerOverrides, err := encryptionconfig.GetTransformerOverrides(o.Recommended.Etcd.EncryptionProviderConfigFilepath)

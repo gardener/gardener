@@ -17,7 +17,7 @@ package openidconnectpreset_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
@@ -36,7 +36,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 		var (
 			admissionHandler        *OpenIDConnectPreset
 			settingsInformerFactory settingsinformer.SharedInformerFactory
-			shoot                   *garden.Shoot
+			shoot                   *core.Shoot
 			preset                  *settingsv1alpha1.OpenIDConnectPreset
 		)
 
@@ -44,13 +44,13 @@ var _ = Describe("OpenID Connect Preset", func() {
 			namespace := "my-namespace"
 			shootName := "shoot"
 			presetName := "preset-1"
-			shoot = &garden.Shoot{
+			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 				},
-				Spec: garden.ShootSpec{
-					Kubernetes: garden.Kubernetes{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
 						Version: "1.15",
 					},
 				},
@@ -95,14 +95,14 @@ var _ = Describe("OpenID Connect Preset", func() {
 		Context("should do nothing when", func() {
 
 			var (
-				expected *garden.Shoot
+				expected *core.Shoot
 				attrs    admission.Attributes
 			)
 
 			BeforeEach(func() {
 				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			AfterEach(func() {
@@ -112,7 +112,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			DescribeTable("disabled operations",
 				func(op admission.Operation) {
-					attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", op, nil, false, nil)
+					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", op, nil, false, nil)
 				},
 				Entry("update verb", admission.Update),
 				Entry("delete verb", admission.Delete),
@@ -120,7 +120,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			)
 
 			It("subresource is status", func() {
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			It("version is not correct", func() {
@@ -133,8 +133,8 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("oidc settings already exist", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{
-					OIDCConfig: &garden.OIDCConfig{},
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					OIDCConfig: &core.OIDCConfig{},
 				}
 				expected = shoot.DeepCopy()
 			})
@@ -142,7 +142,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 		Context("should return error", func() {
 			var (
-				expected     *garden.Shoot
+				expected     *core.Shoot
 				attrs        admission.Attributes
 				errorFunc    func(error) bool
 				errorMessage string
@@ -150,7 +150,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = nil
 				errorMessage = ""
 			})
@@ -164,7 +164,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("when received not a Shoot object", func() {
-				attrs = admission.NewAttributesRecord(&garden.Seed{}, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(&core.Seed{}, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = apierrors.IsBadRequest
 				errorMessage = "could not convert resource into Shoot object"
 			})
@@ -173,20 +173,20 @@ var _ = Describe("OpenID Connect Preset", func() {
 				Skip("this takes 10seconds to pass")
 				admissionHandler.AssignReadyFunc(func() bool { return false })
 				errorFunc = apierrors.IsForbidden
-				errorMessage = `presets.garden.sapcloud.io "shoot" is forbidden: not yet ready to handle request`
+				errorMessage = `presets.core.gardener.cloud "shoot" is forbidden: not yet ready to handle request`
 			})
 
 		})
 
 		Context("should mutate the result", func() {
 			var (
-				expected *garden.Shoot
+				expected *core.Shoot
 			)
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				expected.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{
-					OIDCConfig: &garden.OIDCConfig{
+				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					OIDCConfig: &core.OIDCConfig{
 						CABundle:     pointer.StringPtr("cert"),
 						ClientID:     pointer.StringPtr("client-id"),
 						IssuerURL:    pointer.StringPtr("https://foo.bar"),
@@ -200,7 +200,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 						UsernameClaim:  pointer.StringPtr("user"),
 						UsernamePrefix: pointer.StringPtr("user-prefix"),
 
-						ClientAuthentication: &garden.OpenIDConnectClientAuthentication{
+						ClientAuthentication: &core.OpenIDConnectClientAuthentication{
 							Secret:      pointer.StringPtr("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
@@ -210,7 +210,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			AfterEach(func() {
 				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
-				attrs := admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -221,7 +221,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("oidc settings is not set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {

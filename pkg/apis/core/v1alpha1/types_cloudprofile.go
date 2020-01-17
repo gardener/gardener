@@ -172,3 +172,10 @@ type VolumeType struct {
 	// +optional
 	Usable *bool `json:"usable,omitempty"`
 }
+
+const (
+	// VolumeClassStandard is a constant for the standard volume class.
+	VolumeClassStandard string = "standard"
+	// VolumeClassPremium is a constant for the premium volume class.
+	VolumeClassPremium string = "premium"
+)

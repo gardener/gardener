@@ -126,7 +126,6 @@ rules:
     - patch
     - update
 - apiGroups:
-    - garden.sapcloud.io
     - core.gardener.cloud
   resources:
     - seeds
@@ -135,7 +134,6 @@ rules:
     - list
     - watch
 - apiGroups:
-    - garden.sapcloud.io
     - core.gardener.cloud
   resources:
     - shoots

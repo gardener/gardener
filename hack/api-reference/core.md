@@ -3119,37 +3119,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.GardenerDuration">GardenerDuration
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig</a>)
-</p>
-<p>
-<p>GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>Duration</code></br>
-<em>
-<a href="https://godoc.org/time#Duration">
-time.Duration
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.Hibernation">Hibernation
 </h3>
 <p>
@@ -3275,8 +3244,8 @@ Note: Descriptions were taken from the Kubernetes documentation.</p>
 <td>
 <code>cpuInitializationPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3289,8 +3258,8 @@ GardenerDuration
 <td>
 <code>downscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3303,8 +3272,8 @@ GardenerDuration
 <td>
 <code>downscaleStabilization</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3317,8 +3286,8 @@ GardenerDuration
 <td>
 <code>initialReadinessDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3331,8 +3300,8 @@ GardenerDuration
 <td>
 <code>syncPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3357,8 +3326,8 @@ float64
 <td>
 <code>upscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -7196,5 +7165,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>9e15bb19e</code>.
+on git commit <code>5f32ae02c</code>.
 </em></p>

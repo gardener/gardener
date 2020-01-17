@@ -28,12 +28,24 @@ type Interface interface {
 	BackupBuckets() BackupBucketInformer
 	// BackupEntries returns a BackupEntryInformer.
 	BackupEntries() BackupEntryInformer
+	// CloudProfiles returns a CloudProfileInformer.
+	CloudProfiles() CloudProfileInformer
 	// ControllerInstallations returns a ControllerInstallationInformer.
 	ControllerInstallations() ControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
 	ControllerRegistrations() ControllerRegistrationInformer
 	// Plants returns a PlantInformer.
 	Plants() PlantInformer
+	// Projects returns a ProjectInformer.
+	Projects() ProjectInformer
+	// Quotas returns a QuotaInformer.
+	Quotas() QuotaInformer
+	// SecretBindings returns a SecretBindingInformer.
+	SecretBindings() SecretBindingInformer
+	// Seeds returns a SeedInformer.
+	Seeds() SeedInformer
+	// Shoots returns a ShootInformer.
+	Shoots() ShootInformer
 	// ShootStates returns a ShootStateInformer.
 	ShootStates() ShootStateInformer
 }
@@ -59,6 +71,11 @@ func (v *version) BackupEntries() BackupEntryInformer {
 	return &backupEntryInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// CloudProfiles returns a CloudProfileInformer.
+func (v *version) CloudProfiles() CloudProfileInformer {
+	return &cloudProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // ControllerInstallations returns a ControllerInstallationInformer.
 func (v *version) ControllerInstallations() ControllerInstallationInformer {
 	return &controllerInstallationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -72,6 +89,31 @@ func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 // Plants returns a PlantInformer.
 func (v *version) Plants() PlantInformer {
 	return &plantInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Projects returns a ProjectInformer.
+func (v *version) Projects() ProjectInformer {
+	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Quotas returns a QuotaInformer.
+func (v *version) Quotas() QuotaInformer {
+	return &quotaInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SecretBindings returns a SecretBindingInformer.
+func (v *version) SecretBindings() SecretBindingInformer {
+	return &secretBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Seeds returns a SeedInformer.
+func (v *version) Seeds() SeedInformer {
+	return &seedInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Shoots returns a ShootInformer.
+func (v *version) Shoots() ShootInformer {
+	return &shootInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ShootStates returns a ShootStateInformer.

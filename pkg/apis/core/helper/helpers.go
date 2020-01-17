@@ -15,7 +15,14 @@
 package helper
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
+
+	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -34,6 +41,108 @@ func GetConditionIndex(conditions []core.Condition, conditionType core.Condition
 func GetCondition(conditions []core.Condition, conditionType core.ConditionType) *core.Condition {
 	if index := GetConditionIndex(conditions, conditionType); index != -1 {
 		return &conditions[index]
+	}
+	return nil
+}
+
+// QuotaScope returns the scope of a quota scope reference.
+func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
+	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "core.gardener.cloud" && gvk.Kind == "Project" {
+		return "project", nil
+	}
+	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
+		return "secret", nil
+	}
+	return "", fmt.Errorf("unknown quota scope")
+}
+
+// DetermineLatestExpirableVersion determines the latest ExpirableVersion from a slice of ExpirableVersions
+func DetermineLatestExpirableVersion(offeredVersions []core.ExpirableVersion) (core.ExpirableVersion, error) {
+	var latestExpirableVersion core.ExpirableVersion
+
+	for _, version := range offeredVersions {
+		if len(latestExpirableVersion.Version) == 0 {
+			latestExpirableVersion = version
+			continue
+		}
+		isGreater, err := versionutils.CompareVersions(version.Version, ">", latestExpirableVersion.Version)
+		if err != nil {
+			return core.ExpirableVersion{}, fmt.Errorf("error while comparing versions: %s", err.Error())
+		}
+		if isGreater {
+			latestExpirableVersion = version
+		}
+	}
+	return latestExpirableVersion, nil
+}
+
+// DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
+func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.ExpirableVersion, error) {
+	resultMapVersions := make(map[string]core.ExpirableVersion)
+
+	for _, image := range images {
+		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image)
+		if err != nil {
+			return nil, err
+		}
+		resultMapVersions[image.Name] = latestMachineImageVersion
+	}
+	return resultMapVersions, nil
+}
+
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
+func DetermineLatestMachineImageVersion(image core.MachineImage) (core.ExpirableVersion, error) {
+	var (
+		latestSemVerVersion       *semver.Version
+		latestMachineImageVersion core.ExpirableVersion
+	)
+
+	for _, imageVersion := range image.Versions {
+		v, err := semver.NewVersion(imageVersion.Version)
+		if err != nil {
+			return core.ExpirableVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
+		}
+		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
+			latestSemVerVersion = v
+			latestMachineImageVersion = imageVersion
+		}
+	}
+	return latestMachineImageVersion, nil
+}
+
+// ShootWantsBasicAuthentication returns true if basic authentication is not configured or
+// if it is set explicitly to 'true'.
+func ShootWantsBasicAuthentication(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
+	if kubeAPIServerConfig == nil {
+		return true
+	}
+	if kubeAPIServerConfig.EnableBasicAuthentication == nil {
+		return true
+	}
+	return *kubeAPIServerConfig.EnableBasicAuthentication
+}
+
+// TaintsHave returns true if the given key is part of the taints list.
+func TaintsHave(taints []core.SeedTaint, key string) bool {
+	for _, taint := range taints {
+		if taint.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+// ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
+func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
+	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
+}
+
+// FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
+func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
+	for _, w := range workers {
+		if w.Name == name {
+			return &w
+		}
 	}
 	return nil
 }

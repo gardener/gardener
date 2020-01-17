@@ -3,7 +3,7 @@
 This tool allows for migrating of etcd prefixes. If the keys are stored in `/registry/foo`:
 
 ```bash
-ETCDCTL_API=3 etcdctl get --keys-only --prefix /registry/foo/"
+ETCDCTL_API=3 etcdctl get --keys-only --prefix "/registry/foo/"
 
 /registry/foo/group.foo.bar/someresources/some-name
 /registry/foo/group.bar.foo/anotherresource/some-name-two
@@ -12,7 +12,7 @@ ETCDCTL_API=3 etcdctl get --keys-only --prefix /registry/foo/"
 And the the end-user wants to migrate them to `/registry/baz` then:
 
 ```bash
-go run main.go --backup-file ./etcd.backup --old-registry-prefix="/registry/foo --new-registry-prefix "/registry/baz"
+go run main.go --backup-file ./etcd.backup --old-registry-prefix "/registry/foo" --new-registry-prefix "/registry/baz"
 
 INFO: 2020/01/22 10:49:46 parsed scheme: "endpoint"
 INFO: 2020/01/22 10:49:46 ccResolverWrapper: sending new addresses to cc: [{http://localhost:2379 0  <nil>}]
@@ -30,7 +30,7 @@ WARNING: 2020/01/22 10:50:06 grpc: addrConn.createTransport failed to connect to
 ```
 
 ```bash
-ETCDCTL_API=3 etcdctl get --keys-only --prefix /registry/baz/"
+ETCDCTL_API=3 etcdctl get --keys-only --prefix "/registry/baz/"
 
 /registry/baz/group.foo.bar/someresources/some-name
 /registry/baz/group.bar.foo/anotherresource/some-name-two

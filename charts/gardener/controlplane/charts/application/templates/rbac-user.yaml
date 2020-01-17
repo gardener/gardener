@@ -9,7 +9,6 @@ metadata:
     gardener.cloud/role: admin
 rules:
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
@@ -58,7 +57,6 @@ metadata:
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - cloudprofiles
@@ -100,7 +98,6 @@ metadata:
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - projects
@@ -161,7 +158,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - shoots
@@ -233,7 +229,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - shoots

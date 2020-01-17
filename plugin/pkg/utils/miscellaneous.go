@@ -17,10 +17,10 @@ package utils
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/gardener/gardener/pkg/apis/core"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
@@ -31,15 +31,17 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 }
 
 // GetProject retrieves the project with the corresponding namespace
-func GetProject(namespace string, projectLister gardenlisters.ProjectLister) (*garden.Project, error) {
+func GetProject(namespace string, projectLister corelisters.ProjectLister) (*core.Project, error) {
 	projects, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
+
 	for _, project := range projects {
 		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespace {
 			return project, nil
 		}
 	}
+
 	return nil, fmt.Errorf("no project found for namespace %q", namespace)
 }

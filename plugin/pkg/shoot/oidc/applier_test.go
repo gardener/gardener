@@ -15,37 +15,29 @@
 package oidc_test
 
 import (
-	"testing"
-
-	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
-func TestAPI(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission OpenIDConnectPreset Suite")
-}
-
 var _ = Describe("Applier", func() {
-
 	var (
-		shoot *garden.Shoot
+		shoot *core.Shoot
 		spec  *v1alpha1.OpenIDConnectPresetSpec
 	)
 
 	BeforeEach(func() {
-		shoot = &garden.Shoot{}
+		shoot = &core.Shoot{}
 		spec = &v1alpha1.OpenIDConnectPresetSpec{
 			Server: v1alpha1.KubeAPIServerOpenIDConnect{},
 		}
 	})
 
-	It("no shoot is passed, no modifcations", func() {
+	It("no shoot is passed, no modifications", func() {
 		shoot = nil
 		specCpy := spec.DeepCopy()
 
@@ -53,7 +45,7 @@ var _ = Describe("Applier", func() {
 		Expect(spec).To(Equal(specCpy))
 	})
 
-	It("no spec is passed, no modifcations", func() {
+	It("no spec is passed, no modifications", func() {
 		spec = nil
 		shootCpy := shoot.DeepCopy()
 
@@ -61,7 +53,7 @@ var _ = Describe("Applier", func() {
 		Expect(shoot).To(Equal(shootCpy))
 	})
 
-	It("invalid kubernetes version, no modifcations", func() {
+	It("invalid kubernetes version, no modifications", func() {
 		shoot.Spec.Kubernetes.Version = "something"
 		shootCpy := shoot.DeepCopy()
 		specCpy := spec.DeepCopy()
@@ -73,7 +65,6 @@ var _ = Describe("Applier", func() {
 	})
 
 	It("full preset, empty shoot", func() {
-
 		spec.Server = v1alpha1.KubeAPIServerOpenIDConnect{
 			CABundle:     pointer.StringPtr("cert"),
 			ClientID:     "client-id",
@@ -96,8 +87,8 @@ var _ = Describe("Applier", func() {
 		shoot.Spec.Kubernetes.Version = "v1.13"
 
 		expectedShoot := shoot.DeepCopy()
-		expectedShoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{
-			OIDCConfig: &garden.OIDCConfig{
+		expectedShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+			OIDCConfig: &core.OIDCConfig{
 				CABundle:     pointer.StringPtr("cert"),
 				ClientID:     pointer.StringPtr("client-id"),
 				IssuerURL:    pointer.StringPtr("https://foo.bar"),
@@ -111,7 +102,7 @@ var _ = Describe("Applier", func() {
 				UsernameClaim:  pointer.StringPtr("user"),
 				UsernamePrefix: pointer.StringPtr("user-prefix"),
 
-				ClientAuthentication: &garden.OpenIDConnectClientAuthentication{
+				ClientAuthentication: &core.OpenIDConnectClientAuthentication{
 					Secret:      pointer.StringPtr("secret"),
 					ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 				},
@@ -123,7 +114,5 @@ var _ = Describe("Applier", func() {
 		Expect(shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(Equal(expectedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig))
 		// just to be 100% sure that no other modification is happening.
 		Expect(shoot).To(Equal(expectedShoot))
-
 	})
-
 })

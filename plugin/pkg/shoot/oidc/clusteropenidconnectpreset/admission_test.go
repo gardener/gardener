@@ -17,19 +17,19 @@ package clusteropenidconnectpreset_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
-
-	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Cluster OpenIDConfig Preset", func() {
@@ -37,10 +37,10 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 		var (
 			admissionHandler        *ClusterOpenIDConnectPreset
 			settingsInformerFactory settingsinformer.SharedInformerFactory
-			shoot                   *garden.Shoot
-			project                 *garden.Project
+			shoot                   *core.Shoot
+			project                 *core.Project
 			preset                  *settingsv1alpha1.ClusterOpenIDConnectPreset
-			gardenInformerFactory   gardeninformers.SharedInformerFactory
+			coreInformerFactory     coreinformers.SharedInformerFactory
 		)
 
 		BeforeEach(func() {
@@ -48,27 +48,27 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			shootName := "shoot"
 			presetName := "preset-1"
 			projectName := "project-1"
-			shoot = &garden.Shoot{
+			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 				},
-				Spec: garden.ShootSpec{
-					Kubernetes: garden.Kubernetes{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
 						Version: "1.15",
 					},
 				},
 			}
 
-			project = &garden.Project{
+			project = &core.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
-				Spec: garden.ProjectSpec{
+				Spec: core.ProjectSpec{
 					Namespace: pointer.StringPtr(namespace),
 				},
-				Status: garden.ProjectStatus{
-					Phase: garden.ProjectReady,
+				Status: core.ProjectStatus{
+					Phase: core.ProjectReady,
 				},
 			}
 
@@ -108,21 +108,21 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			settingsInformerFactory = settingsinformer.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSettingsInformerFactory(settingsInformerFactory)
-			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 		})
 
 		Context("should do nothing when", func() {
 
 			var (
-				expected *garden.Shoot
+				expected *core.Shoot
 				attrs    admission.Attributes
 			)
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			AfterEach(func() {
@@ -132,7 +132,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			DescribeTable("disabled operations",
 				func(op admission.Operation) {
-					attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", op, nil, false, nil)
+					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", op, nil, false, nil)
 				},
 				Entry("update verb", admission.Update),
 				Entry("delete verb", admission.Delete),
@@ -140,7 +140,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			)
 
 			It("subresource is status", func() {
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
 			It("version is not correct", func() {
@@ -151,18 +151,18 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("preset shoot label selector doesn't match", func() {
 				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(project)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
 			})
 
 			It("preset preset label selector doesn't match", func() {
 				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(project)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
 			})
 
 			It("oidc settings already exist", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{
-					OIDCConfig: &garden.OIDCConfig{},
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					OIDCConfig: &core.OIDCConfig{},
 				}
 				expected = shoot.DeepCopy()
 			})
@@ -170,7 +170,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		Context("should return error", func() {
 			var (
-				expected     *garden.Shoot
+				expected     *core.Shoot
 				attrs        admission.Attributes
 				errorFunc    func(error) bool
 				errorMessage string
@@ -178,7 +178,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				attrs = admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = nil
 				errorMessage = ""
 			})
@@ -192,7 +192,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			})
 
 			It("when received not a Shoot object", func() {
-				attrs = admission.NewAttributesRecord(&garden.Seed{}, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs = admission.NewAttributesRecord(&core.Seed{}, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				errorFunc = apierrors.IsBadRequest
 				errorMessage = "could not convert resource into Shoot object"
 			})
@@ -201,20 +201,20 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				Skip("this takes 10seconds to pass")
 				admissionHandler.AssignReadyFunc(func() bool { return false })
 				errorFunc = apierrors.IsForbidden
-				errorMessage = `presets.garden.sapcloud.io "shoot" is forbidden: not yet ready to handle request`
+				errorMessage = `presets.core.gardener.cloud "shoot" is forbidden: not yet ready to handle request`
 			})
 
 		})
 
 		Context("should mutate the result", func() {
 			var (
-				expected *garden.Shoot
+				expected *core.Shoot
 			)
 
 			BeforeEach(func() {
 				expected = shoot.DeepCopy()
-				expected.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{
-					OIDCConfig: &garden.OIDCConfig{
+				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					OIDCConfig: &core.OIDCConfig{
 						CABundle:     pointer.StringPtr("cert"),
 						ClientID:     pointer.StringPtr("client-id"),
 						IssuerURL:    pointer.StringPtr("https://foo.bar"),
@@ -228,7 +228,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 						UsernameClaim:  pointer.StringPtr("user"),
 						UsernamePrefix: pointer.StringPtr("user-prefix"),
 
-						ClientAuthentication: &garden.OpenIDConnectClientAuthentication{
+						ClientAuthentication: &core.OpenIDConnectClientAuthentication{
 							Secret:      pointer.StringPtr("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
@@ -238,9 +238,9 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			AfterEach(func() {
 				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(project)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
 
-				attrs := admission.NewAttributesRecord(shoot, nil, garden.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -251,7 +251,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			})
 
 			It("shoot's kube-apiserver-oidc settings is not set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{}
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 			})
 
 			It("successfully", func() {
@@ -336,7 +336,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		It("should return nil error when everything is set", func() {
 			plugin.SetSettingsInformerFactory(settingsinformer.NewSharedInformerFactory(nil, 0))
-			plugin.SetInternalGardenInformerFactory(gardeninformers.NewSharedInformerFactory(nil, 0))
+			plugin.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
 			Expect(plugin.ValidateInitialization()).ToNot(HaveOccurred())
 		})
 	})

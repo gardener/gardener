@@ -12,7 +12,6 @@ metadata:
     uid: {{ .Values.project.uid | quote }}
 rules:
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - projects

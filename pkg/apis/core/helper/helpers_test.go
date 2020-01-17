@@ -19,7 +19,10 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("helper", func() {
@@ -48,4 +51,74 @@ var _ = Describe("helper", func() {
 			Expect(cond).To(BeNil())
 		})
 	})
+
+	DescribeTable("#QuotaScope",
+		func(apiVersion, kind, expectedScope string, expectedErr gomegatypes.GomegaMatcher) {
+			scope, err := QuotaScope(corev1.ObjectReference{APIVersion: apiVersion, Kind: kind})
+			Expect(scope).To(Equal(expectedScope))
+			Expect(err).To(expectedErr)
+		},
+
+		Entry("project", "core.gardener.cloud/v1beta1", "Project", "project", BeNil()),
+		Entry("secret", "v1", "Secret", "secret", BeNil()),
+		Entry("unknown", "v2", "Foo", "", HaveOccurred()),
+	)
+
+	var (
+		trueVar  = true
+		falseVar = false
+	)
+
+	DescribeTable("#ShootWantsBasicAuthentication",
+		func(kubeAPIServerConfig *core.KubeAPIServerConfig, wantsBasicAuth bool) {
+			actualWantsBasicAuth := ShootWantsBasicAuthentication(kubeAPIServerConfig)
+			Expect(actualWantsBasicAuth).To(Equal(wantsBasicAuth))
+		},
+
+		Entry("no kubeapiserver configuration", nil, true),
+		Entry("field not set", &core.KubeAPIServerConfig{}, true),
+		Entry("explicitly enabled", &core.KubeAPIServerConfig{EnableBasicAuthentication: &trueVar}, true),
+		Entry("explicitly disabled", &core.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}, false),
+	)
+
+	DescribeTable("#TaintsHave",
+		func(taints []core.SeedTaint, key string, expectation bool) {
+			Expect(TaintsHave(taints, key)).To(Equal(expectation))
+		},
+
+		Entry("taint exists", []core.SeedTaint{{Key: "foo"}}, "foo", true),
+		Entry("taint does not exist", []core.SeedTaint{{Key: "foo"}}, "bar", false),
+	)
+
+	var (
+		unmanagedType = core.DNSUnmanaged
+		differentType = "foo"
+	)
+
+	DescribeTable("#ShootUsesUnmanagedDNS",
+		func(dns *core.DNS, expectation bool) {
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					DNS: dns,
+				},
+			}
+			Expect(ShootUsesUnmanagedDNS(shoot)).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no dns providers", &core.DNS{}, false),
+		Entry("dns providers but no type", &core.DNS{Providers: []core.DNSProvider{{}}}, false),
+		Entry("dns providers but different type", &core.DNS{Providers: []core.DNSProvider{{Type: &differentType}}}, false),
+		Entry("dns providers and unmanaged type", &core.DNS{Providers: []core.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
+
+	DescribeTable("#FindWorkerByName",
+		func(workers []core.Worker, name string, expectedWorker *core.Worker) {
+			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))
+		},
+
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []core.Worker{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []core.Worker{{Name: "foo"}}, "foo", &core.Worker{Name: "foo"}),
+	)
 })

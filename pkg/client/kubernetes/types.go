@@ -20,8 +20,6 @@ import (
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 
 	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -68,7 +66,6 @@ var (
 func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		gardenscheme.AddToScheme,
 		gardencorescheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
@@ -114,7 +111,6 @@ type Clientset struct {
 	client client.Client
 
 	kubernetes      kubernetesclientset.Interface
-	garden          gardenclientset.Interface
 	gardenCore      gardencoreclientset.Interface
 	apiextension    apiextensionsclientset.Interface
 	apiregistration apiregistrationclientset.Interface
@@ -157,7 +153,6 @@ type Interface interface {
 	Applier() ApplierInterface
 
 	Kubernetes() kubernetesclientset.Interface
-	Garden() gardenclientset.Interface
 	GardenCore() gardencoreclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface

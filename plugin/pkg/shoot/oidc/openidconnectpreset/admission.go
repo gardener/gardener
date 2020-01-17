@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/garden"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
@@ -112,10 +111,10 @@ func (o *OpenIDConnectPreset) Admit(ctx context.Context, a admission.Attributes,
 	// Ignore all kinds other than Shoot
 	// Ignore all subresource calls
 	// Ignore all operations other than CREATE
-	if len(a.GetSubresource()) != 0 || (a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot")) || a.GetOperation() != admission.Create {
+	if len(a.GetSubresource()) != 0 || a.GetKind().GroupKind() != core.Kind("Shoot") || a.GetOperation() != admission.Create {
 		return nil
 	}
-	shoot, ok := a.GetObject().(*garden.Shoot)
+	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
@@ -143,7 +142,7 @@ func (o *OpenIDConnectPreset) Admit(ctx context.Context, a admission.Attributes,
 	return nil
 }
 
-func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *garden.Shoot) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
+func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *core.Shoot) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
 	var matchedPreset *settingsv1alpha1.OpenIDConnectPreset
 
 	for _, oidc := range oidcs {

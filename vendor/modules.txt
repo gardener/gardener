@@ -6,7 +6,7 @@ github.com/Masterminds/goutils
 github.com/Masterminds/semver
 # github.com/Masterminds/sprig v2.22.0+incompatible
 github.com/Masterminds/sprig
-# github.com/NYTimes/gziphandler v1.1.1
+# github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46
 github.com/NYTimes/gziphandler
 # github.com/PuerkitoBio/purell v1.1.1
 github.com/PuerkitoBio/purell
@@ -18,7 +18,7 @@ github.com/ahmetb/gen-crd-api-reference-docs
 github.com/beorn7/perks/quantile
 # github.com/blang/semver v3.5.0+incompatible
 github.com/blang/semver
-# github.com/coreos/bbolt v1.3.3
+# github.com/coreos/bbolt v1.3.2
 github.com/coreos/bbolt
 # github.com/coreos/etcd v3.3.15+incompatible
 github.com/coreos/etcd/alarm
@@ -80,7 +80,7 @@ github.com/coreos/etcd/wal
 github.com/coreos/etcd/wal/walpb
 # github.com/coreos/go-semver v0.3.0
 github.com/coreos/go-semver/semver
-# github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
+# github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/daemon
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
@@ -91,7 +91,7 @@ github.com/cyphar/filepath-securejoin
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
-# github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
+# github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 github.com/docker/spdystream
 github.com/docker/spdystream/spdy
 # github.com/dsnet/compress v0.0.1
@@ -121,24 +121,6 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca => github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
-github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud
-github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/install
-github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1
-github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws
-github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/install
-github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1
-github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure
-github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/install
-github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1
-github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp
-github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/install
-github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1
-github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack
-github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/install
-github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1
-github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet
-github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1
 # github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
@@ -203,14 +185,14 @@ github.com/google/uuid
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
-# github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
+# github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
 # github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 github.com/grpc-ecosystem/go-grpc-prometheus
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v0.0.0-20180717150148-3d5d8f294aa0
+# github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
@@ -232,7 +214,7 @@ github.com/hpcloud/tail/ratelimiter
 github.com/hpcloud/tail/util
 github.com/hpcloud/tail/watch
 github.com/hpcloud/tail/winfile
-# github.com/huandu/xstrings v1.2.0
+# github.com/huandu/xstrings v1.3.0
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.7
 github.com/imdario/mergo
@@ -242,7 +224,7 @@ github.com/inconshreveable/mousetrap
 github.com/jonboulle/clockwork
 # github.com/json-iterator/go v1.1.7
 github.com/json-iterator/go
-# github.com/konsorten/go-windows-terminal-sequences v1.0.2
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
@@ -264,7 +246,7 @@ github.com/mitchellh/reflectwalk
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/munnerz/goautoneg v0.0.0-20190414153302-2ae31c8b6b30
+# github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 github.com/munnerz/goautoneg
 # github.com/nwaples/rardecode v1.0.0
 github.com/nwaples/rardecode
@@ -409,7 +391,7 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
+# golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -425,7 +407,7 @@ golang.org/x/net/websocket
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
+# golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -503,7 +485,7 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
+# google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.23.0

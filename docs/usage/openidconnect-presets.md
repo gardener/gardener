@@ -79,7 +79,7 @@ Simple `Shoot` example:
 This is a sample of a `Shoot` with some fields omitted:
 
 ```yaml
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: preset
@@ -105,7 +105,7 @@ kubectl get shoot preset -o yaml
 ```
 
 ```yaml
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: preset
@@ -223,7 +223,7 @@ This is a sample of a `Shoot` with some fields omitted:
 
 ```yaml
 kind: Shoot
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1beta1
 metadata:
   name: preset
   namespace: default
@@ -248,7 +248,7 @@ kubectl get shoot preset -o yaml
 ```
 
 ```yaml
-apiVersion: garden.sapcloud.io/v1beta1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: preset
