@@ -2634,6 +2634,16 @@ func (in *OpenStackRouter) DeepCopy() *OpenStackRouter {
 func (in *OpenStackWorker) DeepCopyInto(out *OpenStackWorker) {
 	*out = *in
 	in.Worker.DeepCopyInto(&out.Worker)
+	if in.VolumeType != nil {
+		in, out := &in.VolumeType, &out.VolumeType
+		*out = new(string)
+		**out = **in
+	}
+	if in.VolumeSize != nil {
+		in, out := &in.VolumeSize, &out.VolumeSize
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

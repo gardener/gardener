@@ -1198,6 +1198,10 @@ type OpenStackRouter struct {
 // OpenStackWorker is the definition of a worker group.
 type OpenStackWorker struct {
 	Worker `json:",inline"`
+	// TODO: Ignored for now: VolumeType is the type of the root volumes.
+	VolumeType *string `json:"volumeType,omitempty"`
+	// VolumeSize is the size of the root volume.
+	VolumeSize *string `json:"volumeSize,omitempty"`
 }
 
 // Worker is the base definition of a worker group.

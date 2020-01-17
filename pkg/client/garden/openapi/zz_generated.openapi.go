@@ -4984,6 +4984,19 @@ func schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"volumeType": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"volumeSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeSize is the size of the root volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax"},
 			},

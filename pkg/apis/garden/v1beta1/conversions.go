@@ -2489,6 +2489,13 @@ func Convert_garden_Worker_To_v1beta1_OpenStackWorker(in *garden.Worker, out *Op
 	out.Taints = in.Taints
 	out.CABundle = in.CABundle
 
+	if in.Volume != nil {
+		out.VolumeSize = &in.Volume.Size
+		if in.Volume.Type != nil {
+			out.VolumeType = in.Volume.Type
+		}
+	}
+
 	var machineImage *ShootMachineImage
 	if in.Machine.Image != nil {
 		machineImage = &ShootMachineImage{}

@@ -598,6 +598,9 @@ func validateCloud(cloud garden.Cloud, kubernetes garden.Kubernetes, fldPath *fi
 		for i, worker := range openStack.Workers {
 			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker, idxPath)...)
+			if worker.Volume != nil {
+				allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.Volume, 20, idxPath.Child("volume"))...)
+			}
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
