@@ -5,8 +5,8 @@ metadata:
   name: shoot-info
   namespace: kube-system
 data:
-  projectName: {{ .Values.projectName }}
-  shootName: {{ .Values.shootName }}
+  projectName: "{{ .Values.projectName }}"
+  shootName: "{{ .Values.shootName }}"
   provider: {{ .Values.provider }}
   region: {{ .Values.region }}
   kubernetesVersion: {{ .Values.kubernetesVersion }}
