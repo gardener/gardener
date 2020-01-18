@@ -266,8 +266,8 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 			return fmt.Errorf("no VolumeTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 		}
 		shoot.Spec.Provider.Workers[0].Volume = &gardencorev1beta1.Volume{
-			Type: &cloudProfile.Spec.VolumeTypes[0].Name,
-			Size: "35Gi",
+			Type:       &cloudProfile.Spec.VolumeTypes[0].Name,
+			VolumeSize: "35Gi",
 		}
 	}
 

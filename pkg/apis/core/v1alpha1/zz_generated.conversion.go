@@ -2924,7 +2924,7 @@ func Convert_core_MachineType_To_v1alpha1_MachineType(in *core.MachineType, out 
 
 func autoConvert_v1alpha1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineTypeStorage, out *core.MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
-	out.Size = in.Size
+	out.StorageSize = in.StorageSize
 	out.Type = in.Type
 	return nil
 }
@@ -2936,7 +2936,7 @@ func Convert_v1alpha1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineT
 
 func autoConvert_core_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in *core.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
-	out.Size = in.Size
+	out.StorageSize = in.StorageSize
 	out.Type = in.Type
 	return nil
 }
@@ -4169,7 +4169,7 @@ func autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, 
 func autoConvert_v1alpha1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
-	out.Size = in.Size
+	out.VolumeSize = in.VolumeSize
 	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }
@@ -4182,7 +4182,7 @@ func Convert_v1alpha1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conv
 func autoConvert_core_Volume_To_v1alpha1_Volume(in *core.Volume, out *Volume, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
-	out.Size = in.Size
+	out.VolumeSize = in.VolumeSize
 	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }

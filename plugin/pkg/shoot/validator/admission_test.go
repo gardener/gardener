@@ -190,8 +190,8 @@ var _ = Describe("validator", func() {
 								Minimum: 1,
 								Maximum: 1,
 								Volume: &core.Volume{
-									Size: "40Gi",
-									Type: &volumeType,
+									VolumeSize: "40Gi",
+									Type:       &volumeType,
 								},
 								Zones: []string{"europe-a"},
 							},
@@ -799,8 +799,8 @@ var _ = Describe("validator", func() {
 					Minimum: 1,
 					Maximum: 1,
 					Volume: &core.Volume{
-						Size: "10Gi",
-						Type: &volumeType,
+						VolumeSize: "10Gi",
+						Type:       &volumeType,
 					},
 					Zones: []string{"europe-a"},
 				},
@@ -1305,7 +1305,7 @@ var _ = Describe("validator", func() {
 			It("should allow volume removal", func() {
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.Provider.Workers[0].Volume = nil
-				oldShoot.Spec.Provider.Workers[0].Volume.Size = "20Gi"
+				oldShoot.Spec.Provider.Workers[0].Volume.VolumeSize = "20Gi"
 
 				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

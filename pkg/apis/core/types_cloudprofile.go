@@ -110,8 +110,8 @@ type MachineType struct {
 type MachineTypeStorage struct {
 	// Class is the class of the storage type.
 	Class string
-	// Size is the storage size.
-	Size resource.Quantity
+	// StorageSize is the storage size.
+	StorageSize resource.Quantity
 	// Type is the type of the storage.
 	Type string
 }

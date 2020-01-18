@@ -26,11 +26,11 @@ type Plant struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec contains the specification of this Plant.
-	Spec PlantSpec `json:"spec,omitempty"`
+	Spec PlantSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the status of this Plant.
-	Status PlantStatus `json:"status,omitempty"`
+	Status PlantStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,9 +40,9 @@ type PlantList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of Plants.
-	Items []Plant `json:"items"`
+	Items []Plant `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 const (
@@ -56,12 +56,12 @@ const (
 type PlantSpec struct {
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
 	// clusters to be added to Gardener.
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 	// Endpoints is the configuration plant endpoints
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Endpoints []Endpoint `json:"endpoints,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Endpoints []Endpoint `json:"endpoints,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=endpoints"`
 }
 
 // PlantStatus is the status of a Plant.
@@ -70,43 +70,43 @@ type PlantStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
 	// Plant's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration *int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration *int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 	// ClusterInfo is additional computed information about the newly added cluster (Plant)
-	ClusterInfo *ClusterInfo `json:"clusterInfo,omitempty"`
+	ClusterInfo *ClusterInfo `json:"clusterInfo,omitempty" protobuf:"bytes,3,opt,name=clusterInfo"`
 }
 
 // Endpoint is an endpoint for monitoring, logging and other services around the plant.
 type Endpoint struct {
 	// Name is the name of the endpoint
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// URL is the url of the endpoint
-	URL string `json:"url"`
+	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 	// Purpose is the purpose of the endpoint
-	Purpose string `json:"purpose"`
+	Purpose string `json:"purpose" protobuf:"bytes,3,opt,name=purpose"`
 }
 
 // ClusterInfo contains information about the Plant cluster
 type ClusterInfo struct {
 	// Cloud describes the cloud information
-	Cloud CloudInfo `json:"cloud"`
+	Cloud CloudInfo `json:"cloud" protobuf:"bytes,1,opt,name=cloud"`
 	// Kubernetes describes kubernetes meta information (e.g., version)
-	Kubernetes KubernetesInfo `json:"kubernetes"`
+	Kubernetes KubernetesInfo `json:"kubernetes" protobuf:"bytes,2,opt,name=kubernetes"`
 }
 
 // CloudInfo contains information about the cloud
 type CloudInfo struct {
 	// Type is the cloud type
-	Type string `json:"type"`
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Region is the cloud region
-	Region string `json:"region"`
+	Region string `json:"region" protobuf:"bytes,2,opt,name=region"`
 }
 
 // KubernetesInfo contains the version and configuration variables for the Plant cluster.
 type KubernetesInfo struct {
 	// Version is the semantic Kubernetes version to use for the Plant cluster.
-	Version string `json:"version"`
+	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 }

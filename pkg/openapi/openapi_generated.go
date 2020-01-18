@@ -3238,7 +3238,7 @@ func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallba
 					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Size is the storage size.",
+							Description: "StorageSize is the storage size.",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -8277,7 +8277,7 @@ func schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref common.ReferenceCallbac
 					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Size is the storage size.",
+							Description: "StorageSize is the storage size.",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -10315,7 +10315,7 @@ func schema_pkg_apis_core_v1beta1_Volume(ref common.ReferenceCallback) common.Op
 					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Size is the size of the volume.",
+							Description: "VolumeSize is the size of the volume.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

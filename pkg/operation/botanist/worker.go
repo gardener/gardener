@@ -61,7 +61,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			volume = &extensionsv1alpha1.Volume{
 				Name:      worker.Volume.Name,
 				Type:      worker.Volume.Type,
-				Size:      worker.Volume.Size,
+				Size:      worker.Volume.VolumeSize,
 				Encrypted: worker.Volume.Encrypted,
 			}
 		}
@@ -72,7 +72,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				dataVolumes = append(dataVolumes, extensionsv1alpha1.Volume{
 					Name:      dataVolume.Name,
 					Type:      dataVolume.Type,
-					Size:      dataVolume.Size,
+					Size:      dataVolume.VolumeSize,
 					Encrypted: dataVolume.Encrypted,
 				})
 			}

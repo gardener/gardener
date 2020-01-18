@@ -1987,7 +1987,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxSurge := intstr.FromInt(1)
 			maxUnavailable := intstr.FromInt(0)
 			name1 := "vol1-name"
-			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}}
+			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2013,8 +2013,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxUnavailable := intstr.FromInt(0)
 			name1 := "vol1-name"
 			name2 := "vol2-name"
-			vol := core.Volume{Name: &name1, Size: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "12MiB"}}
+			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "12MiB"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2042,8 +2042,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxUnavailable := intstr.FromInt(0)
 			name1 := "vol1-name-is-too-long-for-test"
 			name2 := "not%dns/1123"
-			vol := core.Volume{Name: &name1, Size: "75Gi"}
-			dataVolumes := []core.Volume{{Size: "75Gi"}, {Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}}
+			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			dataVolumes := []core.Volume{{VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2079,8 +2079,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxSurge := intstr.FromInt(1)
 			maxUnavailable := intstr.FromInt(0)
 			name1 := "vol1-name"
-			vol := core.Volume{Name: &name1, Size: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}}
+			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2106,8 +2106,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			name1 := "vol1-name"
 			name2 := "vol2-name"
 			name3 := "vol3-name"
-			vol := core.Volume{Name: &name1, Size: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}}
+			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2137,8 +2137,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			maxUnavailable := intstr.FromInt(0)
 			name1 := "vol1-name"
 			name2 := "vol2-name"
-			vol := core.Volume{Name: &name1, Size: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}, {Name: &name1, Size: "75Gi"}}
+			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{

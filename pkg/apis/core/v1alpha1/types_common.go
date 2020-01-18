@@ -33,16 +33,16 @@ const (
 // LastError indicates the last occurred error for an operation on a resource.
 type LastError struct {
 	// A human readable message indicating details about the last error.
-	Description string `json:"description"`
+	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
 	// ID of the task which caused this last error
 	// +optional
-	TaskID *string `json:"taskID,omitempty"`
+	TaskID *string `json:"taskID,omitempty" protobuf:"bytes,2,opt,name=taskID"`
 	// Well-defined error codes of the last error(s).
 	// +optional
-	Codes []ErrorCode `json:"codes,omitempty"`
+	Codes []ErrorCode `json:"codes,omitempty" protobuf:"bytes,3,rep,name=codes,casttype=ErrorCode"`
 	// Last time the error was reported
 	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty" protobuf:"bytes,4,opt,name=lastUpdateTime"`
 }
 
 // GetDescription implements LastError.
@@ -101,15 +101,15 @@ const (
 // message and a progress indicator.
 type LastOperation struct {
 	// A human readable message indicating details about the last operation.
-	Description string `json:"description"`
+	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
 	// Last time the operation state transitioned from one to another.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime" protobuf:"bytes,2,opt,name=lastUpdateTime"`
 	// The progress in percentage (0-100) of the last operation.
-	Progress int32 `json:"progress"`
+	Progress int32 `json:"progress" protobuf:"varint,3,opt,name=progress"`
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
-	State LastOperationState `json:"state"`
+	State LastOperationState `json:"state" protobuf:"bytes,4,opt,name=state,casttype=LastOperationState"`
 	// Type of the last operation, one of Create, Reconcile, Delete.
-	Type LastOperationType `json:"type"`
+	Type LastOperationType `json:"type" protobuf:"bytes,5,opt,name=type,casttype=LastOperationType"`
 }
 
 // GetDescription implements LastOperation.
@@ -140,11 +140,11 @@ func (l *LastOperation) GetType() LastOperationType {
 // Gardener holds the information about the Gardener version that operated a resource.
 type Gardener struct {
 	// ID is the Docker container id of the Gardener which last acted on a resource.
-	ID string `json:"id"`
+	ID string `json:"id" protobuf:"bytes,1,opt,name=id"`
 	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 	// Version is the version of the Gardener which last acted on a resource.
-	Version string `json:"version"`
+	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
 }
 
 const (

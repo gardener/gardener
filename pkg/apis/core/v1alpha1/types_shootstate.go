@@ -27,10 +27,10 @@ type ShootState struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Specification of the ShootState.
 	// +optional
-	Spec ShootStateSpec `json:"spec,omitempty"`
+	Spec ShootStateSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,9 +40,9 @@ type ShootStateList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of ShootStates.
-	Items []ShootState `json:"items"`
+	Items []ShootState `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // ShootStateSpec is the specification of the ShootState.
@@ -51,33 +51,33 @@ type ShootStateSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Gardener []GardenerResourceData `json:"gardener,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Gardener []GardenerResourceData `json:"gardener,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,1,rep,name=gardener"`
 	// Extensions holds the state of custom resources reconciled by extension controllers in the seed
 	// +optional
-	Extensions []ExtensionResourceState `json:"extensions,omitempty"`
+	Extensions []ExtensionResourceState `json:"extensions,omitempty" protobuf:"bytes,2,rep,name=extensions"`
 }
 
 // GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.
 type GardenerResourceData struct {
 	// Name of the object required to generate resources
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Type of the object
-	Type string `json:"type"`
+	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// Data contains the payload required to generate resources
-	Data runtime.RawExtension `json:"data"`
+	Data runtime.RawExtension `json:"data" protobuf:"bytes,3,opt,name=data"`
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
 // namespace on the Seed cluster.
 type ExtensionResourceState struct {
 	// Kind (type) of the extension custom resource
-	Kind string `json:"kind"`
+	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name of the extension custom resource
 	// +optional
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
 	// Purpose of the extension custom resource
 	// +optional
-	Purpose *string `json:"purpose,omitempty"`
+	Purpose *string `json:"purpose,omitempty" protobuf:"bytes,3,opt,name=purpose"`
 	// State of the extension resource
-	State runtime.RawExtension `json:"state"`
+	State runtime.RawExtension `json:"state" protobuf:"bytes,4,opt,name=state"`
 }
