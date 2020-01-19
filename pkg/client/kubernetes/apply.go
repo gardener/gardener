@@ -119,7 +119,7 @@ func (c *Applier) deleteObject(ctx context.Context, desired *unstructured.Unstru
 var DefaultApplierOptions = ApplierOptions{
 	MergeFuncs: map[schema.GroupKind]MergeFunc{
 		corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
-			// We do not want to overwrite a Service's `.spec.clusterIP' or '.spec.ports[*].nodePort' values.
+			// We do not want to overwrite a Service's `.spec.clusterIP', `.spec.healthCheckNodePort` or '.spec.ports[*].nodePort' values.
 			oldPorts := oldObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
 			newPorts := newObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
 			ports := []map[string]interface{}{}
@@ -143,6 +143,7 @@ var DefaultApplierOptions = ApplierOptions{
 			}
 
 			newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
+			newObj.Object["spec"].(map[string]interface{})["healthCheckNodePort"] = oldObj.Object["spec"].(map[string]interface{})["healthCheckNodePort"]
 			newObj.Object["spec"].(map[string]interface{})["ports"] = ports
 		},
 		corev1.SchemeGroupVersion.WithKind("ServiceAccount").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
