@@ -28,7 +28,7 @@ The motivation behind this proposal is to make all of this functionality accessi
 
 * Gardener must default to configuring its managed clusters with the CRI interface instead of the legacy Dockershim. This change must be transparent to Gardener users and must simply work out-of-the-box for new and existing clusters.
 * Low-level runtimes like gVisor or Kata Containers are provided as gardener extensions which are (optionally) installed into a landscape by the Gardener operator. There must be no runtime-specific knowledge in the core Gardener code.
-* It shall be possible to configure multiple low-level runtimes in Gardener clusters, on the Worker Group level.
+* It shall be possible to configure multiple low-level runtimes in Shoot clusters, on the Worker Group level.
 
 ### Non-Goals
 
