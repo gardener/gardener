@@ -22,7 +22,7 @@ While pods and containers are intended to create isolated areas for concurrently
 
 Kubernetes supports running pods using these alternate runtimes via the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) concept, which was promoted to Beta in Kubernetes 1.14. Once Kubernetes is configured to use the Container Runtime Interface to control pods, it becomes possible to leverage CRI and run specific pods using different Runtime Classes. Additionally, configuring Kubernetes to use CRI instead of the legacy Dockershim is [faster](https://events19.linuxfoundation.org/wp-content/uploads/2017/11/How-Container-Runtime-Matters-in-Kubernetes_-OSS-Kunal-Kushwaha.pdf).
 
-The motivation behind this proposal is to make all of this functionality accessible to clusters managed by Gardener.
+The motivation behind this proposal is to make all of this functionality accessible to Shoot clusters managed by Gardener.
 
 ### Goals
 
