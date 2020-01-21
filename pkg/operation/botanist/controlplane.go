@@ -39,7 +39,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metaerrors "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -292,7 +292,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
-		if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
@@ -928,7 +928,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			Kind:    "Hvpa",
 		})
 		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); err != nil {
-			if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 				return err
 			}
 		}
@@ -1136,7 +1136,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				Kind:    "Hvpa",
 			})
 			if err := b.K8sSeedClient.Client().Delete(ctx, u); err != nil {
-				if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+				if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 					return err
 				}
 			}

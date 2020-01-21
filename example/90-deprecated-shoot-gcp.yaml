@@ -5,6 +5,7 @@ metadata:
   name: johndoe-gcp
   namespace: garden-dev
 spec:
+  purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
   cloud:
     profile: gcp
     region: europe-west1

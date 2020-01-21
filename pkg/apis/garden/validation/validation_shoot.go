@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -56,6 +57,12 @@ var (
 	availableNginxIngressExternalTrafficPolicies = sets.NewString(
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
+	)
+	availableShootPurposes = sets.NewString(
+		string(garden.ShootPurposeEvaluation),
+		string(garden.ShootPurposeTesting),
+		string(garden.ShootPurposeDevelopment),
+		string(garden.ShootPurposeProduction),
 	)
 )
 
@@ -186,6 +193,16 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *garden.ShootSpec, fldPath *
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
+	}
+	if purpose := spec.Purpose; purpose != nil {
+		allowedShootPurposes := availableShootPurposes
+		if meta.Namespace == v1beta1constants.GardenNamespace {
+			allowedShootPurposes = sets.NewString(append(availableShootPurposes.List(), string(garden.ShootPurposeInfrastructure))...)
+		}
+
+		if !allowedShootPurposes.Has(string(*purpose)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, allowedShootPurposes.List()))
+		}
 	}
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.

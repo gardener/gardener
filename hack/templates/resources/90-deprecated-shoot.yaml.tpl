@@ -54,6 +54,7 @@ metadata:
   labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:
+  purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
   cloud:
     profile: ${value("spec.cloud.profile", cloud)}
     region: ${value("spec.cloud.region", region)}

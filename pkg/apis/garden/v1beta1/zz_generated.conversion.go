@@ -4826,6 +4826,7 @@ func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garde
 	// WARNING: in.Networking requires manual conversion: inconvertible types (*github.com/gardener/gardener/pkg/apis/garden/v1beta1.Networking vs github.com/gardener/gardener/pkg/apis/garden.Networking)
 	out.Maintenance = (*garden.Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*garden.Monitoring)(unsafe.Pointer(in.Monitoring))
+	out.Purpose = (*garden.ShootPurpose)(unsafe.Pointer(in.Purpose))
 	return nil
 }
 
@@ -4853,6 +4854,7 @@ func autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out
 	out.Maintenance = (*Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*Monitoring)(unsafe.Pointer(in.Monitoring))
 	// WARNING: in.Provider requires manual conversion: does not exist in peer-type
+	out.Purpose = (*ShootPurpose)(unsafe.Pointer(in.Purpose))
 	// WARNING: in.Region requires manual conversion: does not exist in peer-type
 	// WARNING: in.SecretBindingName requires manual conversion: does not exist in peer-type
 	// WARNING: in.SeedName requires manual conversion: does not exist in peer-type

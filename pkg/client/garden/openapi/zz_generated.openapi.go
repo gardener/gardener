@@ -6336,6 +6336,13 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monitoring"),
 						},
 					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose class for this cluster.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"cloud", "kubernetes"},
 			},

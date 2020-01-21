@@ -3729,6 +3729,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Provider.DeepCopyInto(&out.Provider)
+	if in.Purpose != nil {
+		in, out := &in.Purpose, &out.Purpose
+		*out = new(ShootPurpose)
+		**out = **in
+	}
 	if in.SeedName != nil {
 		in, out := &in.SeedName, &out.SeedName
 		*out = new(string)
