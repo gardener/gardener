@@ -14,7 +14,7 @@ global:
         cpu: 100m
         memory: 100Mi
       limits:
-        cpu: 750m
+        cpu: 2000m
         memory: 512Mi
     additionalVolumes: []
     additionalVolumeMounts: []
