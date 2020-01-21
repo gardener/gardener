@@ -277,16 +277,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				project.Spec.Owner = project.Spec.CreatedBy
 			}
 		}
-		if a.GetOperation() == admission.Update {
-			if createdBy, ok := project.Annotations[common.GardenCreatedBy]; ok {
-				project.Spec.CreatedBy = &rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     createdBy,
-				}
-				delete(project.Annotations, common.GardenCreatedBy)
-			}
-		}
 
 		if project.Spec.Owner != nil {
 			ownerPartOfMember := false
