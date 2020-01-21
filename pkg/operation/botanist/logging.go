@@ -33,7 +33,7 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	if (b.Shoot.Info.Spec.Purpose != nil && *b.Shoot.Info.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting) || !gardenletfeatures.FeatureGate.Enabled(features.Logging) {
+	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting || !gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		return common.DeleteLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 

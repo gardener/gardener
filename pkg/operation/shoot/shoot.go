@@ -124,6 +124,14 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
 }
 
+// GetPurpose returns the purpose of the shoot or 'evaluation' if it's nil.
+func (s *Shoot) GetPurpose() gardencorev1beta1.ShootPurpose {
+	if v := s.Info.Spec.Purpose; v != nil {
+		return *v
+	}
+	return gardencorev1beta1.ShootPurposeEvaluation
+}
+
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkerNames() []string {
 	var workerNames []string

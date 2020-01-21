@@ -10,9 +10,11 @@ The `Shoot` resource contains a `.spec.purpose` field indicating how the shoot i
 
 ## Behavioral Differences
 
-So far, the only behavioral difference is that
+So far, the only difference in the way the shoot cluster is set up is that
 
 * `testing` shoot clusters **do not** get a monitoring or a logging stack as part of their control planes.
+
+There are also differences with respect to how `testing` shoots are scheduled after creation, please consult the [Scheduler documentation](../concepts/scheduler.md).
 
 ## Future Steps
 

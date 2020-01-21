@@ -180,13 +180,16 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 
 func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) (*gardencorev1beta1.Seed, error) {
 	var candidates []*gardencorev1beta1.Seed
-	switch strategy {
-	case config.SameRegion:
+
+	switch {
+	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
+		candidates = determineCandidatesOfSameProvider(seedList, shoot, candidates)
+	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
-	case config.MinimalDistance:
+	case strategy == config.MinimalDistance:
 		candidates = determineCandidatesWithMinimalDistanceStrategy(seedList, shoot, candidates)
 	default:
-		return nil, fmt.Errorf("unknown seed determination strategy configured. Strategy: '%s' does not exist. Valid strategies are: %v", strategy, config.Strategies)
+		return nil, fmt.Errorf("failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, config.Strategies)
 	}
 
 	if candidates == nil {
@@ -245,6 +248,16 @@ func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *ga
 	}
 
 	return bestCandidate, nil
+}
+
+func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
+	// Determine all candidate seed clusters matching the shoot's provider and region.
+	for _, seed := range seedList {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+			candidates = append(candidates, seed)
+		}
+	}
+	return candidates
 }
 
 func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
