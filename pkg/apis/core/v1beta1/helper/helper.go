@@ -186,16 +186,17 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
-	DisableDNS        *bool
-	Protected         *bool
-	Visible           *bool
-	MinimumVolumeSize *string
-	APIServer         *ShootedSeedAPIServer
-	BlockCIDRs        []string
-	ShootDefaults     *gardencorev1beta1.ShootNetworks
-	Backup            *gardencorev1beta1.SeedBackup
-	NoGardenlet       bool
-	WithSecretRef     bool
+	DisableDNS                     *bool
+	Protected                      *bool
+	Visible                        *bool
+	MinimumVolumeSize              *string
+	APIServer                      *ShootedSeedAPIServer
+	BlockCIDRs                     []string
+	ShootDefaults                  *gardencorev1beta1.ShootNetworks
+	Backup                         *gardencorev1beta1.SeedBackup
+	NoGardenlet                    bool
+	UseServiceAccountBootstrapping bool
+	WithSecretRef                  bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -274,6 +275,9 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["use-serviceaccount-bootstrapping"]; ok {
+		shootedSeed.UseServiceAccountBootstrapping = true
 	}
 	if _, ok := flags["with-secret-ref"]; ok {
 		shootedSeed.WithSecretRef = true

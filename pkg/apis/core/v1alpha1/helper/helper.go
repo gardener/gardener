@@ -196,6 +196,7 @@ type ShootedSeed struct {
 	ShootDefaults     *gardencorev1alpha1.ShootNetworks
 	Backup            *gardencorev1alpha1.SeedBackup
 	NoGardenlet       bool
+	UseServiceAccountBootstrapping  bool
 	WithSecretRef     bool
 }
 
@@ -275,6 +276,9 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["use-serviceaccount-bootstrapping"]; ok {
+		shootedSeed.UseServiceAccountBootstrapping = true
 	}
 	if _, ok := flags["with-secret-ref"]; ok {
 		shootedSeed.WithSecretRef = true
