@@ -5,7 +5,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1565956209276,
+  "id": 5,
+  "iteration": 1579608112199,
   "links": [],
   "panels": [
     {
@@ -13,97 +14,13 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Shows the CPU usage of selected extension controllers.",
-      "fill": 0,
+      "description": "Shows the recommendation of the VPA for the selected target.",
+      "fill": 6,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 12,
         "x": 0,
-        "y": 0
-      },
-      "id": 2,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "CPU Usage",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 2,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Shows the memory usage of selected extension controllers.",
-      "fill": 0,
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
         "y": 0
       },
       "id": 3,
@@ -120,28 +37,32 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "seed:container_memory_working_set_bytes:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
+          "expr": "vpa_status_recommendation{recommendation=\"target\", targetName=~\"$targetName\", resource=\"memory\"}",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{ pod }}",
-          "refId": "A"
+          "legendFormat": "{{ container }}-recommendation",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Memory Usage",
+      "title": "VPA Memory Recommendation",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -158,8 +79,8 @@
       "yaxes": [
         {
           "format": "bytes",
-          "label": null,
-          "logBase": 2,
+          "label": "Bytes",
+          "logBase": 1,
           "max": null,
           "min": null,
           "show": true
@@ -183,15 +104,16 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Shows the network I/O of the selected extension controllers.",
-      "fill": 1,
+      "description": "Shows the recommendation of the VPA for the selected target.",
+      "fill": 6,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 9
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
       },
-      "id": 5,
+      "id": 2,
       "legend": {
         "avg": false,
         "current": false,
@@ -205,35 +127,31 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "- seed:container_network_receive_bytes_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
+          "expr": "vpa_status_recommendation{recommendation=\"target\", resource=\"cpu\", targetName=~\"$targetName\"} / 1000",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ pod }}(receive)",
-          "refId": "A"
-        },
-        {
-          "expr": "seed:container_network_transmit_bytes_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}(transmit)",
-          "refId": "B"
+          "legendFormat": "{{ container }}-recommendation",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Network I/O",
+      "title": "VPA CPU Recommendation",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -249,8 +167,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "short",
+          "label": "Cores",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -272,27 +190,26 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
-    "extensions",
-    "resources"
+    "Autoscaling"
   ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "datasource": "prometheus",
-        "definition": "label_values(namespace)",
+        "definition": "label_values(vpa_status_recommendation, targetKind)",
         "hide": 0,
         "includeAll": false,
-        "label": null,
+        "label": "Kind",
         "multi": false,
-        "name": "Extension",
+        "name": "targetKind",
         "options": [],
-        "query": "label_values(namespace)",
-        "refresh": 1,
-        "regex": "extension-(.+)",
+        "query": "label_values(vpa_status_recommendation, targetKind)",
+        "refresh": 2,
+        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -304,15 +221,15 @@
       {
         "allValue": null,
         "datasource": "prometheus",
-        "definition": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
+        "definition": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
         "hide": 0,
         "includeAll": false,
-        "label": null,
-        "multi": true,
-        "name": "Pod",
+        "label": "Target",
+        "multi": false,
+        "name": "targetName",
         "options": [],
-        "query": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
-        "refresh": 0,
+        "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -325,7 +242,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -337,24 +254,23 @@
       "5m",
       "15m",
       "30m",
-      "1h",
-      "2h",
-      "1d"
+      "1h"
     ],
     "time_options": [
       "5m",
       "15m",
       "1h",
+      "3h",
       "6h",
       "12h",
       "24h",
       "2d",
       "7d",
-      "30d"
+      "14d"
     ]
   },
-  "timezone": "",
-  "title": "Extensions",
-  "uid": "jDt-w5OWk",
+  "timezone": "browser",
+  "title": "VPA Recommendations",
+  "uid": "vpa-recommendations",
   "version": 1
 }
