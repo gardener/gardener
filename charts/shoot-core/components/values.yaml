@@ -3,31 +3,39 @@ global:
   podNetwork: 100.96.0.0/11
 cluster-autoscaler:
   enabled: false
+coredns:
+  enabled: true
+kube-apiserver-kubelet:
+  enabled: true
+kube-controller-manager:
+  enabled: true
 kube-proxy:
+  enabled: true
   kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
 # featureGates: {}
   podAnnotations: {}
   images:
     kube-proxy: image-repository
-vpn-shoot:
-  serviceNetwork: 10.0.0.0/24
-  podNetwork: 192.168.0.0/16
-# nodeNetwork: 172.16.0.0/20
-  tlsAuth: dummy-b64-data
-  diffieHellmanKey: LS0tLS1CRUdJTiBESCBQQVJBTUVURVJTLS0tLS0KTUlJQkNBS0NBUUVBN2NCWHhHOWFuNktSei9zQjV1aVNPVGY3RWcrdVdWa2hYTzRwZUtEVEFSek1ZYThiN1dSOApCL0F3K0F5VVh0QjN0WHRyemVDNU0zSUhudWhGd01vM0s0b1NPa0ZKeGF0TGxZS2VZMTVyK0t0NXZuT09UM0JXCmVONU9uV2xSNVdpN0daQldiYVFnWFZSNzlONHlzdDQzc1ZoSnVzNkJ5MGxONk9sYzl4RC95czlHSC95a0pWSWgKWi9OTHJ4QUM1bHhqd0NxSk1kOGhycnlDaHVEbHo1OTd2ZzZnWUZ1UlY2MFUvWVU0REs3MUY0SDdtSTA3YUdKOQpsK1NLOFRia0tXRjVJVEk3a1lXYmM0em10ZlhTWGFHak1oTTlvbVFVYVRIOWNzQjk2aHpGSmRlWjRYanh5YlJmClZjM3Q3WFA1cTdhZmVhS21NM0ZoU1hkZUhLQ1RxUXpRdXdJQkFnPT0KLS0tLS1FTkQgREggUEFSQU1FVEVSUy0tLS0tCg==
-  podAnnotations: {}
+kube-scheduler:
+  enabled: true
+metrics-server:
+  enabled: true
   images:
-    vpn-shoot: image-repository:image-tag
+    metrics-server: image-repository:image-tag
 monitoring:
+  enabled: true
   node-exporter:
     images:
       node-exporter: image-repository:image-tag
-metrics-server:
-  images:
-    metrics-server: image-repository:image-tag
+network-policies:
+  enabled: true
+node-problem-detector:
+  enabled: true
 podsecuritypolicies:
+  enabled: true
   allowPrivilegedContainers: false
 shoot-info:
+  enabled: true
   projectName: core
   shootName: crazy-botany
   provider: aws
@@ -40,3 +48,13 @@ shoot-info:
   maintenanceBegin: 210000+0000
   maintenanceEnd: 220000+0000
   extensions: shoot-dns-service,foo-bar
+vpn-shoot:
+  enabled: true
+  serviceNetwork: 10.0.0.0/24
+  podNetwork: 192.168.0.0/16
+# nodeNetwork: 172.16.0.0/20
+  tlsAuth: dummy-b64-data
+  diffieHellmanKey: LS0tLS1CRUdJTiBESCBQQVJBTUVURVJTLS0tLS0KTUlJQkNBS0NBUUVBN2NCWHhHOWFuNktSei9zQjV1aVNPVGY3RWcrdVdWa2hYTzRwZUtEVEFSek1ZYThiN1dSOApCL0F3K0F5VVh0QjN0WHRyemVDNU0zSUhudWhGd01vM0s0b1NPa0ZKeGF0TGxZS2VZMTVyK0t0NXZuT09UM0JXCmVONU9uV2xSNVdpN0daQldiYVFnWFZSNzlONHlzdDQzc1ZoSnVzNkJ5MGxONk9sYzl4RC95czlHSC95a0pWSWgKWi9OTHJ4QUM1bHhqd0NxSk1kOGhycnlDaHVEbHo1OTd2ZzZnWUZ1UlY2MFUvWVU0REs3MUY0SDdtSTA3YUdKOQpsK1NLOFRia0tXRjVJVEk3a1lXYmM0em10ZlhTWGFHak1oTTlvbVFVYVRIOWNzQjk2aHpGSmRlWjRYanh5YlJmClZjM3Q3WFA1cTdhZmVhS21NM0ZoU1hkZUhLQ1RxUXpRdXdJQkFnPT0KLS0tLS1FTkQgREggUEFSQU1FVEVSUy0tLS0tCg==
+  podAnnotations: {}
+  images:
+    vpn-shoot: image-repository:image-tag

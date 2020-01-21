@@ -215,6 +215,9 @@ const (
 	// NodeProblemDetectorDaemonSetName is the name of the node-problem-detector daemon set.
 	NodeProblemDetectorDaemonSetName = "node-problem-detector"
 
+	// BlackboxExporterDeploymentName is the name of the blackbox-exporter deployment.
+	BlackboxExporterDeploymentName = "blackbox-exporter"
+
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
 
@@ -523,6 +526,11 @@ var (
 		v1beta1constants.DeploymentNameGrafanaUsers,
 		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
 		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+	)
+
+	// RequiredMonitoringShootDeployments is a set of the required shoot monitoring deployments.
+	RequiredMonitoringShootDeployments = sets.NewString(
+		BlackboxExporterDeploymentName,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.

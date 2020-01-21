@@ -1,4 +1,3 @@
-{{- if .Values.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -97,4 +96,3 @@ rules:
   - delete
   - get
   - update
-{{- end }}
