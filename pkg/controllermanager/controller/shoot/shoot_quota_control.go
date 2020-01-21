@@ -106,20 +106,28 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key 
 		return nil
 	}
 
-	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestamp]
+	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestampDeprecated]
 	if !exits {
-		annotations := shoot.Annotations
-		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
-		shoot.Annotations = annotations
+		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestampDeprecated, expirationTime)
 
 		shootUpdated, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
 		shoot = shootUpdated
-
-		expirationTime = annotations[common.ShootExpirationTimestamp]
 	}
+
+	if shoot.Annotations[common.ShootExpirationTimestamp] != expirationTime {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
+		shootUpdated, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+		if err != nil {
+			return err
+		}
+		shoot = shootUpdated
+	}
+
 	expirationTimeParsed, err := time.Parse(time.RFC3339, expirationTime)
 	if err != nil {
 		return err
@@ -129,10 +137,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key 
 		shootLogger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to annotate the Shoot to confirm the deletion.
-		annotations := shoot.Annotations
-		annotations[common.ConfirmationDeletion] = "true"
-		shoot.ObjectMeta.Annotations = annotations
-
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ConfirmationDeletion, "true")
 		if _, err = c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
 			return err
 		}

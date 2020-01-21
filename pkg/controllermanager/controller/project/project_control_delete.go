@@ -70,7 +70,7 @@ func (c *defaultControl) deleteNamespace(project *gardencorev1beta1.Project, nam
 
 	// To prevent "stealing" namespaces by other projects we only delete the namespace if its labels match
 	// the project labels.
-	if !apiequality.Semantic.DeepDerivative(namespaceLabelsFromProject(project), namespace.Labels) {
+	if !apiequality.Semantic.DeepDerivative(namespaceLabelsFromProjectDeprecated(project), namespace.Labels) {
 		return true, nil
 	}
 

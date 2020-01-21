@@ -196,15 +196,18 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 	}
 
 	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		if !apiequality.Semantic.DeepDerivative(projectLabels, ns.Labels) {
-			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
+		projectLabelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
+		if !apiequality.Semantic.DeepDerivative(projectLabelsDeprecated, ns.Labels) {
+			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabelsDeprecated)
 		}
 
-		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, ns.Annotations) {
+		projectAnnotationsDeprecated := namespaceAnnotationsFromProjectDeprecated(project)
+		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProjectDeprecated) && !apiequality.Semantic.DeepDerivative(projectAnnotationsDeprecated, ns.Annotations) {
 			return nil, fmt.Errorf("namespace is already in-use by another project")
 		}
 
 		ns.OwnerReferences = common.MergeOwnerReferences(ns.OwnerReferences, *ownerReference)
+		ns.Labels = utils.MergeStringMaps(ns.Labels, projectLabels)
 		ns.Annotations = utils.MergeStringMaps(ns.Annotations, projectAnnotations)
 
 		return ns, nil

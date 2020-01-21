@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -166,9 +167,9 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}
 
-		delete(s.Annotations, common.ShootOperation)
+		delete(s.Annotations, v1beta1constants.GardenerOperation)
 		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
-		s.Annotations[common.ShootOperation] = common.ShootOperationReconcile
+		s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
 
 		if updatedMachineImages != nil {
 			gardencorev1beta1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
@@ -226,7 +227,7 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
-	operation, ok := shoot.Annotations[common.ShootOperation]
+	operation, ok := common.GetShootOperationAnnotation(shoot.Annotations)
 	return ok && operation == common.ShootOperationMaintain
 }
 

@@ -60,6 +60,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -239,7 +240,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 
 		// set test specific shoot settings
 		integrationTestShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot
 		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, integrationTestShoot, false, nil)
@@ -251,7 +252,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		By("AutoUpdate.MachineImageVersion == true && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
 		// set test specific shoot settings
 		integrationTestShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = trueVar
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot - set maintain now annotation & autoupdate == true
 		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, integrationTestShoot, false, nil)
@@ -263,7 +264,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		By("AutoUpdate.MachineImageVersion == default && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
 		// set test specific shoot settings
 		integrationTestShoot.Spec.Maintenance.AutoUpdate = nil
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// reset machine image from latest version to dummy version
 		intialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
@@ -299,7 +300,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 
 		// sleep so that expiration date is in the past - forceUpdate is required
 		time.Sleep(30 * time.Second)
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot - set maintain now  annotation
 		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, integrationTestShoot, false, nil)
@@ -317,7 +318,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 
 		// set test specific shoot settings
 		integrationTestShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, integrationTestShoot)
@@ -347,7 +348,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 
 		// sleep so that expiration date is in the past - forceUpdate is required
 		time.Sleep(30 * time.Second)
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot - set maintain now  annotation
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, integrationTestShoot)
@@ -365,7 +366,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 
 		// set test specific shoot settings
 		integrationTestShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = trueVar
-		integrationTestShoot.Annotations[common.ShootOperation] = common.ShootOperationMaintain
+		integrationTestShoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
 
 		// update integration test shoot
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, integrationTestShoot)

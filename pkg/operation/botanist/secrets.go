@@ -681,7 +681,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	// If the rotate-kubeconfig operation annotation is set then we delete the existing kubecfg and basic-auth
 	// secrets. This will trigger the regeneration, incorporating new credentials. After successful deletion of all
 	// old secrets we remove the operation annotation.
-	if kutil.HasMetaDataAnnotation(b.Shoot.Info, common.ShootOperation, common.ShootOperationRotateKubeconfigCredentials) {
+	if val, ok := common.GetShootOperationAnnotation(b.Shoot.Info.Annotations); ok && val == common.ShootOperationRotateKubeconfigCredentials {
 		b.Logger.Infof("Rotating kubeconfig credentials")
 
 		for _, secretName := range []string{common.StaticTokenSecretName, common.BasicAuthSecretName, common.KubecfgSecretName} {
@@ -691,7 +691,8 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		}
 
 		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			delete(shoot.Annotations, common.ShootOperation)
+			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+			delete(shoot.Annotations, common.ShootOperationDeprecated)
 			return shoot, nil
 		}); err != nil {
 			return err
