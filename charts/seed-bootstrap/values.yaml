@@ -52,6 +52,11 @@ allowedMetrics:
   - elasticsearch_jvm_memory_pool_used_bytes
   - elasticsearch_jvm_memory_pool_max_bytes
 
+  vpa:
+  - vpa_status_recommendation
+  - vpa_spec_container_resource_policy_allowed
+  - vpa_metadata_generation
+
 
 ingress:
   # admin : admin base64 encoded

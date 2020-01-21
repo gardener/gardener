@@ -881,10 +881,6 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "text": "d064864",
-          "value": "d064864"
-        },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS, project)",
         "hide": 0,
@@ -906,10 +902,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "text": "shootwb",
-          "value": "shootwb"
-        },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS{project=~\"$Project\"}, name)",
         "hide": 0,
@@ -917,15 +909,9 @@
         "label": null,
         "multi": true,
         "name": "Shoot",
-        "options": [
-          {
-            "selected": true,
-            "text": "shootwb",
-            "value": "shootwb"
-          }
-        ],
+        "options": [],
         "query": "label_values(ALERTS{project=~\"$Project\"}, name)",
-        "refresh": 0,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
