@@ -1,4 +1,3 @@
-{{- if .Values.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
@@ -11,4 +10,3 @@ roleRef:
 subjects:
 - kind: User
   name: system:cluster-autoscaler
-{{- end }}
