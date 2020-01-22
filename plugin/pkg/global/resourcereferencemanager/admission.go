@@ -15,13 +15,14 @@
 package resourcereferencemanager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -172,7 +173,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 }
 
 // Admit ensures that referenced resources do actually exist.
-func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {
@@ -276,16 +277,6 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 				project.Spec.Owner = project.Spec.CreatedBy
 			}
 		}
-		if a.GetOperation() == admission.Update {
-			if createdBy, ok := project.Annotations[common.GardenCreatedBy]; ok {
-				project.Spec.CreatedBy = &rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     createdBy,
-				}
-				delete(project.Annotations, common.GardenCreatedBy)
-			}
-		}
 
 		if project.Spec.Owner != nil {
 			ownerPartOfMember := false
@@ -337,8 +328,8 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
 			Verb:            "get",
-			APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
-			APIVersion:      gardencorev1alpha1.SchemeGroupVersion.Version,
+			APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+			APIVersion:      gardencorev1beta1.SchemeGroupVersion.Version,
 			Resource:        "quotas",
 			Subresource:     "",
 			Namespace:       quotaRef.Namespace,
@@ -375,7 +366,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 }
 
 func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
-	// The new core.gardener.cloud/{v1alpha1,v1beta1}.Seed resource does no longer reference a cloud profile.
+	// The new core.gardener.cloud/{v1beta1,v1beta1}.Seed resource does no longer reference a cloud profile.
 	// We only have to check it a value was given.
 	if len(seed.Spec.Cloud.Profile) > 0 {
 		if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {
@@ -383,6 +374,9 @@ func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
 		}
 	}
 
+	if seed.Spec.SecretRef == nil {
+		return nil
+	}
 	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 

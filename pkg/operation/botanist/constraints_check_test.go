@@ -23,6 +23,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/admission/plugin/webhook"
 )
 
 var _ = Describe("constraints checks", func() {
@@ -56,7 +57,7 @@ var _ = Describe("constraints checks", func() {
 		DescribeTable("#IsProblematicWebhook",
 			func(testCase webhookTestCase, expected bool) {
 				var (
-					webhook = admissionregistrationv1beta1.Webhook{
+					w = admissionregistrationv1beta1.MutatingWebhook{
 						Name:          "foo-webhook",
 						FailurePolicy: testCase.failurePolicy,
 						Rules: []admissionregistrationv1beta1.RuleWithOperations{
@@ -69,9 +70,10 @@ var _ = Describe("constraints checks", func() {
 							},
 						},
 					}
+					accessor = webhook.NewMutatingWebhookAccessor("test-uid", "test-cfg", &w)
 				)
 
-				isProblematic := botanist.IsProblematicWebhook(webhook)
+				isProblematic := botanist.IsProblematicWebhook(accessor)
 				Expect(isProblematic).To(Equal(expected))
 			},
 			Entry("Problematic Webhook for CREATE pods",

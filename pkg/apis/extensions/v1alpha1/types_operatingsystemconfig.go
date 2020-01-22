@@ -43,6 +43,12 @@ func (o *OperatingSystemConfig) GetExtensionSpec() Spec {
 	return &o.Spec
 }
 
+// GetExtensionPurpose implements Object.
+func (o *OperatingSystemConfigSpec) GetExtensionPurpose() *string {
+	return (*string)(&o.Purpose)
+
+}
+
 // GetExtensionStatus implements Object.
 func (o *OperatingSystemConfig) GetExtensionStatus() Status {
 	return &o.Status
@@ -66,7 +72,7 @@ type OperatingSystemConfigSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
-	// gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
 	// cloud-config-downloader script already running on a bootstrapped VM.
 	Purpose OperatingSystemConfigPurpose `json:"purpose"`
 	// ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers

@@ -18,12 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -55,7 +54,7 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 
 		fns = append(fns, func(ctx context.Context) error {
 			return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
-				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
+				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig
@@ -121,7 +120,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 
 				return retry.Ok()
 			}); err != nil {
-				return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("failed waiting for extension %s to be ready: %v", name, err))
+				return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed waiting for extension %s to be ready: %v", name, err))
 			}
 			return nil
 		})
@@ -138,7 +137,7 @@ func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.
 func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
 	var (
-		lastError  *gardencorev1alpha1.LastError
+		lastError  *gardencorev1beta1.LastError
 		extensions = &extensionsv1alpha1.ExtensionList{}
 	)
 
@@ -172,13 +171,13 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 					lastError = lastErr
 				}
 
-				return retry.MinorError(common.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
+				return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
 			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for extension delete")
 				if lastError != nil {
-					return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+					return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 				}
-				return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+				return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 			}
 			return nil
 		})

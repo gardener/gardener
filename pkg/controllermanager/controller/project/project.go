@@ -20,11 +20,13 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllermanager"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/prometheus/client_golang/prometheus"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -57,10 +59,10 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
-		corev1Informer             = kubeInformerFactory.Core().V1()
+		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
+		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		projectInformer = gardenCoreV1alpha1Informer.Projects()
+		projectInformer = gardenCoreV1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
 		namespaceInformer = corev1Informer.Namespaces()
@@ -137,4 +139,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
+}
+
+// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
+func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
+	metric, err := prometheus.NewConstMetric(controllermanager.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "project")
+	if err != nil {
+		controllermanager.ScrapeFailures.With(prometheus.Labels{"kind": "project-controller"}).Inc()
+		return
+	}
+	ch <- metric
 }

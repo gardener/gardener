@@ -1,0 +1,52 @@
+{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: dashboard-metrics-scraper
+  namespace: kubernetes-dashboard
+  labels:
+    garden.sapcloud.io/role: optional-addon
+    origin: gardener
+    k8s-app: dashboard-metrics-scraper
+spec:
+  revisionHistoryLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: dashboard-metrics-scraper
+  template:
+    metadata:
+      labels:
+        garden.sapcloud.io/role: optional-addon
+        k8s-app: dashboard-metrics-scraper
+        origin: gardener
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
+    spec:
+      containers:
+      - name: dashboard-metrics-scraper
+        image: {{ index .Values.images "kubernetes-dashboard-metrics-scraper" }}
+        ports:
+          - containerPort: 8000
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1001
+          runAsGroup: 2001
+      serviceAccountName: kubernetes-dashboard
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+{{- end }}

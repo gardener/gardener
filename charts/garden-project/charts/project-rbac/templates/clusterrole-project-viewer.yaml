@@ -2,9 +2,9 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: garden.sapcloud.io:system:project-viewer:{{ .Values.project.name }}
+  name: gardener.cloud:system:project-viewer:{{ .Values.project.name }}
   ownerReferences:
-  - apiVersion: garden.sapcloud.io/v1beta1
+  - apiVersion: core.gardener.cloud/v1beta1
     kind: Project
     blockOwnerDeletion: false
     controller: true

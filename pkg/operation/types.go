@@ -19,11 +19,11 @@ import (
 	"crypto/x509"
 	"net/http"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -37,16 +37,16 @@ import (
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
-	Config                    *config.ControllerManagerConfiguration
+	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
-	GardenerInfo              *gardencorev1alpha1.Gardener
+	GardenerInfo              *gardencorev1beta1.Gardener
 	Secrets                   map[string]*corev1.Secret
 	CheckSums                 map[string]string
 	ImageVector               imagevector.ImageVector
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed
 	Shoot                     *shoot.Shoot
-	ShootedSeed               *gardencorev1alpha1helper.ShootedSeed
+	ShootedSeed               *gardencorev1beta1helper.ShootedSeed
 	K8sGardenClient           kubernetes.Interface
 	K8sGardenCoreInformers    gardencoreinformers.Interface
 	K8sSeedClient             kubernetes.Interface
@@ -57,8 +57,10 @@ type Operation struct {
 	APIServerAddress          string
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
-	ShootBackup               *config.ShootBackup
 	MonitoringClient          prometheusclient.API
+
+	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
+	ControlPlaneWildcardCert *corev1.Secret
 }
 
 type prometheusRoundTripper struct {

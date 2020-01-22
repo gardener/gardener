@@ -17,7 +17,7 @@ package extensions
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +92,15 @@ func nestedInt64(obj map[string]interface{}, fields ...string) int64 {
 	return v
 }
 
+func nestedStringReference(obj map[string]interface{}, fields ...string) *string {
+	v, ok, err := unstructured.NestedString(obj, fields...)
+	if err != nil || !ok {
+		return nil
+	}
+
+	return &v
+}
+
 func nestedInt(obj map[string]interface{}, fields ...string) int {
 	v, ok, err := unstructured.NestedFieldNoCopy(obj, fields...)
 	if err != nil || !ok {
@@ -128,13 +137,13 @@ func (u unstructuredLastOperationAccessor) GetProgress() int {
 }
 
 // GetState implements LastOperation.
-func (u unstructuredLastOperationAccessor) GetState() gardencorev1alpha1.LastOperationState {
-	return gardencorev1alpha1.LastOperationState(nestedString(u.UnstructuredContent(), "status", "lastOperation", "state"))
+func (u unstructuredLastOperationAccessor) GetState() gardencorev1beta1.LastOperationState {
+	return gardencorev1beta1.LastOperationState(nestedString(u.UnstructuredContent(), "status", "lastOperation", "state"))
 }
 
 // GetType implements LastOperation.
-func (u unstructuredLastOperationAccessor) GetType() gardencorev1alpha1.LastOperationType {
-	return gardencorev1alpha1.LastOperationType(nestedString(u.UnstructuredContent(), "status", "lastOperation", "type"))
+func (u unstructuredLastOperationAccessor) GetType() gardencorev1beta1.LastOperationType {
+	return gardencorev1beta1.LastOperationType(nestedString(u.UnstructuredContent(), "status", "lastOperation", "type"))
 }
 
 // GetExtensionType implements Spec.
@@ -142,17 +151,22 @@ func (u unstructuredSpecAccessor) GetExtensionType() string {
 	return nestedString(u.UnstructuredContent(), "spec", "type")
 }
 
+func (u unstructuredSpecAccessor) GetExtensionPurpose() *string {
+
+	return nestedStringReference(u.UnstructuredContent(), "spec", "purpose")
+}
+
 // GetConditions implements Status.
-func (u unstructuredStatusAccessor) GetConditions() []gardencorev1alpha1.Condition {
+func (u unstructuredStatusAccessor) GetConditions() []gardencorev1beta1.Condition {
 	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "conditions")
 	if err != nil || !ok {
 		return nil
 	}
-	var conditions []gardencorev1alpha1.Condition
+	var conditions []gardencorev1beta1.Condition
 	interfaceConditionSlice := val.([]interface{})
 	for _, interfaceCondition := range interfaceConditionSlice {
 		new := interfaceCondition.(map[string]interface{})
-		condition := &gardencorev1alpha1.Condition{}
+		condition := &gardencorev1beta1.Condition{}
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(new, condition)
 		if err != nil {
 			return nil
@@ -163,7 +177,7 @@ func (u unstructuredStatusAccessor) GetConditions() []gardencorev1alpha1.Conditi
 }
 
 // SetConditions implements Status.
-func (u unstructuredStatusAccessor) SetConditions(conditions []gardencorev1alpha1.Condition) {
+func (u unstructuredStatusAccessor) SetConditions(conditions []gardencorev1beta1.Condition) {
 	var interfaceSlice = make([]interface{}, len(conditions))
 	for i, d := range conditions {
 		unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&d)
@@ -191,6 +205,20 @@ func (u unstructuredStatusAccessor) GetObservedGeneration() int64 {
 	return nestedInt64(u.Object, "status", "observedGeneration")
 }
 
+// GetState implements Status.
+func (u unstructuredStatusAccessor) GetState() *runtime.RawExtension {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "state")
+	if err != nil || !ok {
+		return nil
+	}
+	raw := &runtime.RawExtension{}
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(val.(map[string]interface{}), raw)
+	if err != nil {
+		return nil
+	}
+	return raw
+}
+
 // GetDescription implements LastError.
 func (u unstructuredLastErrorAccessor) GetDescription() string {
 	return nestedString(u.Object, "status", "lastError", "description")
@@ -207,11 +235,11 @@ func (u unstructuredLastErrorAccessor) GetTaskID() *string {
 }
 
 // GetCodes implements LastError.
-func (u unstructuredLastErrorAccessor) GetCodes() []gardencorev1alpha1.ErrorCode {
+func (u unstructuredLastErrorAccessor) GetCodes() []gardencorev1beta1.ErrorCode {
 	codeStrings := nestedStringSlice(u.Object, "status", "lastError", "codes")
-	var codes []gardencorev1alpha1.ErrorCode
+	var codes []gardencorev1beta1.ErrorCode
 	for _, codeString := range codeStrings {
-		codes = append(codes, gardencorev1alpha1.ErrorCode(codeString))
+		codes = append(codes, gardencorev1beta1.ErrorCode(codeString))
 	}
 	return codes
 }

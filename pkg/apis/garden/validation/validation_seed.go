@@ -16,13 +16,14 @@ package validation
 
 import (
 	"fmt"
+	"net"
+	"regexp"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/operation/common"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"net"
-	"regexp"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 )
@@ -84,14 +85,18 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	}
 
 	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
-	allErrs = append(allErrs, validateSecretReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+	if seedSpec.SecretRef != nil {
+		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+	}
 
 	networksPath := fldPath.Child("networks")
 
 	networks := []cidrvalidation.CIDR{
-		cidrvalidation.NewCIDR(seedSpec.Networks.Nodes, networksPath.Child("nodes")),
 		cidrvalidation.NewCIDR(seedSpec.Networks.Pods, networksPath.Child("pods")),
 		cidrvalidation.NewCIDR(seedSpec.Networks.Services, networksPath.Child("services")),
+	}
+	if seedSpec.Networks.Nodes != nil {
+		networks = append(networks, cidrvalidation.NewCIDR(*seedSpec.Networks.Nodes, networksPath.Child("nodes")))
 	}
 	if shootDefaults := seedSpec.Networks.ShootDefaults; shootDefaults != nil {
 		if shootDefaults.Pods != nil {
@@ -181,7 +186,9 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *garden.SeedSpec, fldPath *
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Pods, oldSeedSpec.Networks.Pods, fldPath.Child("networks", "pods"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Services, oldSeedSpec.Networks.Services, fldPath.Child("networks", "services"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Nodes, oldSeedSpec.Networks.Nodes, fldPath.Child("networks", "nodes"))...)
+	if oldSeedSpec.Networks.Nodes != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Nodes, oldSeedSpec.Networks.Nodes, fldPath.Child("networks", "nodes"))...)
+	}
 
 	if oldSeedSpec.Backup != nil {
 		if newSeedSpec.Backup != nil {

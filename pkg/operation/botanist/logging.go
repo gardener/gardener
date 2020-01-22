@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,12 +33,11 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	if !controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
+	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting || !gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		return common.DeleteLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 
 	var (
-		kibanaHost                             = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 		kibanaCredentials                      = b.Secrets["kibana-logging-sg-credentials"]
 		kibanaUserIngressCredentialsSecretName = "logging-ingress-credentials-users"
 		sgKibanaUsername                       = kibanaCredentials.Data[secrets.DataKeyUserName]
@@ -87,15 +87,32 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	ct := b.Shoot.Info.CreationTimestamp.Time
 
 	sgFluentdSecret := &corev1.Secret{}
-	if err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(v1alpha1constants.GardenNamespace, "fluentd-es-sg-credentials"), sgFluentdSecret); err != nil {
+	if err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "fluentd-es-sg-credentials"), sgFluentdSecret); err != nil {
 		return err
 	}
 
 	sgFluentdPasswordHash = string(sgFluentdSecret.Data["bcryptPasswordHash"])
 
+	kibanaTLSOverride := common.KibanaTLS
+	if b.ControlPlaneWildcardCert != nil {
+		kibanaTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		// TODO: timuthy - remove in the future. Old Kibana host is retained for migration reasons.
+		{
+			"hostName":   b.ComputeKibanaHostDeprecated(),
+			"secretName": common.KibanaTLS,
+		},
+		{
+			"hostName":   b.ComputeKibanaHost(),
+			"secretName": kibanaTLSOverride,
+		},
+	}
+
 	elasticKibanaCurator := map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"host":            kibanaHost,
+			"hosts":           hosts,
 			"basicAuthSecret": ingressBasicAuth,
 		},
 		"elasticsearch": map[string]interface{}{

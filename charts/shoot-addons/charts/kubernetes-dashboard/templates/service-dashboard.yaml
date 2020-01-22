@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes-dashboard
+  namespace: {{ include "kubernetes-dashboard.namespace" . }}
+  labels:
+    k8s-app: kubernetes-dashboard
+spec:
+  ports:
+  - port: 443
+    targetPort: 8443
+  selector:
+    k8s-app: kubernetes-dashboard

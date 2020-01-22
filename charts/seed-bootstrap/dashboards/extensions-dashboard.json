@@ -282,12 +282,6 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "text": "dns-external-h9jww",
-          "value": [
-            "dns-external-h9jww"
-          ]
-        },
         "datasource": "prometheus",
         "definition": "label_values(namespace)",
         "hide": 0,
@@ -309,10 +303,6 @@
       },
       {
         "allValue": null,
-        "current": {
-          "text": "dns-controller-manager-c5b5cf988-tlcp2",
-          "value": "dns-controller-manager-c5b5cf988-tlcp2"
-        },
         "datasource": "prometheus",
         "definition": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
         "hide": 0,
@@ -320,13 +310,7 @@
         "label": null,
         "multi": true,
         "name": "Pod",
-        "options": [
-          {
-            "selected": true,
-            "text": "dns-controller-manager-c5b5cf988-tlcp2",
-            "value": "dns-controller-manager-c5b5cf988-tlcp2"
-          }
-        ],
+        "options": [],
         "query": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
         "refresh": 0,
         "regex": "",

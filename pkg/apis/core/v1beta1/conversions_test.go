@@ -78,12 +78,12 @@ var _ = Describe("Conversion", func() {
 						DNS: SeedDNS{
 							IngressDomain: ingressDomain,
 						},
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -129,12 +129,12 @@ var _ = Describe("Conversion", func() {
 							Region: regionName,
 						},
 						IngressDomain: ingressDomain,
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -185,12 +185,12 @@ var _ = Describe("Conversion", func() {
 							Region: regionName,
 						},
 						IngressDomain: ingressDomain,
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
 						Networks: garden.SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},
@@ -234,12 +234,12 @@ var _ = Describe("Conversion", func() {
 						DNS: SeedDNS{
 							IngressDomain: ingressDomain,
 						},
-						SecretRef: corev1.SecretReference{
+						SecretRef: &corev1.SecretReference{
 							Name:      secretRefName,
 							Namespace: secretRefNamespace,
 						},
 						Networks: SeedNetworks{
-							Nodes:      nodesCIDR,
+							Nodes:      &nodesCIDR,
 							Pods:       podsCIDR,
 							Services:   servicesCIDR,
 							BlockCIDRs: []string{blockCIDR},

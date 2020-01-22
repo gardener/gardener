@@ -15,7 +15,9 @@
 package common
 
 import (
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	"time"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -162,6 +164,21 @@ const (
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
 
+	// GrafanaOperatorsRole is a constant for the operators role.
+	GrafanaOperatorsRole = "operators"
+
+	// GrafanaUsersRole is a constant for the users role.
+	GrafanaUsersRole = "users"
+
+	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
+	PrometheusPrefix = "p"
+
+	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
+	AlertManagerPrefix = "au"
+
+	// KibanaPrefix is a constant for a prefix used for the Kibana instance.
+	KibanaPrefix = "k"
+
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
 	// '*.<IngressPrefix>.cluster.example.com'.
@@ -180,17 +197,8 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
-	// MachineControllerManagerDeploymentName is the name of the machine-controller-manager deployment.
-	MachineControllerManagerDeploymentName = "machine-controller-manager"
-
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
-
-	// CalicoKubeControllersDeploymentName is the name of calico-kube-controllers deployment.
-	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
-
-	// CalicoTyphaDeploymentName is the name of the calico-typha deployment.
-	CalicoTyphaDeploymentName = "calico-typha-deploy"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
@@ -201,14 +209,14 @@ const (
 	// MetricsServerDeploymentName is the name of the metrics-server deployment.
 	MetricsServerDeploymentName = "metrics-server"
 
-	// CalicoNodeDaemonSetName is the name of the calico-node daemon set.
-	CalicoNodeDaemonSetName = "calico-node"
-
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
 
 	// NodeProblemDetectorDaemonSetName is the name of the node-problem-detector daemon set.
 	NodeProblemDetectorDaemonSetName = "node-problem-detector"
+
+	// BlackboxExporterDeploymentName is the name of the blackbox-exporter deployment.
+	BlackboxExporterDeploymentName = "blackbox-exporter"
 
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
@@ -222,8 +230,14 @@ const (
 	// KubecfgSecretName is the name of the kubecfg secret.
 	KubecfgSecretName = "kubecfg"
 
-	// KubecfgInternalSecretName is the name of the kubecfg secret with cluster IP access.
-	KubecfgInternalSecretName = "kubecfg-internal"
+	// DependencyWatchdogExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
+	DependencyWatchdogExternalProbeSecretName = "dependency-watchdog-external-probe"
+
+	// DependencyWatchdogInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
+	DependencyWatchdogInternalProbeSecretName = "dependency-watchdog-internal-probe"
+
+	// DeprecatedKubecfgInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
+	DeprecatedKubecfgInternalProbeSecretName = "kubecfg-internal"
 
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
@@ -249,6 +263,10 @@ const (
 
 	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
 	SecretRefChecksumAnnotation = "checksum/secret.data"
+
+	// ShootExperimentalAddonKyma is a constant for an annotation on the shoot stating that Kyma shall be installed.
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	ShootExperimentalAddonKyma = "experimental.addons.shoot.gardener.cloud/kyma"
 
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
@@ -320,7 +338,19 @@ const (
 	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
 	NodeProblemDetectorImageName = "node-problem-detector"
 
-	// HyperkubeImageName is the name of the Hyperkube image.
+	// KubeAPIServerImageName is the name of the kube-apiserver image.
+	KubeAPIServerImageName = "kube-apiserver"
+
+	// KubeControllerManagerImageName is the name of the kube-controller-manager image.
+	KubeControllerManagerImageName = "kube-controller-manager"
+
+	// KubeSchedulerImageName is the name of the kube-scheduler image.
+	KubeSchedulerImageName = "kube-scheduler"
+
+	// KubeProxyImageName is the name of the kube-proxy image.
+	KubeProxyImageName = "kube-proxy"
+
+	// HyperkubeImageName is the name of the hyperkube image (used for kubectl + kubelet on the worker nodes).
 	HyperkubeImageName = "hyperkube"
 
 	// MetricsServerImageName is the name of the MetricsServer image.
@@ -335,8 +365,11 @@ const (
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"
 
-	// KubernetesDashboardImageName is the name of the KubernetesDashboard image.
+	// KubernetesDashboardImageName is the name of the kubernetes-dashboard image.
 	KubernetesDashboardImageName = "kubernetes-dashboard"
+
+	// KubernetesDashboardMetricsScraperImageName is the name of the kubernetes-dashboard-metrics-scraper image.
+	KubernetesDashboardMetricsScraperImageName = "kubernetes-dashboard-metrics-scraper"
 
 	// BusyboxImageName is the name of the Busybox image.
 	BusyboxImageName = "busybox"
@@ -439,30 +472,43 @@ const (
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
+
+	// ControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
+	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
+	ControlPlaneWildcardCert = "controlplane-cert"
+
+	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
+	AlertManagerTLS = "alertmanager-tls"
+	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
+	GrafanaTLS = "grafana-tls"
+	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
+	PrometheusTLS = "prometheus-tls"
+	// KibanaTLS is the name of the secret resource which holds the TLS certificate for Kibana.
+	KibanaTLS = "kibana-tls"
+
+	// EndUserCrtValidity is the time period a user facing certificate is valid.
+	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
 var (
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGardenerResourceManager,
-		v1alpha1constants.DeploymentNameKubeAPIServer,
-		v1alpha1constants.DeploymentNameKubeControllerManager,
-		v1alpha1constants.DeploymentNameKubeScheduler,
-		MachineControllerManagerDeploymentName,
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameETCDMain,
-		v1alpha1constants.StatefulSetNameETCDEvents,
+		v1beta1constants.StatefulSetNameETCDMain,
+		v1beta1constants.StatefulSetNameETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
 	RequiredSystemComponentDeployments = sets.NewString(
-		CalicoKubeControllersDeploymentName,
-		CalicoTyphaDeploymentName,
 		CoreDNSDeploymentName,
 		VPNShootDeploymentName,
 		MetricsServerDeploymentName,
@@ -470,17 +516,21 @@ var (
 
 	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
 	RequiredSystemComponentDaemonSets = sets.NewString(
-		CalicoNodeDaemonSetName,
 		KubeProxyDaemonSetName,
 		NodeProblemDetectorDaemonSetName,
 	)
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameGrafanaOperators,
-		v1alpha1constants.DeploymentNameGrafanaUsers,
-		v1alpha1constants.DeploymentNameKubeStateMetricsSeed,
-		v1alpha1constants.DeploymentNameKubeStateMetricsShoot,
+		v1beta1constants.DeploymentNameGrafanaOperators,
+		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+	)
+
+	// RequiredMonitoringShootDeployments is a set of the required shoot monitoring deployments.
+	RequiredMonitoringShootDeployments = sets.NewString(
+		BlackboxExporterDeploymentName,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
@@ -490,11 +540,11 @@ var (
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
-		v1alpha1constants.StatefulSetNameElasticSearch,
+		v1beta1constants.StatefulSetNameElasticSearch,
 	)
 
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
-		v1alpha1constants.DeploymentNameKibana,
+		v1beta1constants.DeploymentNameKibana,
 	)
 )

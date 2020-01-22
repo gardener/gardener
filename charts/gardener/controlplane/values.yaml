@@ -1,0 +1,286 @@
+global:
+  # Gardener API server configuration values
+  apiserver:
+    enabled: true
+    serviceEnabled: true
+    replicaCount: 1
+    serviceAccountName: gardener-apiserver
+    image:
+      repository: eu.gcr.io/gardener-project/gardener/apiserver
+      tag: latest
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    encryption:
+      config: |
+        apiVersion: apiserver.config.k8s.io/v1
+        kind: EncryptionConfiguration
+        resources:
+          - resources:
+            - controllerregistrations.core.gardener.cloud
+            - shootstates.core.gardener.cloud
+            providers:
+            - identity: {}
+    etcd:
+      useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
+      servers: https://etcd:2379
+      # caBundle: |
+      #   -----BEGIN CERTIFICATE-----
+      #   ...
+      #   -----END CERTIFICATE-----
+      # tls:
+      #   crt: |
+      #     -----BEGIN CERTIFICATE-----
+      #     ...
+      #     -----END CERTIFICATE-----
+      #   key: |
+      #     -----BEGIN RSA PRIVATE KEY-----
+      #     ...
+      #     -----END RSA PRIVATE KEY-----
+    insecureSkipTLSVerify: false
+    groupPriorityMinimum: 10000
+    versionPriority: 20
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+    tls:
+      crt: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        ...
+        -----END RSA PRIVATE KEY-----
+    featureGates: {}
+    vpa: false
+    audit:
+ #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
+      log:
+ #      batchBufferSize: 10000
+ #      batchMaxSize: 1
+ #      batchMaxWait: 5m
+ #      batchThrottleBurst: 20
+ #      batchThrottleEnable: false
+ #      batchThrottleQPS: 10.0
+ #      format: json
+ #      maxAge: 7
+        maxBackup: 5
+        maxSize: 100
+ #      mode: blocking
+        path: /var/lib/audit.log
+ #      truncateEnabled: true
+ #      truncateMaxBatchSize: 10485760
+ #      truncateMaxEventSize: 102400
+ #      version: audit.k8s.io/v1
+      policy: |
+        apiVersion: audit.k8s.io/v1
+        kind: Policy
+        rules:
+        - level: None
+          userGroups:
+          - system:nodes
+        - level: None
+          users:
+          - gardener
+          - kubelet
+          - system:kube-controller-manager
+          - system:kube-scheduler
+          - system:gardener-resource-manager
+          - system:kube-aggregator
+          - system:kube-proxy
+          - system:apiserver
+          - system:serviceaccount:garden:gardener-controller-manager
+          - system:serviceaccount:garden:gardener-metrics-exporter
+          - system:serviceaccount:kube-system:generic-garbage-collector
+          - system:serviceaccount:kube-system:namespace-controller
+          - garden.sapcloud.io:monitoring
+          - garden.sapcloud.io:monitoring:prometheus
+          - garden.sapcloud.io:monitoring:kube-state-metrics
+          - gardener.cloud:monitoring
+          - gardener.cloud:monitoring:prometheus
+          - gardener.cloud:monitoring:kube-state-metrics
+        - level: None
+          nonResourceURLs:
+          - /healthz*
+          - /version
+          - /openapi/*
+          - /swagger* # Swagger endpoint is deprecated with https://github.com/kubernetes/kubernetes/pull/73148
+        - level: None
+          resources:
+          - group: ""
+            resources: ["events"]
+        - level: None
+          verbs: ["get", "list", "watch"]
+        - level: Metadata
+      webhook: {}
+ #      batchBufferSize: 10000
+ #      batchMaxSize: 400
+ #      batchMaxWait: 30s
+ #      batchThrottleBurst: 15
+ #      batchThrottleEnable: true
+ #      batchThrottleQPS: 10
+ #      config: |
+ #        kubeconfig-formatted file that defines the audit webhook configuration.
+ #      initialBackoff: 10s
+ #      mode: batch
+ #      truncateEnabled: true
+ #      truncateMaxBatchSize: 10485760
+ #      truncateMaxEventSize: 102400
+ #      version: audit.k8s.io/v1
+
+  # Gardener controller manager configuration values
+  controller:
+    enabled: true
+    replicaCount: 1
+    serviceAccountName: gardener-controller-manager
+    image:
+      repository: eu.gcr.io/gardener-project/gardener/controller-manager
+      tag: latest
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 750m
+        memory: 512Mi
+    additionalVolumes: []
+    additionalVolumeMounts: []
+    env: []
+    vpa: false
+    config:
+      gardenClientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 100
+        burst: 130
+      controllers:
+        plant:
+          concurrentSyncs: 20
+          syncPeriod: 30s
+        seed:
+          concurrentSyncs: 5
+          syncPeriod: 1m
+          monitorPeriod: 40s
+        shootMaintenance:
+          concurrentSyncs: 5
+        shootQuota:
+          concurrentSyncs: 5
+          syncPeriod: 60m
+        shootHibernation:
+          concurrentSyncs: 5
+          syncPeriod: 24h
+      leaderElection:
+        leaderElect: true
+        leaseDuration: 15s
+        renewDeadline: 10s
+        retryPeriod: 2s
+        resourceLock: configmaps
+      # `discovery` allows specifying options for the cached discovery client
+      discovery:
+      #  discoveryCacheDir: /tmp/cache-dir
+      #  httpCacheDir: /tmp/http-cache-dir
+      #  ttl: 10s
+      logLevel: info
+      kubernetesLogLevel: 0
+      server:
+        http:
+          bindAddress: 0.0.0.0
+          port: 2718
+        https:
+          bindAddress: 0.0.0.0
+          port: 2719
+          tls:
+            caBundle: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+            crt: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+            key: |
+              -----BEGIN RSA PRIVATE KEY-----
+              ...
+              -----END RSA PRIVATE KEY-----
+      featureGates: {}
+  scheduler:
+    enabled: true
+    replicaCount: 1
+    serviceAccountName: gardener-scheduler
+    image:
+      repository: eu.gcr.io/gardener-project/gardener/scheduler
+      tag: latest
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 50Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    vpa: false
+    config:
+      clientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 100
+        burst: 130
+      leaderElection:
+        leaderElect: true
+        leaseDuration: 15s
+        renewDeadline: 10s
+        retryPeriod: 2s
+        resourceLock: configmaps
+      # `discovery` allows specifying options for the cached discovery client
+      discovery:
+      #  discoveryCacheDir: /tmp/cache-dir
+      #  httpCacheDir: /tmp/http-cache-dir
+      #  ttl: 10s
+      logLevel: info
+      server:
+        http:
+          bindAddress: 0.0.0.0
+          port: 10251
+#     schedulers:
+#       backupBucket:
+#         retrySyncPeriod: 15s
+#         concurrentSyncs: 5
+#       shoot:
+#         retrySyncPeriod: 15s
+#         concurrentSyncs: 5
+#         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
+
+  internalDomain:
+    provider: aws-route53 # depends on the DNS extension of your choice
+    domain: example.com
+    credentials: {} # actual keys here depend on the DNS extension of your choice
+  defaultDomains: []
+# - domain: example.com
+#   provider: aws-route53 # depends on the DNS extension of your choice
+#   credentials: {}
+#     # actual keys here depend on the DNS extension of your choice
+  alerting: []
+# - auth_type: smtp
+#   to: email-address-to-send-alerts-to
+#   from: email-address-to-send-alerts-from
+#   smarthost: smtp-host-used-for-sending
+#   auth_username: smtp-authentication-username
+#   auth_identity: smtp-authentication-username
+#   auth_password: smtp-authentication-password
+# openVPNDiffieHellmanKey: |
+#   my-key generated by `openssl dhparam -out dh2048.pem 2048`
+
+  # Deployment related configuration
+  deployment:
+    virtualGarden:
+      enabled: false
+      clusterIP: 1.2.3.4
+      createNamespace: true

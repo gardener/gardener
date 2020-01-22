@@ -187,7 +187,7 @@ spec:
 			It("should create non-existent objects", func() {
 				cm := corev1.ConfigMap{
 					TypeMeta:   configMapTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "c", Namespace: "n"},
+					ObjectMeta: metav1.ObjectMeta{Name: "c", Namespace: "n", ResourceVersion: "1"},
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)

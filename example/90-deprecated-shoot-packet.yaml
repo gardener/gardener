@@ -5,6 +5,7 @@ metadata:
   name: johndoe-packet
   namespace: garden-dev
 spec:
+  purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
   cloud:
     profile: packet
     region: ewr1
@@ -76,7 +77,7 @@ spec:
   #   scaleDownDelayAfterFailure: 10m
   #   scaleDownDelayAfterDelete: 10s
   #   scanInterval: 10s
-    version: 1.16.0 # specify "major.minor" to get latest patch version
+    version: 1.17.0 # specify "major.minor" to get latest patch version
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   admissionPlugins:

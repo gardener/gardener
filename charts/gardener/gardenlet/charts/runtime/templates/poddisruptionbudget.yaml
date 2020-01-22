@@ -1,0 +1,22 @@
+{{- if gt (int .Values.global.gardenlet.replicaCount) 1 }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: gardenlet
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  maxUnavailable: {{ sub (int .Values.global.gardenlet.replicaCount) 1 }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: gardenlet
+      chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      release: "{{ .Release.Name }}"
+      heritage: "{{ .Release.Service }}"
+{{- end }}

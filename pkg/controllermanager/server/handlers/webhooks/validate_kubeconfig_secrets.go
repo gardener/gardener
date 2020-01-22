@@ -133,7 +133,7 @@ func (h *kubeconfigSecretValidator) admitSecrets(request *admissionv1beta1.Admis
 	if err != nil {
 		return errToAdmissionResponse(err)
 	}
-	if err := kubernetes.ValidateClientConfig(rawConfig); err != nil {
+	if err := kubernetes.ValidateConfig(rawConfig); err != nil {
 		return errToAdmissionResponse(err)
 	}
 

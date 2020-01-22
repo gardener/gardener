@@ -60,14 +60,18 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: kube-proxy
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "kube-proxy" }}
         imagePullPolicy: IfNotPresent
         command:
+        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
         {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - proxy
         {{- else }}
         - kube-proxy
+        {{- end }}
+        {{- else }}
+        - /usr/local/bin/kube-proxy
         {{- end }}
         - --config=/var/lib/kube-proxy-config/config.yaml
         - --v=2

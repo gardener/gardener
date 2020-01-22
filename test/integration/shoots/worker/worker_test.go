@@ -40,16 +40,15 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 )
 
 var (
@@ -199,7 +198,7 @@ var _ = Describe("Worker Suite", func() {
 })
 
 // prepareShoot parses the shoot.yaml from the given path and sets the shoot information provided by the flags
-func prepareShoot() *gardencorev1alpha1.Shoot {
+func prepareShoot() *gardencorev1beta1.Shoot {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
 		// locally, we need find the example shoot
@@ -224,7 +223,7 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 	}
 
 	if networkingNodes != nil && len(*networkingNodes) > 0 {
-		shootObject.Spec.Networking.Nodes = *networkingNodes
+		shootObject.Spec.Networking.Nodes = networkingNodes
 	}
 
 	// set ProviderConfigs

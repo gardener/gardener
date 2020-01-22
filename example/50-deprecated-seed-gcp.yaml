@@ -8,9 +8,10 @@ spec:
   cloud:
     profile: gcp
     region: europe-west1
-  secretRef:
-    name: seed-gcp
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-gcp
+#   namespace: garden
   ingressDomain: dev.gcp.seed.example.com
   networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16

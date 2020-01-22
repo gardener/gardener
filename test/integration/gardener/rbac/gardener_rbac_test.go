@@ -32,24 +32,21 @@ import (
 	"flag"
 	"time"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/test/integration/framework"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	. "github.com/gardener/gardener/test/integration/shoots"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -148,8 +145,8 @@ var _ = Describe("RBAC testing", func() {
 		saClient, err := NewClientFromServiceAccount(ctx, gardenClient, serviceAccount)
 		Expect(err).ToNot(HaveOccurred())
 
-		shoots := &gardencorev1alpha1.ShootList{}
-		err = saClient.Client().List(ctx, shoots, client.InNamespace(v1alpha1constants.GardenNamespace))
+		shoots := &gardencorev1beta1.ShootList{}
+		err = saClient.Client().List(ctx, shoots, client.InNamespace(v1beta1constants.GardenNamespace))
 		Expect(err).To(HaveOccurred())
 		Expect(errors.IsForbidden(err)).To(BeTrue())
 	}, ServiceAccountPermissionTimeout)

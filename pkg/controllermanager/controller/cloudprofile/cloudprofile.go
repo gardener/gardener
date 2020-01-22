@@ -20,10 +20,10 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
+	"github.com/gardener/gardener/pkg/controllermanager"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,9 +53,9 @@ type Controller struct {
 // It creates and return a new Garden controller to control CloudProfiles.
 func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
-		cloudProfileInformer       = gardenCoreV1alpha1Informer.CloudProfiles()
-		shootLister                = gardenCoreV1alpha1Informer.Shoots().Lister()
+		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
+		cloudProfileInformer      = gardenCoreV1beta1Informer.CloudProfiles()
+		shootLister               = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	cloudProfileController := &Controller{
@@ -127,9 +127,9 @@ func (c *Controller) RunningWorkers() int {
 
 // CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
 func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "cloudprofile")
+	metric, err := prometheus.NewConstMetric(controllermanager.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "cloudprofile")
 	if err != nil {
-		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "cloudprofile-controller"}).Inc()
+		controllermanager.ScrapeFailures.With(prometheus.Labels{"kind": "cloudprofile-controller"}).Inc()
 		return
 	}
 	ch <- metric

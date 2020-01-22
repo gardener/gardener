@@ -15,6 +15,7 @@
 package validator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -23,15 +24,15 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -119,8 +120,10 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = &ValidateShoot{}
+
 // Admit validates the Shoot details against the referenced CloudProfile.
-func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -211,8 +214,13 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 	}
 
-	// Check whether seed is protected or not. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
-	if shoot.Namespace != v1alpha1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintProtected) {
+	changed, err := seedChanged(a)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	needCheckForProtectedSeed := changed || a.GetOperation() == admission.Create
+	// Check whether seed is protected or not only if the shoot.spec.seedName has been updated. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
+	if needCheckForProtectedSeed && shoot.Namespace != v1beta1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintProtected) {
 		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a protected seed"))
 	}
 
@@ -305,12 +313,12 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		oldFinalizers := sets.NewString(oldShoot.Finalizers...)
 		newFinalizers := sets.NewString(shoot.Finalizers...)
 
-		if oldFinalizers.Has(gardencorev1alpha1.GardenerName) && !newFinalizers.Has(gardencorev1alpha1.GardenerName) {
+		if oldFinalizers.Has(garden.GardenerName) && !newFinalizers.Has(garden.GardenerName) {
 			lastOperation := shoot.Status.LastOperation
 			deletionSucceeded := lastOperation.Type == garden.LastOperationTypeDelete && lastOperation.State == garden.LastOperationStateSucceeded && lastOperation.Progress == 100
 
 			if !deletionSucceeded {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer \"%s\" cannot be removed because shoot deletion has not completed successfully yet", gardencorev1alpha1.GardenerName))
+				return admission.NewForbidden(a, fmt.Errorf("finalizer \"%s\" cannot be removed because shoot deletion has not completed successfully yet", garden.GardenerName))
 			}
 		}
 	}
@@ -342,12 +350,10 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		return apierrors.NewBadRequest(err.Error())
 	}
 
-	for idx, worker := range shoot.Spec.Provider.Workers {
-		if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
-		}
-	}
-
+	// General approach with machine image defaulting in this code: Try to keep the machine image
+	// from the old shoot object to not accidentally update it to the default machine image.
+	// This should only happen in the maintenance time window of shoots and is performed by the
+	// shoot maintenance controller.
 	switch shoot.Spec.Provider.Type {
 	case "aws":
 		if shoot.Spec.Cloud.AWS.MachineImage == nil {
@@ -356,7 +362,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.AWS.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.AWS.Workers[idx].Machine.Image = shoot.Spec.Cloud.AWS.MachineImage
+				shoot.Spec.Cloud.AWS.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.AWS.Workers, worker.Name, shoot.Spec.Cloud.AWS.MachineImage)
 			}
 		}
 
@@ -387,7 +393,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Azure.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Azure.Workers[idx].Machine.Image = shoot.Spec.Cloud.Azure.MachineImage
+				shoot.Spec.Cloud.Azure.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Azure.Workers, worker.Name, shoot.Spec.Cloud.Azure.MachineImage)
 			}
 		}
 
@@ -418,7 +424,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.GCP.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.GCP.Workers[idx].Machine.Image = shoot.Spec.Cloud.GCP.MachineImage
+				shoot.Spec.Cloud.GCP.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.GCP.Workers, worker.Name, shoot.Spec.Cloud.GCP.MachineImage)
 			}
 		}
 
@@ -449,7 +455,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.OpenStack.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.OpenStack.Workers[idx].Machine.Image = shoot.Spec.Cloud.OpenStack.MachineImage
+				shoot.Spec.Cloud.OpenStack.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.OpenStack.Workers, worker.Name, shoot.Spec.Cloud.OpenStack.MachineImage)
 			}
 		}
 
@@ -480,7 +486,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Packet.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Packet.Workers[idx].Machine.Image = shoot.Spec.Cloud.Packet.MachineImage
+				shoot.Spec.Cloud.Packet.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Packet.Workers, worker.Name, shoot.Spec.Cloud.Packet.MachineImage)
 			}
 		}
 
@@ -511,7 +517,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 		for idx, worker := range shoot.Spec.Cloud.Alicloud.Workers {
 			if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-				shoot.Spec.Cloud.Alicloud.Workers[idx].Machine.Image = shoot.Spec.Cloud.Alicloud.MachineImage
+				shoot.Spec.Cloud.Alicloud.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Cloud.Alicloud.Workers, worker.Name, shoot.Spec.Cloud.Alicloud.MachineImage)
 			}
 		}
 
@@ -545,7 +551,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	for idx, worker := range shoot.Spec.Provider.Workers {
 		if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
+			shoot.Spec.Provider.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Provider.Workers, worker.Name, image)
 		}
 	}
 
@@ -596,7 +602,15 @@ func validateAWS(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -649,7 +663,15 @@ func validateAzure(c *validationContext) field.ErrorList {
 		path    = field.NewPath("spec", "cloud", "azure")
 	)
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -699,7 +721,15 @@ func validateGCP(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -753,7 +783,15 @@ func validatePacket(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Packet.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -807,7 +845,15 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	if ok, validFloatingPools := validateFloatingPoolConstraints(c.cloudProfile.Spec.OpenStack.Constraints.FloatingPools, c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, c.oldShoot.Spec.Cloud.OpenStack.FloatingPoolName); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("floatingPoolName"), c.shoot.Spec.Cloud.OpenStack.FloatingPoolName, validFloatingPools))
@@ -864,7 +910,15 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, path.Child("networks"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Nodes,
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Pods,
+			c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
@@ -918,7 +972,15 @@ func validateProvider(c *validationContext) field.ErrorList {
 	)
 
 	if c.seed != nil {
-		allErrs = append(allErrs, admissionutils.ValidateNetworkDisjointedness(c.seed.Spec.Networks, garden.K8SNetworks{Nodes: &c.shoot.Spec.Networking.Nodes, Pods: c.shoot.Spec.Networking.Pods, Services: c.shoot.Spec.Networking.Services}, path.Child("networking"))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+			path.Child("networks"),
+			c.shoot.Spec.Networking.Nodes,
+			c.shoot.Spec.Networking.Pods,
+			c.shoot.Spec.Networking.Services,
+			c.seed.Spec.Networks.Nodes,
+			c.seed.Spec.Networks.Pods,
+			c.seed.Spec.Networks.Services,
+		)...)
 	}
 
 	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
@@ -1182,7 +1244,10 @@ top:
 }
 
 func validateZones(constraints []garden.Region, region, oldRegion, zone string) (bool, []string) {
-	validValues := []string{}
+	var (
+		validValues = []string{}
+		regionFound = false
+	)
 
 	for _, r := range constraints {
 		if r.Name == region {
@@ -1192,10 +1257,12 @@ func validateZones(constraints []garden.Region, region, oldRegion, zone string) 
 					return true, nil
 				}
 			}
+			regionFound = true
+			break
 		}
 	}
 
-	if region == oldRegion {
+	if !regionFound && region == oldRegion {
 		return true, nil
 	}
 
@@ -1292,4 +1359,36 @@ func validateMachineImagesConstraints(constraints []garden.CloudProfileMachineIm
 		}
 	}
 	return false, validValues
+}
+
+func getOldWorkerMachineImageOrDefault(workers []garden.Worker, name string, defaultImage *garden.ShootMachineImage) *garden.ShootMachineImage {
+	if oldWorker := helper.FindWorkerByName(workers, name); oldWorker != nil && oldWorker.Machine.Image != nil {
+		return oldWorker.Machine.Image
+	}
+	return defaultImage
+}
+
+func seedChanged(attr admission.Attributes) (bool, error) {
+	if attr.GetOperation() != admission.Update {
+		return false, nil
+	}
+	newShoot, ok := attr.GetObject().(*garden.Shoot)
+	if !ok {
+		return false, errors.New("could not convert resource into Shoot object")
+	}
+	oldShoot, ok := attr.GetOldObject().(*garden.Shoot)
+	if !ok {
+		return false, errors.New("could not convert old resource into Shoot object")
+	}
+
+	newSeedName := ""
+	if newShoot.Spec.SeedName != nil {
+		newSeedName = *newShoot.Spec.SeedName
+	}
+	oldSeedName := ""
+	if oldShoot.Spec.SeedName != nil {
+		oldSeedName = *oldShoot.Spec.SeedName
+	}
+
+	return newSeedName != oldSeedName, nil
 }

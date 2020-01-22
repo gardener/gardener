@@ -20,9 +20,16 @@ spec:
   additionalPrinterColumns:
   - name: Class
     type: string
-    priority: 1
     description: The class identifies which resource manager is responsible for this ManagedResource.
     JSONPath: .spec.class
+  - name: Applied
+    type: string
+    description: Indicates whether all resources have been applied.
+    JSONPath: .status.conditions[?(@.type=="ResourcesApplied")].status
+  - name: Healthy
+    type: string
+    description: Indicates whether all resources are healthy.
+    JSONPath: .status.conditions[?(@.type=="ResourcesHealthy")].status
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp

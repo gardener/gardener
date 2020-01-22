@@ -15,7 +15,7 @@
 package kubernetes
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -29,18 +29,18 @@ func tryUpdateControllerRegistration(
 	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
-	transform func(*gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error),
-	updateFunc func(g gardencore.Interface, controllerRegistration *gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error),
-	equalFunc func(cur, updated *gardencorev1alpha1.ControllerRegistration) bool,
-) (*gardencorev1alpha1.ControllerRegistration, error) {
+	transform func(*gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error),
+	updateFunc func(g gardencore.Interface, controllerRegistration *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error),
+	equalFunc func(cur, updated *gardencorev1beta1.ControllerRegistration) bool,
+) (*gardencorev1beta1.ControllerRegistration, error) {
 
 	var (
-		result  *gardencorev1alpha1.ControllerRegistration
+		result  *gardencorev1beta1.ControllerRegistration
 		attempt int
 	)
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.CoreV1alpha1().ControllerRegistrations().Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1beta1().ControllerRegistrations().Get(meta.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -71,9 +71,9 @@ func tryUpdateControllerRegistration(
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerRegistration object. If the equal
 // func concludes a semantically equal ControllerRegistration, no update is done and the operation returns normally.
-func TryUpdateControllerRegistrationWithEqualFunc(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error), equal func(cur, updated *gardencorev1alpha1.ControllerRegistration) bool) (*gardencorev1alpha1.ControllerRegistration, error) {
-	return tryUpdateControllerRegistration(g, backoff, meta, transform, func(g gardencore.Interface, controllerRegistration *gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error) {
-		return g.CoreV1alpha1().ControllerRegistrations().Update(controllerRegistration)
+func TryUpdateControllerRegistrationWithEqualFunc(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error), equal func(cur, updated *gardencorev1beta1.ControllerRegistration) bool) (*gardencorev1beta1.ControllerRegistration, error) {
+	return tryUpdateControllerRegistration(g, backoff, meta, transform, func(g gardencore.Interface, controllerRegistration *gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error) {
+		return g.CoreV1beta1().ControllerRegistrations().Update(controllerRegistration)
 	}, equal)
 }
 
@@ -81,8 +81,8 @@ func TryUpdateControllerRegistrationWithEqualFunc(g gardencore.Interface, backof
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerRegistration object. If the transformation
 // yields a semantically equal ControllerRegistration, no update is done and the operation returns normally.
-func TryUpdateControllerRegistration(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1alpha1.ControllerRegistration) (*gardencorev1alpha1.ControllerRegistration, error)) (*gardencorev1alpha1.ControllerRegistration, error) {
-	return TryUpdateControllerRegistrationWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1alpha1.ControllerRegistration) bool {
+func TryUpdateControllerRegistration(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerRegistration) (*gardencorev1beta1.ControllerRegistration, error)) (*gardencorev1beta1.ControllerRegistration, error) {
+	return TryUpdateControllerRegistrationWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerRegistration) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }

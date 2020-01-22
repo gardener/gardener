@@ -25,22 +25,22 @@
   kubernetesVersion=""
   if cloud == "aws":
     region="eu-west-1"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
   elif cloud == "azure" or cloud == "az":
     region="westeurope"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
   elif cloud == "gcp":
     region="europe-west1"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
   elif cloud == "alicloud":
     region="cn-beijing"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
   elif cloud == "packet":
     region="ewr1"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
-    kubernetesVersion="1.16.0"
+    kubernetesVersion="1.17.0"
 %>---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
@@ -54,6 +54,7 @@ metadata:
   labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:
+  purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
   cloud:
     profile: ${value("spec.cloud.profile", cloud)}
     region: ${value("spec.cloud.region", region)}

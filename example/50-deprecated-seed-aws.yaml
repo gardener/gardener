@@ -8,9 +8,10 @@ spec:
   cloud:
     profile: aws
     region: eu-west-1
-  secretRef:
-    name: seed-aws
-    namespace: garden
+# Optional, only needed if controlled by a Gardenlet running outside
+# secretRef:
+#   name: seed-aws
+#   namespace: garden
   ingressDomain: dev.aws.seed.example.com
   networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16

@@ -83,12 +83,12 @@ var _ = Describe("roundtripper seed migration", func() {
 					DNS: gardencorev1alpha1.SeedDNS{
 						IngressDomain: ingressDomain,
 					},
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      secretRefName,
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardencorev1alpha1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardencorev1alpha1.ShootNetworks{
@@ -143,12 +143,12 @@ var _ = Describe("roundtripper seed migration", func() {
 						Region:  regionName,
 					},
 					IngressDomain: ingressDomain,
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      secretRefName,
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardenv1beta1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardenv1beta1.ShootNetworks{
@@ -204,12 +204,12 @@ var _ = Describe("roundtripper seed migration", func() {
 						Region:  regionName,
 					},
 					IngressDomain: ingressDomain,
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      secretRefName,
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardenv1beta1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardenv1beta1.ShootNetworks{
@@ -239,12 +239,12 @@ var _ = Describe("roundtripper seed migration", func() {
 					DNS: gardencorev1alpha1.SeedDNS{
 						IngressDomain: ingressDomain,
 					},
-					SecretRef: corev1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      secretRefName,
 						Namespace: secretRefNamespace,
 					},
 					Networks: gardencorev1alpha1.SeedNetworks{
-						Nodes:    nodesCIDR,
+						Nodes:    &nodesCIDR,
 						Pods:     podsCIDR,
 						Services: servicesCIDR,
 						ShootDefaults: &gardencorev1alpha1.ShootNetworks{

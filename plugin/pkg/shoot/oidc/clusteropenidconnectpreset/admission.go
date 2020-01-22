@@ -15,6 +15,7 @@
 package clusteropenidconnectpreset
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -58,9 +59,8 @@ type ClusterOpenIDConnectPreset struct {
 }
 
 var (
-	_                             = admissioninitializer.WantsInternalGardenInformerFactory(&ClusterOpenIDConnectPreset{})
-	_                             = admissioninitializer.WantsSettingsInformerFactory(&ClusterOpenIDConnectPreset{})
-	_ admission.MutationInterface = &ClusterOpenIDConnectPreset{}
+	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ClusterOpenIDConnectPreset{})
+	_ = admissioninitializer.WantsSettingsInformerFactory(&ClusterOpenIDConnectPreset{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -107,8 +107,10 @@ func (c *ClusterOpenIDConnectPreset) ValidateInitialization() error {
 	return nil
 }
 
+var _ admission.MutationInterface = &ClusterOpenIDConnectPreset{}
+
 // Admit tries to determine a OpenIDConnectPreset hosted zone for the Shoot's external domain.
-func (c *ClusterOpenIDConnectPreset) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
+func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if c.readyFunc == nil {
 		c.AssignReadyFunc(func() bool {

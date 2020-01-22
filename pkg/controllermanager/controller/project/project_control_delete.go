@@ -17,7 +17,7 @@ package project
 import (
 	"context"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -27,34 +27,34 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (c *defaultControl) delete(project *gardencorev1alpha1.Project, projectLogger logrus.FieldLogger) (bool, error) {
+func (c *defaultControl) delete(project *gardencorev1beta1.Project, projectLogger logrus.FieldLogger) (bool, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
 		alreadyDeleted, err := c.deleteNamespace(project, *namespace)
 		if err != nil {
-			c.reportEvent(project, true, gardencorev1alpha1.ProjectEventNamespaceDeletionFailed, err.Error())
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectFailed))
+			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
+			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 			return false, err
 		}
 
 		if !alreadyDeleted {
-			c.reportEvent(project, false, gardencorev1alpha1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1alpha1.ProjectTerminating))
+			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
+			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
 			return true, nil
 		}
 	}
 
 	// Remove finalizer from project resource.
 	projectFinalizers := sets.NewString(project.Finalizers...)
-	projectFinalizers.Delete(gardencorev1alpha1.GardenerName)
+	projectFinalizers.Delete(gardencorev1beta1.GardenerName)
 	project.Finalizers = projectFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Projects().Update(project); err != nil && !apierrors.IsNotFound(err) {
+	if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Projects().Update(project); err != nil && !apierrors.IsNotFound(err) {
 		projectLogger.Error(err.Error())
 		return false, err
 	}
 	return false, nil
 }
 
-func (c *defaultControl) deleteNamespace(project *gardencorev1alpha1.Project, namespaceName string) (bool, error) {
+func (c *defaultControl) deleteNamespace(project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace, err := c.namespaceLister.Get(namespaceName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {

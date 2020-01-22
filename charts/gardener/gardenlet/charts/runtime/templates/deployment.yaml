@@ -1,0 +1,121 @@
+{{- if .Values.global.gardenlet.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: gardenlet
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  revisionHistoryLimit: {{ required ".Values.global.gardenlet.revisionHistoryLimit is required" .Values.global.gardenlet.revisionHistoryLimit }}
+  replicas: {{ required ".Values.global.gardenlet.replicaCount is required" .Values.global.gardenlet.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: gardenlet
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+        checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
+        checksum/secret-gardenlet-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
+        {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
+        checksum/secret-gardenlet-kubeconfig-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-bootstrap.yaml") . | sha256sum }}
+        {{- end }}
+      labels:
+        app: gardener
+        role: gardenlet
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if not .Values.global.gardenlet.kubeconfig }}
+      serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
+      {{- end }}
+      {{- if gt (int .Values.global.gardenlet.replicaCount) 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - gardener
+              - key: role
+                operator: In
+                values:
+                - gardenlet
+            topologyKey: kubernetes.io/hostname
+      {{- end }}
+      containers:
+      - name: gardenlet
+        image: {{ required ".Values.global.gardenlet.image.repository is required" .Values.global.gardenlet.image.repository }}:{{ required ".Values.global.gardenlet.image.tag is required" .Values.global.gardenlet.image.tag }}
+        imagePullPolicy: {{ .Values.global.gardenlet.image.pullPolicy }}
+        command:
+        - /gardenlet
+        - --config=/etc/gardenlet/config/config.yaml
+        {{- if or .Values.global.gardenlet.env .Values.global.gardenlet.imageVectorOverwrite }}
+        env:
+        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+        - name: IMAGEVECTOR_OVERWRITE
+          value: /charts_overwrite/images_overwrite.yaml
+        {{- end }}
+        {{- range $index, $value := .Values.global.gardenlet.env }}
+        {{- if not (empty $value) }}
+        - name: {{ index $value "name" | quote }}
+          value: {{ index $value "value" | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.global.gardenlet.resources }}
+        resources:
+{{ toYaml .Values.global.gardenlet.resources | indent 10 }}
+        {{- end }}
+        {{- if .Values.global.gardenlet.dnsConfig }}
+        dnsConfig:
+{{ toYaml .Values.global.gardenlet.dnsConfig | indent 10 }}
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        {{- if .Values.global.gardenlet.kubeconfig }}
+        - name: gardenlet-kubeconfig
+          mountPath: /etc/gardenlet/kubeconfig
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+        - name: gardenlet-imagevector-overwrite
+          mountPath: /charts_overwrite
+          readOnly: true
+        {{- end }}
+        - name: gardenlet-config
+          mountPath: /etc/gardenlet/config
+{{- if .Values.global.gardenlet.additionalVolumeMounts }}
+{{ toYaml .Values.global.gardenlet.additionalVolumeMounts | indent 8 }}
+{{- end }}
+      terminationGracePeriodSeconds: 3600
+      volumes:
+      {{- if .Values.global.gardenlet.kubeconfig }}
+      - name: gardenlet-kubeconfig
+        secret:
+          secretName: gardenlet-kubeconfig
+      {{- end }}
+      {{- if .Values.global.gardenlet.imageVectorOverwrite }}
+      - name: gardenlet-imagevector-overwrite
+        configMap:
+          name: gardenlet-imagevector-overwrite
+      {{- end }}
+      - name: gardenlet-config
+        configMap:
+          name: gardenlet-configmap
+{{- if .Values.global.gardenlet.additionalVolumes }}
+{{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
+{{- end }}
+{{- end}}

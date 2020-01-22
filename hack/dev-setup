@@ -50,6 +50,7 @@ mkdir -p ${DEV_DIR}
 
 cp ${EXAMPLE_DIR}/20-componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 cp ${EXAMPLE_DIR}/20-componentconfig-gardener-scheduler.yaml ${DEV_DIR}/
+cp ${EXAMPLE_DIR}/20-componentconfig-gardenlet.yaml ${DEV_DIR}/
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
@@ -71,7 +72,7 @@ spec:
         run: etcd
     spec:
       containers:
-      - image: quay.io/coreos/etcd:v3.3.12
+      - image: quay.io/coreos/etcd:v3.3.17
         name: etcd
         command:
         - etcd

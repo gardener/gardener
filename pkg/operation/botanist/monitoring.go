@@ -20,30 +20,35 @@ import (
 	"path/filepath"
 	"strings"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
+	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting {
+		return b.DeleteSeedMonitoring(ctx)
+	}
+
 	var (
 		credentials         = b.Secrets["monitoring-ingress-credentials"]
 		credentialsUsers    = b.Secrets["monitoring-ingress-credentials-users"]
 		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
-		prometheusHost      = b.ComputePrometheusHost()
 		alertingRules       = strings.Builder{}
 		scrapeConfigs       = strings.Builder{}
 		operatorsDashboards = strings.Builder{}
@@ -54,16 +59,16 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{v1alpha1constants.LabelExtensionConfiguration: v1alpha1constants.LabelMonitoring}); err != nil {
+		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
 		return err
 	}
 
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
-		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.PrometheusConfigMapAlertingRules]))
-		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.PrometheusConfigMapScrapeConfig]))
-		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapOperatorDashboard]))
-		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1alpha1constants.GrafanaConfigMapUserDashboard]))
+		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
+		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
+		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]))
+		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]))
 	}
 
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(common.GardenRoleAlerting))
@@ -71,17 +76,34 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	prometheusTLSOverride := common.PrometheusTLS
+	if b.ControlPlaneWildcardCert != nil {
+		prometheusTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
+		{
+			"hostName":   b.ComputePrometheusHostDeprecated(),
+			"secretName": common.PrometheusTLS,
+		},
+		{
+			"hostName":   b.ComputePrometheusHost(),
+			"secretName": prometheusTLSOverride,
+		},
+	}
+
 	var (
+		networks = map[string]interface{}{
+			"pods":     b.Shoot.GetPodNetwork(),
+			"services": b.Shoot.GetServiceNetwork(),
+		}
+
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"networks": map[string]interface{}{
-				"pods":     b.Shoot.GetPodNetwork(),
-				"services": b.Shoot.GetServiceNetwork(),
-				"nodes":    b.Shoot.Info.Spec.Networking.Nodes,
-			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
-				"host":            prometheusHost,
+				"hosts":           hosts,
 			},
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
@@ -107,10 +129,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
 					"elasticsearch": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.Logging),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
 					"hvpa": map[string]interface{}{
-						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.HVPA),
+						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
 					},
 				},
 			},
@@ -134,6 +156,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
+
+	if v := b.Shoot.GetNodeNetwork(); v != nil {
+		networks["nodes"] = *v
+	}
+	prometheusConfig["networks"] = networks
 
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig,
 		common.PrometheusImageName,
@@ -169,11 +196,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.deployGrafanaCharts("operators", operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix); err != nil {
+	if err := b.deployGrafanaCharts(common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix); err != nil {
 		return err
 	}
 
-	if err := b.deployGrafanaCharts("users", usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix); err != nil {
+	if err := b.deployGrafanaCharts(common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix); err != nil {
 		return err
 	}
 
@@ -203,10 +230,28 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				}
 			}
 		}
+
+		alertManagerTLSOverride := common.AlertManagerTLS
+		if b.ControlPlaneWildcardCert != nil {
+			alertManagerTLSOverride = b.ControlPlaneWildcardCert.GetName()
+		}
+
+		hosts := []map[string]interface{}{
+			// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
+			{
+				"hostName":   b.ComputeAlertManagerHostDeprecated(),
+				"secretName": common.AlertManagerTLS,
+			},
+			{
+				"hostName":   b.ComputeAlertManagerHost(),
+				"secretName": alertManagerTLSOverride,
+			},
+		}
+
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuthUsers,
-				"host":            b.Seed.GetIngressFQDN("au", b.Shoot.Info.Name, b.Garden.Project.Name),
+				"hosts":           hosts,
 			},
 			"replicas":     b.Shoot.GetReplicas(1),
 			"storage":      b.Seed.GetValidVolumeSize("1Gi"),
@@ -305,10 +350,26 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 }
 
 func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain string) error {
+	grafanaTLSOverride := common.GrafanaTLS
+	if b.ControlPlaneWildcardCert != nil {
+		grafanaTLSOverride = b.ControlPlaneWildcardCert.GetName()
+	}
+
+	hosts := []map[string]interface{}{
+		{
+			"hostName":   b.ComputeIngressHostDeprecated(subDomain),
+			"secretName": common.GrafanaTLS,
+		},
+		{
+			"hostName":   b.ComputeIngressHost(subDomain),
+			"secretName": grafanaTLSOverride,
+		},
+	}
+
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
-			"host":            b.Seed.GetIngressFQDN(subDomain, b.Shoot.Info.Name, b.Garden.Project.Name),
+			"hosts":           hosts,
 		},
 		"replicas": b.Shoot.GetReplicas(1),
 		"role":     role,
@@ -326,21 +387,62 @@ func (b *Botanist) deployGrafanaCharts(role, dashboards, basicAuth, subDomain st
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
 func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
-	alertManagerStatefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1constants.StatefulSetNameAlertManager,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-	if err := b.K8sSeedClient.Client().Delete(ctx, alertManagerStatefulSet, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
+	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
 		return err
 	}
 
-	prometheusStatefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1constants.StatefulSetNamePrometheus,
-			Namespace: b.Shoot.SeedNamespace,
-		},
+	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+		return err
 	}
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, prometheusStatefulSet, kubernetes.DefaultDeleteOptions...))
+
+	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
+		return err
+	}
+
+	for _, obj := range []struct {
+		apiGroup string
+		version  string
+		kind     string
+		name     string
+	}{
+		{"", "v1", "ServiceAccount", "kube-state-metrics-seed"},
+		{"", "v1", "RoleBinding", "kube-state-metrics-seed"},
+		{"", "v1", "Service", "kube-state-metrics-seed"},
+		{"apps", "v1", "Deployment", "kube-state-metrics-seed"},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "kube-state-metrics-seed-vpa"},
+
+		{"", "v1", "Service", "kube-state-metrics"},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "kube-state-metrics-vpa"},
+		{"apps", "v1", "Deployment", "kube-state-metrics"},
+
+		{"networking", "v1", "NetworkPolicy", "allow-from-prometheus"},
+		{"networking", "v1", "NetworkPolicy", "allow-prometheus"},
+		{"", "v1", "ConfigMap", "prometheus-config"},
+		{"", "v1", "ConfigMap", "prometheus-rules"},
+		{"", "v1", "ConfigMap", "blackbox-exporter-config-prometheus"},
+		{"", "v1", "Secret", "prometheus-basic-auth"},
+		{"extensions", "v1beta1", "Ingress", "prometheus"},
+		{"networking", "v1", "Ingress", "prometheus"},
+		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "prometheus-vpa"},
+		{"", "v1", "ServiceAccount", "prometheus"},
+		{"", "v1", "Service", "prometheus"},
+		{"", "v1", "Service", "prometheus-web"},
+		{"apps", "v1", "StatefulSet", "prometheus"},
+		{"rbac", "v1", "ClusterRoleBinding", "prometheus-" + b.Shoot.SeedNamespace},
+		{"", "v1", "PersistentVolumeClaim", "prometheus-db-prometheus-0"},
+	} {
+		u := &unstructured.Unstructured{}
+		u.SetName(obj.name)
+		u.SetNamespace(b.Shoot.SeedNamespace)
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   obj.apiGroup,
+			Version: obj.version,
+			Kind:    obj.kind,
+		})
+		if err := b.K8sSeedClient.Client().Delete(ctx, u); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
+
+	return nil
 }

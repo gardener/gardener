@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -92,7 +91,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -100,10 +99,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			},
 			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
-				Name:      v1alpha1constants.SecretNameCloudProvider,
+				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: worker.Namespace,
 			},
-			SSHPublicKey: b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
+			SSHPublicKey: b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: b.Shoot.InfrastructureStatus,
 			},
@@ -142,14 +141,14 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 		b.Shoot.MachineDeployments = worker.Status.MachineDeployments
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
 	}
 	return nil
 }
 
 // WaitUntilWorkerDeleted waits until the worker extension resource has been deleted.
 func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
-	var lastError *gardencorev1alpha1.LastError
+	var lastError *gardencorev1beta1.LastError
 
 	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
 		worker := &extensionsv1alpha1.Worker{}
@@ -166,13 +165,13 @@ func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for worker to be deleted...")
-		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("worker is still present"), lastError))
+		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("worker is still present"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for worker object to be deleted")
 		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil

@@ -30,18 +30,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
 
+	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/test/integration/framework"
 )
 
 var (
@@ -78,7 +77,6 @@ var (
 	shootGardenerTest     *ShootGardenerTest
 	testLogger            *logrus.Logger
 	shootYamlPath         = "/example/90-shoot.yaml"
-	trueVar               = true
 	err                   error
 	gardenerTestOperation *GardenerTestOperation
 )
@@ -214,7 +212,7 @@ var _ = Describe("Shoot Creation testing", func() {
 	}, CreateAndReconcileTimeout)
 })
 
-func prepareShoot() *gardencorev1alpha1.Shoot {
+func prepareShoot() *gardencorev1beta1.Shoot {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
 		// locally, we need find the example shoot
@@ -229,11 +227,11 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 		shootObject.Name = *testShootName
 	}
 
-	nginxIngress := &gardencorev1alpha1.NginxIngress{Addon: gardencorev1alpha1.Addon{Enabled: true}}
+	nginxIngress := &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}
 	if shootObject.Spec.Addons != nil {
 		shootObject.Spec.Addons.NginxIngress = nginxIngress
 	} else {
-		shootObject.Spec.Addons = &gardencorev1alpha1.Addons{NginxIngress: nginxIngress}
+		shootObject.Spec.Addons = &gardencorev1beta1.Addons{NginxIngress: nginxIngress}
 	}
 
 	if networkingPods != nil && len(*networkingPods) > 0 {
@@ -245,7 +243,7 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 	}
 
 	if networkingNodes != nil && len(*networkingNodes) > 0 {
-		shootObject.Spec.Networking.Nodes = *networkingNodes
+		shootObject.Spec.Networking.Nodes = networkingNodes
 	}
 
 	// set ProviderConfigs
@@ -254,7 +252,7 @@ func prepareShoot() *gardencorev1alpha1.Shoot {
 	return shootObject
 }
 
-func printShoot(shoot *gardencorev1alpha1.Shoot) error {
+func printShoot(shoot *gardencorev1beta1.Shoot) error {
 	d, err := yaml.Marshal(shoot)
 	if err != nil {
 		return err

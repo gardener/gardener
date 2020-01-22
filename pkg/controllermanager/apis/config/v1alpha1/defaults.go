@@ -55,8 +55,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Gardener controller manager.
 func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfiguration) {
-	trueVar := true
-
 	if len(obj.Server.HTTP.BindAddress) == 0 {
 		obj.Server.HTTP.BindAddress = "0.0.0.0"
 	}
@@ -80,16 +78,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
-	if obj.Controllers.ControllerInstallation == nil {
-		obj.Controllers.ControllerInstallation = &ControllerInstallationControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
-	if obj.Controllers.SecretBinding == nil {
-		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
 	if obj.Controllers.Project == nil {
 		obj.Controllers.Project = &ProjectControllerConfiguration{
 			ConcurrentSyncs: 5,
@@ -100,43 +88,22 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
-	if obj.Controllers.Seed == nil {
-		obj.Controllers.Seed = &SeedControllerConfiguration{
-			ConcurrentSyncs:       5,
-			ReserveExcessCapacity: &trueVar,
-		}
-	} else {
-		if obj.Controllers.Seed.ReserveExcessCapacity == nil {
-			obj.Controllers.Seed.ReserveExcessCapacity = &trueVar
-		}
-	}
-
-	if obj.Controllers.Shoot.RespectSyncPeriodOverwrite == nil {
-		falseVar := false
-		obj.Controllers.Shoot.RespectSyncPeriodOverwrite = &falseVar
-	}
-	if obj.Controllers.Shoot.RetrySyncPeriod == nil {
-		durationVar := metav1.Duration{Duration: 15 * time.Second}
-		obj.Controllers.Shoot.RetrySyncPeriod = &durationVar
-	}
-
-	if obj.Controllers.BackupBucket == nil {
-		obj.Controllers.BackupBucket = &BackupBucketControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
-	if obj.Controllers.BackupEntry == nil {
-		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
-	if obj.Controllers.BackupEntry.DeletionGracePeriodHours == nil || *obj.Controllers.BackupEntry.DeletionGracePeriodHours < 0 {
-		var defaultBackupEntryDeletionGracePeriodHours = DefaultBackupEntryDeletionGracePeriodHours
-		obj.Controllers.BackupEntry.DeletionGracePeriodHours = &defaultBackupEntryDeletionGracePeriodHours
-	}
 
 	if obj.Controllers.Plant == nil {
-		obj.Controllers.Plant = &PlantConfiguration{
+		obj.Controllers.Plant = &PlantControllerConfiguration{
+			ConcurrentSyncs: 5,
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+		}
+	}
+	if obj.Controllers.SecretBinding == nil {
+		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.Seed == nil {
+		obj.Controllers.Seed = &SeedControllerConfiguration{
 			ConcurrentSyncs: 5,
 			SyncPeriod: metav1.Duration{
 				Duration: 30 * time.Second,
@@ -144,14 +111,9 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
-	if obj.ShootBackup == nil {
-		obj.ShootBackup = &ShootBackup{
-			Schedule: DefaultETCDBackupSchedule,
-		}
-	} else {
-		if len(obj.ShootBackup.Schedule) == 0 {
-			obj.ShootBackup.Schedule = DefaultETCDBackupSchedule
-		}
+	if obj.Controllers.Seed.MonitorPeriod == nil {
+		v := metav1.Duration{Duration: 40 * time.Second}
+		obj.Controllers.Seed.MonitorPeriod = &v
 	}
 
 	if obj.Discovery.TTL == nil {
@@ -165,44 +127,8 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 }
 
-// SetDefaults_ClientConnection sets defaults for the client connection.
-func SetDefaults_ClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
-	if len(obj.AcceptContentTypes) == 0 {
-		obj.AcceptContentTypes = "application/json"
-	}
-	if len(obj.ContentType) == 0 {
-		obj.ContentType = "application/json"
-	}
-	if obj.QPS == 0.0 {
-		obj.QPS = 50.0
-	}
-	if obj.Burst == 0 {
-		obj.Burst = 100
-	}
-}
-
-// SetDefaults_SeedClientConnection sets defaults for the client connection.
-func SetDefaults_SeedClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
-	if len(obj.AcceptContentTypes) == 0 {
-		obj.AcceptContentTypes = "application/json"
-	}
-	if len(obj.ContentType) == 0 {
-		obj.ContentType = "application/json"
-	}
-	if obj.QPS == 0.0 {
-		obj.QPS = 50.0
-	}
-	if obj.Burst == 0 {
-		obj.Burst = 100
-	}
-}
-
-// SetDefaults_ShootClientConnection sets defaults for the client connection.
-func SetDefaults_ShootClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
+// SetDefaults_GardenClientConnection sets defaults for the client connection.
+func SetDefaults_GardenClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
 	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
 	if len(obj.AcceptContentTypes) == 0 {

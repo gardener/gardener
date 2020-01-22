@@ -32,11 +32,11 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/gardener/gardener/test/integration/shoots"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
+	. "github.com/gardener/gardener/test/integration/shoots"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -86,7 +86,7 @@ var _ = Describe("Shoot update testing", func() {
 		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootTestLogger)
 		Expect(err).NotTo(HaveOccurred())
 
-		shoot := &gardencorev1alpha1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 		shootTestOperations, err = NewGardenTestOperationWithShoot(ctx, shootGardenerTest.GardenClient, shootTestLogger, shoot)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -110,7 +110,7 @@ var _ = Describe("Shoot update testing", func() {
 		}
 
 		By(fmt.Sprintf("updating shoot worker to min of %d machines", min))
-		_, err := shootGardenerTest.UpdateShoot(ctx, shoot, func(shoot *gardencorev1alpha1.Shoot) error {
+		_, err := shootGardenerTest.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Spec.Provider.Workers[0].Minimum = min
 			shoot.Spec.Provider.Workers[0].Maximum = max
 			return nil

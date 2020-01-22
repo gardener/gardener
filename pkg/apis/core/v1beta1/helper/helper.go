@@ -23,9 +23,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
+	errors "github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -185,13 +186,17 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
-	Protected         *bool
-	Visible           *bool
-	MinimumVolumeSize *string
-	APIServer         *ShootedSeedAPIServer
-	BlockCIDRs        []string
-	ShootDefaults     *gardencorev1beta1.ShootNetworks
-	Backup            *gardencorev1beta1.SeedBackup
+	DisableDNS                     *bool
+	Protected                      *bool
+	Visible                        *bool
+	MinimumVolumeSize              *string
+	APIServer                      *ShootedSeedAPIServer
+	BlockCIDRs                     []string
+	ShootDefaults                  *gardencorev1beta1.ShootNetworks
+	Backup                         *gardencorev1beta1.SeedBackup
+	NoGardenlet                    bool
+	UseServiceAccountBootstrapping bool
+	WithSecretRef                  bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -265,6 +270,19 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		shootedSeed.MinimumVolumeSize = &size
 	}
 
+	if _, ok := flags["disable-dns"]; ok {
+		shootedSeed.DisableDNS = &trueVar
+	}
+	if _, ok := flags["no-gardenlet"]; ok {
+		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["use-serviceaccount-bootstrapping"]; ok {
+		shootedSeed.UseServiceAccountBootstrapping = true
+	}
+	if _, ok := flags["with-secret-ref"]; ok {
+		shootedSeed.WithSecretRef = true
+	}
+
 	if _, ok := flags["protected"]; ok {
 		shootedSeed.Protected = &trueVar
 	}
@@ -287,12 +305,7 @@ func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
 		return nil, nil
 	}
 
-	var addresses []string
-	for _, addr := range strings.Split(cidrs, ";") {
-		addresses = append(addresses, addr)
-	}
-
-	return addresses, nil
+	return strings.Split(cidrs, ";"), nil
 }
 
 func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1beta1.ShootNetworks, error) {
@@ -545,6 +558,22 @@ func ShootWantsBasicAuthentication(shoot *gardencorev1beta1.Shoot) bool {
 	return *kubeAPIServerConfig.EnableBasicAuthentication
 }
 
+// ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
+func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
+}
+
+// GetMachineImagesFor returns a list of all machine images for a given shoot.
+func GetMachineImagesFor(shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.ShootMachineImage {
+	var workerMachineImages []*gardencorev1beta1.ShootMachineImage
+	for _, worker := range shoot.Spec.Provider.Workers {
+		if worker.Machine.Image != nil {
+			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
+		}
+	}
+	return workerMachineImages
+}
+
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
@@ -616,7 +645,7 @@ func UpdateMachineImages(workers []gardencorev1beta1.Worker, machineImages []*ga
 // KubernetesVersionExistsInCloudProfile checks if the given Kubernetes version exists in the CloudProfile
 func KubernetesVersionExistsInCloudProfile(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, gardencorev1beta1.ExpirableVersion, error) {
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		ok, err := utils.CompareVersions(version.Version, "=", currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, "=", currentVersion)
 		if err != nil {
 			return false, gardencorev1beta1.ExpirableVersion{}, err
 		}
@@ -662,7 +691,7 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1beta1.CloudProfil
 	)
 
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
-		ok, err := utils.CompareVersions(version.Version, operator, currentVersion)
+		ok, err := versionutils.CompareVersions(version.Version, operator, currentVersion)
 		if err != nil {
 			return false, []string{}, []gardencorev1beta1.ExpirableVersion{}, err
 		}
@@ -696,4 +725,12 @@ func GetDefaultMachineImageFromCloudProfile(profile gardencorev1beta1.CloudProfi
 		return nil
 	}
 	return &profile.Spec.MachineImages[0]
+}
+
+// WrapWithLastError is wrapper function for gardencorev1beta1.LastError
+func WrapWithLastError(err error, lastError *gardencorev1beta1.LastError) error {
+	if err == nil || lastError == nil {
+		return err
+	}
+	return errors.Wrapf(err, "last error: %s", lastError.Description)
 }

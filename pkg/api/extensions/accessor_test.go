@@ -17,9 +17,10 @@ package extensions
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsinstall "github.com/gardener/gardener/pkg/apis/extensions/install"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,7 @@ func mkUnstructuredAccessorWithStatus(status extensionsv1alpha1.DefaultStatus) e
 	return mkUnstructuredAccessor(&extensionsv1alpha1.Infrastructure{Status: extensionsv1alpha1.InfrastructureStatus{DefaultStatus: status}}).GetExtensionStatus()
 }
 
-func mkUnstructuredAccessorWithLastOperation(lastOperation *gardencorev1alpha1.LastOperation) extensionsv1alpha1.LastOperation {
+func mkUnstructuredAccessorWithLastOperation(lastOperation *gardencorev1beta1.LastOperation) extensionsv1alpha1.LastOperation {
 	return mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{LastOperation: lastOperation}).GetLastOperation()
 }
 
@@ -65,7 +66,7 @@ var _ = Describe("Accessor", func() {
 			Expect(acc).To(BeIdenticalTo(extension))
 		})
 
-		It("should create an unstructured accessor for unstructures", func() {
+		It("should create an unstructured accessor for unstructured", func() {
 			u := &unstructured.Unstructured{}
 			acc, err := Accessor(u)
 
@@ -100,7 +101,7 @@ var _ = Describe("Accessor", func() {
 					It("should get the description", func() {
 						var (
 							desc = "desc"
-							acc  = mkUnstructuredAccessorWithLastOperation(&gardencorev1alpha1.LastOperation{Description: desc})
+							acc  = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Description: desc})
 						)
 
 						Expect(acc.GetDescription()).To(Equal(desc))
@@ -111,7 +112,7 @@ var _ = Describe("Accessor", func() {
 					It("should get the last update time", func() {
 						var (
 							t   = metav1.NewTime(time.Unix(50, 0))
-							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1alpha1.LastOperation{LastUpdateTime: t})
+							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{LastUpdateTime: t})
 						)
 
 						Expect(acc.GetLastUpdateTime()).To(Equal(t))
@@ -122,7 +123,7 @@ var _ = Describe("Accessor", func() {
 					It("should get the progress", func() {
 						var (
 							progress = 10
-							acc      = mkUnstructuredAccessorWithLastOperation(&gardencorev1alpha1.LastOperation{Progress: progress})
+							acc      = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Progress: progress})
 						)
 
 						Expect(acc.GetProgress()).To(Equal(progress))
@@ -132,8 +133,8 @@ var _ = Describe("Accessor", func() {
 				Describe("#GetState", func() {
 					It("should get the state", func() {
 						var (
-							state = gardencorev1alpha1.LastOperationStateSucceeded
-							acc   = mkUnstructuredAccessorWithLastOperation(&gardencorev1alpha1.LastOperation{State: state})
+							state = gardencorev1beta1.LastOperationStateSucceeded
+							acc   = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{State: state})
 						)
 
 						Expect(acc.GetState()).To(Equal(state))
@@ -143,8 +144,8 @@ var _ = Describe("Accessor", func() {
 				Describe("#GetType", func() {
 					It("should get the type", func() {
 						var (
-							t   = gardencorev1alpha1.LastOperationTypeReconcile
-							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1alpha1.LastOperation{Type: t})
+							t   = gardencorev1beta1.LastOperationTypeReconcile
+							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Type: t})
 						)
 
 						Expect(acc.GetType()).To(Equal(t))
@@ -153,10 +154,10 @@ var _ = Describe("Accessor", func() {
 				Describe("#Get Conditions", func() {
 					It("should get the conditions", func() {
 						var (
-							conditions = []gardencorev1alpha1.Condition{
+							conditions = []gardencorev1beta1.Condition{
 								{
 									Type:           "ABC",
-									Status:         gardencorev1alpha1.ConditionTrue,
+									Status:         gardencorev1beta1.ConditionTrue,
 									Reason:         "reason",
 									Message:        "message",
 									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
@@ -169,14 +170,22 @@ var _ = Describe("Accessor", func() {
 					})
 				})
 
+				Describe("#GetState", func() {
+					It("should get the extensions state", func() {
+						state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
+						acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{State: state})
+						Expect(acc.GetState()).To(Equal(state))
+					})
+				})
+
 				Describe("#Set Conditions", func() {
 					It("should set the conditions", func() {
 						var (
 							acc        = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
-							conditions = []gardencorev1alpha1.Condition{
+							conditions = []gardencorev1beta1.Condition{
 								{
 									Type:           "ABC",
-									Status:         gardencorev1alpha1.ConditionTrue,
+									Status:         gardencorev1beta1.ConditionTrue,
 									Reason:         "reason",
 									Message:        "message",
 									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),

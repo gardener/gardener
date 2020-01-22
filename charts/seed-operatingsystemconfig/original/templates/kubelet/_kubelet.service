@@ -15,7 +15,6 @@
     RestartSec=5
     EnvironmentFile=/etc/environment
     EnvironmentFile=-/var/lib/kubelet/extra_args
-    ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} cp /hyperkube /opt/bin/
-    ExecStart=/opt/bin/hyperkube kubelet \
+    ExecStart=/opt/bin/kubelet \
 {{ include "kubelet-flags" . | trim | replace "\n" " \\\n" | indent 8 }}
 {{- end -}}

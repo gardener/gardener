@@ -3,8 +3,8 @@ package shoot
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -23,7 +23,7 @@ func (c *Controller) shootQuotaAdd(obj interface{}) {
 }
 
 func (c *Controller) shootQuotaDelete(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1alpha1.Shoot)
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if shoot == nil || !ok {
 		return
 	}
@@ -61,7 +61,7 @@ func (c *Controller) reconcileShootQuotaKey(key string) error {
 // QuotaControlInterface implements the control logic for quota management of Shoots. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type QuotaControlInterface interface {
-	CheckQuota(shoot *gardencorev1alpha1.Shoot, key string) error
+	CheckQuota(shoot *gardencorev1beta1.Shoot, key string) error
 }
 
 // NewDefaultQuotaControl returns a new instance of the default implementation of QuotaControlInterface
@@ -75,7 +75,7 @@ type defaultQuotaControl struct {
 	k8sGardenCoreInformers gardencoreinformers.Interface
 }
 
-func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1alpha1.Shoot, key string) error {
+func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key string) error {
 	var (
 		clusterLifeTime *int
 		shoot           = shootObj.DeepCopy()
@@ -112,7 +112,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1alpha1.Shoot, key
 		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		shoot.Annotations = annotations
 
-		shootUpdated, err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot)
+		shootUpdated, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
@@ -133,12 +133,12 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1alpha1.Shoot, key
 		annotations[common.ConfirmationDeletion] = "true"
 		shoot.ObjectMeta.Annotations = annotations
 
-		if _, err = c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(shoot.Namespace).Update(shoot); err != nil {
+		if _, err = c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
 			return err
 		}
 
 		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
-		if err := c.k8sGardenClient.GardenCore().CoreV1alpha1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
+		if err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}

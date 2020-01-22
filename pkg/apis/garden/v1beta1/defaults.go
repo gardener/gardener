@@ -17,11 +17,14 @@ package v1beta1
 import (
 	"math"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/utils"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	rbacv1 "k8s.io/api/rbac/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -31,7 +34,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	k8sVersionLessThan116, _ := utils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
+	k8sVersionLessThan116, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
 	// Error is ignored here because we cannot do anything meaningful with it.
 	// k8sVersionLessThan116 will default to `false`.
 
@@ -243,6 +246,20 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
 	}
+
+	if obj.Spec.Purpose == nil {
+		p := ShootPurposeEvaluation
+
+		// backwards compatibility - take purpose from annotation if given. If not, default.
+		// TODO: This code can be removed in a future version
+		if v, ok := obj.Annotations[v1beta1constants.GardenerPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
+			p = ShootPurpose(v)
+		} else if v, ok := obj.Annotations[v1beta1constants.GardenPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
+			p = ShootPurpose(v)
+		}
+
+		obj.Spec.Purpose = &p
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.
@@ -276,17 +293,17 @@ func SetDefaults_Seed(obj *Seed) {
 	}
 
 	if v, ok := obj.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
-		if obj.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil && !cidrvalidation.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
 			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
 		}
-		if obj.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
+		if obj.Spec.Networks.ShootDefaults.Services == nil && !cidrvalidation.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
 			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
 		}
 	} else {
-		if obj.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDR) {
+		if obj.Spec.Networks.ShootDefaults.Pods == nil && !cidrvalidation.NetworksIntersect(obj.Spec.Networks.Pods, defaultPodCIDR) {
 			obj.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
 		}
-		if obj.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDR) {
+		if obj.Spec.Networks.ShootDefaults.Services == nil && !cidrvalidation.NetworksIntersect(obj.Spec.Networks.Services, defaultServiceCIDR) {
 			obj.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
 		}
 	}

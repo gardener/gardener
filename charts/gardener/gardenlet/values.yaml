@@ -1,0 +1,101 @@
+global:
+  # Gardenlet configuration values
+  gardenlet:
+    enabled: true
+    replicaCount: 1
+    revisionHistoryLimit: 10
+    serviceAccountName: gardenlet
+    image:
+      repository: eu.gcr.io/gardener-project/gardener/gardenlet
+      tag: latest
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 2000m
+        memory: 512Mi
+    additionalVolumes: []
+    additionalVolumeMounts: []
+    env: []
+    vpa: false
+  # imageVectorOverwrite: |
+  #  Please find documentation in docs/deployment/image_vector.md
+    config:
+      gardenClientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 100
+        burst: 130
+      # gardenClusterAddress: https://some-external-ip-address-to-garden-cluster
+      # gardenClusterCACert: <base64-ca-cert>
+      # bootstrapKubeconfig:
+      #   name: gardenlet-kubeconfig-bootstrap
+      #   namespace: garden
+      #   kubeconfig: |
+      #     some-kubeconfig-for-bootstrapping
+      # kubeconfigSecret:
+      #   name: gardenlet-kubeconfig
+      #   namespace: garden
+      seedClientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 25
+        burst: 50
+      shootClientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 25
+        burst: 50
+      controllers:
+        backupBucket:
+          concurrentSyncs: 20
+        backupEntry:
+          concurrentSyncs: 20
+          deletionGracePeriodHours: 0
+        seed:
+          concurrentSyncs: 5
+          syncPeriod: 1m
+          reserveExcessCapacity: true
+        shoot:
+          concurrentSyncs: 20
+          syncPeriod: 1h
+          retryDuration: 24h
+          respectSyncPeriodOverwrite: false
+          reconcileInMaintenanceOnly: false
+        shootCare:
+          concurrentSyncs: 5
+          syncPeriod: 30s
+          conditionThresholds:
+          - type: APIServerAvailable
+            duration: 1m
+          - type: ControlPlaneHealthy
+            duration: 1m
+          - type: SystemComponentsHealthy
+            duration: 1m
+          - type: EveryNodeReady
+            duration: 5m
+        shootStateSync:
+          concurrentSyncs: 5
+          syncPeriod: 30s
+      leaderElection:
+        leaderElect: true
+        leaseDuration: 15s
+        renewDeadline: 10s
+        retryPeriod: 2s
+        resourceLock: configmaps
+     # `discovery` allows specifying options for the cached discovery client
+   #  discovery:
+   #    discoveryCacheDir: /tmp/cache-dir
+   #    httpCacheDir: /tmp/http-cache-dir
+   #    ttl: 10s
+      logLevel: info
+      kubernetesLogLevel: 0
+      featureGates: {}
+    # seedSelector: {}
+    # seedConfig: {}
+  # Deployment related configuration
+  deployment:
+    virtualGarden:
+      enabled: false

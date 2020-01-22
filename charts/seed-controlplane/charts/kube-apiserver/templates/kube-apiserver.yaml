@@ -63,14 +63,18 @@ spec:
           mountPath: /lib/modules
       containers:
       - name: kube-apiserver
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "kube-apiserver" }}
         imagePullPolicy: IfNotPresent
         command:
+        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
         {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - apiserver
         {{- else }}
         - kube-apiserver
+        {{- end }}
+        {{- else }}
+        - /usr/local/bin/kube-apiserver
         {{- end }}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
@@ -114,7 +118,7 @@ spec:
         - --requestheader-username-headers=X-Remote-User
         {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
-        - --service-cluster-ip-range={{ .Values.shootNetworks.service }}
+        - --service-cluster-ip-range={{ .Values.shootNetworks.services }}
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
         {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
         - --shutdown-delay-duration=20s
@@ -236,11 +240,13 @@ spec:
         - name: APISERVER_AUTH_MODE_CLIENT_CERT_KEY
           value: /srv/secrets/vpn-seed/tls.key
         - name: SERVICE_NETWORK
-          value: {{ .Values.shootNetworks.service }}
+          value: {{ .Values.shootNetworks.services }}
         - name: POD_NETWORK
-          value: {{ .Values.shootNetworks.pod }}
+          value: {{ .Values.shootNetworks.pods }}
+        {{- if .Values.shootNetworks.nodes }}
         - name: NODE_NETWORK
-          value: {{ .Values.shootNetworks.node }}
+          value: {{ .Values.shootNetworks.nodes }}
+        {{- end }}
         ports:
         - name: tcp-tunnel
           containerPort: 1194

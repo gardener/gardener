@@ -15,7 +15,6 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -23,12 +22,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -39,8 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/handlers"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -88,7 +83,7 @@ func NewOptions() (*Options, error) {
 	if err := controllermanagerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardencorev1alpha1.AddToScheme(scheme.Scheme); err != nil {
+	if err := gardencorev1beta1.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 
@@ -215,8 +210,6 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener controller manager.
 type Gardener struct {
 	Config                 *config.ControllerManagerConfiguration
-	Identity               *gardencorev1alpha1.Gardener
-	GardenerNamespace      string
 	K8sGardenClient        kubernetes.Interface
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory    informers.SharedInformerFactory
@@ -226,7 +219,7 @@ type Gardener struct {
 }
 
 func discoveryFromControllerManagerConfiguration(cfg *config.ControllerManagerConfiguration) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -270,10 +263,10 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
-		cfg.ClientConnection.Kubeconfig = kubeconfig
+		cfg.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -311,14 +304,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		}
 	}
 
-	identity, gardenerNamespace, err := determineGardenerIdentity()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Gardener{
-		Identity:               identity,
-		GardenerNamespace:      gardenerNamespace,
 		Config:                 cfg,
 		Logger:                 logger,
 		Recorder:               recorder,
@@ -347,8 +333,8 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Start HTTP server
 	var (
-		projectInformer = g.K8sGardenCoreInformers.Core().V1alpha1().Projects()
-		shootInformer   = g.K8sGardenCoreInformers.Core().V1alpha1().Shoots()
+		projectInformer = g.K8sGardenCoreInformers.Core().V1beta1().Projects()
+		shootInformer   = g.K8sGardenCoreInformers.Core().V1beta1().Shoots()
 
 		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
 			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), shootInformer.Lister()),
@@ -393,56 +379,6 @@ func (g *Gardener) startControllers(ctx context.Context) {
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,
 		g.Config,
-		g.Identity,
-		g.GardenerNamespace,
 		g.Recorder,
 	).Run(ctx)
-}
-
-// We want to determine the Docker container id of the currently running Gardener controller manager because
-// we need to identify for still ongoing operations whether another Gardener controller manager instance is
-// still operating the respective Shoots. When running locally, we generate a random string because
-// there is no container id.
-func determineGardenerIdentity() (*gardencorev1alpha1.Gardener, string, error) {
-	var (
-		gardenerID        string
-		gardenerName      string
-		gardenerNamespace = v1alpha1constants.GardenNamespace
-		err               error
-	)
-
-	gardenerName, err = os.Hostname()
-	if err != nil {
-		return nil, "", fmt.Errorf("unable to get hostname: %v", err)
-	}
-
-	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
-	// Otherwise generate a random string for the gardenerID
-	if cGroupFile, err := os.Open("/proc/self/cgroup"); err == nil {
-		defer cGroupFile.Close()
-		reader := bufio.NewReaderSize(cGroupFile, 4096)
-		line, con, err := reader.ReadLine()
-		if !con && err == nil {
-			splitBySlash := strings.Split(string(line), "/")
-			gardenerID = splitBySlash[len(splitBySlash)-1]
-		}
-	}
-
-	if gardenerID == "" {
-		gardenerID, err = gardenerutils.GenerateRandomString(64)
-		if err != nil {
-			return nil, "", fmt.Errorf("unable to generate gardenerID: %v", err)
-		}
-	}
-
-	// If running inside a Kubernetes cluster we will have a service account mount.
-	if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
-		gardenerNamespace = string(ns)
-	}
-
-	return &gardencorev1alpha1.Gardener{
-		ID:      gardenerID,
-		Name:    gardenerName,
-		Version: version.Get().GitVersion,
-	}, gardenerNamespace, nil
 }

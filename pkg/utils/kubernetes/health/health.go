@@ -19,14 +19,14 @@ import (
 	"net/http"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 )
@@ -44,15 +44,6 @@ func checkConditionState(conditionType string, expected, actual, reason, message
 }
 
 func getDeploymentCondition(conditions []appsv1.DeploymentCondition, conditionType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			return &condition
-		}
-	}
-	return nil
-}
-
-func getMachineDeploymentCondition(conditions []machinev1alpha1.MachineDeploymentCondition, conditionType machinev1alpha1.MachineDeploymentConditionType) *machinev1alpha1.MachineDeploymentCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			return &condition
@@ -182,6 +173,11 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 	return nil
 }
 
+// NodeOutOfDisk is deprecated NodeConditionType.
+// It is no longer reported by kubelet >= 1.13. See https://github.com/kubernetes/kubernetes/pull/70111.
+// +deprecated
+const NodeOutOfDisk = "OutOfDisk"
+
 var (
 	trueNodeConditionTypes = []corev1.NodeConditionType{
 		corev1.NodeReady,
@@ -191,8 +187,8 @@ var (
 		corev1.NodeDiskPressure,
 		corev1.NodeMemoryPressure,
 		corev1.NodeNetworkUnavailable,
-		corev1.NodeOutOfDisk,
 		corev1.NodePIDPressure,
+		NodeOutOfDisk,
 	}
 )
 
@@ -226,86 +222,28 @@ func CheckNode(node *corev1.Node) error {
 }
 
 var (
-	trueMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentAvailable,
-	}
-
-	trueOptionalMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentProgressing,
-	}
-
-	falseMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentReplicaFailure,
-		machinev1alpha1.MachineDeploymentFrozen,
-	}
-)
-
-// CheckMachineDeployment checks whether the given MachineDeployment is healthy.
-// A MachineDeployment is considered healthy if its controller observed its current revision and if
-// its desired number of replicas is equal to its updated replicas.
-func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error {
-	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
-	}
-
-	for _, trueConditionType := range trueMachineDeploymentConditionTypes {
-		conditionType := string(trueConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueConditionType)
-		if condition == nil {
-			return requiredConditionMissing(conditionType)
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	for _, trueOptionalConditionType := range trueOptionalMachineDeploymentConditionTypes {
-		conditionType := string(trueOptionalConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	for _, falseConditionType := range falseMachineDeploymentConditionTypes {
-		conditionType := string(falseConditionType)
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, falseConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-var (
-	trueSeedConditionTypes = []gardencorev1alpha1.ConditionType{
-		gardencorev1alpha1.SeedAvailable,
+	trueSeedConditionTypes = []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.SeedGardenletReady,
+		gardencorev1beta1.SeedBootstrapped,
 	}
 )
 
 // CheckSeed checks if the Seed is up-to-date and if its extensions have been successfully bootstrapped.
-func CheckSeed(seed *gardencorev1alpha1.Seed, identity *gardencorev1alpha1.Gardener) error {
+func CheckSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener) error {
 	if seed.Status.ObservedGeneration < seed.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", seed.Status.ObservedGeneration, seed.Generation)
 	}
-	if seed.Status.Gardener != *identity {
+	if !apiequality.Semantic.DeepEqual(seed.Status.Gardener, identity) {
 		return fmt.Errorf("observing Gardener version not up to date (%v/%v)", seed.Status.Gardener, identity)
 	}
 
 	for _, trueConditionType := range trueSeedConditionTypes {
 		conditionType := string(trueConditionType)
-		condition := helper.GetCondition(seed.Status.Conditions, trueConditionType)
+		condition := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, trueConditionType)
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(gardencorev1alpha1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(conditionType, string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -325,7 +263,7 @@ func CheckExtensionObject(obj extensionsv1alpha1.Object) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", status.GetObservedGeneration(), obj.GetGeneration())
 	}
 
-	op, ok := obj.GetAnnotations()[v1alpha1constants.GardenerOperation]
+	op, ok := obj.GetAnnotations()[v1beta1constants.GardenerOperation]
 	if ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by extension controller", op)
 	}
@@ -339,7 +277,7 @@ func CheckExtensionObject(obj extensionsv1alpha1.Object) error {
 		return fmt.Errorf("extension did not record a last operation yet")
 	}
 
-	if lastOp.GetState() != gardencorev1alpha1.LastOperationStateSucceeded {
+	if lastOp.GetState() != gardencorev1beta1.LastOperationStateSucceeded {
 		return fmt.Errorf("extension state is not succeeded but %v", lastOp.GetState())
 	}
 	return nil
@@ -351,13 +289,13 @@ func CheckExtensionObject(obj extensionsv1alpha1.Object) error {
 // * No gardener.cloud/operation is set
 // * No lastError is in the status
 // * A last operation is state succeeded is present
-func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
+func CheckBackupBucket(obj *gardencorev1beta1.BackupBucket) error {
 	status := obj.Status
 	if status.ObservedGeneration != obj.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", status.ObservedGeneration, obj.Generation)
 	}
 
-	op, ok := obj.GetAnnotations()[v1alpha1constants.GardenerOperation]
+	op, ok := obj.GetAnnotations()[v1beta1constants.GardenerOperation]
 	if ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
 	}
@@ -371,7 +309,7 @@ func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
 		return fmt.Errorf("backup bucket did not record a last operation yet")
 	}
 
-	if lastOp.GetState() != gardencorev1alpha1.LastOperationStateSucceeded {
+	if lastOp.GetState() != gardencorev1beta1.LastOperationStateSucceeded {
 		return fmt.Errorf("backup bucket state is not succeeded but %v", lastOp.GetState())
 	}
 	return nil
@@ -381,10 +319,10 @@ func CheckBackupBucket(obj *gardencorev1alpha1.BackupBucket) error {
 var Now = time.Now
 
 // ConditionerFunc to update a condition with type and message
-type conditionerFunc func(conditionType string, message string) gardencorev1alpha1.Condition
+type conditionerFunc func(conditionType string, message string) gardencorev1beta1.Condition
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
-func CheckAPIServerAvailability(condition gardencorev1alpha1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1alpha1.Condition {
+func CheckAPIServerAvailability(condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1beta1.Condition {
 	now := Now()
 	response := restClient.Get().AbsPath("/healthz").Do()
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
@@ -410,5 +348,5 @@ func CheckAPIServerAvailability(condition gardencorev1alpha1.Condition, restClie
 	}
 
 	message := fmt.Sprintf("API server /healthz endpoint responded with success status code. %s", responseDurationText)
-	return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
 }

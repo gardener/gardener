@@ -10,14 +10,18 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   tls:
-  - secretName: {{ .Chart.Name }}-tls
+  {{- range .Values.ingress.hosts }}
+  - secretName: {{ required ".secretName is required" .secretName }}
     hosts:
-    - {{ .Values.ingress.host }}
+    - {{ required ".hostName is required" .hostName }}
+  {{- end }}
   rules:
-  - host: {{ .Values.ingress.host }}
+  {{- range .Values.ingress.hosts }}
+  - host: {{ required ".hostName is required" .hostName }}
     http:
       paths:
       - backend:
           serviceName: prometheus-web
           servicePort: 80
         path: /
+  {{- end }}

@@ -246,6 +246,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 		}
 		worker1Labels              = map[string]string{"lab": "els"}
 		worker1Name                = "worker1"
+		worker2Name                = "worker2"
 		worker1MachineType         = "machinetype1"
 		worker1MachineImageName    = "machineimage1"
 		worker1MachineImageVersion = "machineimage1version"
@@ -451,7 +452,7 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 							Raw: []byte(networkingProviderConfig),
 						},
 					},
-					Nodes:    networkingNodesCIDR,
+					Nodes:    &networkingNodesCIDR,
 					Pods:     &networkingPodsCIDR,
 					Services: &networkingServicesCIDR,
 				},
@@ -732,8 +733,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
+				worker2VolumeType   = "voltype_premium"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -781,6 +784,21 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						Zones: worker1Zones,
 					},
+					{
+						Name: worker2Name,
+						Machine: gardencorev1alpha1.Machine{
+							Type: worker1MachineType,
+							Image: &gardencorev1alpha1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						Volume: &gardencorev1alpha1.Volume{
+							Size: worker1VolumeSize,
+							Type: &worker2VolumeType,
+						},
+						Zones: worker1Zones,
+					},
 				},
 			}
 
@@ -825,6 +843,18 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						VolumeSize: worker1VolumeSize,
 						VolumeType: worker1VolumeType,
+					},
+					{
+						Worker: gardenv1beta1.Worker{
+							Name:        worker2Name,
+							MachineType: worker1MachineType,
+							MachineImage: &gardenv1beta1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						VolumeSize: worker1VolumeSize,
+						VolumeType: worker2VolumeType,
 					},
 				},
 				Zones: []string{zone1Name, zone2Name},
@@ -895,7 +925,9 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 				controlPlaneConfigJSON, _ = json.Marshal(controlPlaneConfig)
 				worker1VolumeSize         = "20Gi"
 				worker1VolumeType         = "voltype"
-				workerMigrationJSON       = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}}"
+				worker2VolumeType         = "voltype_premium"
+				workerMigrationJSON       = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":null}}"
 
 				in          *gardencorev1alpha1.Shoot
 				expectedOut *gardenv1beta1.Shoot
@@ -946,6 +978,20 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 								Type: &worker1VolumeType,
 							},
 						},
+						{
+							Name: worker2Name,
+							Machine: gardencorev1alpha1.Machine{
+								Type: worker1MachineType,
+								Image: &gardencorev1alpha1.ShootMachineImage{
+									Name:    worker1MachineImageName,
+									Version: worker1MachineImageVersion,
+								},
+							},
+							Volume: &gardencorev1alpha1.Volume{
+								Size: worker1VolumeSize,
+								Type: &worker2VolumeType,
+							},
+						},
 					},
 				}
 
@@ -992,6 +1038,18 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 							},
 							VolumeSize: worker1VolumeSize,
 							VolumeType: worker1VolumeType,
+						},
+						{
+							Worker: gardenv1beta1.Worker{
+								Name:        worker2Name,
+								MachineType: worker1MachineType,
+								MachineImage: &gardenv1beta1.ShootMachineImage{
+									Name:    worker1MachineImageName,
+									Version: worker1MachineImageVersion,
+								},
+							},
+							VolumeSize: worker1VolumeSize,
+							VolumeType: worker2VolumeType,
 						},
 					},
 				}
@@ -1049,8 +1107,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 
 				in.Spec.Provider.InfrastructureConfig.RawExtension.Raw = infrastructureConfigJSON
 				in.Spec.Provider.Workers[0].Zones = worker1Zones
+				in.Spec.Provider.Workers[1].Zones = worker1Zones
 
-				expectedOut.Annotations[garden.MigrationShootWorkers] = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				expectedOut.Annotations[garden.MigrationShootWorkers] = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 				expectedOut.Spec.Cloud.Azure.Zones = worker1Zones
 				expectedOut.Spec.Cloud.Azure.Networks.ServiceEndpoints = serviceEndpoints
 
@@ -1114,8 +1174,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
+				worker2VolumeType   = "voltype_premium"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1163,6 +1225,21 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						Zones: worker1Zones,
 					},
+					{
+						Name: worker2Name,
+						Machine: gardencorev1alpha1.Machine{
+							Type: worker1MachineType,
+							Image: &gardencorev1alpha1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						Volume: &gardencorev1alpha1.Volume{
+							Size: worker1VolumeSize,
+							Type: &worker2VolumeType,
+						},
+						Zones: worker1Zones,
+					},
 				},
 			}
 
@@ -1205,6 +1282,18 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						VolumeSize: worker1VolumeSize,
 						VolumeType: worker1VolumeType,
+					},
+					{
+						Worker: gardenv1beta1.Worker{
+							Name:        worker2Name,
+							MachineType: worker1MachineType,
+							MachineImage: &gardenv1beta1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						VolumeSize: worker1VolumeSize,
+						VolumeType: worker2VolumeType,
 					},
 				},
 				Zones: []string{zone1Name, zone2Name},
@@ -1461,8 +1550,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
+				worker2VolumeType   = "voltype_premium"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1510,6 +1601,21 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						Zones: worker1Zones,
 					},
+					{
+						Name: worker2Name,
+						Machine: gardencorev1alpha1.Machine{
+							Type: worker1MachineType,
+							Image: &gardencorev1alpha1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						Volume: &gardencorev1alpha1.Volume{
+							Size: worker1VolumeSize,
+							Type: &worker2VolumeType,
+						},
+						Zones: worker1Zones,
+					},
 				},
 			}
 
@@ -1552,6 +1658,18 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						VolumeSize: worker1VolumeSize,
 						VolumeType: worker1VolumeType,
+					},
+					{
+						Worker: gardenv1beta1.Worker{
+							Name:        worker2Name,
+							MachineType: worker1MachineType,
+							MachineImage: &gardenv1beta1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						VolumeSize: worker1VolumeSize,
+						VolumeType: worker2VolumeType,
 					},
 				},
 				Zones: []string{zone1Name, zone2Name},
@@ -1607,8 +1725,10 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 
 				worker1VolumeSize   = "20Gi"
 				worker1VolumeType   = "voltype"
+				worker2VolumeType   = "voltype_premium"
 				worker1Zones        = []string{zone1Name, zone2Name}
-				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
+				workerMigrationJSON = "{\"worker1\":{\"ProviderConfig\":" + worker1ProviderConfig + ",\"Volume\":{\"Type\":\"" + worker1VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}" +
+					",\"worker2\":{\"ProviderConfig\":null,\"Volume\":{\"Type\":\"" + worker2VolumeType + "\",\"Size\":\"" + worker1VolumeSize + "\"},\"Zones\":[\"" + worker1Zones[0] + "\",\"" + worker1Zones[1] + "\"]}}"
 
 				in          = defaultCoreShoot.DeepCopy()
 				expectedOut = defaultGardenShoot.DeepCopy()
@@ -1656,6 +1776,21 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						Zones: worker1Zones,
 					},
+					{
+						Name: worker2Name,
+						Machine: gardencorev1alpha1.Machine{
+							Type: worker1MachineType,
+							Image: &gardencorev1alpha1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						Volume: &gardencorev1alpha1.Volume{
+							Size: worker1VolumeSize,
+							Type: &worker2VolumeType,
+						},
+						Zones: worker1Zones,
+					},
 				},
 			}
 
@@ -1693,6 +1828,18 @@ var _ = Describe("roundtripper cloudprofile migration", func() {
 						},
 						VolumeSize: worker1VolumeSize,
 						VolumeType: worker1VolumeType,
+					},
+					{
+						Worker: gardenv1beta1.Worker{
+							Name:        worker2Name,
+							MachineType: worker1MachineType,
+							MachineImage: &gardenv1beta1.ShootMachineImage{
+								Name:    worker1MachineImageName,
+								Version: worker1MachineImageVersion,
+							},
+						},
+						VolumeSize: worker1VolumeSize,
+						VolumeType: worker2VolumeType,
 					},
 				},
 				Zones: []string{zone1Name, zone2Name},

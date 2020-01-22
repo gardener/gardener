@@ -15,16 +15,15 @@
 package validator_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	kubeclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/gardener/gardener/test"
 
@@ -32,7 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,16 +77,16 @@ var _ = Describe("validator", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
-			seedSecret       = v1.Secret{
+			seedSecret       = corev1.Secret{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      seedName,
 					Namespace: "garden",
 				},
 				Data: map[string][]byte{
-					kubeclient.KubeConfig: []byte(""),
+					kubernetes.KubeConfig: []byte(""),
 				},
-				Type: v1.SecretTypeOpaque,
+				Type: corev1.SecretTypeOpaque,
 			}
 
 			projectBase = garden.Project{
@@ -154,9 +153,9 @@ var _ = Describe("validator", func() {
 					Networks: garden.SeedNetworks{
 						Pods:     seedPodsCIDR,
 						Services: seedServicesCIDR,
-						Nodes:    seedNodesCIDR,
+						Nodes:    &seedNodesCIDR,
 					},
-					SecretRef: v1.SecretReference{
+					SecretRef: &corev1.SecretReference{
 						Name:      seedSecret.Name,
 						Namespace: seedSecret.Namespace,
 					},
@@ -184,7 +183,7 @@ var _ = Describe("validator", func() {
 						Version: "1.6.4",
 					},
 					Networking: garden.Networking{
-						Nodes:    *k8sNetworks.Nodes,
+						Nodes:    k8sNetworks.Nodes,
 						Pods:     k8sNetworks.Pods,
 						Services: k8sNetworks.Services,
 					},
@@ -261,9 +260,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -271,19 +270,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should pass because the Seed is now protected but the same while shoot has never been in garden namespace", func() {
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
+				oldShoot.Spec.SeedName = shoot.Spec.SeedName
+				shoot.Spec.Provider.Workers[0].Maximum += 1
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should fail because the new Seed specified in shoot manifest is protected while shoot is not in garden namespace", func() {
+				seed.Spec.Taints = []garden.SeedTaint{{Key: garden.SeedTaintProtected}}
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
 			})
 
 			It("create should pass because shoot is not in garden namespace and seed is not protected", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -291,9 +314,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -303,9 +326,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -317,9 +340,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -334,9 +357,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -350,9 +373,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -365,9 +388,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -380,9 +403,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -399,9 +422,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
@@ -415,9 +438,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -437,16 +460,16 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
 
-			It("should not testing length constraints for operations other than CREATE", func() {
+			It("should not test length constraints for operations other than CREATE", func() {
 				shortName := "short"
 				projectName := "too-long-long-long-label"
 				project.ObjectMeta = metav1.ObjectMeta{
@@ -461,13 +484,13 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
-				err := admissionHandler.Admit(attrs, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
 
-				attrs = admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
-				err = admissionHandler.Admit(attrs, nil)
+				attrs = admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+				err = admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
 			})
@@ -481,13 +504,7 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				shoot = *shootBase.DeepCopy()
 
-				// technical ID is used to determine the namespace in the seed
-				shoot.Status.TechnicalID = operationshoot.ComputeTechnicalID(projectName, &corev1alpha1.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: shoot.Name,
-					},
-				})
-
+				shoot.Status.TechnicalID = "some-id"
 				shoot.Status.LastOperation = &garden.LastOperation{
 					Type:     garden.LastOperationTypeReconcile,
 					State:    garden.LastOperationStateSucceeded,
@@ -497,7 +514,7 @@ var _ = Describe("validator", func() {
 				// set old shoot for update and add gardener finalizer to it
 				oldShoot = shoot.DeepCopy()
 				finalizers := sets.NewString(oldShoot.GetFinalizers()...)
-				finalizers.Insert(corev1alpha1.GardenerName)
+				finalizers.Insert(garden.GardenerName)
 				oldShoot.SetFinalizers(finalizers.UnsortedList())
 			})
 
@@ -505,9 +522,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("shoot deletion has not completed successfully yet"))
 			})
@@ -523,9 +540,9 @@ var _ = Describe("validator", func() {
 					Progress: 100,
 				}
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -551,9 +568,9 @@ var _ = Describe("validator", func() {
 
 					shoot.Status.Constraints = constraints
 
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(attrs, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 					Expect(err).To(match)
 				},
 				Entry("should allow if set to True", []garden.Condition{
@@ -598,27 +615,27 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject creating a shoot on a seed which is marked for deletion", func() {
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
 			})
 
 			It("should allow no-op updates", func() {
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should allow modifying the finalizers array", func() {
-				oldShoot.Finalizers = []string{corev1alpha1.GardenerName}
+				oldShoot.Finalizers = []string{garden.GardenerName}
 				shoot.Finalizers = []string{}
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -626,18 +643,18 @@ var _ = Describe("validator", func() {
 				shoot.Annotations = make(map[string]string)
 				shoot.Annotations[common.ConfirmationDeletion] = "true"
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should reject modifying the shoot spec when seed is marked for deletion", func() {
 				shoot.Spec.Region = "other-region"
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
 			})
@@ -646,18 +663,18 @@ var _ = Describe("validator", func() {
 				shoot.Annotations = make(map[string]string)
 				shoot.Annotations["foo"] = "bar"
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
 			})
 		})
 
 		It("should reject because the referenced cloud profile was not found", func() {
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
@@ -666,9 +683,9 @@ var _ = Describe("validator", func() {
 		It("should reject because the referenced seed was not found", func() {
 			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
@@ -677,9 +694,9 @@ var _ = Describe("validator", func() {
 		It("should reject because the referenced project was not found", func() {
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
@@ -692,9 +709,9 @@ var _ = Describe("validator", func() {
 			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
@@ -708,9 +725,9 @@ var _ = Describe("validator", func() {
 			gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-			attrs := admission.NewAttributesRecord(&shoot, shoot2, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, shoot2, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(attrs, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot provider type was changed which is not allowed")))
@@ -735,16 +752,16 @@ var _ = Describe("validator", func() {
 					},
 				}
 
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
-				err := admissionHandler.Admit(attrs, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
 			It("should not add deploy infrastructure task because spec has not changed", func() {
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
-				err := admissionHandler.Admit(attrs, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).ToNot(BeTrue())
@@ -801,9 +818,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -814,9 +831,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -828,9 +845,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -842,9 +859,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -859,9 +876,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -879,9 +896,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -899,9 +916,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -918,9 +935,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -938,9 +955,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeNil())
 			})
@@ -951,9 +968,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -967,9 +984,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -983,9 +1000,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1000,9 +1017,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1037,9 +1054,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1057,9 +1074,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1076,9 +1093,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1096,9 +1113,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1120,9 +1137,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1134,12 +1151,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.AWS.Zones = append(shoot.Spec.Cloud.AWS.Zones, oldShoot.Spec.Cloud.AWS.Zones...)
+				shoot.Spec.Cloud.AWS.Zones = append(shoot.Spec.Cloud.AWS.Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.AWS.Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
@@ -1211,9 +1259,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1224,9 +1272,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1238,9 +1286,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1252,9 +1300,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1266,9 +1314,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1282,9 +1330,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -1298,9 +1346,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1315,9 +1363,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1352,9 +1400,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1372,9 +1420,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1396,9 +1444,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1410,9 +1458,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1424,9 +1472,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1483,9 +1531,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1496,9 +1544,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1510,9 +1558,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1524,9 +1572,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1538,9 +1586,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1554,9 +1602,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -1570,9 +1618,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1587,9 +1635,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1624,9 +1672,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1644,9 +1692,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1668,9 +1716,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1682,12 +1730,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.GCP.Zones = append(shoot.Spec.Cloud.GCP.Zones, oldShoot.Spec.Cloud.GCP.Zones...)
+				shoot.Spec.Cloud.GCP.Zones = append(shoot.Spec.Cloud.GCP.Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.GCP.Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
@@ -1741,9 +1820,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1754,9 +1833,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1768,9 +1847,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1782,9 +1861,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1798,9 +1877,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -1814,9 +1893,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1831,9 +1910,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1868,9 +1947,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1888,9 +1967,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1912,9 +1991,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -1926,12 +2005,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.Packet.Zones = append(shoot.Spec.Cloud.Packet.Zones, oldShoot.Spec.Cloud.Packet.Zones...)
+				shoot.Spec.Cloud.Packet.Zones = append(shoot.Spec.Cloud.Packet.Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.Packet.Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
@@ -1993,9 +2103,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2006,9 +2116,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2020,9 +2130,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2034,9 +2144,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2048,9 +2158,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Succeed())
 			})
@@ -2061,9 +2171,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2075,9 +2185,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2091,9 +2201,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -2107,9 +2217,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2121,9 +2231,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2138,9 +2248,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2175,9 +2285,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2195,9 +2305,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2209,12 +2319,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.OpenStack.Zones = append(shoot.Spec.Cloud.OpenStack.Zones, oldShoot.Spec.Cloud.OpenStack.Zones...)
+				shoot.Spec.Cloud.OpenStack.Zones = append(shoot.Spec.Cloud.OpenStack.Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.OpenStack.Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
@@ -2268,9 +2409,9 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2281,9 +2422,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2295,9 +2436,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2309,9 +2450,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2323,9 +2464,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2339,9 +2480,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -2355,9 +2496,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2372,9 +2513,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2409,9 +2550,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2429,9 +2570,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2453,9 +2594,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2467,12 +2608,57 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone", func() {
+				shoot.Spec.Provider.Workers[0].Zones = []string{"invalid-zone"}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.Alicloud.Zones = append(shoot.Spec.Cloud.Alicloud.Zones, oldShoot.Spec.Cloud.Alicloud.Zones...)
+				shoot.Spec.Cloud.Alicloud.Zones = append(shoot.Spec.Cloud.Alicloud.Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Cloud.Alicloud.Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should reject due to an machine type is not available in shoot zones", func() {
@@ -2489,9 +2675,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2511,9 +2697,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2547,22 +2733,22 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = nil
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Networking.Nodes = seedNodesCIDR
+				shoot.Spec.Networking.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2574,9 +2760,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2588,9 +2774,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2605,9 +2791,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2625,9 +2811,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2645,9 +2831,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2664,9 +2850,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2684,9 +2870,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeNil())
 			})
@@ -2697,9 +2883,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2713,9 +2899,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
@@ -2729,9 +2915,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2746,9 +2932,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2783,12 +2969,126 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should use latest machine image as old shoot does not specify one", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = []garden.CloudProfileMachineImage{
+					{
+						Name: imageName,
+						Versions: []garden.ExpirableVersion{
+							{
+								Version: version2,
+							},
+							{
+								Version:        version1,
+								ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+							},
+						},
+					},
+				}
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = nil
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}))
+			})
+
+			It("should not touch the machine image of the old shoot", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
+					Name: imageName,
+					Versions: []garden.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version1,
+				}
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Provider.Workers[0].Machine.Image = nil
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(newShoot, &shoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*newShoot).To(Equal(shoot))
+			})
+
+			It("should respect the desired machine image of the new shoot", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, garden.CloudProfileMachineImage{
+					Name: imageName,
+					Versions: []garden.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version1,
+				}
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Provider.Workers[0].Machine.Image = &garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(newShoot, &shoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&garden.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}))
 			})
 
 			It("should not reject due to an usable machine type", func() {
@@ -2803,9 +3103,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2822,9 +3122,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2842,9 +3142,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2866,9 +3166,9 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -2880,12 +3180,43 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Admit(attrs, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone update", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, oldShoot.Spec.Provider.Workers[0].Zones...)
+				shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "invalid-zone")
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should allow update when zone has removed from CloudProfile", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{}
+				cloudProfile.Spec.Regions = cloudProfile.Spec.Regions[1:]
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})

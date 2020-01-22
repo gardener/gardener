@@ -17,15 +17,18 @@ package seed_test
 import (
 	"context"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/seed"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +49,54 @@ var _ = Describe("seed", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#GetWildcardCertificate", func() {
+		It("should return no wildcard certificate secret", func() {
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}))
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
+
+		It("should return a wildcard certificate secret", func() {
+			secretList := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{},
+				},
+			}
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
+				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+					*secrets = *secretList
+					return nil
+				})
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*secret).To(Equal(secretList.Items[0]))
+		})
+
+		It("should return an error because more than one wildcard secrets is found", func() {
+			secretList := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{},
+					{},
+				},
+			}
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})).DoAndReturn(
+				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+					*secrets = *secretList
+					return nil
+				})
+
+			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
+
+			Expect(err).To(HaveOccurred())
+			Expect(secret).To(BeNil())
+		})
 	})
 
 	Describe("#GetFluentdReplicaCount", func() {
@@ -82,8 +133,8 @@ var _ = Describe("seed", func() {
 			var (
 				size = "20Gi"
 				seed = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
 							Volume: nil,
 						},
 					},
@@ -99,9 +150,9 @@ var _ = Describe("seed", func() {
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
 				seed                = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
-							Volume: &gardencorev1alpha1.SeedVolume{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
+							Volume: &gardencorev1beta1.SeedVolume{
 								MinimumSize: &minimumSizeQuantity,
 							},
 						},
@@ -118,9 +169,9 @@ var _ = Describe("seed", func() {
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
 				seed                = &Seed{
-					Info: &gardencorev1alpha1.Seed{
-						Spec: gardencorev1alpha1.SeedSpec{
-							Volume: &gardencorev1alpha1.SeedVolume{
+					Info: &gardencorev1beta1.Seed{
+						Spec: gardencorev1beta1.SeedSpec{
+							Volume: &gardencorev1beta1.SeedVolume{
 								MinimumSize: &minimumSizeQuantity,
 							},
 						},

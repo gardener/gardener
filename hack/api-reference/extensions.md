@@ -987,7 +987,7 @@ OperatingSystemConfigPurpose
 </td>
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
-gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
 cloud-config-downloader script already running on a bootstrapped VM.</p>
 </td>
 </tr>
@@ -1744,7 +1744,7 @@ string
 <code>conditions</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.Condition">
-[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </a>
 </em>
 </td>
@@ -1758,7 +1758,7 @@ string
 <code>lastError</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.LastError">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError
 </a>
 </em>
 </td>
@@ -1772,7 +1772,7 @@ github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError
 <code>lastOperation</code></br>
 <em>
 <a href="../core#core.gardener.cloud/v1alpha1.LastOperation">
-github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
 </a>
 </em>
 </td>
@@ -2253,6 +2253,20 @@ DefaultStatus
 </tr>
 <tr>
 <td>
+<code>nodesCIDR</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
+This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
+be statically defined in the Shoot resource but must be computed dynamically.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>providerStatus</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
@@ -2550,7 +2564,7 @@ OperatingSystemConfigPurpose
 </td>
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
-gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
 cloud-config-downloader script already running on a bootstrapped VM.</p>
 </td>
 </tr>
@@ -3190,5 +3204,5 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>63f9d9f55</code>.
+on git commit <code>864ace2ad</code>.
 </em></p>

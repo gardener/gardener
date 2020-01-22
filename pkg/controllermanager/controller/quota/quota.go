@@ -20,10 +20,10 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
+	"github.com/gardener/gardener/pkg/controllermanager"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,11 +55,11 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewQuotaController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
-		coreV1alpha1Informer = gardenCoreInformerFactory.Core().V1alpha1()
+		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 
-		quotaInformer       = coreV1alpha1Informer.Quotas()
+		quotaInformer       = gardenCoreV1beta1Informer.Quotas()
 		quotaLister         = quotaInformer.Lister()
-		secretBindingLister = coreV1alpha1Informer.SecretBindings().Lister()
+		secretBindingLister = gardenCoreV1beta1Informer.SecretBindings().Lister()
 	)
 
 	quotaController := &Controller{
@@ -132,9 +132,9 @@ func (c *Controller) RunningWorkers() int {
 
 // CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
 func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "quota")
+	metric, err := prometheus.NewConstMetric(controllermanager.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "quota")
 	if err != nil {
-		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "quota-controller"}).Inc()
+		controllermanager.ScrapeFailures.With(prometheus.Labels{"kind": "quota-controller"}).Inc()
 		return
 	}
 	ch <- metric

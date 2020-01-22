@@ -16,13 +16,13 @@ package shoot_test
 import (
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/logger"
 	mockgardencore "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned"
-	mockgardencorev1alpha1 "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned/typed/core/v1alpha1"
+	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned/typed/core/v1beta1"
 	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/controllermanager/controller/shoot"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -60,14 +60,14 @@ var _ = Describe("Shoot Hibernation", func() {
 					locationEuropeBerlin = "Europe/Berlin"
 					locationUSCentral    = "US/Central"
 
-					s1 = gardencorev1alpha1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s2 = gardencorev1alpha1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s3 = gardencorev1alpha1.HibernationSchedule{Location: &locationUSCentral}
-					s4 = gardencorev1alpha1.HibernationSchedule{}
+					s1 = gardencorev1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
+					s2 = gardencorev1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
+					s3 = gardencorev1beta1.HibernationSchedule{Location: &locationUSCentral}
+					s4 = gardencorev1beta1.HibernationSchedule{}
 				)
 
-				grouped := GroupHibernationSchedulesByLocation([]gardencorev1alpha1.HibernationSchedule{s1, s2, s3, s4})
-				Expect(grouped).To(Equal(map[string][]gardencorev1alpha1.HibernationSchedule{
+				grouped := GroupHibernationSchedulesByLocation([]gardencorev1beta1.HibernationSchedule{s1, s2, s3, s4})
+				Expect(grouped).To(Equal(map[string][]gardencorev1beta1.HibernationSchedule{
 					locationEuropeBerlin: {s1, s2},
 					locationUSCentral:    {s3},
 					time.UTC.String():    {s4},
@@ -78,9 +78,9 @@ var _ = Describe("Shoot Hibernation", func() {
 		Describe("#ComputeHibernationSchedule", func() {
 			It("should compute a correct hibernation schedule", func() {
 				var (
-					c      = mockgardencore.NewMockInterface(ctrl)
-					logger = utils.NewNopLogger()
-					now    time.Time
+					c   = mockgardencore.NewMockInterface(ctrl)
+					log = logger.NewNopLogger()
+					now time.Time
 
 					start = "0 * * * *"
 					end   = "10 * * * *"
@@ -90,11 +90,11 @@ var _ = Describe("Shoot Hibernation", func() {
 					location       = time.UTC
 					locationString = location.String()
 
-					shoot = gardencorev1alpha1.Shoot{
-						Spec: gardencorev1alpha1.ShootSpec{
-							Hibernation: &gardencorev1alpha1.Hibernation{
+					shoot = gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Hibernation: &gardencorev1beta1.Hibernation{
 								Enabled: &trueVar,
-								Schedules: []gardencorev1alpha1.HibernationSchedule{
+								Schedules: []gardencorev1beta1.HibernationSchedule{
 									{
 										Start:    &start,
 										End:      &end,
@@ -120,11 +120,11 @@ var _ = Describe("Shoot Hibernation", func() {
 				gomock.InOrder(
 					newCronWithLocation.EXPECT().Do(location).Return(cr),
 
-					cr.EXPECT().Schedule(startSched, NewHibernationJob(c, LocationLogger(logger, location), &shoot, trueVar)),
-					cr.EXPECT().Schedule(endSched, NewHibernationJob(c, LocationLogger(logger, location), &shoot, false)),
+					cr.EXPECT().Schedule(startSched, NewHibernationJob(c, LocationLogger(log, location), &shoot, trueVar)),
+					cr.EXPECT().Schedule(endSched, NewHibernationJob(c, LocationLogger(log, location), &shoot, false)),
 				)
 
-				actualSched, err := ComputeHibernationSchedule(c, logger, &shoot)
+				actualSched, err := ComputeHibernationSchedule(c, log, &shoot)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSched).To(Equal(HibernationSchedule{locationString: cr}))
 			})
@@ -223,34 +223,34 @@ var _ = Describe("Shoot Hibernation", func() {
 			It("should set the correct hibernation status", func() {
 				var (
 					c           = mockgardencore.NewMockInterface(ctrl)
-					gardenIface = mockgardencorev1alpha1.NewMockCoreV1alpha1Interface(ctrl)
-					shootIface  = mockgardencorev1alpha1.NewMockShootInterface(ctrl)
-					logger      = utils.NewNopLogger()
+					gardenIface = mockgardencorev1beta1.NewMockCoreV1beta1Interface(ctrl)
+					shootIface  = mockgardencorev1beta1.NewMockShootInterface(ctrl)
+					log         = logger.NewNopLogger()
 					enabled     = trueVar
 
 					namespace = "foo"
 					name      = "bar"
-					shoot     = gardencorev1alpha1.Shoot{
+					shoot     = gardencorev1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: namespace,
 							Name:      name,
 						},
-						Spec: gardencorev1alpha1.ShootSpec{
-							Hibernation: &gardencorev1alpha1.Hibernation{},
+						Spec: gardencorev1beta1.ShootSpec{
+							Hibernation: &gardencorev1beta1.Hibernation{},
 						},
 					}
-					job = NewHibernationJob(c, logger, &shoot, enabled)
+					job = NewHibernationJob(c, log, &shoot, enabled)
 				)
 
 				gomock.InOrder(
-					c.EXPECT().CoreV1alpha1().Return(gardenIface),
+					c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
 					shootIface.EXPECT().Get(name, metav1.GetOptions{}).Return(&shoot, nil),
 
-					c.EXPECT().CoreV1alpha1().Return(gardenIface),
+					c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1alpha1.Shoot{})).Do(func(actual *gardencorev1alpha1.Shoot) {
-						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1alpha1.Hibernation{
+					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Do(func(actual *gardencorev1beta1.Shoot) {
+						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
 							Enabled: &enabled,
 						}))
 					}),

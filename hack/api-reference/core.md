@@ -319,7 +319,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -1198,6 +1198,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 the account the Seed cluster has been deployed to.</p>
 </td>
@@ -2114,7 +2115,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targetting this profile.</p>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
 </td>
 </tr>
 <tr>
@@ -3161,7 +3162,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Enabled is true if the Shoot&rsquo;s desired state is hibernated, false otherwise.</p>
+<p>Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot&rsquo;s desired state is to be hibernated.
+If it is false or nil, the Shoot&rsquo;s desired state is to be awaken.</p>
 </td>
 </tr>
 <tr>
@@ -3900,7 +3902,7 @@ string
 <a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
 </p>
 <p>
-<p>KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.</p>
+<p>KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.</p>
 </p>
 <table>
 <thead>
@@ -4978,6 +4980,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Nodes is the CIDR of the entire node network.</p>
 </td>
 </tr>
@@ -5050,6 +5053,21 @@ map[string]string
 <em>(Optional)</em>
 <p>Config contains custom configuration for the nginx-ingress-controller configuration.
 See <a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options">https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#serviceexternaltrafficpolicytype-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy controls the <code>.spec.externalTrafficPolicy</code> value of the load balancer <code>Service</code>
+exposing the nginx-ingress. Defaults to <code>Cluster</code>.</p>
 </td>
 </tr>
 </tbody>
@@ -5894,6 +5912,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Nodes is the CIDR of the node network.</p>
 </td>
 </tr>
@@ -6072,6 +6091,7 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 the account the Seed cluster has been deployed to.</p>
 </td>
@@ -6135,6 +6155,18 @@ Gardener
 <td>
 <em>(Optional)</em>
 <p>Gardener holds information about the Gardener which last acted on the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetesVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubernetesVersion is the Kubernetes version of the seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -7127,5 +7159,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>63f9d9f55</code>.
+on git commit <code>864ace2ad</code>.
 </em></p>

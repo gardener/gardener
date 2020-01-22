@@ -19,16 +19,16 @@ import (
 	"fmt"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
-	schedulerutils "github.com/gardener/gardener/pkg/scheduler/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,9 +50,9 @@ func (c *SchedulerController) shootAdd(obj interface{}) {
 		return
 	}
 
-	newShoot, ok := obj.(*gardencorev1alpha1.Shoot)
+	newShoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
-		logger.Logger.Errorf("Couldn't convert object into `core.gardener.cloud/v1alpha1.Shoot`: %+v: %v", obj, err)
+		logger.Logger.Errorf("Couldn't convert object into `core.gardener.cloud/v1beta1.Shoot`: %+v: %v", obj, err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (c *SchedulerController) reconcileShootKey(ctx context.Context, key string)
 type SchedulerInterface interface {
 	// ScheduleShoot implements the control logic for Shoot Scheduling (to a Seed).
 	// If an implementation returns a non-nil error, the invocation will be retried respecting the RetrySyncPeriod with exponential backoff.
-	ScheduleShoot(ctx context.Context, seed *gardencorev1alpha1.Shoot, key string) error
+	ScheduleShoot(ctx context.Context, seed *gardencorev1beta1.Shoot, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation SchedulerInterface that
@@ -116,9 +116,9 @@ type defaultControl struct {
 	cloudProfileLister     gardencorelisters.CloudProfileLister
 }
 
-type executeSchedulingRequest = func(context.Context, *gardencorev1alpha1.Shoot) error
+type executeSchedulingRequest = func(context.Context, *gardencorev1beta1.Shoot) error
 
-func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1alpha1.Shoot, key string) error {
+func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1beta1.Shoot, key string) error {
 	var (
 		shoot           = obj.DeepCopy()
 		schedulerLogger = logger.NewFieldLogger(logger.Logger, "scheduler", "shoot").WithField("shoot", shoot.Name)
@@ -133,9 +133,9 @@ func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1alp
 		return err
 	}
 
-	updateShoot := func(ctx context.Context, shootToUpdate *gardencorev1alpha1.Shoot) error {
+	updateShoot := func(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot) error {
 		// need retry logic, because the controller-manager is acting on it at the same time: setting Status to Pending until scheduled
-		_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardencorev1alpha1.Shoot) (*gardencorev1alpha1.Shoot, error) {
+		_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Spec.SeedName != nil {
 				alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("shoot has already a seed assigned when trying to schedule the shoot to %s", *shootToUpdate.Spec.SeedName))
 				return nil, &alreadyScheduledErr
@@ -161,7 +161,7 @@ func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1alp
 }
 
 // determineSeed returns an appropriate Seed cluster (or nil).
-func determineSeed(shoot *gardencorev1alpha1.Shoot, seedLister gardencorelisters.SeedLister, shootLister gardencorelisters.ShootLister, cloudProfileLister gardencorelisters.CloudProfileLister, strategy config.CandidateDeterminationStrategy) (*gardencorev1alpha1.Seed, error) {
+func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.SeedLister, shootLister gardencorelisters.ShootLister, cloudProfileLister gardencorelisters.CloudProfileLister, strategy config.CandidateDeterminationStrategy) (*gardencorev1beta1.Seed, error) {
 	seedList, err := seedLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -178,15 +178,18 @@ func determineSeed(shoot *gardencorev1alpha1.Shoot, seedLister gardencorelisters
 	return determineBestSeedCandidate(shoot, cloudProfile, shootList, seedList, strategy)
 }
 
-func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *gardencorev1alpha1.CloudProfile, shootList []*gardencorev1alpha1.Shoot, seedList []*gardencorev1alpha1.Seed, strategy config.CandidateDeterminationStrategy) (*gardencorev1alpha1.Seed, error) {
-	var candidates []*gardencorev1alpha1.Seed
-	switch strategy {
-	case config.SameRegion:
+func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) (*gardencorev1beta1.Seed, error) {
+	var candidates []*gardencorev1beta1.Seed
+
+	switch {
+	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
+		candidates = determineCandidatesOfSameProvider(seedList, shoot, candidates)
+	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
-	case config.MinimalDistance:
+	case strategy == config.MinimalDistance:
 		candidates = determineCandidatesWithMinimalDistanceStrategy(seedList, shoot, candidates)
 	default:
-		return nil, fmt.Errorf("unknown seed determination strategy configured. Strategy: '%s' does not exist. Valid strategies are: %v", strategy, config.Strategies)
+		return nil, fmt.Errorf("failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, config.Strategies)
 	}
 
 	if candidates == nil {
@@ -208,8 +211,7 @@ func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *g
 	candidateErrors := make(map[string]error)
 
 	for _, seed := range old {
-		disj, err := networksAreDisjunct(seed, shoot)
-		if !disj {
+		if disjointed, err := networksAreDisjointed(seed, shoot); !disjointed {
 			candidateErrors[seed.Name] = err
 			continue
 		}
@@ -233,7 +235,7 @@ func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *g
 
 	// Find the best candidate (i.e. the one managing the smallest number of shoots right now).
 	var (
-		bestCandidate *gardencorev1alpha1.Seed
+		bestCandidate *gardencorev1beta1.Seed
 		min           *int
 		seedUsage     = generateSeedUsageMap(shootList)
 	)
@@ -248,17 +250,27 @@ func determineBestSeedCandidate(shoot *gardencorev1alpha1.Shoot, cloudProfile *g
 	return bestCandidate, nil
 }
 
-func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot, candidates []*gardencorev1alpha1.Seed) []*gardencorev1alpha1.Seed {
+func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	// Determine all candidate seed clusters matching the shoot's provider and region.
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintInvisible) && verifySeedAvailability(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
 			candidates = append(candidates, seed)
 		}
 	}
 	return candidates
 }
 
-func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot, candidates []*gardencorev1alpha1.Seed) []*gardencorev1alpha1.Seed {
+func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
+	// Determine all candidate seed clusters matching the shoot's provider and region.
+	for _, seed := range seedList {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+			candidates = append(candidates, seed)
+		}
+	}
+	return candidates
+}
+
+func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	if candidates = determineCandidatesWithSameRegionStrategy(seeds, shoot, candidates); candidates != nil {
 		return candidates
 	}
@@ -270,12 +282,12 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1alpha1.
 
 	// Determine all candidate seed clusters with matching cloud provider but different region that are lexicographically closest to the shoot
 	for _, seed := range seeds {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintInvisible) && verifySeedAvailability(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
 			seedRegion := seed.Spec.Provider.Region
 
 			for currentMaxMatchingCharacters < len(shootRegion) {
 				if strings.HasPrefix(seedRegion, shootRegion[:currentMaxMatchingCharacters+1]) {
-					candidates = []*gardencorev1alpha1.Seed{}
+					candidates = []*gardencorev1beta1.Seed{}
 					currentMaxMatchingCharacters++
 					continue
 				} else if strings.HasPrefix(seedRegion, shootRegion[:currentMaxMatchingCharacters]) {
@@ -288,7 +300,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1alpha1.
 	return candidates
 }
 
-func generateSeedUsageMap(shootList []*gardencorev1alpha1.Shoot) map[string]int {
+func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
@@ -300,48 +312,62 @@ func generateSeedUsageMap(shootList []*gardencorev1alpha1.Shoot) map[string]int 
 	return m
 }
 
-func networksAreDisjunct(seed *gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot) (bool, error) {
-	errs := schedulerutils.ValidateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Networking.Nodes, shoot.Spec.Networking.Pods, shoot.Spec.Networking.Services, field.NewPath(""))
-	var errMsgs []string
-	for _, e := range errs {
-		errMsgs = append(errMsgs, e.ErrorBody())
-	}
-	return len(errs) == 0, fmt.Errorf("invalid networks: %s", errMsgs)
-}
+func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	var (
+		shootPodsNetwork     = shoot.Spec.Networking.Pods
+		shootServicesNetwork = shoot.Spec.Networking.Services
 
-func verifySeedAvailability(seed *gardencorev1alpha1.Seed) bool {
-	if cond := gardencorev1alpha1helper.GetCondition(seed.Status.Conditions, gardencorev1alpha1.SeedAvailable); cond != nil {
-		return cond.Status == gardencorev1alpha1.ConditionTrue
+		errorMessages []string
+	)
+
+	if shootPodsNetwork == nil {
+		shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
 	}
-	return false
+	if shootServicesNetwork == nil {
+		shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+	}
+
+	for _, e := range cidrvalidation.ValidateNetworkDisjointedness(
+		field.NewPath(""),
+		shoot.Spec.Networking.Nodes,
+		shootPodsNetwork,
+		shootServicesNetwork,
+		seed.Spec.Networks.Nodes,
+		seed.Spec.Networks.Pods,
+		seed.Spec.Networks.Services,
+	) {
+		errorMessages = append(errorMessages, e.ErrorBody())
+	}
+
+	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
 }
 
 // ignore seed if it disables DNS and shoot has DNS but not unmanaged
-func ignoreSeedDueToDNSConfiguration(seed *gardencorev1alpha1.Seed, shoot *gardencorev1alpha1.Shoot) bool {
-	if !gardencorev1alpha1helper.TaintsHave(seed.Spec.Taints, gardencorev1alpha1.SeedTaintDisableDNS) {
+func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) bool {
+	if !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
 		return false
 	}
 	if shoot.Spec.DNS == nil {
 		return false
 	}
-	return !gardencorev1alpha1helper.ShootUsesUnmanagedDNS(shoot)
+	return !gardencorev1beta1helper.ShootUsesUnmanagedDNS(shoot)
 }
 
 // UpdateShootToBeScheduledOntoSeed sets the seed name where the shoot should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.
-func UpdateShootToBeScheduledOntoSeed(ctx context.Context, shoot *gardencorev1alpha1.Shoot, seed *gardencorev1alpha1.Seed, executeSchedulingRequest executeSchedulingRequest) error {
+func UpdateShootToBeScheduledOntoSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, executeSchedulingRequest executeSchedulingRequest) error {
 	shoot.Spec.SeedName = &seed.Name
 	return executeSchedulingRequest(ctx, shoot)
 }
 
-func (c *defaultControl) reportFailedScheduling(shoot *gardencorev1alpha1.Shoot, err error) {
-	c.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1alpha1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", shoot.Name, err)
+func (c *defaultControl) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
+	c.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", shoot.Name, err)
 }
 
-func (c *defaultControl) reportSuccessfulScheduling(shoot *gardencorev1alpha1.Shoot, seedName string) {
-	c.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1alpha1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seedName)
+func (c *defaultControl) reportSuccessfulScheduling(shoot *gardencorev1beta1.Shoot, seedName string) {
+	c.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seedName)
 }
 
-func (c *defaultControl) reportEvent(project *gardencorev1alpha1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
+func (c *defaultControl) reportEvent(project *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
 	c.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
 }
 

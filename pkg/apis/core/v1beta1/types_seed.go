@@ -63,7 +63,8 @@ type SeedSpec struct {
 	Provider SeedProvider `json:"provider"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 	// Taints describes taints on the seed.
 	// +optional
 	Taints []SeedTaint `json:"taints,omitempty"`
@@ -76,7 +77,10 @@ type SeedSpec struct {
 type SeedStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	// +optional
-	Gardener Gardener `json:"gardener,omitempty"`
+	Gardener *Gardener `json:"gardener,omitempty"`
+	// KubernetesVersion is the Kubernetes version of the seed cluster.
+	// +optional
+	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -111,7 +115,8 @@ type SeedDNS struct {
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes string `json:"nodes"`
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
 	// Pods is the CIDR of the pod network.
 	Pods string `json:"pods"`
 	// Services is the CIDR of the service network.
@@ -153,6 +158,10 @@ type SeedTaint struct {
 }
 
 const (
+	// SeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
+	// using this seed won't get any DNS providers, DNS records, and no DNS extension controller is required to
+	// be installed here. This is useful for environment where DNS is not required.
+	SeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
 	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
 	// may only be used by shoots in the `garden` namespace.
 	SeedTaintProtected = "seed.gardener.cloud/protected"
@@ -182,6 +191,11 @@ type SeedVolumeProvider struct {
 }
 
 const (
-	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
-	SeedAvailable ConditionType = "Available"
+	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
+	// bootstrapped.
+	SeedBootstrapped ConditionType = "Bootstrapped"
+	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
+	SeedExtensionsReady ConditionType = "ExtensionsReady"
+	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
+	SeedGardenletReady ConditionType = "GardenletReady"
 )

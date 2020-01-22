@@ -82,6 +82,9 @@ type ShootSpec struct {
 	Monitoring *Monitoring `json:"monitoring,omitempty"`
 	// Provider contains all provider-specific and provider-relevant information.
 	Provider Provider `json:"provider"`
+	// Purpose is the purpose class for this cluster.
+	// +optional
+	Purpose *ShootPurpose `json:"purpose,omitempty"`
 	// Region is a name of a region.
 	Region string `json:"region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
@@ -179,6 +182,10 @@ type NginxIngress struct {
 	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options
 	// +optional
 	Config map[string]string `json:"config,omitempty"`
+	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
+	// exposing the nginx-ingress. Defaults to `Cluster`.
+	// +optional
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -250,7 +257,8 @@ type Extension struct {
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
-	// Enabled is true if the Shoot's desired state is hibernated, false otherwise.
+	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
+	// If it is false or nil, the Shoot's desired state is to be awaken.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 	// Schedules determine the hibernation schedules.
@@ -645,7 +653,7 @@ type KubeletConfigEviction struct {
 	NodeFSInodesFree *string `json:"nodeFSInodesFree,omitempty"`
 }
 
-// KubeletConfigEviction contains configuration for the kubelet eviction minimum reclaim.
+// KubeletConfigEvictionMinimumReclaim contains configuration for the kubelet eviction minimum reclaim.
 type KubeletConfigEvictionMinimumReclaim struct {
 	// MemoryAvailable is the threshold for the memory reclaim on the host server.
 	// +optional
@@ -698,7 +706,8 @@ type Networking struct {
 	// +optional
 	Pods *string `json:"pods,omitempty"`
 	// Nodes is the CIDR of the entire node network.
-	Nodes string `json:"nodes"`
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
 	// Services is the CIDR of the service network.
 	// +optional
 	Services *string `json:"services,omitempty"`
@@ -900,4 +909,20 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+)
+
+// ShootPurpose is a type alias for string.
+type ShootPurpose string
+
+const (
+	// ShootPurposeEvaluation is a constant for the evaluation purpose.
+	ShootPurposeEvaluation ShootPurpose = "evaluation"
+	// ShootPurposeTesting is a constant for the testing purpose.
+	ShootPurposeTesting ShootPurpose = "testing"
+	// ShootPurposeDevelopment is a constant for the development purpose.
+	ShootPurposeDevelopment ShootPurpose = "development"
+	// ShootPurposeProduction is a constant for the production purpose.
+	ShootPurposeProduction ShootPurpose = "production"
+	// ShootPurposeInfrastructure is a constant for the infrastructure purpose.
+	ShootPurposeInfrastructure ShootPurpose = "infrastructure"
 )

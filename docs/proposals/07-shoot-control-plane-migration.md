@@ -81,7 +81,7 @@ metadata:
   name: my-shoot
   namespace: garden-core
   ownerReference:
-    apiVersion: core.gardener.cloud/v1alpha1
+    apiVersion: core.gardener.cloud/v1beta1
     blockOwnerDeletion: true
     controller: true
     kind: Shoot

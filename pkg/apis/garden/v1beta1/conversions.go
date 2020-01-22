@@ -23,7 +23,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
-	"github.com/gardener/gardener/pkg/utils"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
 	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
@@ -40,6 +40,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog"
 )
 
@@ -319,17 +320,17 @@ func Convert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversio
 	}
 
 	if v, ok := out.Annotations[garden.MigrationSeedProviderType]; ok && v == "alicloud" {
-		if out.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
+		if out.Spec.Networks.ShootDefaults.Pods == nil && !cidrvalidation.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDRAlicloud) {
 			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDRAlicloud
 		}
-		if out.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
+		if out.Spec.Networks.ShootDefaults.Services == nil && !cidrvalidation.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDRAlicloud) {
 			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDRAlicloud
 		}
 	} else {
-		if out.Spec.Networks.ShootDefaults.Pods == nil && !utils.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDR) {
+		if out.Spec.Networks.ShootDefaults.Pods == nil && !cidrvalidation.NetworksIntersect(out.Spec.Networks.Pods, defaultPodCIDR) {
 			out.Spec.Networks.ShootDefaults.Pods = &defaultPodCIDR
 		}
-		if out.Spec.Networks.ShootDefaults.Services == nil && !utils.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDR) {
+		if out.Spec.Networks.ShootDefaults.Services == nil && !cidrvalidation.NetworksIntersect(out.Spec.Networks.Services, defaultServiceCIDR) {
 			out.Spec.Networks.ShootDefaults.Services = &defaultServiceCIDR
 		}
 	}
@@ -1440,6 +1441,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.AWS.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1455,7 +1457,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1481,8 +1483,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.AWS.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.AWS.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1491,7 +1496,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.AWS.Workers = workers
 
 		if in.Spec.Cloud.AWS.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.AWS.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.AWS.Networks.Nodes
 		}
 		if in.Spec.Cloud.AWS.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.AWS.Networks.Pods
@@ -1581,6 +1586,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Azure.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1596,7 +1602,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1621,8 +1627,12 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.ProviderConfig = data.ProviderConfig
 				w.Zones = data.Zones
 			}
-			if w.Zones == nil && zoned {
-				w.Zones = in.Spec.Cloud.Azure.Zones
+
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Azure.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1631,7 +1641,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.Azure.Workers = workers
 
 		if in.Spec.Cloud.Azure.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.Azure.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.Azure.Networks.Nodes
 		}
 		if in.Spec.Cloud.Azure.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Azure.Networks.Pods
@@ -1716,6 +1726,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.GCP.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -1731,7 +1742,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -1757,8 +1768,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.GCP.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.GCP.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1767,7 +1781,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.GCP.Workers = workers
 
 		if in.Spec.Cloud.GCP.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.GCP.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.GCP.Networks.Nodes
 		}
 		if in.Spec.Cloud.GCP.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.GCP.Networks.Pods
@@ -1894,8 +1908,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Volume = data.Volume
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.OpenStack.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.OpenStack.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -1904,7 +1921,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.OpenStack.Workers = workers
 
 		if in.Spec.Cloud.OpenStack.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.OpenStack.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.OpenStack.Networks.Nodes
 		}
 		if in.Spec.Cloud.OpenStack.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.OpenStack.Networks.Pods
@@ -1992,6 +2009,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Alicloud.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -2007,7 +2025,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -2033,8 +2051,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.Alicloud.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Alicloud.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -2043,7 +2064,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.Alicloud.Workers = workers
 
 		if in.Spec.Cloud.Alicloud.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.Alicloud.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.Alicloud.Networks.Nodes
 		}
 		if in.Spec.Cloud.Alicloud.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Alicloud.Networks.Pods
@@ -2093,6 +2114,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Provider.Workers = nil
 
 		for _, worker := range in.Spec.Cloud.Packet.Workers {
+			volumeType := worker.VolumeType
 			w := garden.Worker{
 				Annotations: worker.Annotations,
 				CABundle:    worker.CABundle,
@@ -2108,7 +2130,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				Taints:         worker.Taints,
 				Volume: &garden.Volume{
 					Size: worker.VolumeSize,
-					Type: &worker.VolumeType,
+					Type: &volumeType,
 				},
 			}
 
@@ -2134,8 +2156,11 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 				w.Zones = data.Zones
 			}
 
-			if w.Zones == nil {
-				w.Zones = in.Spec.Cloud.Packet.Zones
+			usedZones := sets.NewString(w.Zones...)
+			for _, zone := range in.Spec.Cloud.Packet.Zones {
+				if !usedZones.Has(zone) {
+					w.Zones = append(w.Zones, zone)
+				}
 			}
 
 			out.Spec.Provider.Workers = append(out.Spec.Provider.Workers, w)
@@ -2144,7 +2169,7 @@ func Convert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conve
 		out.Spec.Cloud.Packet.Workers = workers
 
 		if in.Spec.Cloud.Packet.Networks.Nodes != nil {
-			out.Spec.Networking.Nodes = *in.Spec.Cloud.Packet.Networks.Nodes
+			out.Spec.Networking.Nodes = in.Spec.Cloud.Packet.Networks.Nodes
 		}
 		if in.Spec.Cloud.Packet.Networks.Pods != nil {
 			out.Spec.Networking.Pods = in.Spec.Cloud.Packet.Networks.Pods
@@ -2242,7 +2267,6 @@ func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conve
 		}
 		metav1.SetMetaDataAnnotation(&out.ObjectMeta, garden.MigrationShootProvider, string(data))
 	}
-
 	return nil
 }
 
@@ -2584,7 +2608,7 @@ func Convert_garden_Networking_To_v1beta1_Networking(in *garden.Networking, out 
 	}
 
 	out.K8SNetworks = K8SNetworks{
-		Nodes:    &in.Nodes,
+		Nodes:    in.Nodes,
 		Pods:     in.Pods,
 		Services: in.Services,
 	}
@@ -2598,7 +2622,7 @@ func Convert_v1beta1_Networking_To_garden_Networking(in *Networking, out *garden
 	}
 
 	if in.K8SNetworks.Nodes != nil {
-		out.Nodes = *in.K8SNetworks.Nodes
+		out.Nodes = in.K8SNetworks.Nodes
 	}
 	out.Pods = in.K8SNetworks.Pods
 	out.Services = in.K8SNetworks.Services

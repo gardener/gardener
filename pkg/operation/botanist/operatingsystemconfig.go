@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -38,15 +38,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
 
 // first hard, second soft
-func getEvictionMemoryAvailable(machineTypes []gardencorev1alpha1.MachineType, machineType string) (string, string) {
+func getEvictionMemoryAvailable(machineTypes []gardencorev1beta1.MachineType, machineType string) (string, string) {
 	memoryThreshold, _ := resource.ParseQuantity("8Gi")
 
 	for _, machtype := range machineTypes {
@@ -87,7 +85,7 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 		}
 
 		wg.Add(1)
-		go func(worker gardencorev1alpha1.Worker) {
+		go func(worker gardencorev1beta1.Worker) {
 			defer wg.Done()
 
 			downloaderConfig := b.generateDownloaderConfig(worker.Machine.Image.Name)
@@ -135,7 +133,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 		originalConfig = map[string]interface{}{
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-				"domain":     gardencorev1alpha1.DefaultDomain,
+				"domain":     gardencorev1beta1.DefaultDomain,
 				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		}
@@ -144,15 +142,15 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
 		caBundle = *cloudProfileCaBundle
 	}
-	if caCert, ok := b.Secrets[v1alpha1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
+	if caCert, ok := b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
 		caBundle = fmt.Sprintf("%s\n%s", caBundle, caCert)
 	}
 	originalConfig["caBundle"] = caBundle
 
-	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName)
 }
 
-func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1alpha1.MachineType, machineImage *gardencorev1alpha1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1alpha1.Worker) (*shoot.OperatingSystemConfigs, error) {
+func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
 	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 
 	downloaderConfig["secretName"] = secretName
@@ -165,7 +163,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		}
 	}
 
-	sshKey := b.Secrets[v1alpha1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
+	sshKey := b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
 
 	originalConfig["osc"] = map[string]interface{}{
 		"type":                 machineImage.Name,
@@ -279,7 +277,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 	}
 
 	var kubelet = map[string]interface{}{
-		"caCert":                  string(b.Secrets[v1alpha1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
+		"caCert":                  string(b.Secrets[v1beta1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
 		"evictionHard":            evictionHard,
 		"evictionSoft":            evictionSoft,
 		"evictionSoftGracePeriod": evictionSoftGracePeriod,
@@ -377,7 +375,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name str
 // generateCloudConfigExecutionChart renders the gardener-resource-manager configuration for the cloud config user data.
 // After that it creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedChart, error) {
-	bootstrapTokenSecret, err := b.computeBootstrapToken()
+	bootstrapTokenSecret, err := kutil.ComputeBootstrapToken(context.TODO(), b.K8sShootClient.Client(), utils.ComputeSHA256Hex([]byte(time.Now().Format("2006-01-02")))[:6], "A bootstrap token generated by Gardener.", 48*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -401,9 +399,10 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	}
 
 	config := map[string]interface{}{
-		"bootstrapToken": bootstraptokenutil.TokenFromIDAndSecret(string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenIDKey]), string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenSecretKey])),
-		"configFilePath": common.CloudConfigFilePath,
-		"workers":        workers,
+		"bootstrapToken":    kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data),
+		"configFilePath":    common.CloudConfigFilePath,
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"workers":           workers,
 	}
 
 	config, err = b.InjectShootShootImages(config, common.HyperkubeImageName)
@@ -412,44 +411,6 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	}
 
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
-}
-
-func (b *Botanist) computeBootstrapToken() (secret *corev1.Secret, err error) {
-	var (
-		tokenID    = utils.ComputeSHA256Hex([]byte(time.Now().Format("2006-01-02")))[:6]
-		secretName = bootstraptokenutil.BootstrapTokenSecretName(tokenID)
-	)
-
-	secret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: metav1.NamespaceSystem,
-		},
-	}
-	err = b.K8sShootClient.Client().Get(context.TODO(), kutil.Key(secret.Namespace, secret.Name), secret)
-	if apierrors.IsNotFound(err) {
-		bootstrapTokenSecretKey, err := utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
-		if err != nil {
-			return nil, err
-		}
-		data := map[string][]byte{
-			bootstraptokenapi.BootstrapTokenDescriptionKey:      []byte("A bootstrap token generated by Gardener."),
-			bootstraptokenapi.BootstrapTokenIDKey:               []byte(tokenID),
-			bootstraptokenapi.BootstrapTokenSecretKey:           []byte(bootstrapTokenSecretKey),
-			bootstraptokenapi.BootstrapTokenExpirationKey:       []byte(metav1.Now().Add(48 * time.Hour).Format(time.RFC3339)),
-			bootstraptokenapi.BootstrapTokenUsageAuthentication: []byte("true"),
-			bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
-		}
-
-		err = kutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), secret, func() error {
-			secret.Type = bootstraptokenapi.SecretTypeBootstrapToken
-			secret.Data = data
-			return nil
-		})
-
-		return secret, err
-	}
-	return secret, err
 }
 
 // CleanupOperatingSystemConfigs deletes all unused operating system configs in the shoot seed namespace

@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -111,9 +111,14 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 		}
 	}
 
-	oldPurpose = oldShoot.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
-	newPurpose = newShoot.ObjectMeta.Annotations[v1alpha1constants.GardenPurpose]
+	oldPurpose = oldShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
+	newPurpose = newShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
 	if oldPurpose != newPurpose {
+		return true
+	}
+
+	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
+	if oldShoot.ObjectMeta.Annotations[common.ShootExperimentalAddonKyma] != newShoot.ObjectMeta.Annotations[common.ShootExperimentalAddonKyma] {
 		return true
 	}
 
@@ -182,24 +187,24 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), nil
 }
 
-// TriggerFunc matches correct seed when watching.
-func TriggerFunc(obj runtime.Object) []storage.MatchValue {
-	shoot := obj.(*garden.Shoot)
-
-	seedResultDeprecated := storage.MatchValue{IndexName: garden.ShootSeedNameDeprecated, Value: getSeedName(shoot)}
-	seedResult := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getSeedName(shoot)}
-	cloudProfileResult := storage.MatchValue{IndexName: garden.ShootCloudProfileName, Value: shoot.Spec.CloudProfileName}
-	return []storage.MatchValue{seedResultDeprecated, seedResult, cloudProfileResult}
-}
-
 // MatchShoot returns a generic matcher for a given label and field selector.
 func MatchShoot(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{garden.ShootSeedNameDeprecated, garden.ShootSeedName, garden.ShootCloudProfileName},
+		IndexFields: []string{garden.ShootSeedName},
 	}
+}
+
+// SeedNameTriggerFunc returns spec.seedName of given Shoot.
+func SeedNameTriggerFunc(obj runtime.Object) string {
+	shoot, ok := obj.(*garden.Shoot)
+	if !ok {
+		return ""
+	}
+
+	return getSeedName(shoot)
 }
 
 func getSeedName(shoot *garden.Shoot) string {

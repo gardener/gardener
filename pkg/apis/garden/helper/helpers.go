@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/utils"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -181,7 +181,7 @@ func DetermineLatestKubernetesVersion(offeredVersions []garden.KubernetesVersion
 			latestKubernetesVersion = version
 			continue
 		}
-		isGreater, err := utils.CompareVersions(version.Version, ">", latestKubernetesVersion.Version)
+		isGreater, err := versionutils.CompareVersions(version.Version, ">", latestKubernetesVersion.Version)
 		if err != nil {
 			return garden.KubernetesVersion{}, fmt.Errorf("error while comparing Kubernetes versions: %s", err.Error())
 		}
@@ -201,7 +201,7 @@ func DetermineLatestExpirableVersion(offeredVersions []garden.ExpirableVersion) 
 			latestExpirableVersion = version
 			continue
 		}
-		isGreater, err := utils.CompareVersions(version.Version, ">", latestExpirableVersion.Version)
+		isGreater, err := versionutils.CompareVersions(version.Version, ">", latestExpirableVersion.Version)
 		if err != nil {
 			return garden.ExpirableVersion{}, fmt.Errorf("error while comparing versions: %s", err.Error())
 		}
@@ -268,4 +268,14 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 		return "secret", nil
 	}
 	return "", fmt.Errorf("unknown quota scope")
+}
+
+// FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
+func FindWorkerByName(workers []garden.Worker, name string) *garden.Worker {
+	for _, w := range workers {
+		if w.Name == name {
+			return &w
+		}
+	}
+	return nil
 }
