@@ -44,8 +44,6 @@
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
-* [User Alerts](development/user_alerts.md)
-* [Operator Alerts](development/operator_alerts.md)
 
 ## Extensions
 
@@ -90,3 +88,5 @@
 ## Monitoring
 
 * [Alerting](monitoring/alerting.md)
+* [User Alerts](monitoring/user_alerts.md)
+* [Operator Alerts](monitoring/operator_alerts.md)
