@@ -106,7 +106,7 @@ Since each operating system distribution has different methods of installing sof
            label: container.runtime.gvisor=true (shoot.spec.cloud.<IAAS>.worker.containerRuntimes.gvisor)
         2. During the Shoot reconciliation (Similar steps to the Extensions today) Gardener will create new ContainerRuntime resource if a container runtime exist in at least one worker spec:
             ```yaml
-            apiVersion: containerruntime.gardener.cloud/v1alpha1
+            apiVersion: extensions.gardener.cloud/v1alpha1
             kind: ContainerRuntime
             metadata:
               name: kata-containers-runtime-extention
