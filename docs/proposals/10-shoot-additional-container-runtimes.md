@@ -49,8 +49,8 @@ workers:
   autoScalerMax: 2
   maxSurge: 1
   containerRuntimes:
-  - gvisor
-  - kata-containers
+  - type: gvisor
+  - type: kata-containers
   machineImage:
     name: coreos
     version: 2135.6.0
@@ -86,13 +86,20 @@ Since each operating system distribution has different methods of installing sof
             1. Add the following flags to the kubelet execution command:
                1. --container-runtime=remote
                2. --container-runtime-endpoint=unix:///var/run/docker/libcontainerd/docker-containerd.socket
-            2. Create a containerd configuration file: /etc/containerd/config.toml based on the file in the path: __TBD__ and remove the CRI disabled plugin. 
+            2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration.
             3. Override the default containerd.service unit. Create a new unit in: /etc/systemd/system/containerd.service unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml.
-        3. os-suse-jeos - __TBD__     
+        3. os-suse-jeos - 
+           1. Add the following flags to the kubelet execution command:
+              1. --container-runtime=remote
+              2. --container-runtime-endpoint=unix:///var/run/docker/containerd/docker-containerd.sock 
+           2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration.
         
-    3. Docker-monitor daemon and rotate log should be replaced with equivalent conatinerd services. __TBD__ 
+    3. Docker-monitor daemon and conatinerd service. For CRI it is possible to send parameters to Kubelet to do the log rotation:
+       CRIContainerLogRotation=true
+    4. Docker pull images in OSC should be changed to the Docker ctr equivalent command. 
 
-2. Validate workers additional runtime configurations.  __TBD__
+2. Validate workers additional runtime configurations:
+   1. kata-container validation: Machine type support nested virtualization.
 3. Add support for each additional container runtime in the cluster.   
     1. In order to install each additional available runtime in the cluster we should:
         1. Install the runtime binaries in each Worker's pool nodes that specified the runtime support.
