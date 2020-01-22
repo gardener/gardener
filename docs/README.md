@@ -35,6 +35,7 @@
 * [GEP-7: Shoot Control Plane Migration](proposals/07-shoot-control-plane-migration.md)
 * [GEP-8: SNI Passthrough proxy for kube-apiservers](proposals/08-shoot-apiserver-via-sni.md)
 * [GEP-9: Gardener integration test framework](proposals/09-test-framework.md)
+* [GEP-10: 10-shoot-additional-container-runtimes](proposals/10-shoot-additional-container-runtimes.md)
 
 ## Development
 
