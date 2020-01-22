@@ -114,7 +114,7 @@ rules:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-member-aggregation
+  name: gardener.cloud:system:project-member
   labels:
     gardener.cloud/role: project-member
     app: gardener
@@ -129,7 +129,7 @@ aggregationRule:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-member
+  name: gardener.cloud:system:project-member-aggregation
   labels:
     rbac.gardener.cloud/aggregate-to-project-member: "true"
     app: gardener
@@ -198,7 +198,7 @@ rules:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-viewer-aggregation
+  name: gardener.cloud:system:project-viewer
   labels:
     garden.sapcloud.io/role: project-viewer
     gardener.cloud/role: project-viewer
@@ -214,7 +214,7 @@ aggregationRule:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-viewer
+  name: gardener.cloud:system:project-viewer-aggregation
   labels:
     rbac.gardener.cloud/aggregate-to-project-viewer: "true"
     app: gardener
