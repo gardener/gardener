@@ -3218,6 +3218,21 @@ var _ = Describe("validator", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("should allow volume removal", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Volume = nil
+				oldShoot.Spec.Provider.Workers[0].Volume.Size = "20Gi"
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 	})
 })
