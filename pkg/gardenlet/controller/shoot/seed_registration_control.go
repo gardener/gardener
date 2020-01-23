@@ -291,6 +291,9 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 	if shootedSeedConfig.DisableDNS != nil && *shootedSeedConfig.DisableDNS {
 		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableDNS})
 	}
+	if shootedSeedConfig.DisableCapacityReservation != nil && *shootedSeedConfig.DisableCapacityReservation {
+		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableCapacityReservation})
+	}
 	if shootedSeedConfig.Protected != nil && *shootedSeedConfig.Protected {
 		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintProtected})
 	}

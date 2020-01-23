@@ -128,7 +128,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	}
 
 	var (
-		supportedTaintKeys = sets.NewString(garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible)
+		supportedTaintKeys = sets.NewString(garden.SeedTaintDisableDNS, garden.SeedTaintProtected, garden.SeedTaintInvisible, garden.SeedTaintDisableCapacityReservation)
 		foundTaintKeys     = sets.NewString()
 	)
 
