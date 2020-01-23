@@ -21,6 +21,7 @@ IMAGE_TAG                          := $(shell cat VERSION)
 WORKDIR                            := $(shell pwd)
 PUSH_LATEST                        := true
 LD_FLAGS                           := $(shell ./hack/get-build-ld-flags)
+LOCAL_GARDEN_LABEL                 := local-garden
 
 #########################################
 # Rules for local development scenarios #
@@ -33,6 +34,32 @@ dev-setup:
 .PHONY: dev-setup-extensions
 dev-setup-extensions:
 	@./hack/dev-setup-extensions
+
+.PHONY: local-garden-up
+local-garden-up:
+	# Remove old containers and create the docker user network
+	@-./hack/local-garden/cleanup
+	@-docker network create gardener-dev --label $(LOCAL_GARDEN_LABEL)
+
+    # Start the nodeless kubernetes environment
+	@./hack/local-garden/run-kube-etcd $(LOCAL_GARDEN_LABEL)
+	@./hack/local-garden/run-kube-apiserver $(LOCAL_GARDEN_LABEL)
+	@./hack/local-garden/run-kube-controller-manager $(LOCAL_GARDEN_LABEL)
+
+	# This etcd will be used to storge gardener resources (e.g., seeds, shoots)
+	@./hack/local-garden/run-gardener-etcd $(LOCAL_GARDEN_LABEL)
+
+	# Applying proxy RBAC for the extension controller
+	# After this step, you can start using the cluster at hack/local-garden/kubeconfigs/admin.conf
+	@./hack/local-garden/apply-rbac-garden-ns
+
+	# Now you can start using the cluster at with `export KUBECONFIG=hack/local-garden/kubeconfigs/default-admin.conf`
+	# Then you need to run ./hack/dev-setup-register-gardener to register gardener.
+	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
+
+.PHONY: local-garden-down
+local-garden-down:
+	@-./hack/local-garden/cleanup
 
 .PHONY: start-apiserver
 start-apiserver:

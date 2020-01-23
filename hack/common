@@ -20,6 +20,7 @@ DOCKER_FOR_DESKTOP="docker-for-desktop"
 MINIKUBE="minikube"
 KIND="kind"
 KIND_NODE_NAME_SUFFIX="-control-plane"
+NODELESS="nodeless"
 
 API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
 
@@ -29,7 +30,14 @@ k8s_nodename() {
         echo "$__k8s_nodename"
         return
     fi
-    echo "$(kubectl get node -o jsonpath="{.items[0].metadata.name}")"
+
+    nodes_len=$(kubectl get node -o json | jq ".items" | jq '. | length')
+    if [[ "$nodes_len" == "0" ]]; then
+      echo $NODELESS
+      return
+    fi
+
+    echo "$(kubectl get node -o json | jq ".items[0].metadata.name")" |  tr -d \"
 }
 
 k8s_env() {
@@ -45,6 +53,10 @@ k8s_env() {
     if [[ "$node_name" == "docker"* ]]; then
         echo "$DOCKER_FOR_DESKTOP"
         return
+    fi
+    if [[ "$node_name" == "$NODELESS" ]]; then
+      echo $NODELESS
+      return
     fi
 
     >&2 echo "Unsupported Kubernetes Environment: $__k8s_env"
