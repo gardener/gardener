@@ -187,17 +187,17 @@ func TaintsHave(taints []gardencorev1alpha1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
-	DisableDNS        *bool
-	Protected         *bool
-	Visible           *bool
-	MinimumVolumeSize *string
-	APIServer         *ShootedSeedAPIServer
-	BlockCIDRs        []string
-	ShootDefaults     *gardencorev1alpha1.ShootNetworks
-	Backup            *gardencorev1alpha1.SeedBackup
-	NoGardenlet       bool
-	UseServiceAccountBootstrapping  bool
-	WithSecretRef     bool
+	DisableDNS                     *bool
+	Protected                      *bool
+	Visible                        *bool
+	MinimumVolumeSize              *string
+	APIServer                      *ShootedSeedAPIServer
+	BlockCIDRs                     []string
+	ShootDefaults                  *gardencorev1alpha1.ShootNetworks
+	Backup                         *gardencorev1alpha1.SeedBackup
+	NoGardenlet                    bool
+	UseServiceAccountBootstrapping bool
+	WithSecretRef                  bool
 }
 
 type ShootedSeedAPIServer struct {

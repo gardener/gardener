@@ -181,9 +181,23 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) (*gardencorev1beta1.Seed, error) {
 	var candidates []*gardencorev1beta1.Seed
 
+	selector := &metav1.LabelSelector{}
+	providers := []string{cloudProfile.Spec.Type}
+	if cloudProfile.Spec.SeedSelector != nil {
+		selector = cloudProfile.Spec.SeedSelector.LabelSelector
+		if len(cloudProfile.Spec.SeedSelector.Providers) > 0 {
+			providers = cloudProfile.Spec.SeedSelector.Providers
+		}
+	}
+
 	switch {
 	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
 		candidates = determineCandidatesOfSameProvider(seedList, shoot, candidates)
+	case strategy == config.Selector:
+		if matchProvider(cloudProfile.Spec.Type, shoot.Spec.Provider.Type, providers) {
+			candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
+		}
+		candidates = addCanditatesWithMatchingProviders(providers, seedList, shoot, candidates)
 	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
 	case strategy == config.MinimalDistance:
@@ -196,10 +210,6 @@ func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *ga
 		return nil, fmt.Errorf("no matching seed found for Configuration (Cloud Profile '%s', Region '%s', SeedDeterminationStrategy '%s')", shoot.Spec.CloudProfileName, shoot.Spec.Region, strategy)
 	}
 
-	selector := &metav1.LabelSelector{}
-	if cloudProfile.Spec.SeedSelector != nil {
-		selector = cloudProfile.Spec.SeedSelector
-	}
 	seedSelector, err := metav1.LabelSelectorAsSelector(selector)
 	if err != nil {
 		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *selector, err)
@@ -253,18 +263,39 @@ func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *ga
 func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	// Determine all candidate seed clusters matching the shoot's provider and region.
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
-			candidates = append(candidates, seed)
+		if seed.Spec.Provider.Type == shoot.Spec.Provider.Type && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
+			candidates = addCandidate(candidates, seed)
 		}
 	}
 	return candidates
 }
 
-func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
-	// Determine all candidate seed clusters matching the shoot's provider and region.
+func matchProvider(seed, shoot string, providers []string) bool {
+	if len(providers) == 0 {
+		return seed == shoot
+	}
+	for _, p := range providers {
+		if p == "*" || p == seed {
+			return true
+		}
+	}
+	return false
+}
+
+func addCanditatesWithMatchingProviders(providers []string, seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
-			candidates = append(candidates, seed)
+		if matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
+			candidates = addCandidate(candidates, seed)
+		}
+	}
+	return candidates
+}
+
+func determineCandidatesWithSameRegionStrategy(seeds []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
+	// Determine all candidate seed clusters matching the shoot's provider and region.
+	for _, seed := range seeds {
+		if seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
+			candidates = addCandidate(candidates, seed)
 		}
 	}
 	return candidates
@@ -282,7 +313,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 
 	// Determine all candidate seed clusters with matching cloud provider but different region that are lexicographically closest to the shoot
 	for _, seed := range seeds {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+		if seed.Spec.Provider.Type == shoot.Spec.Provider.Type && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
 			seedRegion := seed.Spec.Provider.Region
 
 			for currentMaxMatchingCharacters < len(shootRegion) {
@@ -291,13 +322,22 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 					currentMaxMatchingCharacters++
 					continue
 				} else if strings.HasPrefix(seedRegion, shootRegion[:currentMaxMatchingCharacters]) {
-					candidates = append(candidates, seed)
+					candidates = addCandidate(candidates, seed)
 				}
 				break
 			}
 		}
 	}
 	return candidates
+}
+
+func addCandidate(candidates []*gardencorev1beta1.Seed, seed *gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
+	for _, c := range candidates {
+		if c == seed {
+			return candidates
+		}
+	}
+	return append(candidates, seed)
 }
 
 func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {

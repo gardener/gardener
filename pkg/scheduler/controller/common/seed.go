@@ -29,3 +29,11 @@ func VerifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
 	}
 	return true
 }
+
+// SeedUsableForScheduling verifies whether the seed is usable for scheduling.
+func SeedUsableForScheduling(seed *gardencorev1beta1.Seed) bool {
+	if seed.DeletionTimestamp == nil && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) {
+		return false
+	}
+	return true
+}

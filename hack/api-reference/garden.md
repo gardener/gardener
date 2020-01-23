@@ -909,6 +909,20 @@ Monitoring
 <p>Monitoring contains information about custom monitoring configurations for the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -7618,6 +7632,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="garden.sapcloud.io/v1beta1.ShootPurpose">ShootPurpose
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#garden.sapcloud.io/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ShootPurpose is a type alias for string.</p>
+</p>
 <h3 id="garden.sapcloud.io/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>
@@ -7757,6 +7780,20 @@ Monitoring
 <td>
 <em>(Optional)</em>
 <p>Monitoring contains information about custom monitoring configurations for the shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#garden.sapcloud.io/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -8224,5 +8261,5 @@ string
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>864ace2ad</code>.
+on git commit <code>59f3e0a</code>.
 </em></p>

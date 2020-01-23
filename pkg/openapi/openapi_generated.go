@@ -130,6 +130,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedList":                              schema_pkg_apis_core_v1alpha1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector":                          schema_pkg_apis_core_v1alpha1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec":                              schema_pkg_apis_core_v1alpha1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus":                            schema_pkg_apis_core_v1alpha1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint":                             schema_pkg_apis_core_v1alpha1_SeedTaint(ref),
@@ -242,6 +243,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                               schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                           schema_pkg_apis_core_v1beta1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                               schema_pkg_apis_core_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus":                             schema_pkg_apis_core_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint":                              schema_pkg_apis_core_v1beta1_SeedTaint(ref),
@@ -1418,7 +1420,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector"),
 						},
 					},
 					"type": {
@@ -1452,7 +1454,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType"},
 	}
 }
 
@@ -4629,6 +4631,33 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"providers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6398,7 +6427,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
 						},
 					},
 					"type": {
@@ -6432,7 +6461,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType"},
 	}
 }
 
@@ -9539,6 +9568,33 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 					},
 				},
 				Required: []string{"type", "region"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"providers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

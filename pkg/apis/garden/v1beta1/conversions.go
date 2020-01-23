@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1061,7 +1061,7 @@ func Convert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *
 	}
 
 	if seedSelectorJSON, ok := in.Annotations[garden.MigrationCloudProfileSeedSelector]; ok {
-		var seedSelector metav1.LabelSelector
+		var seedSelector garden.SeedSelector
 		if err := json.Unmarshal([]byte(seedSelectorJSON), &seedSelector); err != nil {
 			return err
 		}
