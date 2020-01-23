@@ -28,6 +28,7 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	utiltime "github.com/gardener/gardener/pkg/utils/time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -63,7 +64,7 @@ type quotaWorker struct {
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
-		return New()
+		return New(utiltime.DefaultOps())
 	})
 }
 
@@ -75,6 +76,7 @@ type QuotaValidator struct {
 	secretBindingLister listers.SecretBindingLister
 	quotaLister         listers.QuotaLister
 	readyFunc           admission.ReadyFunc
+	time                utiltime.Ops
 }
 
 var (
@@ -84,9 +86,10 @@ var (
 )
 
 // New creates a new QuotaValidator admission plugin.
-func New() (*QuotaValidator, error) {
+func New(time utiltime.Ops) (*QuotaValidator, error) {
 	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
+		time:    time,
 	}, nil
 }
 
@@ -229,7 +232,6 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime     time.Time
-			oldExpirationTime         time.Time
 			maxPossibleExpirationTime time.Time
 		)
 
@@ -238,20 +240,9 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 			return apierrors.NewInternalError(err)
 		}
 
-		oldLifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]
-		if !exists {
-			// The old version of the Shoot has no clusterLifetime annotation yet.
-			// Therefore we have to calculate the lifetime based on the maxShootLifetime.
-			oldLifetime = oldShoot.CreationTimestamp.Time.Add(time.Duration(*maxShootLifetime*24) * time.Hour).Format(time.RFC3339)
-		}
-		oldExpirationTime, err = time.Parse(time.RFC3339, oldLifetime)
-		if err != nil {
-			return apierrors.NewInternalError(err)
-		}
-
-		maxPossibleExpirationTime = oldExpirationTime.Add(time.Duration(*maxShootLifetime*24) * time.Hour)
+		maxPossibleExpirationTime = q.time.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
 		if plannedExpirationTime.After(maxPossibleExpirationTime) {
-			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time to long. Can only be extended by %d day(s)", *maxShootLifetime))
+			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time is too long. Can only be extended by %d day(s)", *maxShootLifetime))
 		}
 	}
 
