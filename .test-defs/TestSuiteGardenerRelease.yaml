@@ -1,0 +1,22 @@
+kind: TestDefinition
+metadata:
+  name: gardener-release-test-suite
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: gardener test suites that includes all release tests
+
+  activeDeadlineSeconds: 7200
+  labels: ["gardener", "release"]
+
+  command: [bash, -c]
+  args:
+    - >-
+      go test -timeout=0 -mod=vendor ./test/suites/gardener
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+      --report-file=$TM_EXPORT_PATH/report.json
+      -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
+      -project-namespace=$PROJECT_NAMESPACE
+      -ginkgo.focus="\[RELEASE\]"
+      -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
+
+  image: golang:1.13.4

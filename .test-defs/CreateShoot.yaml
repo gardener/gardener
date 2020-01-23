@@ -9,10 +9,10 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/integration/shoots/creation
+    go test -timeout=0 -mod=vendor ./test/system/shoot_creation
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -verbose=debug
-    -gardener-kubecfg-path=$TM_KUBECONFIG_PATH/gardener.config
+    -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -seed-kubecfg-path=$TM_KUBECONFIG_PATH/seed.config
     -shoot-kubecfg-path=$TM_KUBECONFIG_PATH/shoot.config
     -shoot-name=$SHOOT_NAME
