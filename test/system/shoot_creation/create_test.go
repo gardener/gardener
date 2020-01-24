@@ -208,18 +208,6 @@ func prepareShoot(ctx context.Context, f *framework.GardenerFramework) *gardenco
 	cloudprofile, err := f.GetCloudProfile(ctx, shootObject.Spec.CloudProfileName)
 	Expect(err).ToNot(HaveOccurred())
 
-	nginxIngress := &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}
-	kubernetesDashboard := &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: true}}
-	if shootObject.Spec.Addons != nil {
-		shootObject.Spec.Addons.NginxIngress = nginxIngress
-		shootObject.Spec.Addons.KubernetesDashboard = kubernetesDashboard
-	} else {
-		shootObject.Spec.Addons = &gardencorev1beta1.Addons{
-			NginxIngress:        nginxIngress,
-			KubernetesDashboard: kubernetesDashboard,
-		}
-	}
-
 	if networkingPods != nil && len(*networkingPods) > 0 {
 		shootObject.Spec.Networking.Pods = networkingPods
 	}
