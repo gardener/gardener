@@ -148,16 +148,10 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	}
 
 	// Delete legacy resources
-	// TODO: This can be removed in a future version of Gardener.
+	// TODO: This can be removed in a future version of Gardener (post v1.0 release).
 	for _, obj := range []runtime.Object{
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: project.Name}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: project.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: namespace.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: namespace.Name}},
 	} {
 		if err := c.k8sGardenClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while cleaning up legacy RBAC rules for namespace %q: %+v", namespace.Name, err)
