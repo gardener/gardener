@@ -31,9 +31,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gardener/gardener/test/framework"
-	"path"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -240,11 +238,4 @@ func printShoot(shoot *gardencorev1beta1.Shoot) error {
 	}
 	fmt.Print(string(d))
 	return nil
-}
-
-// getProjectRootPath gets the root path of the project relative to the integration test folder
-func getProjectRootPath() string {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(filename), "../../../")
-	return dir
 }
