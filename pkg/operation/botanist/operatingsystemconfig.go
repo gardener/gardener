@@ -147,7 +147,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	}
 	originalConfig["caBundle"] = caBundle
 
-	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName)
+	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName, common.HyperkubeImageName)
 }
 
 func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
