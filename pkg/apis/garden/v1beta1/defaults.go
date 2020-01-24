@@ -239,7 +239,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
 		var defaultAuthMode string
-		if k8sVersionLessThan116 {
+		if *obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication {
 			defaultAuthMode = KubernetesDashboardAuthModeBasic
 		} else {
 			defaultAuthMode = KubernetesDashboardAuthModeToken
