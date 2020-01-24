@@ -23,6 +23,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	seedctrl "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -34,6 +35,8 @@ import (
 )
 
 var _ = Describe("ExtensionControlReconcile", func() {
+	const seedName = "test"
+
 	var (
 		fakeClient         *fake.Clientset
 		indexer            cache.Indexer
@@ -51,7 +54,7 @@ var _ = Describe("ExtensionControlReconcile", func() {
 		logger.Logger = logger.NewNopLogger()
 
 		seed = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			ObjectMeta: metav1.ObjectMeta{Name: seedName},
 		}
 
 		indexer = cache.NewIndexer(
@@ -92,13 +95,12 @@ var _ = Describe("ExtensionControlReconcile", func() {
 
 	Context("listing of controller installations fails", func() {
 		BeforeEach(func() {
-			lister = &failingControllerInstalltionLister{}
+			lister = &failingControllerInstallationLister{}
 		})
 
 		It("should return error", func() {
 			Expect(controller.ReconcileExtensionCheckFor(seed)).To(HaveOccurred())
 		})
-
 	})
 
 	Context("update needed", func() {
@@ -106,7 +108,7 @@ var _ = Describe("ExtensionControlReconcile", func() {
 			current, expected gardencorev1beta1.Condition
 			assertConditions  = func() {
 				DescribeTable("condition exist",
-					// seed and expected conditions are wrrapped in functions, so they are not evaluated
+					// seed and expected conditions are wrapped in functions, so they are not evaluated
 					// at compile time.
 					func(mutateFunc func()) {
 						mutateFunc()
@@ -173,7 +175,7 @@ var _ = Describe("ExtensionControlReconcile", func() {
 					Type:               "ExtensionsReady",
 					Status:             gardencorev1beta1.ConditionFalse,
 					Reason:             "NotAllExtensionsInstalled",
-					Message:            `Extensions ["foo-1" "foo-3"] are not installed`,
+					Message:            `Some extensions are not installed: +map[foo-1:extension was not yet installed foo-3:extension was not yet installed]`,
 					LastTransitionTime: metav1.NewTime(time.Unix(1, 1)),
 					LastUpdateTime:     metav1.NewTime(time.Unix(1, 1)),
 				}
@@ -181,7 +183,7 @@ var _ = Describe("ExtensionControlReconcile", func() {
 
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
-				c1.Spec.SeedRef.Name = "test"
+				c1.Spec.SeedRef.Name = seedName
 
 				c2 := c1.DeepCopy()
 				c2.SetName("foo-2")
@@ -193,19 +195,18 @@ var _ = Describe("ExtensionControlReconcile", func() {
 				Expect(indexer.Add(c1)).NotTo(HaveOccurred(), "adding to the index should succeed")
 				Expect(indexer.Add(c2)).NotTo(HaveOccurred(), "adding to the index should succeed")
 				Expect(indexer.Add(c3)).NotTo(HaveOccurred(), "adding to the index should succeed")
-
 			})
 
 			assertConditions()
 		})
 
-		Context("NotAllExtensionsReady", func() {
+		Context("NotAllExtensionsInstalled", func() {
 			BeforeEach(func() {
 				current = gardencorev1beta1.Condition{
 					Type:               "ExtensionsReady",
 					Status:             gardencorev1beta1.ConditionFalse,
-					Reason:             "NotAllExtensionsReady",
-					Message:            `Extensions ["foo-2"] are not ready`,
+					Reason:             "NotAllExtensionsInstalled",
+					Message:            `Some extensions are not installed: +map[foo-2:]`,
 					LastTransitionTime: metav1.NewTime(time.Unix(1, 1)),
 					LastUpdateTime:     metav1.NewTime(time.Unix(1, 1)),
 				}
@@ -213,7 +214,7 @@ var _ = Describe("ExtensionControlReconcile", func() {
 
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
-				c1.Spec.SeedRef.Name = "test"
+				c1.Spec.SeedRef.Name = seedName
 				c1.Status.Conditions = []gardencorev1beta1.Condition{
 					// string literal to ensure that the tests fails if the constant is changed
 					{
@@ -289,14 +290,14 @@ var _ = Describe("ExtensionControlReconcile", func() {
 					Type:               "ExtensionsReady",
 					Status:             gardencorev1beta1.ConditionFalse,
 					Reason:             "NotAllExtensionsInstalled",
-					Message:            `Extensions ["foo-1" "foo-3"] are not installed`,
+					Message:            `Some extensions are not installed: +map[foo-1:extension was not yet installed foo-3:extension was not yet installed]`,
 					LastTransitionTime: metav1.NewTime(time.Unix(1, 1)),
 					LastUpdateTime:     metav1.NewTime(time.Unix(1, 1)),
 				}
 
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
-				c1.Spec.SeedRef.Name = "test"
+				c1.Spec.SeedRef.Name = seedName
 
 				c2 := c1.DeepCopy()
 				c2.SetName("foo-2")
@@ -321,20 +322,20 @@ var _ = Describe("ExtensionControlReconcile", func() {
 			})
 		})
 
-		Context("NotAllExtensionsReady", func() {
+		Context("NotAllExtensionsInstalled", func() {
 			BeforeEach(func() {
 				current = gardencorev1beta1.Condition{
 					Type:               "ExtensionsReady",
 					Status:             gardencorev1beta1.ConditionFalse,
-					Reason:             "NotAllExtensionsReady",
-					Message:            `Extensions ["foo-2"] are not ready`,
+					Reason:             "NotAllExtensionsInstalled",
+					Message:            `Some extensions are not installed: +map[foo-2:]`,
 					LastTransitionTime: metav1.NewTime(time.Unix(1, 1)),
 					LastUpdateTime:     metav1.NewTime(time.Unix(1, 1)),
 				}
 
 				c1 := &gardencorev1beta1.ControllerInstallation{}
 				c1.SetName("foo-1")
-				c1.Spec.SeedRef.Name = "test"
+				c1.Spec.SeedRef.Name = seedName
 				c1.Status.Conditions = []gardencorev1beta1.Condition{
 					// string literal to ensure that the tests fails if the constant is changed
 					{
@@ -379,12 +380,12 @@ var _ = Describe("ExtensionControlReconcile", func() {
 	})
 })
 
-type failingControllerInstalltionLister struct{}
+type failingControllerInstallationLister struct{}
 
-func (f *failingControllerInstalltionLister) List(selector labels.Selector) (ret []*gardencorev1beta1.ControllerInstallation, err error) {
+func (f *failingControllerInstallationLister) List(selector labels.Selector) (ret []*gardencorev1beta1.ControllerInstallation, err error) {
 	return nil, fmt.Errorf("dummy error")
 }
 
-func (f *failingControllerInstalltionLister) Get(name string) (*gardencorev1beta1.ControllerInstallation, error) {
+func (f *failingControllerInstallationLister) Get(name string) (*gardencorev1beta1.ControllerInstallation, error) {
 	return nil, fmt.Errorf("dummy error")
 }

@@ -11,7 +11,7 @@ require (
 	github.com/gardener/controller-manager-library v0.1.1-0.20191212112146-917449ad760c // indirect
 	github.com/gardener/external-dns-management v0.7.3
 	github.com/gardener/gardener-extensions v0.0.0-20191028142629-438a3dcf5eca
-	github.com/gardener/gardener-resource-manager v0.8.1
+	github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
@@ -47,7 +47,7 @@ require (
 	k8s.io/helm v2.14.2+incompatible
 	k8s.io/klog v0.4.0
 	k8s.io/kube-aggregator v0.0.0-20191004104030-d9d5f0cc7532
-	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
+	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	k8s.io/metrics v0.0.0-20191004105854-2e8cf7d0888c
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 	sigs.k8s.io/controller-runtime v0.4.0
