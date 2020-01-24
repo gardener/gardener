@@ -118,6 +118,9 @@ func mergeCommonConfigs(base, overwrite *CommonConfig) *CommonConfig {
 	if StringSet(overwrite.ChartDir) {
 		base.ChartDir = overwrite.ChartDir
 	}
+	if overwrite.DisableStateDump {
+		base.DisableStateDump = overwrite.DisableStateDump
+	}
 	return base
 }
 

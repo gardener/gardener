@@ -4,6 +4,9 @@ metadata:
   name: abc
   namespace: abc
 spec:
+  kubernetes:
+    kubeAPIServer:
+      enableBasicAuthentication: false
   dns: {}
   networking:
     type: calico
@@ -26,4 +29,5 @@ spec:
       enabled: true
     kubernetesDashboard:
       enabled: true
+      authenticationMode: token
 
