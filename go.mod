@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
+	github.com/coreos/etcd v3.3.15+incompatible
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gardener/controller-manager-library v0.1.1-0.20191212112146-917449ad760c // indirect
@@ -33,8 +34,10 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
+	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
+	google.golang.org/grpc v1.23.0
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
 	k8s.io/apiextensions-apiserver v0.0.0-20190918161926-8f644eb6e783
