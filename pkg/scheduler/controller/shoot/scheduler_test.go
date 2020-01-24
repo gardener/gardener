@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"github.com/gardener/gardener/pkg/logger"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -28,6 +29,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func init() {
+	logger.Logger = logger.NewLogger("info")
+}
 
 var _ = Describe("Scheduler_Control", func() {
 	var (
@@ -117,6 +122,119 @@ var _ = Describe("Scheduler_Control", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Selector' seed determination strategy", func() {
+		var shootType = providerType + "2"
+
+		BeforeEach(func() {
+			cloudProfile = *cloudProfileBase.DeepCopy()
+			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"label": "useit",
+					},
+				},
+				Providers: []string{"*"},
+			}
+			seed = *seedBase.DeepCopy()
+			seed.ObjectMeta.Labels = map[string]string{
+				"label": "useit",
+			}
+			shoot = *shootBase.DeepCopy()
+			shoot.Spec.Provider.Type = shootType
+			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
+			schedulerConfiguration.Schedulers.Shoot.Strategy = config.Selector
+			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			// no seed referenced
+			shoot.Spec.SeedName = nil
+		})
+
+		// PASS
+
+		It("should find only a seed matching labels and type", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.Providers = nil
+
+			seed1 := *seed.DeepCopy()
+			seed1.Name = "match"
+			seed1.Spec.Provider.Type = shootType
+
+			seed2 := *seed1.DeepCopy()
+			seed2.Name = "dont"
+			seed2.Labels["label"] = "don't use"
+
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed1)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed2)
+
+			lister := gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister()
+
+			bestSeed, err := determineSeed(&shoot, lister, gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed1.Name))
+		})
+
+		It("should find a seed cluster cross provider type", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed.Name))
+		})
+
+		It("should find the best seed cluster matching seed selector", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+			secondSeed := *seed.DeepCopy()
+			secondSeed.Name = "seed-2"
+
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&secondSeed)
+
+			secondShoot := *shoot.DeepCopy()
+			secondShoot.Name = "shoot-2"
+			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
+			secondShoot.Spec.SeedName = &seed.Name
+
+			gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&secondShoot)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
+		// FAIL
+
+		It("should not find a seed with matching labels but not the type", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.Providers = nil
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+
+		It("should fail because it cannot find a seed cluster with matching labels and type", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.Providers = []string{"other"}
+
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
 	})
 
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Same Region' seed determination strategy", func() {
@@ -240,7 +358,9 @@ var _ = Describe("Scheduler_Control", func() {
 			anotherRegion := "europe-west3"
 			shoot.Spec.Region = anotherRegion
 
-			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+			lister := gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister()
+
+			bestSeed, err := determineSeed(&shoot, lister, gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
@@ -363,9 +483,11 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should fail because the cloudprofile used by the shoot doesn't select any seed candidate", func() {
-			cloudProfile.Spec.SeedSelector = &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"foo": "bar",
+			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"foo": "bar",
+					},
 				},
 			}
 

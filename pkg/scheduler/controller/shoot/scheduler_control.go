@@ -175,6 +175,10 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 		return nil, err
 	}
 
+	logger.Logger.Debugf("strategy: %s\n", strategy)
+	for _, s := range seedList {
+		logger.Logger.Debugf("found seed %s (%s)\n", s.Name, s.Spec.Provider.Type)
+	}
 	return determineBestSeedCandidate(shoot, cloudProfile, shootList, seedList, strategy)
 }
 
@@ -294,6 +298,7 @@ func addCanditatesWithMatchingProviders(providers []string, seedList []*gardenco
 func determineCandidatesWithSameRegionStrategy(seeds []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	// Determine all candidate seed clusters matching the shoot's provider and region.
 	for _, seed := range seeds {
+		logger.Logger.Debugf("same region: checking seed %s (usable=%t, ready=%t)\n", seed.Name, common.SeedUsableForScheduling(seed), common.VerifySeedReadiness(seed))
 		if seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
 			candidates = addCandidate(candidates, seed)
 		}
