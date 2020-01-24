@@ -154,7 +154,7 @@ type Addons struct {
 	NginxIngress *NginxIngress `json:"nginx-ingress,omitempty"`
 }
 
-// Addon also enabling or disabling a specific addon and is used to derive from.
+// Addon allows enabling or disabling a specific addon and is used to derive from.
 type Addon struct {
 	// Enabled indicates whether the addon is enabled or not.
 	Enabled bool `json:"enabled"`
