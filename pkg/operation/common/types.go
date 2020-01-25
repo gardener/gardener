@@ -404,15 +404,6 @@ const (
 	// ETCDImageName is the name of the ETCD image.
 	ETCDImageName = "etcd"
 
-	// CSINodeDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/node-driver-registrar
-	CSINodeDriverRegistrarImageName = "csi-node-driver-registrar"
-
-	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
-	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
-
-	// CSIPluginPacketImageName is the name of csi plugin for Packet - https://github.com/packethost/csi-packet
-	CSIPluginPacketImageName = "packet-storage-interface"
-
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
 

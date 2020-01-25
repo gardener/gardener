@@ -664,7 +664,7 @@ func schema_pkg_apis_core_v1alpha1_Addon(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Addon also enabling or disabling a specific addon and is used to derive from.",
+				Description: "Addon allows enabling or disabling a specific addon and is used to derive from.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -5644,7 +5644,7 @@ func schema_pkg_apis_core_v1beta1_Addon(ref common.ReferenceCallback) common.Ope
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Addon also enabling or disabling a specific addon and is used to derive from.",
+				Description: "Addon allows enabling or disabling a specific addon and is used to derive from.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -10846,7 +10846,7 @@ func schema_pkg_apis_garden_v1beta1_Addon(ref common.ReferenceCallback) common.O
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Addon also enabling or disabling a specific addon and is used to derive from.",
+				Description: "Addon allows enabling or disabling a specific addon and is used to derive from.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {

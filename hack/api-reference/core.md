@@ -1446,6 +1446,20 @@ Provider
 </tr>
 <tr>
 <td>
+<code>purpose</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>region</code></br>
 <em>
 string
@@ -1506,7 +1520,7 @@ ShootStatus
 <a href="#core.gardener.cloud/v1beta1.NginxIngress">NginxIngress</a>)
 </p>
 <p>
-<p>Addon also enabling or disabling a specific addon and is used to derive from.</p>
+<p>Addon allows enabling or disabling a specific addon and is used to derive from.</p>
 </p>
 <table>
 <thead>
@@ -6475,6 +6489,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootPurpose">ShootPurpose
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ShootPurpose is a type alias for string.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>
@@ -6625,6 +6648,20 @@ Provider
 </td>
 <td>
 <p>Provider contains all provider-specific and provider-relevant information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
 </td>
 </tr>
 <tr>
@@ -7159,5 +7196,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>864ace2ad</code>.
+on git commit <code>ab4ddfc16</code>.
 </em></p>
