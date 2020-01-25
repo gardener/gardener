@@ -187,10 +187,14 @@ func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *ga
 
 	selector := &metav1.LabelSelector{}
 	providers := []string{cloudProfile.Spec.Type}
+	seeds := []string{}
 	if cloudProfile.Spec.SeedSelector != nil {
 		selector = cloudProfile.Spec.SeedSelector.LabelSelector
 		if len(cloudProfile.Spec.SeedSelector.Providers) > 0 {
 			providers = cloudProfile.Spec.SeedSelector.Providers
+		}
+		if len(cloudProfile.Spec.SeedSelector.Seeds) > 0 {
+			seeds = cloudProfile.Spec.SeedSelector.Seeds
 		}
 	}
 
@@ -201,7 +205,7 @@ func determineBestSeedCandidate(shoot *gardencorev1beta1.Shoot, cloudProfile *ga
 		if matchProvider(cloudProfile.Spec.Type, shoot.Spec.Provider.Type, providers) {
 			candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
 		}
-		candidates = addCanditatesWithMatchingProviders(providers, seedList, shoot, candidates)
+		candidates = addCanditatesWithMatchingProviders(providers, seeds, seedList, shoot, candidates)
 	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot, candidates)
 	case strategy == config.MinimalDistance:
@@ -286,9 +290,19 @@ func matchProvider(seed, shoot string, providers []string) bool {
 	return false
 }
 
-func addCanditatesWithMatchingProviders(providers []string, seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
+func matchSeed(seed string, seeds []string) bool {
+	for _, p := range seeds {
+		if p == "*" || p == seed {
+			return true
+		}
+	}
+	return false
+}
+
+func addCanditatesWithMatchingProviders(providers, seeds []string, seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
 	for _, seed := range seedList {
-		if matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) && common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
+		if (matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) || matchSeed(seed.Name, seeds)) &&
+			common.SeedUsableForScheduling(seed) && common.VerifySeedReadiness(seed) {
 			candidates = addCandidate(candidates, seed)
 		}
 	}

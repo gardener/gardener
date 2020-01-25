@@ -2684,6 +2684,11 @@ func (in *SeedSelector) DeepCopyInto(out *SeedSelector) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Seeds != nil {
+		in, out := &in.Seeds, &out.Seeds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

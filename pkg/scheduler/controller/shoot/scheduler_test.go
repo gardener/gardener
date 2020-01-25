@@ -152,6 +152,59 @@ var _ = Describe("Scheduler_Control", func() {
 
 		// PASS
 
+		It("should find only a seed matching name", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.MatchLabels = nil
+			cloudProfile.Spec.SeedSelector.Providers = nil
+			cloudProfile.Spec.SeedSelector.Seeds = []string{"seedbyname"}
+
+			seed1 := *seed.DeepCopy()
+			seed1.Name = "seedbyname"
+
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed1)
+
+			lister := gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister()
+
+			bestSeed, err := determineSeed(&shoot, lister, gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed1.Name))
+		})
+
+		It("should find any seed by seed wildcard", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.MatchLabels = nil
+			cloudProfile.Spec.SeedSelector.Providers = nil
+			cloudProfile.Spec.SeedSelector.Seeds = []string{"*"}
+
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			lister := gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister()
+
+			bestSeed, err := determineSeed(&shoot, lister, gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed.Name))
+		})
+
+		It("should find any seed by provider wildcard", func() {
+			cloudProfile := *cloudProfile.DeepCopy()
+			cloudProfile.Spec.SeedSelector.MatchLabels = nil
+
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			lister := gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister()
+
+			bestSeed, err := determineSeed(&shoot, lister, gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed.Name))
+		})
+
 		It("should find only a seed matching labels and type", func() {
 			cloudProfile := *cloudProfile.DeepCopy()
 			cloudProfile.Spec.SeedSelector.Providers = nil

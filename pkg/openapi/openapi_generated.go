@@ -4635,12 +4635,26 @@ func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Description: "SeedSelector describes constraints for selecting seeds by the scheduler for shoots based on the used profile",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"providers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"seeds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Seeds is optional and can be used by restricting seeds by their name. '*' can be used to enable seeds regardless of their name.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9577,12 +9591,26 @@ func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) com
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Description: "SeedSelector describes constraints for selecting seeds by the scheduler for shoots based on the used profile",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"providers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"seeds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Seeds is optional and can be used by restricting seeds by their name. '*' can be used to enable seeds regardless of their name.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

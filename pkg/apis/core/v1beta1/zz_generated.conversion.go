@@ -3740,6 +3740,7 @@ func Convert_garden_SeedProvider_To_v1beta1_SeedProvider(in *garden.SeedProvider
 func autoConvert_v1beta1_SeedSelector_To_garden_SeedSelector(in *SeedSelector, out *garden.SeedSelector, s conversion.Scope) error {
 	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
 	out.Providers = *(*[]string)(unsafe.Pointer(&in.Providers))
+	out.Seeds = *(*[]string)(unsafe.Pointer(&in.Seeds))
 	return nil
 }
 
@@ -3751,6 +3752,7 @@ func Convert_v1beta1_SeedSelector_To_garden_SeedSelector(in *SeedSelector, out *
 func autoConvert_garden_SeedSelector_To_v1beta1_SeedSelector(in *garden.SeedSelector, out *SeedSelector, s conversion.Scope) error {
 	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
 	out.Providers = *(*[]string)(unsafe.Pointer(&in.Providers))
+	out.Seeds = *(*[]string)(unsafe.Pointer(&in.Seeds))
 	return nil
 }
 
