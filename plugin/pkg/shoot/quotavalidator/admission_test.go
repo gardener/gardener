@@ -21,9 +21,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
+	mocktime "github.com/gardener/gardener/pkg/mock/gardener/utils/time"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +37,10 @@ import (
 var _ = Describe("quotavalidator", func() {
 	Describe("#Admit", func() {
 		var (
+			ctrl *gomock.Controller
+
 			admissionHandler      *QuotaValidator
+			timeOps               *mocktime.MockOps
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
 			oldShoot              garden.Shoot
@@ -221,7 +226,10 @@ var _ = Describe("quotavalidator", func() {
 			quotaProject = *quotaProjectBase.DeepCopy()
 			quotaSecret = *quotaSecretBase.DeepCopy()
 
-			admissionHandler, _ = New()
+			ctrl = gomock.NewController(GinkgoT())
+			timeOps = mocktime.NewMockOps(ctrl)
+
+			admissionHandler, _ = New(timeOps)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
@@ -363,10 +371,6 @@ var _ = Describe("quotavalidator", func() {
 
 		Context("tests for extending the lifetime of a Shoot", func() {
 			BeforeEach(func() {
-				annotations := map[string]string{
-					common.ShootExpirationTimestamp: "2018-01-01T00:00:00+00:00",
-				}
-				shoot.Annotations = annotations
 				oldShoot = *shoot.DeepCopy()
 			})
 
@@ -383,18 +387,38 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should pass as shoot expiration time can be extended", func() {
-				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-02T00:00:00+00:00" // plus 1 day
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-02T00:00:00+00:00") // plus 1 day compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
+				Expect(err).NotTo(HaveOccurred())
+				timeOps.EXPECT().Now().Return(now)
+
+				err = admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should fail as shoots expiration time can’t be extended, because requested time higher then quota allows", func() {
-				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-09T00:00:00+00:00" // plus 8 days
+			It("should fail as shoots expiration time can’t be extended, because requested time higher then the minimum .spec.clusterLifetimeDays among the quotas", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-05T00:00:00+00:00") // plus 4 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
+				Expect(err).NotTo(HaveOccurred())
+				timeOps.EXPECT().Now().Return(now)
+
+				err = admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail as shoots expiration time can’t be extended, because requested time higher then the maximum .spec.clusterLifetimeDays among the quotas", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-09T00:00:00+00:00") // plus 8 days compared to time.Now()
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
+				Expect(err).NotTo(HaveOccurred())
+				timeOps.EXPECT().Now().Return(now)
+
+				err = admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 			})
 		})
