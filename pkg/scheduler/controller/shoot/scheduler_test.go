@@ -290,6 +290,68 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 	})
 
+	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Selector' seed determination strategy without selector spec", func() {
+		BeforeEach(func() {
+			cloudProfile = *cloudProfileBase.DeepCopy()
+			seed = *seedBase.DeepCopy()
+			shoot = *shootBase.DeepCopy()
+			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
+			schedulerConfiguration.Schedulers.Shoot.Strategy = config.Selector
+			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			// no seed referenced
+			shoot.Spec.SeedName = nil
+		})
+
+		// PASS
+
+		It("should find a seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same region 4) indicating availability", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(seed.Name))
+		})
+
+		It("should find the best seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same region 4) indicating availability", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+			secondSeed := seedBase
+			secondSeed.Name = "seed-2"
+
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&secondSeed)
+
+			secondShoot := shootBase
+			secondShoot.Name = "shoot-2"
+			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
+			secondShoot.Spec.SeedName = &seed.Name
+
+			gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&secondShoot)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
+		// FAIL
+
+		It("should fail because it cannot find a seed cluster 1) 'Same Region' seed determination strategy 2) region that no seed supports", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+			shoot.Spec.Region = "another-region"
+
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+	})
+
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Same Region' seed determination strategy", func() {
 		BeforeEach(func() {
 			cloudProfile = *cloudProfileBase.DeepCopy()
