@@ -187,6 +187,7 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 
 type ShootedSeed struct {
 	DisableDNS                     *bool
+	DisableCapacityReservation     *bool
 	Protected                      *bool
 	Visible                        *bool
 	MinimumVolumeSize              *string
@@ -272,6 +273,9 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 
 	if _, ok := flags["disable-dns"]; ok {
 		shootedSeed.DisableDNS = &trueVar
+	}
+	if _, ok := flags["disable-capacity-reservation"]; ok {
+		shootedSeed.DisableCapacityReservation = &trueVar
 	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true

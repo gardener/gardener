@@ -32,9 +32,10 @@ spec:
     blockCIDRs:
     - 169.254.169.254/32
 # taints:
-# - key: seed.gardener.cloud/disable-dns # all shoots on this seed won't use any DNS, just the plain IPs/hostnames
-# - key: seed.gardener.cloud/protected   # only shoots in the `garden` namespace can use this seed
-# - key: seed.gardener.cloud/invisible   # the gardener-scheduler won't consider this seed for shoots
+# - key: seed.gardener.cloud/disable-dns                  # all shoots on this seed won't use any DNS, just the plain IPs/hostnames
+# - key: seed.gardener.cloud/protected                    # only shoots in the `garden` namespace can use this seed
+# - key: seed.gardener.cloud/invisible                    # the gardener-scheduler won't consider this seed for shoots
+# - key: seed.gardener.cloud/disable-capacity-reservation # this seed will not deploy excess-capacity-reservation pods
 # volume:
 #  minimumSize: 20Gi
 #  providers:
