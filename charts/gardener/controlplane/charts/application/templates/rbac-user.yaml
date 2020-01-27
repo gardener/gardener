@@ -187,6 +187,20 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 
 # Cluster role setting the permissions for a project viewer. It gets bound by a RoleBinding
 # in a respective project namespace.
@@ -244,6 +258,15 @@ rules:
   - settings.gardener.cloud
   resources:
   - openidconnectpresets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
   verbs:
   - get
   - list
