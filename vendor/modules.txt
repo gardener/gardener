@@ -93,7 +93,7 @@ github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/
 github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet
 github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1
-# github.com/gardener/gardener-resource-manager v0.8.1
+# github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
 github.com/gardener/gardener-resource-manager/pkg/health
@@ -1017,7 +1017,7 @@ k8s.io/kube-aggregator/pkg/client/informers/externalversions/internalinterfaces
 k8s.io/kube-aggregator/pkg/client/listers/apiregistration/v1
 k8s.io/kube-aggregator/pkg/controllers
 k8s.io/kube-aggregator/pkg/controllers/autoregister
-# k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf => k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
+# k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a => k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
 k8s.io/kube-openapi/cmd/openapi-gen
 k8s.io/kube-openapi/cmd/openapi-gen/args
 k8s.io/kube-openapi/pkg/builder

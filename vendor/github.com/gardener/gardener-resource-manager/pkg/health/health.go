@@ -22,15 +22,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-)
-
-var (
-	trueCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
-		apiextensionsv1beta1.NamesAccepted, apiextensionsv1beta1.Established,
-	}
-	falseOptionalCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
-		apiextensionsv1beta1.Terminating,
-	}
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // CheckManagedResource checks if the conditions of ManagedResources are healthy.
@@ -44,7 +36,7 @@ func CheckManagedResource(mr *v1alpha1.ManagedResource) error {
 	appliedCondition := false
 	for _, cond := range status.Conditions {
 		if cond.Status != v1alpha1.ConditionTrue {
-			return fmt.Errorf("condition %s of managed resource %s/%s is %s - waiting to become %s", cond.Type, mr.GetNamespace(), mr.GetName(), cond.Status, v1alpha1.ConditionTrue)
+			return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", cond.Type, mr.GetNamespace(), mr.GetName(), cond.Status, cond.Message)
 		}
 		if cond.Type == v1alpha1.ResourcesApplied {
 			appliedCondition = true
@@ -57,6 +49,15 @@ func CheckManagedResource(mr *v1alpha1.ManagedResource) error {
 
 	return nil
 }
+
+var (
+	trueCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
+		apiextensionsv1beta1.NamesAccepted, apiextensionsv1beta1.Established,
+	}
+	falseOptionalCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
+		apiextensionsv1beta1.Terminating,
+	}
+)
 
 // CheckCustomResourceDefinition checks whether the given CustomResourceDefinition is healthy.
 // A CRD is considered healthy if its `NamesAccepted` and `Established` conditions are with status `True`
@@ -76,6 +77,80 @@ func CheckCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefin
 	for _, falseOptionalConditionType := range falseOptionalCrdConditionTypes {
 		conditionType := string(falseOptionalConditionType)
 		condition := getCustomResourceDefinitionCondition(crd.Status.Conditions, falseOptionalConditionType)
+		if condition == nil {
+			continue
+		}
+		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CheckDaemonSet checks whether the given DaemonSet is healthy.
+// A DaemonSet is considered healthy if its controller observed its current revision and if
+// its desired number of scheduled pods is equal to its updated number of scheduled pods.
+func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
+	if daemonSet.Status.ObservedGeneration < daemonSet.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", daemonSet.Status.ObservedGeneration, daemonSet.Generation)
+	}
+
+	maxUnavailable := daemonSetMaxUnavailable(daemonSet)
+
+	if requiredAvailable := daemonSet.Status.DesiredNumberScheduled - maxUnavailable; daemonSet.Status.CurrentNumberScheduled < requiredAvailable {
+		return fmt.Errorf("not enough available replicas (%d/%d)", daemonSet.Status.CurrentNumberScheduled, requiredAvailable)
+	}
+	return nil
+}
+
+var (
+	trueDeploymentConditionTypes = []appsv1.DeploymentConditionType{
+		appsv1.DeploymentAvailable,
+	}
+
+	trueOptionalDeploymentConditionTypes = []appsv1.DeploymentConditionType{
+		appsv1.DeploymentProgressing,
+	}
+
+	falseOptionalDeploymentConditionTypes = []appsv1.DeploymentConditionType{
+		appsv1.DeploymentReplicaFailure,
+	}
+)
+
+// CheckDeployment checks whether the given Deployment is healthy.
+// A deployment is considered healthy if the controller observed its current revision and
+// if the number of updated replicas is equal to the number of replicas.
+func CheckDeployment(deployment *appsv1.Deployment) error {
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
+	}
+
+	for _, trueConditionType := range trueDeploymentConditionTypes {
+		conditionType := string(trueConditionType)
+		condition := getDeploymentCondition(deployment.Status.Conditions, trueConditionType)
+		if condition == nil {
+			return requiredConditionMissing(conditionType)
+		}
+		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+			return err
+		}
+	}
+
+	for _, trueOptionalConditionType := range trueOptionalDeploymentConditionTypes {
+		conditionType := string(trueOptionalConditionType)
+		condition := getDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
+		if condition == nil {
+			continue
+		}
+		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+			return err
+		}
+	}
+
+	for _, falseOptionalConditionType := range falseOptionalDeploymentConditionTypes {
+		conditionType := string(falseOptionalConditionType)
+		condition := getDeploymentCondition(deployment.Status.Conditions, falseOptionalConditionType)
 		if condition == nil {
 			continue
 		}
@@ -153,7 +228,54 @@ func CheckReplicationController(rc *corev1.ReplicationController) error {
 	return nil
 }
 
+// CheckStatefulSet checks whether the given StatefulSet is healthy.
+// A StatefulSet is considered healthy if its controller observed its current revision,
+// it is not in an update (i.e. UpdateRevision is empty) and if its current replicas are equal to
+// its desired replicas.
+func CheckStatefulSet(statefulSet *appsv1.StatefulSet) error {
+	if statefulSet.Status.ObservedGeneration < statefulSet.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", statefulSet.Status.ObservedGeneration, statefulSet.Generation)
+	}
+
+	replicas := int32(1)
+	if statefulSet.Spec.Replicas != nil {
+		replicas = *statefulSet.Spec.Replicas
+	}
+
+	if statefulSet.Status.ReadyReplicas < replicas {
+		return fmt.Errorf("not enough ready replicas (%d/%d)", statefulSet.Status.ReadyReplicas, replicas)
+	}
+	return nil
+}
+
+func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int32 {
+	if daemonSet.Status.DesiredNumberScheduled == 0 || daemonSet.Spec.UpdateStrategy.Type != appsv1.RollingUpdateDaemonSetStrategyType {
+		return 0
+	}
+
+	rollingUpdate := daemonSet.Spec.UpdateStrategy.RollingUpdate
+	if rollingUpdate == nil {
+		return 0
+	}
+
+	maxUnavailable, err := intstr.GetValueFromIntOrPercent(rollingUpdate.MaxUnavailable, int(daemonSet.Status.DesiredNumberScheduled), false)
+	if err != nil {
+		return 0
+	}
+
+	return int32(maxUnavailable)
+}
+
 func getCustomResourceDefinitionCondition(conditions []apiextensionsv1beta1.CustomResourceDefinitionCondition, conditionType apiextensionsv1beta1.CustomResourceDefinitionConditionType) *apiextensionsv1beta1.CustomResourceDefinitionCondition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return &condition
+		}
+	}
+	return nil
+}
+
+func getDeploymentCondition(conditions []appsv1.DeploymentCondition, conditionType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			return &condition

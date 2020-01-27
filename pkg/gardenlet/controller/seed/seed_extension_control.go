@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -103,8 +102,9 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 
 	var (
 		seed         = obj.DeepCopy()
-		notInstalled = sets.NewString()
-		notReady     = sets.NewString()
+		notValid     = make(map[string]string)
+		notInstalled = make(map[string]string)
+		notHealthy   = make(map[string]string)
 	)
 
 	for _, controllerInstallation := range controllerInstallationList {
@@ -113,7 +113,7 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 		}
 
 		if len(controllerInstallation.Status.Conditions) == 0 {
-			notInstalled.Insert(controllerInstallation.Name)
+			notInstalled[controllerInstallation.Name] = "extension was not yet installed"
 			continue
 		}
 
@@ -131,15 +131,26 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 				continue
 			}
 
-			if condition.Status != gardencorev1beta1.ConditionTrue {
+			if condition.Type == gardencorev1beta1.ControllerInstallationValid && condition.Status != gardencorev1beta1.ConditionTrue {
+				notValid[controllerInstallation.Name] = condition.Message
+				break
+			}
+
+			if condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status != gardencorev1beta1.ConditionTrue {
+				notInstalled[controllerInstallation.Name] = condition.Message
+				break
+			}
+
+			if condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status != gardencorev1beta1.ConditionTrue {
+				notHealthy[controllerInstallation.Name] = condition.Message
 				break
 			}
 
 			conditionsReady++
 		}
 
-		if conditionsReady != len(requiredConditions) {
-			notReady.Insert(controllerInstallation.Name)
+		if _, found := notHealthy[controllerInstallation.Name]; !found && conditionsReady != len(requiredConditions) {
+			notHealthy[controllerInstallation.Name] = "not all required conditions found in ControllerInstallation"
 		}
 	}
 
@@ -153,16 +164,24 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 	}
 
 	switch {
-	case notInstalled.Len() != 0:
+	case len(notValid) != 0:
+		bldr.
+			WithStatus(gardencorev1beta1.ConditionFalse).
+			WithReason("NotAllExtensionsValid").
+			WithMessage(fmt.Sprintf("Some extensions are not valid: %+v", notValid))
+
+	case len(notInstalled) != 0:
 		bldr.
 			WithStatus(gardencorev1beta1.ConditionFalse).
 			WithReason("NotAllExtensionsInstalled").
-			WithMessage(fmt.Sprintf("Extensions %q are not installed", notInstalled.List()))
-	case notReady.Len() != 0:
+			WithMessage(fmt.Sprintf("Some extensions are not installed: +%v", notInstalled))
+
+	case len(notHealthy) != 0:
 		bldr.
 			WithStatus(gardencorev1beta1.ConditionFalse).
-			WithReason("NotAllExtensionsReady").
-			WithMessage(fmt.Sprintf("Extensions %q are not ready", notReady.List()))
+			WithReason("NotAllExtensionsHealthy").
+			WithMessage(fmt.Sprintf("Some extensions are not healthy: +%v", notHealthy))
+
 	default:
 		bldr.
 			WithStatus(gardencorev1beta1.ConditionTrue).
@@ -174,7 +193,6 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 	if !update {
 		return nil
 	}
-
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
 
 	_, err = c.gardenCoreClient.CoreV1beta1().Seeds().UpdateStatus(seed)
