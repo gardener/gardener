@@ -21,6 +21,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	shootoperations "github.com/gardener/gardener/pkg/operation/shoot"
 
@@ -94,8 +95,20 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 		state := extensionObject.GetExtensionStatus().GetState()
 		projectNamespace, shootName := fromNamespace(req.Namespace)
 
+		shoot, err := s.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(projectNamespace).Get(shootName, metav1.GetOptions{})
+		if err != nil {
+			s.log.Errorf("Couldn't retrieve Shoot %s from namespace %s. Extension %s state with name %s and purpose %v was NOT synced: %v", shootName, projectNamespace, kind, name, purpose, err)
+			return reconcile.Result{}, err
+		}
+
+		ownerReference := metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+
+		blockOwnerDeletion := false
+		ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
 		shootState := &gardencorev1alpha1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: projectNamespace}}
+
 		if _, err := controllerutil.CreateOrUpdate(ctx, s.k8sGardenClient.Client(), shootState, func() error {
+			shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 			return updateShootStateExtensionState(state, shootState, kind, name, purpose)
 		}); err != nil {
 			message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %v was NOT successfully synced: %v", shootName, kind, name, purpose, err)
@@ -104,7 +117,7 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 			return reconcile.Result{}, err
 		}
 
-		message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %v was NOT successfully synced", shootName, kind, name, purpose)
+		message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %v was successfully synced", shootName, kind, name, purpose)
 		s.log.Info(message)
 		s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{}, nil
