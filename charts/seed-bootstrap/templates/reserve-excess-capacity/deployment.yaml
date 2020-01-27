@@ -27,10 +27,10 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            cpu: 500m
-            memory: 1200Mi
+            cpu: 2
+            memory: 6Gi
           limits:
-            cpu: 500m
-            memory: 1200Mi
+            cpu: 2
+            memory: 6Gi
       priorityClassName: gardener-reserve-excess-capacity
 {{- end }}

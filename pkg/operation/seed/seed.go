@@ -300,7 +300,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
+func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
 	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
@@ -592,7 +592,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{
-			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
+			"reserve-excess-capacity": DesiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
 			"storage": seed.GetValidVolumeSize("10Gi"),
@@ -686,21 +686,15 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
-// corresponds to resources of (request/limits) 500m of CPU and 1200Mi of Memory.
-// ReplicasRequiredToSupportSingleShoot is 4 which is 2000m of CPU and 4800Mi of RAM.
-// The logic for computation of desired excess capacity corresponds to either deploying 2 new shoot control planes
-// or 3% of existing shoot control planes of current number of shoots deployed in seed (3 if current shoots are 100),
-// whichever of the two is larger
-func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
+// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
+// This roughly corresponds to a single, moderately large control-plane.
+// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
+// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
+func DesiredExcessCapacity() int {
 	var (
-		replicasToSupportSingleShoot          = 4
-		effectiveExcessCapacity               = 2
-		excessCapacityBasedOnAssociatedShoots = int(float64(numberOfAssociatedShoots) * 0.03)
+		replicasToSupportSingleShoot = 1
+		effectiveExcessCapacity      = 2
 	)
-
-	if excessCapacityBasedOnAssociatedShoots > effectiveExcessCapacity {
-		effectiveExcessCapacity = excessCapacityBasedOnAssociatedShoots
-	}
 
 	return effectiveExcessCapacity * replicasToSupportSingleShoot
 }
