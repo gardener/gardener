@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +93,92 @@ func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Int
 	// Wait and check whether an error occurred during the parallel processing of the Secret creation.
 	if len(errorList) > 0 {
 		return deployedClusterSecrets, fmt.Errorf("Errors occurred during shoot secrets generation: %+v", errorList)
+	}
+
+	return deployedClusterSecrets, nil
+}
+
+// GeneratePersistedSecrets generates data for secrets which will be saved in the ShootState resource.
+// If data for a secret already exists in the ShootState resource nothing is done, otherwise new data is generated from the secret config and saved in the gardenerResourceDataMap
+func GeneratePersistedSecrets(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, wantedSecretsList []ConfigInterface) error {
+	for _, s := range wantedSecretsList {
+		name := s.GetName()
+
+		if _, ok := gardenerResourceDataMap[name]; !ok {
+			certificate, err := s.Generate()
+			if err != nil {
+				return err
+			}
+			certificateResourceData := gardencorev1alpha1.GardenerResourceData{Name: name, Data: certificate.SecretData()}
+			gardenerResourceDataMap[name] = certificateResourceData
+		}
+	}
+
+	return nil
+}
+
+// DeployPersistedSecrets creates kubernetes secret resources from the corresponding data in the resourceDataList and deploys them in the Shoot's control plane.
+// If a secret already exists the function does not try to recreate it.
+func DeployPersistedSecrets(ctx context.Context, gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, wantedSecretsList []ConfigInterface, existingSecretsMap map[string]*corev1.Secret, namespace string, k8sClusterClient kubernetes.Interface) (map[string]*corev1.Secret, error) {
+	type secretOutput struct {
+		secret *corev1.Secret
+		err    error
+	}
+
+	var (
+		results                = make(chan *secretOutput)
+		deployedClusterSecrets = map[string]*corev1.Secret{}
+		wg                     sync.WaitGroup
+		errorList              = []error{}
+	)
+
+	for _, s := range wantedSecretsList {
+		name := s.GetName()
+		if existingSecret, ok := existingSecretsMap[name]; ok {
+			deployedClusterSecrets[name] = existingSecret
+			continue
+		}
+		if existingResourceData, ok := gardenerResourceDataMap[name]; ok {
+			wg.Add(1)
+			go func(name string, secretResourceData *gardencorev1alpha1.GardenerResourceData, config ConfigInterface) {
+				defer wg.Done()
+				secretType := corev1.SecretTypeOpaque
+				if typedSecret, ok := config.(Typer); ok {
+					secretType = typedSecret.Type()
+				}
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretResourceData.Name,
+						Namespace: namespace,
+					},
+					Type: secretType,
+					Data: secretResourceData.Data,
+				}
+
+				err := k8sClusterClient.Client().Create(ctx, secret)
+				results <- &secretOutput{secret, err}
+			}(name, &existingResourceData, s)
+		} else {
+			return nil, fmt.Errorf("data for required secret %s not found", name)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for out := range results {
+		if out.err != nil {
+			errorList = append(errorList, out.err)
+			continue
+		}
+		deployedClusterSecrets[out.secret.Name] = out.secret
+	}
+
+	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
+	if len(errorList) > 0 {
+		return nil, fmt.Errorf("Errors occurred during certificate authority generation: %+v", errorList)
 	}
 
 	return deployedClusterSecrets, nil

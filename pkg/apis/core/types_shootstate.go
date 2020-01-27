@@ -54,7 +54,7 @@ type GardenerResourceData struct {
 	// Name of the object required to generate resources
 	Name string
 	// Data contains the payload required to generate resources
-	Data map[string]string
+	Data map[string][]byte
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's

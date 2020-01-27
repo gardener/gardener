@@ -96,6 +96,10 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name: "Syncing shoot cluster information to seed",
 			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		ensureShootStateExists = g.Add(flow.Task{
+			Name: "Ensuring that ShootState resource exists",
+			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 		deployNamespace = g.Add(flow.Task{
 			Name:         "Deploying Shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -116,11 +120,21 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
+		loadSecretsData = g.Add(flow.Task{
+			Name:         "Loading exisitng secret data",
+			Fn:           flow.TaskFn(botanist.LoadExistingSecretsData),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
+		generatePersistentSecretData = g.Add(flow.Task{
+			Name:         "Generating secret data",
+			Fn:           flow.TaskFn(botanist.GenerateSecrets),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, loadSecretsData),
+		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
 			Fn:   flow.TaskFn(botanist.DeploySecrets),
 			Dependencies: func() flow.TaskIDs {
-				taskIDs := flow.NewTaskIDs(deployNamespace)
+				taskIDs := flow.NewTaskIDs(deployNamespace, generatePersistentSecretData)
 				if !dnsEnabled && !o.Shoot.HibernationEnabled {
 					taskIDs.Insert(waitUntilKubeAPIServerServiceIsReady)
 				}

@@ -16,6 +16,8 @@ package initializer
 
 import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -27,15 +29,27 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// WantsInternalCoreInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
+// WantsInternalCoreInformerFactory defines a function which sets Core InformerFactory for admission plugins that need it.
 type WantsInternalCoreInformerFactory interface {
 	SetInternalCoreInformerFactory(coreinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsExternalCoreInformerFactory defines a function which sets external Core InformerFactory for admission plugins that need
+type WantsExternalCoreInformerFactory interface {
+	SetExternalCoreInformerFactory(externalcoreinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
 // WantsInternalCoreClientset defines a function which sets Core Clientset for admission plugins that need it.
 type WantsInternalCoreClientset interface {
 	SetInternalCoreClientset(coreclientset.Interface)
+	admission.InitializationValidator
+}
+
+// WantsExternalCoreClientset defines a function which sets external Core Clientset for admission plugins that need it.
+type WantsExternalCoreClientset interface {
+	SetExternalCoreClientset(externalcoreclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -78,6 +92,9 @@ type WantsAuthorizer interface {
 type pluginInitializer struct {
 	coreInformers coreinformers.SharedInformerFactory
 	coreClient    coreclientset.Interface
+
+	externalCoreInformers externalcoreinformers.SharedInformerFactory
+	externalCoreClient    externalcoreclientset.Interface
 
 	gardenInformers gardeninformers.SharedInformerFactory
 	gardenClient    gardenclientset.Interface

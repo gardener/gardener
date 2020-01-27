@@ -21,6 +21,8 @@ import (
 	"net"
 	"os/exec"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -41,7 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
+var wantedCertificateAuthorityConfigs = map[string]*secrets.CertificateSecretConfig{
 	v1beta1constants.SecretNameCACluster: {
 		Name:       v1beta1constants.SecretNameCACluster,
 		CommonName: "kubernetes",
@@ -69,15 +71,42 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	},
 }
 
+var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
+	Name:           common.BasicAuthSecretName,
+	Format:         secrets.BasicAuthFormatCSV,
+	Username:       "admin",
+	PasswordLength: 32,
+}
+
+var staticTokenConfig = &secrets.StaticTokenSecretConfig{
+	Name: common.StaticTokenSecretName,
+	Tokens: []secrets.TokenConfig{
+		{
+			Username: common.KubecfgUsername,
+			UserID:   common.KubecfgUsername,
+			Groups:   []string{user.SystemPrivilegedGroup},
+		},
+		{
+			Username: common.KubeAPIServerHealthCheck,
+			UserID:   common.KubeAPIServerHealthCheck,
+		},
+	},
+}
+
+var browserCerts = sets.NewString(common.GrafanaTLS, common.KibanaTLS, common.PrometheusTLS, common.AlertManagerTLS)
+
 const (
 	certificateETCDServer = "etcd-server-tls"
 	certificateETCDClient = "etcd-client-tls"
+
+	renewedLabel    = "cert.gardener.cloud/renewed-endpoint"
+	oldRenewedLabel = "cert.gardener.cloud/renewed"
 )
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, checkCertificateAuthorities bool, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
@@ -106,7 +135,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		}
 	}
 
-	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
+	if checkCertificateAuthorities && len(certificateAuthorities) != len(wantedCertificateAuthorityConfigs) {
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
@@ -529,9 +558,13 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	}
 
 	// Secret definition for kubecfg
-	kubecfgToken, err := staticToken.GetTokenForUsername(common.KubecfgUsername)
-	if err != nil {
-		return nil, err
+	var kubecfgToken *secrets.Token
+	if staticToken != nil {
+		var err error
+		kubecfgToken, err = staticToken.GetTokenForUsername(common.KubecfgUsername)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
@@ -672,77 +705,44 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	return secretList, nil
 }
 
-// DeploySecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
-// used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
-// pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
-// credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
-// Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
+// DeploySecrets loads data from the ShootState for secret resources and uses it to deploy kubernetes secret objects in the Shoot's control plane.
 func (b *Botanist) DeploySecrets(ctx context.Context) error {
-	// If the rotate-kubeconfig operation annotation is set then we delete the existing kubecfg and basic-auth
-	// secrets. This will trigger the regeneration, incorporating new credentials. After successful deletion of all
-	// old secrets we remove the operation annotation.
-	if kutil.HasMetaDataAnnotation(b.Shoot.Info, common.ShootOperation, common.ShootOperationRotateKubeconfigCredentials) {
-		b.Logger.Infof("Rotating kubeconfig credentials")
-
-		for _, secretName := range []string{common.StaticTokenSecretName, common.BasicAuthSecretName, common.KubecfgSecretName} {
-			if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-		}
-
-		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			delete(shoot.Annotations, common.ShootOperation)
-			return shoot, nil
-		}); err != nil {
-			return err
-		}
+	shootState, err := b.K8sGardenClient.GardenCore().CoreV1alpha1().ShootStates(b.Shoot.Info.Namespace).Get(b.Shoot.Info.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
-
-	// Basic authentication can be enabled or disabled. In both cases we have to check whether the basic auth secret in the shoot
-	// namespace in the seed exists because we might need to regenerate the end-users kubecfg that is used to communicate with the
-	// shoot cluster. If basic auth is enabled then we want to store the credentials inside the kubeconfig, if it's disabled then
-	// we want to remove old credentials out of it.
-	// Thus, if the basic-auth secret is not found and basic auth is disabled then we don't need to refresh anything. If it's found
-	// then we have to delete it and refresh the kubecfg (which is triggered by deleting the kubecfg secret). The other cases are
-	// the opposite: Basic auth is enabled and basic-auth secret found: no deletion required. If the secret is not found then we
-	// generate a new one and want to refresh the kubecfg.
-	mustDeleteUserCredentialSecrets := !gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
-	basicAuthSecret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BasicAuthSecretName), basicAuthSecret); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		mustDeleteUserCredentialSecrets = gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	gardenerResourceDataMap, err := gardencorev1alpha1helper.CreateGardenerResourceDataMap(shootState.Spec.Gardener)
+	if err != nil {
+		return err
 	}
-	if mustDeleteUserCredentialSecrets {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.BasicAuthSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.KubecfgSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
 	existingSecretsMap, err := b.fetchExistingSecrets(ctx)
 	if err != nil {
 		return err
 	}
 
-	certificateAuthorities, err := b.generateCertificateAuthorities(existingSecretsMap)
+	_, err = b.loadAndDeployCertificateAuthorities(gardenerResourceDataMap, existingSecretsMap, wantedCertificateAuthorityConfigs)
 	if err != nil {
 		return err
 	}
 
-	var basicAuthAPIServer *secrets.BasicAuth
 	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
-		basicAuthAPIServer, err = b.generateBasicAuthAPIServer(ctx, existingSecretsMap)
+		_, err := b.loadAndDeployCSVSecret(ctx, gardenerResourceDataMap, existingSecretsMap, secrets.DataKeyCSV, basicAuthSecretAPIServer, func(name string, data []byte) (secrets.Interface, error) {
+			return secrets.LoadBasicAuthFromCSV(name, data)
+		})
 		if err != nil {
 			return err
 		}
 	}
 
-	staticToken, err := b.generateStaticToken(ctx, existingSecretsMap)
+	staticTokenSecret, err := b.loadAndDeployCSVSecret(ctx, gardenerResourceDataMap, existingSecretsMap, secrets.DataKeyStaticTokenCSV, staticTokenConfig, func(name string, data []byte) (secrets.Interface, error) {
+		return secrets.LoadStaticTokenFromCSV(name, data)
+	})
 	if err != nil {
+		return err
+	}
+	staticToken := staticTokenSecret.(*secrets.StaticToken)
+
+	if err := b.storeAPIServerHealthCheckToken(staticToken); err != nil {
 		return err
 	}
 
@@ -750,54 +750,13 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
-	wantedSecretsList, err := b.generateWantedSecrets(basicAuthAPIServer, staticToken, certificateAuthorities)
+	wantedSecretsList, err := b.generateWantedSecrets(nil, nil, false, nil)
 	if err != nil {
 		return err
 	}
 
-	// Only necessary to renew certificates for Alertmanager, Grafana, Kibana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	var (
-		oldRenewedLabel = "cert.gardener.cloud/renewed"
-		renewedLabel    = "cert.gardener.cloud/renewed-endpoint"
-		browserCerts    = sets.NewString(common.GrafanaTLS, common.KibanaTLS, common.PrometheusTLS, common.AlertManagerTLS)
-	)
-	for name, secret := range existingSecretsMap {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-			delete(existingSecretsMap, name)
-		}
-	}
-
-	if err := b.generateShootSecrets(ctx, existingSecretsMap, wantedSecretsList); err != nil {
+	if err := b.deployShootSecrets(ctx, gardenerResourceDataMap, existingSecretsMap, wantedSecretsList); err != nil {
 		return err
-	}
-
-	// Only necessary to renew certificates for Alertmanager, Grafana, Kibana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	for name, secret := range b.Secrets {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if secret.Labels == nil {
-				secret.Labels = make(map[string]string)
-			}
-			delete(secret.Labels, oldRenewedLabel)
-			secret.Labels[renewedLabel] = "true"
-
-			if err := b.K8sSeedClient.Client().Update(ctx, secret); err != nil {
-				return err
-			}
-		}
-	}
-
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	for name, secret := range b.Secrets {
-		b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
 	}
 
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
@@ -822,7 +781,173 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		b.ControlPlaneWildcardCert = crt
 	}
 
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	for name, secret := range b.Secrets {
+		b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
+	}
+
 	return nil
+}
+
+// LoadExistingSecretsData loads data from already existing certificate authorities and secrets in the Shoot's control plane.
+// TODO: This function is only necessary because of the addition of the ShootState resource so that data for secrets of existing shoots does not get regenerated
+// but is instead loaded into the ShootState. It can be removed later on
+func (b *Botanist) LoadExistingSecretsData(ctx context.Context) error {
+	shootState, err := b.K8sGardenClient.GardenCore().CoreV1alpha1().ShootStates(b.Shoot.Info.Namespace).Get(b.Shoot.Info.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	gardenerResourceList := shootState.Spec.Gardener
+
+	existingSecrets, err := b.fetchExistingSecrets(ctx)
+	if err != nil {
+		return err
+	}
+
+	if basicAuthSecret, ok := existingSecrets[basicAuthSecretAPIServer.Name]; ok {
+		if _, existingResourceData := gardencorev1alpha1helper.GetGardenerResourceData(gardenerResourceList, basicAuthSecretAPIServer.Name); existingResourceData == nil {
+			gardenerResourceList = append(gardenerResourceList, gardencorev1alpha1.GardenerResourceData{
+				Name: basicAuthSecretAPIServer.Name,
+				Data: basicAuthSecret.Data,
+			})
+		}
+	}
+
+	if staticTokenSecret, ok := existingSecrets[staticTokenConfig.Name]; ok {
+		if _, existingResourceData := gardencorev1alpha1helper.GetGardenerResourceData(gardenerResourceList, staticTokenConfig.Name); existingResourceData == nil {
+			gardenerResourceList = append(gardenerResourceList, gardencorev1alpha1.GardenerResourceData{
+				Name: staticTokenConfig.Name,
+				Data: staticTokenSecret.Data,
+			})
+		}
+	}
+
+	gardenerResourceList = loadCertificateAuthorities(gardenerResourceList, existingSecrets, wantedCertificateAuthorityConfigs)
+	wantedShootSecrets, err := b.generateWantedSecrets(nil, nil, false, nil)
+	if err != nil {
+		return err
+	}
+
+	gardenerResourceList = loadSecrets(gardenerResourceList, existingSecrets, wantedShootSecrets)
+
+	err = kutil.TryUpdate(ctx, retry.DefaultBackoff, b.K8sGardenClient.Client(), shootState, func() error {
+		shootState.Spec.Gardener = gardenerResourceList
+		return nil
+	})
+
+	return err
+}
+
+// GenerateSecrets generates Certificate Authorities for the Shoot cluster and uses them
+// to sign certificates used by components in the Shoot's control plane. It also generates RSA key
+// pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
+// credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
+// Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
+// All of this data is saved in the ShootState resource as it must be persisted for eventual Shoot Control Plane migration
+func (b *Botanist) GenerateSecrets(ctx context.Context) error {
+	shootState, err := b.K8sGardenClient.GardenCore().CoreV1alpha1().ShootStates(b.Shoot.Info.Namespace).Get(b.Shoot.Info.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	gardenerResourceList := shootState.Spec.Gardener
+	gardenerResourceDataMap, err := gardencorev1alpha1helper.CreateGardenerResourceDataMap(gardenerResourceList)
+	if err != nil {
+		return err
+	}
+
+	// If the rotate-kubeconfig operation annotation is set then we delete the existing kubecfg and basic-auth
+	// secrets and we also remove their data from gardenerResourceDataMap so that it can be regenerated and re-added to the ShootState.
+	// This will trigger the regeneration, incorporating new credentials. After successful deletion of all
+	// old secrets we remove the operation annotation.
+	if kutil.HasMetaDataAnnotation(b.Shoot.Info, common.ShootOperation, common.ShootOperationRotateKubeconfigCredentials) {
+		b.Logger.Infof("Rotating kubeconfig credentials")
+		secretsToRegenerate := []string{common.StaticTokenSecretName, common.BasicAuthSecretName, common.KubecfgSecretName}
+		for _, secretName := range secretsToRegenerate {
+			if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			delete(gardenerResourceDataMap, secretName)
+		}
+
+		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+			delete(shoot.Annotations, common.ShootOperation)
+			return shoot, nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	// Basic authentication can be enabled or disabled. In both cases we have to check whether the basic auth secret in the shoot
+	// namespace in the seed exists because we might need to regenerate the end-users kubecfg that is used to communicate with the
+	// shoot cluster. If basic auth is enabled then we want to store the credentials inside the kubeconfig, if it's disabled then
+	// we want to remove old credentials out of it.
+	// Thus, if the basic-auth secret is not found and basic auth is disabled then we don't need to refresh anything. If it's found
+	// then we have to delete it and refresh the kubecfg (which is triggered by deleting the kubecfg secret). The other cases are
+	// the opposite: Basic auth is enabled and basic-auth secret found: no deletion required. If the secret is not found then we
+	// generate a new one and want to refresh the kubecfg. If we delete the basic auth secret, we must also remove it from the secrets in the ShootState
+	mustDeleteUserCredentialSecrets := !gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	basicAuthSecret := &corev1.Secret{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BasicAuthSecretName), basicAuthSecret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		mustDeleteUserCredentialSecrets = gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	}
+	if mustDeleteUserCredentialSecrets {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.BasicAuthSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		gardenerResourceList = gardencorev1alpha1helper.RemoveGardenerResourceData(gardenerResourceList, common.BasicAuthSecretName)
+		delete(gardenerResourceDataMap, common.BasicAuthSecretName)
+
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.KubecfgSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		delete(gardenerResourceDataMap, common.KubecfgSecretName)
+	}
+
+	var basicAuthAPIServer *secrets.BasicAuth
+	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+		basicAuth, err := generateCSVSecretData(gardenerResourceDataMap, secrets.DataKeyCSV, basicAuthSecretAPIServer, func(name string, data []byte) (secrets.Interface, error) {
+			return secrets.LoadBasicAuthFromCSV(name, data)
+		})
+		if err != nil {
+			return err
+		}
+		basicAuthAPIServer = basicAuth.(*secrets.BasicAuth)
+	}
+
+	staticToken, err := generateCSVSecretData(gardenerResourceDataMap, secrets.DataKeyStaticTokenCSV, staticTokenConfig, func(name string, data []byte) (secrets.Interface, error) {
+		return secrets.LoadStaticTokenFromCSV(name, data)
+	})
+	if err != nil {
+		return err
+	}
+	staticTokenSecret := staticToken.(*secrets.StaticToken)
+
+	certificateAuthorities, err := secrets.GenerateCertificateAuthoritiesData(gardenerResourceDataMap, wantedCertificateAuthorityConfigs)
+	if err != nil {
+		return err
+	}
+
+	wantedSecretsConfig, err := b.generateWantedSecrets(basicAuthAPIServer, staticTokenSecret, true, certificateAuthorities)
+	if err != nil {
+		return err
+	}
+
+	err = secrets.GeneratePersistedSecrets(gardenerResourceDataMap, wantedSecretsConfig)
+	if err != nil {
+		return err
+	}
+
+	err = kutil.TryUpdate(ctx, retry.DefaultBackoff, b.K8sGardenClient.Client(), shootState, func() error {
+		shootState.Spec.Gardener = gardencorev1alpha1helper.AddGardenerResourceDataFromMap(gardenerResourceList, gardenerResourceDataMap)
+		return nil
+	})
+
+	return err
 }
 
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
@@ -858,6 +983,21 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	return nil
 }
 
+func (b *Botanist) loadAndDeployCertificateAuthorities(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorityConfigs map[string]*secrets.CertificateSecretConfig) (map[string]*secrets.Certificate, error) {
+	generatedSecrets, certificateAuthorities, err := secrets.LoadAndDeployCertificateAuthorities(gardenerResourceDataMap, existingSecretsMap, wantedCertificateAuthorityConfigs, b.Shoot.SeedNamespace, b.K8sSeedClient)
+	if err != nil {
+		return nil, err
+	}
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	for secretName, caSecret := range generatedSecrets {
+		b.Secrets[secretName] = caSecret
+	}
+
+	return certificateAuthorities, nil
+}
+
 func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := b.K8sSeedClient.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
@@ -873,134 +1013,6 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 	return existingSecretsMap, nil
 }
 
-func (b *Botanist) generateCertificateAuthorities(existingSecretsMap map[string]*corev1.Secret) (map[string]*secrets.Certificate, error) {
-	generatedSecrets, certificateAuthorities, err := secrets.GenerateCertificateAuthorities(b.K8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, b.Shoot.SeedNamespace)
-	if err != nil {
-		return nil, err
-	}
-
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	for secretName, caSecret := range generatedSecrets {
-		b.Secrets[secretName] = caSecret
-	}
-
-	return certificateAuthorities, nil
-}
-
-func (b *Botanist) generateBasicAuthAPIServer(ctx context.Context, existingSecretsMap map[string]*corev1.Secret) (*secrets.BasicAuth, error) {
-	basicAuthSecretAPIServer := &secrets.BasicAuthSecretConfig{
-		Name:           common.BasicAuthSecretName,
-		Format:         secrets.BasicAuthFormatCSV,
-		Username:       "admin",
-		PasswordLength: 32,
-	}
-
-	if existingSecret, ok := existingSecretsMap[basicAuthSecretAPIServer.Name]; ok {
-		basicAuth, err := secrets.LoadBasicAuthFromCSV(basicAuthSecretAPIServer.Name, existingSecret.Data[secrets.DataKeyCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
-
-		b.Secrets[basicAuthSecretAPIServer.Name] = existingSecret
-
-		return basicAuth, nil
-	}
-
-	basicAuth, err := basicAuthSecretAPIServer.Generate()
-	if err != nil {
-		return nil, err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      basicAuthSecretAPIServer.Name,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: basicAuth.SecretData(),
-	}
-	if err := b.K8sSeedClient.Client().Create(ctx, secret); err != nil {
-		return nil, err
-	}
-
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	b.Secrets[basicAuthSecretAPIServer.Name] = secret
-
-	return basicAuth.(*secrets.BasicAuth), nil
-}
-
-func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap map[string]*corev1.Secret) (*secrets.StaticToken, error) {
-	staticTokenConfig := &secrets.StaticTokenSecretConfig{
-		Name: common.StaticTokenSecretName,
-		Tokens: []secrets.TokenConfig{
-			{
-				Username: common.KubecfgUsername,
-				UserID:   common.KubecfgUsername,
-				Groups:   []string{user.SystemPrivilegedGroup},
-			},
-			{
-				Username: common.KubeAPIServerHealthCheck,
-				UserID:   common.KubeAPIServerHealthCheck,
-			},
-		},
-	}
-
-	if existingSecret, ok := existingSecretsMap[staticTokenConfig.Name]; ok {
-		staticToken, err := secrets.LoadStaticTokenFromCSV(staticTokenConfig.Name, existingSecret.Data[secrets.DataKeyStaticTokenCSV])
-		if err != nil {
-			return nil, err
-		}
-
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
-
-		b.Secrets[staticTokenConfig.Name] = existingSecret
-
-		if err := b.storeAPIServerHealthCheckToken(staticToken); err != nil {
-			return nil, err
-		}
-
-		return staticToken, nil
-	}
-
-	staticToken, err := staticTokenConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      staticTokenConfig.Name,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: staticToken.SecretData(),
-	}
-	if err := b.K8sSeedClient.Client().Create(ctx, secret); err != nil {
-		return nil, err
-	}
-
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	b.Secrets[staticTokenConfig.Name] = secret
-
-	staticTokenObj := staticToken.(*secrets.StaticToken)
-
-	if err := b.storeAPIServerHealthCheckToken(staticTokenObj); err != nil {
-		return nil, err
-	}
-
-	return staticTokenObj, nil
-}
-
 func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticToken) error {
 	kubeAPIServerHealthCheckToken, err := staticToken.GetTokenForUsername(common.KubeAPIServerHealthCheck)
 	if err != nil {
@@ -1011,8 +1023,8 @@ func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticTok
 	return nil
 }
 
-func (b *Botanist) generateShootSecrets(ctx context.Context, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) error {
-	deployedClusterSecrets, err := secrets.GenerateClusterSecrets(ctx, b.K8sSeedClient, existingSecretsMap, wantedSecretsList, b.Shoot.SeedNamespace)
+func (b *Botanist) deployShootSecrets(ctx context.Context, gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) error {
+	deployedClusterSecrets, err := secrets.DeployPersistedSecrets(ctx, gardenerResourceDataMap, wantedSecretsList, existingSecretsMap, b.Shoot.SeedNamespace, b.K8sSeedClient)
 	if err != nil {
 		return err
 	}
@@ -1141,6 +1153,36 @@ func (b *Botanist) deployOpenVPNTLSAuthSecret(ctx context.Context, existingSecre
 	return nil
 }
 
+func loadCertificateAuthorities(gardenerReourceDataList []gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorityConfigs map[string]*secrets.CertificateSecretConfig) []gardencorev1alpha1.GardenerResourceData {
+	for name := range wantedCertificateAuthorityConfigs {
+		if val, ok := existingSecretsMap[name]; ok {
+			if _, existingResourceData := gardencorev1alpha1helper.GetGardenerResourceData(gardenerReourceDataList, name); existingResourceData == nil {
+				gardenerReourceDataList = append(gardenerReourceDataList, gardencorev1alpha1.GardenerResourceData{
+					Name: name,
+					Data: val.Data,
+				})
+			}
+		}
+	}
+	return gardenerReourceDataList
+}
+
+func loadSecrets(gardenerReourceDataList []gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) []gardencorev1alpha1.GardenerResourceData {
+	for _, secreteConfig := range wantedSecretsList {
+		name := secreteConfig.GetName()
+		if val, ok := existingSecretsMap[name]; ok {
+			if _, existingResourceData := gardencorev1alpha1helper.GetGardenerResourceData(gardenerReourceDataList, name); existingResourceData == nil {
+				gardenerReourceDataList = append(gardenerReourceDataList, gardencorev1alpha1.GardenerResourceData{
+					Name: name,
+					Data: val.Data,
+				})
+			}
+		}
+	}
+
+	return gardenerReourceDataList
+}
+
 func generateOpenVPNTLSAuth() ([]byte, error) {
 	var (
 		out bytes.Buffer
@@ -1172,4 +1214,75 @@ func dnsNamesForEtcd(namespace string) []string {
 	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDMain), namespace)...)
 	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDEvents), namespace)...)
 	return names
+}
+
+func markSecretDataForRegeneration(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, name string) {
+
+}
+
+type loadDataFromCSV func(name string, data []byte) (secrets.Interface, error)
+
+func generateCSVSecretData(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, dataKey string, config secrets.ConfigInterface, loadDataFunc loadDataFromCSV) (secrets.Interface, error) {
+	name := config.GetName()
+
+	if existingResourceData, ok := gardenerResourceDataMap[name]; ok {
+		secretInterface, err := loadDataFunc(name, existingResourceData.Data[dataKey])
+		if err != nil {
+			return nil, err
+		}
+		return secretInterface, nil
+	}
+
+	csvSecretDataObj, err := config.Generate()
+	if err != nil {
+		return nil, err
+	}
+	csvSecretData := csvSecretDataObj.SecretData()
+	gardenerResourceData := gardencorev1alpha1.GardenerResourceData{Name: name, Data: csvSecretData}
+	gardenerResourceDataMap[name] = gardenerResourceData
+
+	secretInterface, err := loadDataFunc(name, csvSecretData[dataKey])
+	if err != nil {
+		return nil, err
+	}
+	return secretInterface, nil
+}
+
+func (b *Botanist) loadAndDeployCSVSecret(ctx context.Context, gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, dataKey string, config secrets.ConfigInterface, loadDataFunc loadDataFromCSV) (secrets.Interface, error) {
+	name := config.GetName()
+	existingResourceData, ok := gardenerResourceDataMap[name]
+	if !ok {
+		return nil, fmt.Errorf("missing data for %s secret", name)
+	}
+
+	secretInterface, err := loadDataFunc(name, existingResourceData.Data[dataKey])
+	if err != nil {
+		return nil, err
+	}
+
+	if existingSecret, ok := existingSecretsMap[name]; ok {
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+		b.Secrets[name] = existingSecret
+
+		return secretInterface, nil
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: b.Shoot.SeedNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: existingResourceData.Data,
+	}
+	if err := b.K8sSeedClient.Client().Create(ctx, secret); err != nil {
+		return nil, err
+	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.Secrets[name] = secret
+
+	return secretInterface, nil
 }

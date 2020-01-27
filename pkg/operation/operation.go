@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -49,6 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerruntimeutils "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // New creates a new operation object with a Shoot resource object.
@@ -425,6 +427,26 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// EnsureShootStateExists tries to get the ShootState for the Shoot. If it does not exist it creates a new one and sets its ownerReference to the Shoot object.
+func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
+	shootState := &gardencorev1alpha1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      o.Shoot.Info.Name,
+			Namespace: o.Shoot.Info.Namespace,
+		},
+	}
+	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	blockOwnerDeletion := false
+	ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
+
+	_, err := controllerruntimeutils.CreateOrUpdate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
+		return nil
+	})
+
+	return err
 }
 
 // ComputeGrafanaHosts computes the host for both grafanas.

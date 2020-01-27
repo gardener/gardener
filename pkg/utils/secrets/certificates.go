@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -102,6 +103,14 @@ func (s *CertificateSecretConfig) GetName() string {
 // Generate implements ConfigInterface.
 func (s *CertificateSecretConfig) Generate() (Interface, error) {
 	return s.GenerateCertificate()
+}
+
+// Type implements ConfigInterface.
+func (s *CertificateSecretConfig) Type() corev1.SecretType {
+	if s.CertType == "" || s.CertType == CACert {
+		return corev1.SecretTypeOpaque
+	}
+	return corev1.SecretTypeTLS
 }
 
 // GenerateCertificate computes a CA, server, or client certificate based on the configuration.
@@ -296,6 +305,119 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, *Certif
 		return nil, nil, err
 	}
 	return existingSecret, certificate, nil
+}
+
+func loadAndDeployCA(k8sClusterClient kubernetes.Interface, gardenerResourceData *gardencorev1alpha1.GardenerResourceData, namespace string) (*corev1.Secret, *Certificate, error) {
+	certificate, err := LoadCertificate(gardenerResourceData.Name, gardenerResourceData.Data[DataKeyPrivateKeyCA], gardenerResourceData.Data[DataKeyCertificateCA])
+	if err != nil {
+		return nil, nil, err
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gardenerResourceData.Name,
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: gardenerResourceData.Data,
+	}
+
+	if err := k8sClusterClient.Client().Create(context.TODO(), secret); err != nil {
+		return nil, nil, err
+	}
+
+	return secret, certificate, nil
+}
+
+// GenerateCertificateAuthoritiesData generates CertificateAuthorities and saves their data in the gardenerResourceData map.
+// If a CA already exists in the provided GardenerResourceData nothing is doen, otherwise a new certificate is generate
+// The function returns a map of CAs which can be used to sign other certificates.
+func GenerateCertificateAuthoritiesData(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, wantedCertificateAuthorities map[string]*CertificateSecretConfig) (map[string]*Certificate, error) {
+	var (
+		certificateAuthorities = map[string]*Certificate{}
+		certificate            *Certificate
+		err                    error
+	)
+
+	for name, config := range wantedCertificateAuthorities {
+		if existingResourceData, ok := gardenerResourceDataMap[name]; ok {
+			certificate, err = LoadCertificate(name, existingResourceData.Data[DataKeyPrivateKeyCA], existingResourceData.Data[DataKeyCertificateCA])
+			if err != nil {
+				return nil, err
+			}
+			certificateAuthorities[name] = certificate
+			continue
+		}
+
+		certificate, err = config.GenerateCertificate()
+		if err != nil {
+			return nil, err
+		}
+		certificateResourceData := gardencorev1alpha1.GardenerResourceData{Name: name, Data: certificate.SecretData()}
+
+		gardenerResourceDataMap[name] = certificateResourceData
+		certificateAuthorities[name] = certificate
+	}
+
+	return certificateAuthorities, nil
+}
+
+// LoadAndDeployCertificateAuthorities loads CAs either from the secrets in the Shoot's namespace if they exist or from the provided gardenerResourceData.
+// If the secret does not exist in the Shoot's namespace a new one is deployed with data from gardenerResourceData.
+// If a wanted CA is neither present in the Shoot's namespace as a secret nor in the gardenerResourceData an error is retured.
+func LoadAndDeployCertificateAuthorities(gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string, k8sClusterClient kubernetes.Interface) (map[string]*corev1.Secret, map[string]*Certificate, error) {
+	type caOutput struct {
+		secret      *corev1.Secret
+		certificate *Certificate
+		err         error
+	}
+
+	var (
+		certificateAuthorities = map[string]*Certificate{}
+		generatedSecrets       = map[string]*corev1.Secret{}
+		results                = make(chan *caOutput)
+		wg                     sync.WaitGroup
+		errorList              = []error{}
+	)
+
+	for name := range wantedCertificateAuthorities {
+		wg.Add(1)
+		if val, ok := existingSecretsMap[name]; ok {
+			go func(name string, secret *corev1.Secret) {
+				defer wg.Done()
+				certificate, err := LoadCertificate(name, secret.Data[DataKeyPrivateKeyCA], secret.Data[DataKeyCertificateCA])
+				results <- &caOutput{secret, certificate, err}
+			}(name, val)
+		} else if existingResourceData, ok := gardenerResourceDataMap[name]; ok {
+			go func(name string, secretResourceData *gardencorev1alpha1.GardenerResourceData) {
+				defer wg.Done()
+				secret, certificate, err := loadAndDeployCA(k8sClusterClient, &existingResourceData, namespace)
+				results <- &caOutput{secret, certificate, err}
+			}(name, &existingResourceData)
+		} else {
+			return nil, nil, fmt.Errorf("data for required certificate authority %s not found", name)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for out := range results {
+		if out.err != nil {
+			errorList = append(errorList, out.err)
+			continue
+		}
+		generatedSecrets[out.secret.Name] = out.secret
+		certificateAuthorities[out.secret.Name] = out.certificate
+	}
+
+	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
+	if len(errorList) > 0 {
+		return nil, nil, fmt.Errorf("Errors occurred during certificate authority generation: %+v", errorList)
+	}
+
+	return generatedSecrets, certificateAuthorities, nil
 }
 
 // GenerateCertificateAuthorities get a map of wanted certificates and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding

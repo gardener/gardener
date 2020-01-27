@@ -14,10 +14,17 @@
 
 package secrets
 
+import corev1 "k8s.io/api/core/v1"
+
 // ConfigInterface define functions needed for generating a specific secret.
 type ConfigInterface interface {
 	GetName() string
 	Generate() (Interface, error)
+}
+
+// Typer retrieves the type of the secret which should be created
+type Typer interface {
+	Type() corev1.SecretType
 }
 
 // Interface defines functions needed for defining the data map of a Kubernetes secret.

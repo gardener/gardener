@@ -750,3 +750,61 @@ func GetExtensionResourceState(extensionsResourcesStates []gardencorev1alpha1.Ex
 	}
 	return -1, nil
 }
+
+// RemoveGardenerResourceData removes the resourceData with the given name from the provided GardenerResourceData list
+func RemoveGardenerResourceData(gardenerResourceDataList []gardencorev1alpha1.GardenerResourceData, name string) []gardencorev1alpha1.GardenerResourceData {
+	index, _ := GetGardenerResourceData(gardenerResourceDataList, name)
+	if index < 0 {
+		return gardenerResourceDataList
+	}
+
+	newGardnerResourceDataList := make([]gardencorev1alpha1.GardenerResourceData, 0, len(gardenerResourceDataList)-1)
+	for _, resourceData := range gardenerResourceDataList {
+		if resourceData.Name != name {
+			newGardnerResourceDataList = append(newGardnerResourceDataList, resourceData)
+		}
+	}
+
+	return newGardnerResourceDataList
+}
+
+// GetGardenerResourceData returns a pointer to the GardenerResourceData with the specified name.
+func GetGardenerResourceData(gardenerResourceDataList []gardencorev1alpha1.GardenerResourceData, name string) (int, *gardencorev1alpha1.GardenerResourceData) {
+	for i, resourceData := range gardenerResourceDataList {
+		if resourceData.Name == name {
+			return i, &gardenerResourceDataList[i]
+		}
+	}
+	return -1, nil
+}
+
+// CreateGardenerResourceDataMap creates a new GardenerResourceDataSet from the given GardenerResourceData list
+func CreateGardenerResourceDataMap(resourceDataList []gardencorev1alpha1.GardenerResourceData) (map[string]gardencorev1alpha1.GardenerResourceData, error) {
+	gardenerResourceDataMap := make(map[string]gardencorev1alpha1.GardenerResourceData, len(resourceDataList))
+
+	for _, item := range resourceDataList {
+		if _, ok := gardenerResourceDataMap[item.Name]; ok {
+			return nil, fmt.Errorf("duplicate entry found in gardener resource data in ShootState: %s", item.Name)
+		}
+		gardenerResourceDataMap[item.Name] = item
+	}
+
+	return gardenerResourceDataMap, nil
+}
+
+// AddGardenerResourceDataFromMap takes a list and a map of GardenerResourceData objects. If an object with the same name exists in the list and in the map its data in the list is overwritten.
+// All objects which exist in the map but not in the list are appended to the list. In the end the modified list is returned
+func AddGardenerResourceDataFromMap(resourceDataList []gardencorev1alpha1.GardenerResourceData, resourceDataMap map[string]gardencorev1alpha1.GardenerResourceData) []gardencorev1alpha1.GardenerResourceData {
+	for i, dataFromList := range resourceDataList {
+		if dataFromMap, ok := resourceDataMap[dataFromList.Name]; ok {
+			resourceDataList[i].Data = dataFromMap.Data
+			delete(resourceDataMap, dataFromList.Name)
+		}
+	}
+
+	for _, item := range resourceDataMap {
+		resourceDataList = append(resourceDataList, item)
+	}
+
+	return resourceDataList
+}

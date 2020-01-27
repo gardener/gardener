@@ -850,4 +850,109 @@ var _ = Describe("helper", func() {
 			false,
 		),
 	)
+
+	Describe("GardenerResourceData", func() {
+		var (
+			gardenerResourceDataList []gardencorev1alpha1.GardenerResourceData
+			first                    gardencorev1alpha1.GardenerResourceData
+		)
+		BeforeEach(func() {
+			first = gardencorev1alpha1.GardenerResourceData{
+				Name: "first",
+				Data: map[string][]byte{"entry1": []byte("data1")},
+			}
+			gardenerResourceDataList = []gardencorev1alpha1.GardenerResourceData{
+				first,
+				{Name: "foo", Data: map[string][]byte{"entry1": []byte("data1")}},
+				{Name: "bar", Data: map[string][]byte{"entry2": []byte("data2")}},
+				{Name: "baz", Data: map[string][]byte{"entry3": []byte("data3")}},
+			}
+		})
+
+		Describe("#RemoveGardenerResourceData", func() {
+			It("should return the same list if an item is not found", func() {
+				newGardenerResourceDataList := RemoveGardenerResourceData(gardenerResourceDataList, "not-in")
+				Expect(newGardenerResourceDataList).To(Equal(gardenerResourceDataList))
+			})
+
+			It("should remove an item and keep the list in the same order", func() {
+				newGardenerResourceDataList := RemoveGardenerResourceData(gardenerResourceDataList, first.Name)
+				Expect(newGardenerResourceDataList).To(Equal(gardenerResourceDataList[1:]))
+			})
+
+			It("should return empty list if the original list is also empty", func() {
+				newGardenerResourceDataList := RemoveGardenerResourceData([]gardencorev1alpha1.GardenerResourceData{}, "not-in")
+				Expect(len(newGardenerResourceDataList)).To(Equal(0))
+			})
+		})
+
+		Describe("#GetGardenerResourceData", func() {
+			It("should get the correct element from the list and its index if the item was found", func() {
+				idx, gardenerResourceData := GetGardenerResourceData(gardenerResourceDataList, first.Name)
+				Expect(idx).To(Equal(0))
+				Expect(gardenerResourceData).To(Equal(&first))
+			})
+
+			It("should return nil element and index -1 if the element was not found", func() {
+				idx, gardenerResourceData := GetGardenerResourceData(gardenerResourceDataList, "not-in")
+				Expect(idx).To(Equal(-1))
+				Expect(gardenerResourceData).To(BeNil())
+			})
+
+			It("should return nil and index -1 if the gardenerResourceDataList is empty,", func() {
+				idx, gardenerResourceData := GetGardenerResourceData([]gardencorev1alpha1.GardenerResourceData{}, first.Name)
+				Expect(idx).To(Equal(-1))
+				Expect(gardenerResourceData).To(BeNil())
+			})
+		})
+
+		Describe("#GetGardenerResourceData", func() {
+			It("should create map with the same contents as the passed gardenerResourceDataList", func() {
+				gardenerResourceDataMap, err := CreateGardenerResourceDataMap(gardenerResourceDataList)
+				Expect(err).NotTo(HaveOccurred())
+				for _, resourceData := range gardenerResourceDataList {
+					val, ok := gardenerResourceDataMap[resourceData.Name]
+					Expect(ok).To(BeTrue())
+					Expect(val).To(Equal(resourceData))
+				}
+			})
+
+			It("should return error when there are duplicate entries in the passed gardenerResourceDataList", func() {
+				gardenerResourceDataList = append(gardenerResourceDataList, first)
+				_, err := CreateGardenerResourceDataMap(gardenerResourceDataList)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Describe("#AddGardenerResourceDataFromMap", func() {
+			var gardenerResourceDataMap map[string]gardencorev1alpha1.GardenerResourceData
+
+			BeforeEach(func() {
+				gardenerResourceDataMap = map[string]gardencorev1alpha1.GardenerResourceData{
+					"map_foo": {Name: "map_foo", Data: map[string][]byte{"entry1": []byte("data1")}},
+					"map_bar": {Name: "map_bar", Data: map[string][]byte{"entry2": []byte("data2")}},
+					"map_baz": {Name: "map_baz", Data: map[string][]byte{"entry3": []byte("data3")}},
+				}
+			})
+			It("should append all elements to the list", func() {
+				initialLen := len(gardenerResourceDataList) + len(gardenerResourceDataMap)
+				gardenerResourceDataList = AddGardenerResourceDataFromMap(gardenerResourceDataList, gardenerResourceDataMap)
+				Expect(len(gardenerResourceDataList)).To(Equal(initialLen))
+			})
+
+			It("should overwrite element's data if object exists in the list and the map of GardenerResourceData", func() {
+				first.Data = map[string][]byte{"changed": []byte("changed")}
+				gardenerResourceDataMap[first.Name] = first
+				initialLen := len(gardenerResourceDataList) + len(gardenerResourceDataMap)
+				gardenerResourceDataList = AddGardenerResourceDataFromMap(gardenerResourceDataList, gardenerResourceDataMap)
+				Expect(len(gardenerResourceDataList)).To(Equal(initialLen - 1))
+				for _, item := range gardenerResourceDataList {
+					if item.Name == first.Name {
+						Expect(item.Data).To(Equal(first.Data))
+						break
+					}
+				}
+			})
+		})
+	})
 })

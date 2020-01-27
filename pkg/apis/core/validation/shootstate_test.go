@@ -44,9 +44,9 @@ var _ = Describe("validation", func() {
 		It("should forbid shootState containing data required for gardener resource generation with empty name", func() {
 			shootState.Spec.Gardener = []core.GardenerResourceData{
 				{
-					Data: map[string]string{
-						"ca.key": "ca-key",
-						"ca.crt": "ca-crt",
+					Data: map[string][]byte{
+						"ca.key": []byte("ca-key"),
+						"ca.crt": []byte("ca-crt"),
 					},
 				},
 			}

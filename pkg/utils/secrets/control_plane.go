@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -60,6 +61,11 @@ func (s *ControlPlaneSecretConfig) GetName() string {
 // Generate implements ConfigInterface.
 func (s *ControlPlaneSecretConfig) Generate() (Interface, error) {
 	return s.GenerateControlPlane()
+}
+
+// Type implements Typer.
+func (s *ControlPlaneSecretConfig) Type() corev1.SecretType {
+	return corev1.SecretTypeOpaque
 }
 
 // GenerateControlPlane computes a secret for a control plane component of the clusters managed by Gardener.

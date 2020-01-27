@@ -1930,7 +1930,7 @@ func schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref common.ReferenceCall
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
-										Format: "",
+										Format: "byte",
 									},
 								},
 							},

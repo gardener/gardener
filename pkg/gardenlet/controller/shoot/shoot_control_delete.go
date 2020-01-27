@@ -199,9 +199,25 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
+		ensureShootStateExists = g.Add(flow.Task{
+			Name: "Ensuring that ShootState resource exists",
+			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		// In case ShootState was manually deleted we need to reload the persisted secrets from the Shoot's control plane
+		loadSecretsData = g.Add(flow.Task{
+			Name:         "Loading exisitng secret data",
+			Fn:           flow.TaskFn(botanist.LoadExistingSecretsData),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
+		generatePersistentSecretData = g.Add(flow.Task{
+			Name:         "Generating secret data",
+			Fn:           flow.TaskFn(botanist.GenerateSecrets),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, loadSecretsData),
+		})
 		deploySecrets = g.Add(flow.Task{
-			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
+			Name:         "Deploying Shoot certificates / keys",
+			Fn:           flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generatePersistentSecretData),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-

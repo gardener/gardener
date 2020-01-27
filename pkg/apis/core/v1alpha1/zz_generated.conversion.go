@@ -2344,7 +2344,7 @@ func Convert_garden_Gardener_To_v1alpha1_Gardener(in *garden.Gardener, out *Gard
 
 func autoConvert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *GardenerResourceData, out *core.GardenerResourceData, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Data = *(*map[string]string)(unsafe.Pointer(&in.Data))
+	out.Data = *(*map[string][]byte)(unsafe.Pointer(&in.Data))
 	return nil
 }
 
@@ -2355,7 +2355,7 @@ func Convert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *Gard
 
 func autoConvert_core_GardenerResourceData_To_v1alpha1_GardenerResourceData(in *core.GardenerResourceData, out *GardenerResourceData, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Data = *(*map[string]string)(unsafe.Pointer(&in.Data))
+	out.Data = *(*map[string][]byte)(unsafe.Pointer(&in.Data))
 	return nil
 }
 

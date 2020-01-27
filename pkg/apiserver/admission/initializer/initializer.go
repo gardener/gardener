@@ -16,6 +16,8 @@ package initializer
 
 import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
@@ -30,6 +32,8 @@ import (
 // New constructs new instance of PluginInitializer
 func New(coreInformers coreinformers.SharedInformerFactory,
 	coreClient coreclientset.Interface,
+	coreExternalInformers externalcoreinformers.SharedInformerFactory,
+	externalCoreClient externalcoreclientset.Interface,
 	gardenInformers gardeninformers.SharedInformerFactory,
 	gardenClient gardenclientset.Interface,
 	settingsInformers settingsinformer.SharedInformerFactory,
@@ -39,6 +43,9 @@ func New(coreInformers coreinformers.SharedInformerFactory,
 	return pluginInitializer{
 		coreInformers: coreInformers,
 		coreClient:    coreClient,
+
+		externalCoreInformers: coreExternalInformers,
+		externalCoreClient:    externalCoreClient,
 
 		gardenInformers: gardenInformers,
 		gardenClient:    gardenClient,
@@ -71,6 +78,14 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {
 		wants.SetSettingsInformerFactory(i.settingsInformers)
+	}
+
+	if wants, ok := plugin.(WantsExternalCoreInformerFactory); ok {
+		wants.SetExternalCoreInformerFactory(i.externalCoreInformers)
+	}
+
+	if wants, ok := plugin.(WantsExternalCoreClientset); ok {
+		wants.SetExternalCoreClientset(i.externalCoreClient)
 	}
 
 	if wants, ok := plugin.(WantsKubeInformerFactory); ok {

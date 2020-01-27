@@ -607,9 +607,17 @@ func (in *GardenerResourceData) DeepCopyInto(out *GardenerResourceData) {
 	*out = *in
 	if in.Data != nil {
 		in, out := &in.Data, &out.Data
-		*out = make(map[string]string, len(*in))
+		*out = make(map[string][]byte, len(*in))
 		for key, val := range *in {
-			(*out)[key] = val
+			var outVal []byte
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = make([]byte, len(*in))
+				copy(*out, *in)
+			}
+			(*out)[key] = outVal
 		}
 	}
 	return
