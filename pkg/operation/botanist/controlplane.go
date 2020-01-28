@@ -996,11 +996,15 @@ func (b *Botanist) DeployKubeControllerManager() error {
 		},
 	}
 
-	replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
-	if err != nil {
-		return err
+	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
+		// Keep the replica count same if the shoot is not transitioning from/to hibernation state
+		// otherwise this may interfere with dependency-watchdog
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
+		if err != nil {
+			return err
+		}
+		defaultValues["replicas"] = replicaCount
 	}
-	defaultValues["replicas"] = replicaCount
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {
