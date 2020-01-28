@@ -55,3 +55,12 @@ COPY charts /charts
 WORKDIR /
 
 ENTRYPOINT ["/gardenlet"]
+
+############# registry-migrator #############
+FROM alpine:3.11.3 AS registry-migrator
+
+COPY --from=builder /go/bin/registry-migrator /registry-migrator
+
+WORKDIR /
+
+ENTRYPOINT ["/registry-migrator"]

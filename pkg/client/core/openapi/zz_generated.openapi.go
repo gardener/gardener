@@ -72,7 +72,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension":                            schema_pkg_apis_core_v1alpha1_Extension(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionResourceState":               schema_pkg_apis_core_v1alpha1_ExtensionResourceState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener":                             schema_pkg_apis_core_v1alpha1_Gardener(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration":                     schema_pkg_apis_core_v1alpha1_GardenerDuration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerResourceData":                 schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation":                          schema_pkg_apis_core_v1alpha1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HibernationSchedule":                  schema_pkg_apis_core_v1alpha1_HibernationSchedule(ref),
@@ -185,7 +184,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                      schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                             schema_pkg_apis_core_v1beta1_Extension(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                              schema_pkg_apis_core_v1beta1_Gardener(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration":                      schema_pkg_apis_core_v1beta1_GardenerDuration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                           schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                   schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":         schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
@@ -1895,18 +1893,6 @@ func schema_pkg_apis_core_v1alpha1_Gardener(ref common.ReferenceCallback) common
 	}
 }
 
-func schema_pkg_apis_core_v1alpha1_GardenerDuration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.",
-				Type:        v1alpha1.GardenerDuration{}.OpenAPISchemaType(),
-				Format:      v1alpha1.GardenerDuration{}.OpenAPISchemaFormat(),
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2022,31 +2008,31 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 					"cpuInitializationPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period after which a ready pod transition is considered to be the first.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"initialReadinessDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period for syncing the number of pods in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"tolerance": {
@@ -2059,14 +2045,14 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 					"upscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -6832,18 +6818,6 @@ func schema_pkg_apis_core_v1beta1_Gardener(ref common.ReferenceCallback) common.
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_GardenerDuration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.",
-				Type:        v1beta1.GardenerDuration{}.OpenAPISchemaType(),
-				Format:      v1beta1.GardenerDuration{}.OpenAPISchemaFormat(),
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_Hibernation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6923,31 +6897,31 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 					"cpuInitializationPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period after which a ready pod transition is considered to be the first.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"initialReadinessDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period for syncing the number of pods in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"tolerance": {
@@ -6960,14 +6934,14 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 					"upscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

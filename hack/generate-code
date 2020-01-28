@@ -35,7 +35,6 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \
   "core:v1alpha1,v1beta1" \
-  --extra-peer-dirs=github.com/gardener/gardener/pkg/apis/garden \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 # extensions.gardener.cloud APIs
@@ -45,16 +44,6 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   github.com/gardener/gardener/pkg/client/extensions \
   github.com/gardener/gardener/pkg/apis \
   "extensions:v1alpha1" \
-  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-# garden.sapcloud.io APIs
-
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
-  all \
-  github.com/gardener/gardener/pkg/client/garden \
-  github.com/gardener/gardener/pkg/apis \
-  github.com/gardener/gardener/pkg/apis \
-  "garden:v1beta1" \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 # settings.gardener.cloud APIs
@@ -141,7 +130,6 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1alpha1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
-  --input-dirs=github.com/gardener/gardener/pkg/apis/garden/v1beta1 \
   --input-dirs=k8s.io/api/core/v1 \
   --input-dirs=k8s.io/api/rbac/v1 \
   --input-dirs=k8s.io/apimachinery/pkg/apis/meta/v1 \
@@ -155,4 +143,4 @@ ${GOPATH}/bin/openapi-gen "$@" \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 echo
-echo "NOTE: If you changed the API then consider updating the example manifests by modifying '$(dirname $0)/templates/resources/*.yaml.tpl' and running '$(dirname $0)/generate-examples'".
+echo "NOTE: If you changed the API then consider updating the example manifests.".

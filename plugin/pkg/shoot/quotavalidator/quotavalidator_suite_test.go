@@ -15,10 +15,10 @@
 package quotavalidator_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestQuotaValidator(t *testing.T) {

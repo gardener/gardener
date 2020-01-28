@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 
@@ -36,12 +36,12 @@ import (
 var _ = Describe("dns", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler      *DNS
-			kubeInformerFactory   kubeinformers.SharedInformerFactory
-			gardenInformerFactory gardeninformers.SharedInformerFactory
+			admissionHandler    *DNS
+			kubeInformerFactory kubeinformers.SharedInformerFactory
+			coreInformerFactory coreinformers.SharedInformerFactory
 
-			seed  garden.Seed
-			shoot garden.Shoot
+			seed  core.Seed
+			shoot core.Shoot
 
 			namespace   = "my-namespace"
 			projectName = "my-project"
@@ -49,13 +49,13 @@ var _ = Describe("dns", func() {
 			shootName   = "shoot"
 
 			domain   = "example.com"
-			provider = garden.DNSUnmanaged
+			provider = core.DNSUnmanaged
 
-			project = garden.Project{
+			project = core.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
-				Spec: garden.ProjectSpec{
+				Spec: core.ProjectSpec{
 					Namespace: &namespace,
 				},
 			}
@@ -75,19 +75,19 @@ var _ = Describe("dns", func() {
 				},
 			}
 
-			seedBase = garden.Seed{
+			seedBase = core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
 			}
 
-			shootBase = garden.Shoot{
+			shootBase = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 				},
-				Spec: garden.ShootSpec{
-					DNS:      &garden.DNS{},
+				Spec: core.ShootSpec{
+					DNS:      &core.DNS{},
 					SeedName: &seedName,
 				},
 			}
@@ -98,11 +98,11 @@ var _ = Describe("dns", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
-			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 			shootBase.Spec.DNS.Domain = nil
-			shootBase.Spec.DNS.Providers = []garden.DNSProvider{
+			shootBase.Spec.DNS.Providers = []core.DNSProvider{
 				{
 					Type: &provider,
 				},
@@ -116,7 +116,7 @@ var _ = Describe("dns", func() {
 			shootCopy.Spec.SeedName = nil
 			shootBefore := shootCopy.DeepCopy()
 
-			attrs := admission.NewAttributesRecord(shootCopy, nil, garden.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -129,7 +129,7 @@ var _ = Describe("dns", func() {
 			shootCopy.Spec.SeedName = nil
 			shootBefore := shootCopy.DeepCopy()
 
-			attrs := admission.NewAttributesRecord(shootCopy, shootCopy, garden.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shootCopy, shootCopy, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -140,7 +140,7 @@ var _ = Describe("dns", func() {
 		It("should do nothing because the old shoot already specify a seed", func() {
 			shootBefore := shoot.DeepCopy()
 
-			attrs := admission.NewAttributesRecord(&shoot, &shoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -150,13 +150,13 @@ var _ = Describe("dns", func() {
 
 		It("should do nothing because the seed disables DNS", func() {
 			seedCopy := seed.DeepCopy()
-			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, garden.SeedTaint{Key: garden.SeedTaintDisableDNS})
+			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, core.SeedTaint{Key: core.SeedTaintDisableDNS})
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.DNS = nil
 			shootBefore := shootCopy.DeepCopy()
 
-			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
-			attrs := admission.NewAttributesRecord(shootCopy, nil, garden.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
+			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -166,10 +166,10 @@ var _ = Describe("dns", func() {
 
 		It("should throw an error because the seed disables DNS but shoot specifies a dns section", func() {
 			seedCopy := seed.DeepCopy()
-			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, garden.SeedTaint{Key: garden.SeedTaintDisableDNS})
+			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, core.SeedTaint{Key: core.SeedTaintDisableDNS})
 
-			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)
+			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -179,8 +179,8 @@ var _ = Describe("dns", func() {
 		It("should do nothing because the shoot specifies the 'unmanaged' dns provider", func() {
 			shootBefore := shoot.DeepCopy()
 
-			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -200,15 +200,15 @@ var _ = Describe("dns", func() {
 					providerType = "provider"
 				)
 				shoot.Spec.DNS.Domain = &shootDomain
-				shoot.Spec.DNS.Providers = []garden.DNSProvider{
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						Type: &providerType,
 					},
 				}
 
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -221,9 +221,9 @@ var _ = Describe("dns", func() {
 
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -237,9 +237,9 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -253,9 +253,9 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -264,8 +264,8 @@ var _ = Describe("dns", func() {
 
 			It("should reject because no domain was configured for the shoot and project is missing", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -273,9 +273,9 @@ var _ = Describe("dns", func() {
 			})
 
 			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 

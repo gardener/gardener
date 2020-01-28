@@ -15,13 +15,13 @@
 package oidc
 
 import (
-	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ApplyOIDCConfiguration applies preset OpenID Connect configuration to the shoot.
-func ApplyOIDCConfiguration(shoot *garden.Shoot, preset *settingsv1alpha1.OpenIDConnectPresetSpec) {
+func ApplyOIDCConfiguration(shoot *core.Shoot, preset *settingsv1alpha1.OpenIDConnectPresetSpec) {
 	if shoot == nil || preset == nil {
 		return
 	}
@@ -32,14 +32,14 @@ func ApplyOIDCConfiguration(shoot *garden.Shoot, preset *settingsv1alpha1.OpenID
 		return
 	}
 
-	var client *garden.OpenIDConnectClientAuthentication
+	var client *core.OpenIDConnectClientAuthentication
 	if preset.Client != nil {
-		client = &garden.OpenIDConnectClientAuthentication{
+		client = &core.OpenIDConnectClientAuthentication{
 			Secret:      preset.Client.Secret,
 			ExtraConfig: preset.Client.ExtraConfig,
 		}
 	}
-	oidc := &garden.OIDCConfig{
+	oidc := &core.OIDCConfig{
 		CABundle:             preset.Server.CABundle,
 		ClientID:             &preset.Server.ClientID,
 		GroupsClaim:          preset.Server.GroupsClaim,
@@ -56,7 +56,7 @@ func ApplyOIDCConfiguration(shoot *garden.Shoot, preset *settingsv1alpha1.OpenID
 	}
 
 	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
-		shoot.Spec.Kubernetes.KubeAPIServer = &garden.KubeAPIServerConfig{}
+		shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
 	}
 	shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = oidc
 }

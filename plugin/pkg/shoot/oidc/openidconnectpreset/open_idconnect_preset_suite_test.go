@@ -15,10 +15,10 @@
 package openidconnectpreset_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestOpenIDConnectPreset(t *testing.T) {

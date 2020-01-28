@@ -21,7 +21,6 @@ IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
 CORE_V1ALPHA1_APISERVICE_NAME="v1alpha1.core.gardener.cloud"
 CORE_V1BETA1_APISERVICE_NAME="v1beta1.core.gardener.cloud"
-GARDEN_APISERVICE_NAME="v1beta1.garden.sapcloud.io"
 SETTINGS_APISERVICE_NAME="v1alpha1.settings.gardener.cloud"
 
 APISERVER_SERVICE_NAME="gardener-apiserver"
@@ -29,21 +28,25 @@ APISERVER_ENDPOINT_NAME="gardener-apiserver"
 CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
 CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
 
+# Remove legacy API group as it's no longer needed
+# TODO: Remove this in a future release.
+GARDEN_APISERVICE_NAME="v1beta1.garden.sapcloud.io"
+if kubectl get apiservice "$GARDEN_APISERVICE_NAME" &> /dev/null; then
+  kubectl delete apiservice $GARDEN_APISERVICE_NAME --wait=false
+  kubectl patch  apiservice $GARDEN_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
+fi
+
 if kubectl get apiservice "$CORE_V1ALPHA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1ALPHA1_APISERVICE_NAME --wait=false
-  kubectl patch apiservices $CORE_V1ALPHA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
+  kubectl patch  apiservice $CORE_V1ALPHA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 if kubectl get apiservice "$CORE_V1BETA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1BETA1_APISERVICE_NAME --wait=false
-  kubectl patch apiservices $CORE_V1BETA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
-fi
-if kubectl get apiservice "$GARDEN_APISERVICE_NAME" &> /dev/null; then
-  kubectl delete apiservice $GARDEN_APISERVICE_NAME --wait=false
-  kubectl patch apiservices $GARDEN_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
+  kubectl patch  apiservice $CORE_V1BETA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 if kubectl get apiservice "$SETTINGS_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $SETTINGS_APISERVICE_NAME --wait=false
-  kubectl patch apiservices $SETTINGS_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
+  kubectl patch  apiservice $SETTINGS_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 
 
@@ -115,20 +118,6 @@ subsets:
 EOF
 
 cat <<EOF | kubectl apply -f -
-apiVersion: apiregistration.k8s.io/v1beta1
-kind: APIService
-metadata:
-  name: $GARDEN_APISERVICE_NAME
-spec:
-  insecureSkipTLSVerify: true
-  group: garden.sapcloud.io
-  version: v1beta1
-  groupPriorityMinimum: 10
-  versionPriority: 10
-  service:
-    name: gardener-apiserver
-    namespace: garden
----
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:

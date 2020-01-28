@@ -76,7 +76,7 @@ metadata:
   name: shoot--dev--example--3ef42 # Naming convention explained before
   namespace: garden-dev
   ownerReferences:
-  - apiVersion: garden.sapcloud.io/v1beta1
+  - apiVersion: core.gardener.cloud/v1beta1
     blockOwnerDeletion: false
     controller: true
     kind: Shoot

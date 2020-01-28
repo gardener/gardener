@@ -22,12 +22,11 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -55,13 +54,13 @@ func Register(plugins *admission.Plugins) {
 type DNS struct {
 	*admission.Handler
 	secretLister  kubecorev1listers.SecretLister
-	projectLister gardenlisters.ProjectLister
-	seedLister    gardenlisters.SeedLister
+	projectLister corelisters.ProjectLister
+	seedLister    corelisters.SeedLister
 	readyFunc     admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalGardenInformerFactory(&DNS{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DNS{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&DNS{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -80,12 +79,12 @@ func (d *DNS) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (d *DNS) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	projectInformer := f.Garden().InternalVersion().Projects()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DNS) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().InternalVersion().Projects()
 	d.projectLister = projectInformer.Lister()
 
-	seedInformer := f.Garden().InternalVersion().Seeds()
+	seedInformer := f.Core().InternalVersion().Seeds()
 	d.seedLister = seedInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced, seedInformer.Informer().HasSynced)
@@ -133,10 +132,10 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	}
 
 	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
-	shoot, ok := a.GetObject().(*garden.Shoot)
+	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
@@ -150,7 +149,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		}
 
 	case admission.Update:
-		oldShoot, ok := a.GetOldObject().(*garden.Shoot)
+		oldShoot, ok := a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
 		}
@@ -188,23 +187,23 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	// If the seed does not disable DNS and the shoot does not use the unmanaged DNS provider then we need
 	// a configured domain.
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", garden.DNSUnmanaged))
+		return apierrors.NewBadRequest(fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
 	}
 	return nil
 }
 
-func seedDisablesDNS(seedLister gardenlisters.SeedLister, seedName string) (bool, error) {
+func seedDisablesDNS(seedLister corelisters.SeedLister, seedName string) (bool, error) {
 	seed, err := seedLister.Get(seedName)
 	if err != nil {
 		return false, err
 	}
-	return helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintDisableDNS), nil
+	return helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS), nil
 }
 
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
-func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) error {
+func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.ProjectLister, secretLister kubecorev1listers.SecretLister) error {
 	project, err := admissionutils.GetProject(shoot.Namespace, projectLister)
 	if err != nil {
 		return apierrors.NewInternalError(err)
@@ -262,7 +261,7 @@ func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlister
 		// Shoot did not specify a domain, assign default domain and set provider to nil
 		if shootDomain == nil {
 			if shoot.Spec.DNS == nil {
-				shoot.Spec.DNS = &garden.DNS{}
+				shoot.Spec.DNS = &core.DNS{}
 			}
 			generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
 			shoot.Spec.DNS.Providers = nil

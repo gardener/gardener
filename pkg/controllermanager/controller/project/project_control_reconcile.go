@@ -117,7 +117,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
-	// We also create a RoleBinding in the namespace that binds all members to the garden.sapcloud.io:system:project-member
+	// We also create a RoleBinding in the namespace that binds all members to the gardener.cloud:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
 	var (
 		admins  []rbacv1.Subject
