@@ -1166,10 +1166,10 @@ func dnsNamesForService(name, namespace string) []string {
 
 func dnsNamesForEtcd(namespace string) []string {
 	names := []string{
-		fmt.Sprintf("%s-0", v1beta1constants.StatefulSetNameETCDMain),
-		fmt.Sprintf("%s-0", v1beta1constants.StatefulSetNameETCDEvents),
+		fmt.Sprintf("%s-0", v1beta1constants.ETCDMain),
+		fmt.Sprintf("%s-0", v1beta1constants.ETCDEvents),
 	}
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDMain), namespace)...)
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDEvents), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
 	return names
 }

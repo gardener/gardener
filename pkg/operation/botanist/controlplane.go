@@ -215,7 +215,7 @@ func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
-	for _, statefulset := range []string{v1beta1constants.StatefulSetNameETCDEvents, v1beta1constants.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 1); err != nil {
 			return err
 		}
@@ -303,7 +303,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	for _, statefulset := range []string{v1beta1constants.StatefulSetNameETCDEvents, v1beta1constants.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, c, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}

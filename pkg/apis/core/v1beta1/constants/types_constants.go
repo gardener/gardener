@@ -97,12 +97,10 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
-	// StatefulSetNameETCDMain is a constant for the name of a Kubernetes stateful set object that contains
-	// the etcd-main pod.
-	StatefulSetNameETCDMain = "etcd-main"
-	// StatefulSetNameETCDEvents is a constant for the name of a Kubernetes stateful set object that contains
-	// the etcd-events pod.
-	StatefulSetNameETCDEvents = "etcd-events"
+	// ETCDMain is a constant for the name of etcd-main Etcd object.
+	ETCDMain = "etcd-main"
+	// ETCDEvents is a constant for the name of etcd-events Etcd object.
+	ETCDEvents = "etcd-events"
 	// StatefulSetNameElasticSearch is a constant for the name of a Kubernetes stateful set object that contains
 	// the elasticsearch-logging pod.
 	StatefulSetNameElasticSearch = "elasticsearch-logging"
