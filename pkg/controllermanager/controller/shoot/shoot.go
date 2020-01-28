@@ -16,9 +16,12 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -33,6 +36,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Controller controls Shoots.
@@ -146,6 +150,42 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 			}
 		}
 	}()
+
+	// Clean up orphaned `ShootState` resources for non-existing shoots (see https://github.com/gardener/gardener/pull/1855).
+	// TODO: This code can be removed in a future version (post v1.0 release).
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := c.k8sGardenClient.Client().List(ctx, shootList); err != nil {
+		panic(fmt.Sprintf("Error listing Shoot resources: %+v", err))
+	}
+
+	shootMap := make(map[string]struct{}, len(shootList.Items))
+	for _, shoot := range shootList.Items {
+		key, err := cache.MetaNamespaceKeyFunc(&shoot)
+		if err != nil {
+			panic(fmt.Sprintf("Error constructing key for shoot %s/%s: %+v", shoot.Namespace, shoot.Name, err))
+		}
+		shootMap[key] = struct{}{}
+	}
+
+	shootStateList := &gardencorev1alpha1.ShootStateList{}
+	if err := c.k8sGardenClient.Client().List(ctx, shootStateList); err != nil {
+		panic(fmt.Sprintf("Error listing ShootState resources: %+v", err))
+	}
+
+	for _, shootState := range shootStateList.Items {
+		key, err := cache.MetaNamespaceKeyFunc(&shootState)
+		if err != nil {
+			panic(fmt.Sprintf("Error constructing key for ShootState %s/%s: %+v", shootState.Namespace, shootState.Name, err))
+		}
+
+		if _, shootExists := shootMap[key]; !shootExists {
+			logger.Logger.Infof("Deleting orphaned ShootState resource %s", key)
+			obj := shootState.DeepCopy()
+			if err := c.k8sGardenClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+				panic(fmt.Sprintf("Error deleting orphaned ShootState %s/%s: %+v", shootState.Namespace, shootState.Name, err))
+			}
+		}
+	}
 
 	logger.Logger.Info("Shoot controller initialized.")
 
