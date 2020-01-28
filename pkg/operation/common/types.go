@@ -494,8 +494,8 @@ var (
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		v1beta1constants.StatefulSetNameETCDMain,
-		v1beta1constants.StatefulSetNameETCDEvents,
+		v1beta1constants.ETCDMain,
+		v1beta1constants.ETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.

@@ -200,8 +200,8 @@ var _ = Describe("health check", func() {
 		}
 
 		// control plane stateful sets
-		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameETCDMain, v1beta1constants.GardenRoleControlPlane, true)
-		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
+		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true)
+		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
 
 		requiredControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			etcdMainStatefulSet,
