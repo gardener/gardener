@@ -20,14 +20,15 @@ spec:
   template:
     metadata:
       annotations:
+        checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
         checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
         {{- end }}
-        checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
-        checksum/secret-gardenlet-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
-        checksum/secret-gardenlet-kubeconfig-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-bootstrap.yaml") . | sha256sum }}
+        checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
         {{- end }}
+        checksum/secret-gardenlet-kubeconfig-garden: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden.yaml") . | sha256sum }}
+        checksum/secret-gardenlet-kubeconfig-seed: {{ include (print $.Template.BasePath "/secret-kubeconfig-seed.yaml") . | sha256sum }}
       labels:
         app: gardener
         role: gardenlet
@@ -35,8 +36,10 @@ spec:
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
     spec:
-      {{- if not .Values.global.gardenlet.kubeconfig }}
+      {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
+      {{- else }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if gt (int .Values.global.gardenlet.replicaCount) 1 }}
       affinity:
@@ -85,9 +88,14 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if .Values.global.gardenlet.kubeconfig }}
-        - name: gardenlet-kubeconfig
-          mountPath: /etc/gardenlet/kubeconfig
+        {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+        - name: gardenlet-kubeconfig-garden
+          mountPath: /etc/gardenlet/kubeconfig-garden
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+        - name: gardenlet-kubeconfig-seed
+          mountPath: /etc/gardenlet/kubeconfig-seed
           readOnly: true
         {{- end }}
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
@@ -102,10 +110,15 @@ spec:
 {{- end }}
       terminationGracePeriodSeconds: 3600
       volumes:
-      {{- if .Values.global.gardenlet.kubeconfig }}
-      - name: gardenlet-kubeconfig
+      {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+      - name: gardenlet-kubeconfig-garden
         secret:
-          secretName: gardenlet-kubeconfig
+          secretName: gardenlet-kubeconfig-garden
+      {{- end }}
+      {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+      - name: gardenlet-kubeconfig-seed
+        secret:
+          secretName: gardenlet-kubeconfig-seed
       {{- end }}
       {{- if .Values.global.gardenlet.imageVectorOverwrite }}
       - name: gardenlet-imagevector-overwrite
