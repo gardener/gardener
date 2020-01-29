@@ -96,6 +96,9 @@ type SeedStatus struct {
 type SeedBackup struct {
 	// Provider is a provider name.
 	Provider string `json:"provider"`
+	// ProviderConfig is the configuration passed to BackupBucket resource.
+	// +optional
+	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 	// Region is a region name.
 	// +optional
 	Region *string `json:"region,omitempty"`

@@ -147,15 +147,11 @@ type Volume struct {
 type WorkerStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
-
 	// MachineDeployments is a list of created machine deployments. It will be used to e.g. configure
 	// the cluster-autoscaler properly.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	// ProviderStatus contains provider-specific output for this worker.
-	// +optional
-	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }
 
 // MachineDeployment is a created machine deployment.

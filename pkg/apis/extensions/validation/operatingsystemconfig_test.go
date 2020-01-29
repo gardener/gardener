@@ -39,10 +39,10 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			},
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "provider",
+					Type:           "provider",
+					ProviderConfig: &runtime.RawExtension{},
 				},
 				Purpose:              extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-				ProviderConfig:       &runtime.RawExtension{},
 				ReloadConfigFilePath: &reloadConfigFilePath,
 				Units: []extensionsv1alpha1.Unit{
 					{

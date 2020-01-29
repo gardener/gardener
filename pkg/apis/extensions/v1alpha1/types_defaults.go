@@ -23,6 +23,9 @@ import (
 type DefaultSpec struct {
 	// Type contains the instance of the resource's kind.
 	Type string `json:"type"`
+	// ProviderConfig is the provider specific configuration.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // GetExtensionType implements Spec.
@@ -35,8 +38,16 @@ func (d *DefaultSpec) GetExtensionPurpose() *string {
 	return nil
 }
 
+// GetProviderConfig implements Spec.
+func (d *DefaultSpec) GetProviderConfig() *runtime.RawExtension {
+	return d.ProviderConfig
+}
+
 // DefaultStatus contains common status fields for every extension resource.
 type DefaultStatus struct {
+	// ProviderStatus contains provider-specific status.
+	// +optional
+	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
@@ -51,6 +62,11 @@ type DefaultStatus struct {
 	// State can be filled by the operating controller with what ever data it needs.
 	// +optional
 	State *runtime.RawExtension `json:"state,omitempty"`
+}
+
+// GetProviderStatus implements Status.
+func (d *DefaultStatus) GetProviderStatus() *runtime.RawExtension {
+	return d.ProviderStatus
 }
 
 // GetConditions implements Status.

@@ -303,6 +303,7 @@ var _ = Describe("shoot", func() {
 				ProviderConfig: &providerConfig,
 			}
 		)
+
 		DescribeTable("#MergeExtensions",
 			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, conditionMatcher types.GomegaMatcher) {
 				ext, err := MergeExtensions(registrations, extensions, namespace)
@@ -326,9 +327,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchFields(IgnoreExtras, Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(fooExtensionType),
+										"Type":           Equal(fooExtensionType),
+										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 									}),
-									"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 								}),
 							}),
 							"Timeout": Equal(fooReconciliationTimeout.Duration),
@@ -357,9 +358,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(barExtensionType),
+										"Type":           Equal(barExtensionType),
+										"ProviderConfig": BeNil(),
 									}),
-									"ProviderConfig": BeNil(),
 								}),
 							}),
 							"Timeout": Equal(ExtensionDefaultTimeout),
@@ -393,9 +394,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(barExtensionType),
+										"Type":           Equal(barExtensionType),
+										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 									}),
-									"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 								}),
 							}),
 							"Timeout": Equal(ExtensionDefaultTimeout),

@@ -93,9 +93,51 @@ var _ = Describe("Accessor", func() {
 					Expect(acc.GetExtensionType()).To(Equal(t))
 				})
 			})
+
+			Describe("#GetProviderConfig", func() {
+				It("should get the provider config", func() {
+					var (
+						pc = &runtime.RawExtension{
+							Object: &corev1.Secret{},
+						}
+						acc = mkUnstructuredAccessorWithSpec(extensionsv1alpha1.DefaultSpec{ProviderConfig: pc})
+					)
+
+					Expect(acc.GetProviderConfig()).To(Equal(&runtime.RawExtension{
+						Raw: []byte(`{"metadata":{"creationTimestamp":null}}`),
+					}))
+				})
+
+				It("should return nil", func() {
+					acc := mkUnstructuredAccessorWithSpec(extensionsv1alpha1.DefaultSpec{})
+
+					Expect(acc.GetProviderConfig()).To(BeNil())
+				})
+			})
 		})
 
 		Context("#GetExtensionStatus", func() {
+			Describe("#GetProviderStatus", func() {
+				It("should get the provider status", func() {
+					var (
+						ps = &runtime.RawExtension{
+							Object: &corev1.Secret{},
+						}
+						acc = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{ProviderStatus: ps})
+					)
+
+					Expect(acc.GetProviderStatus()).To(Equal(&runtime.RawExtension{
+						Raw: []byte(`{"metadata":{"creationTimestamp":null}}`),
+					}))
+				})
+
+				It("should return nil", func() {
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+
+					Expect(acc.GetProviderStatus()).To(BeNil())
+				})
+			})
+
 			Context("#GetLastOperation", func() {
 				Describe("#GetDescription", func() {
 					It("should get the description", func() {

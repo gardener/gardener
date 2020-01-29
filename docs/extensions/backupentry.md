@@ -22,6 +22,10 @@ metadata:
   name: shoot--foo--bar
 spec:
   type: azure
+  providerConfig:
+    <some-optional-provider-specific-backup-bucket-configuration>
+  backupBucketProviderStatus:
+    <some-optional-provider-specific-backup-bucket-status>
   region: eu-west-1
   bucketName: foo
   secretRef:

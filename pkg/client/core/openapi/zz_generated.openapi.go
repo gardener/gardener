@@ -640,6 +640,12 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider"),
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretRef is a reference to a secret that contains the credentials to access object store.",
@@ -658,7 +664,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -669,6 +675,12 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 				Description: "BackupBucketStatus holds the most recently observed status of the Backup Bucket.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"providerStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupBucket.",
@@ -698,7 +710,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -4101,6 +4113,12 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a region name.",
@@ -4119,7 +4137,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -5608,6 +5626,12 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider"),
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretRef is a reference to a secret that contains the credentials to access object store.",
@@ -5626,7 +5650,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -5637,6 +5661,12 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 				Description: "BackupBucketStatus holds the most recently observed status of the Backup Bucket.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"providerStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupBucket.",
@@ -5666,7 +5696,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -8990,6 +9020,12 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a region name.",
@@ -9008,7 +9044,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 

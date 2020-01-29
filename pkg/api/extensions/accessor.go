@@ -119,6 +119,25 @@ func nestedInt(obj map[string]interface{}, fields ...string) int {
 	}
 }
 
+func nestedRawExtension(obj map[string]interface{}, fields ...string) *runtime.RawExtension {
+	val, ok, err := unstructured.NestedFieldNoCopy(obj, fields...)
+	if err != nil || !ok {
+		return nil
+	}
+
+	data, ok := val.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	rawExtension := &runtime.RawExtension{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(data, rawExtension); err != nil {
+		return nil
+	}
+
+	return rawExtension
+}
+
 // GetDescription implements LastOperation.
 func (u unstructuredLastOperationAccessor) GetDescription() string {
 	return nestedString(u.UnstructuredContent(), "status", "lastOperation", "description")
@@ -151,9 +170,19 @@ func (u unstructuredSpecAccessor) GetExtensionType() string {
 	return nestedString(u.UnstructuredContent(), "spec", "type")
 }
 
+// GetExtensionPurpose implements Spec.
 func (u unstructuredSpecAccessor) GetExtensionPurpose() *string {
-
 	return nestedStringReference(u.UnstructuredContent(), "spec", "purpose")
+}
+
+// GetProviderConfig implements Spec.
+func (u unstructuredSpecAccessor) GetProviderConfig() *runtime.RawExtension {
+	return nestedRawExtension(u.UnstructuredContent(), "spec", "providerConfig")
+}
+
+// GetProviderStatus implements Status.
+func (u unstructuredStatusAccessor) GetProviderStatus() *runtime.RawExtension {
+	return nestedRawExtension(u.UnstructuredContent(), "status", "providerStatus")
 }
 
 // GetConditions implements Status.
@@ -167,8 +196,7 @@ func (u unstructuredStatusAccessor) GetConditions() []gardencorev1beta1.Conditio
 	for _, interfaceCondition := range interfaceConditionSlice {
 		new := interfaceCondition.(map[string]interface{})
 		condition := &gardencorev1beta1.Condition{}
-		err = runtime.DefaultUnstructuredConverter.FromUnstructured(new, condition)
-		if err != nil {
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(new, condition); err != nil {
 			return nil
 		}
 		conditions = append(conditions, *condition)
