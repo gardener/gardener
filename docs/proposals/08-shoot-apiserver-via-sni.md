@@ -206,136 +206,168 @@ Another issue occurs when the client tries to talk to the apiserver via the in-c
 
 To mitigate this problem an additional proxy must be deployed on every single Node. It does not terminate TLS and sends the traffic to the correct Shoot API Server. This is achieved by:
 
-- the apiserver master service reconciler is stopped (`--endpoint-reconciler-type=none`).
+- the apiserver master service reconciler is started and pointing to the `kube-apiserver`'s Cluster IP in the Seed cluster (e.g. `--advertise-address=10.1.2.3`).
 - the proxy runs in the host network of the `Node`.
 - the proxy has a sidecar container which:
-  - creates a dummy network interface and assigns the master service IP address to it.
-  - enables (with iptables) traffic to that IP address (kube-proxy rejects all traffic to `Services` without endpoints) and it removes connection tracking (conntrack) as the IP address is local to the `Node`.
-- the proxy needs to send multiple TLS streams over a single TCP connection (to reduce performance overhead).
-- the proxy listens on the master service IP address and it sends traffic to the correct API server.
+  - creates a dummy network interface and assigns the `10.1.2.3` to it.
+  - removes connection tracking (conntrack) if iptables/nftables is enabled as the IP address is local to the `Node`.
+- the proxy listens on the `10.1.2.3` and using the [PROXY protocol](http://www.haproxy.org/download/2.0/doc/proxy-protocol.txt) it sends the data stream to the Envoy ingress gateway (EIGW).
+- EIGW listens for PROXY protocol on a dedicated `8443` port. EIGW reads the destination IP + port from the PROXY protocol and forwards traffic to the correct upstream apiserver.
 
 The sidecar is a standalone component. It's possible to transparently change the proxy implementation without any modifications to the sidecar. The simplified flow looks like:
 
 ```text
-                                              +------------------+
-                                              |                  |
-                                              | Shoot API Server |
-                                              |                  |
-                                              | Cluster A        |
-                                              |                  |
-                                              +------------------+
-                                                        ^
-                                                        |
-                                                        |
-                                                        |
-                                                        |
-  +-----------------------------------------------------------------------+
-                                                        |   Shoot Cluster
-                                                        |
-                                                        |
-                                                        |
-                                                        |
-                                                        |
-                                                        |
-   +---------------------+                   +---------------------+
-   |                     |                   |                     |
-   |  Pod talking to     |                   |                     |
-   |  the kubernetes     |                   |       Proxy         |
-   |  service            +------------------>+  No TLS termination |
-   |                     |                   |                     |
-   |                     |                   |                     |
-   +---------------------+                   +---------------------+
++------------------+                    +----------------+
+| Shoot API Server |       TCP          |   Envoy IGW    |
+|                  +<-------------------+ PROXY listener |
+| Cluster A        |                    |     :8443      |
++------------------+                    +-+--------------+
+                                          ^
+                                          |
+                                          |
+                                          |
+                                          |
++-----------------------------------------------------------+
+                                          |   Single Node in
+                                          |   the Shoot cluster
+                                          |
+                                          | PROXY Protocol
+                                          |
+                                          |
+                                          |
+ +---------------------+       +----------+----------+
+ |  Pod talking to     |       |                     |
+ |  the kubernetes     |       |       Proxy         |
+ |  service            +------>+  No TLS termination |
+ |                     |       |                     |
+ +---------------------+       +---------------------+
 ```
 
 Multiple OSS solutions can be used:
 
-- https://github.com/ginuerzh/gost (various transport options)
-- https://github.com/jpillora/chisel
-- https://github.com/xtaci/kcptun (transport is UDP-based)
-- OpenVPN is discarded as the performance is abysmal
+- haproxy
+- nginx
 
-`chisel` is the fastest and offers the least latency when testing under different conditions. The architecture is simple:
-
-![overview](https://docs.google.com/drawings/d/1p53VWxzGNfy8rjr-mW8pvisJmhkoLl82vAgctO_6f1w/pub?w=960&h=720)
-
-For the Gardener implementation, the `chisel-client` will run as a `DaemonSet` on the `Shoot` cluster and a dedicated `chisel-server` is provisioned for each `Shoot` control plane. To reduce the amount of records we create, it listens on a dedicated port `9443`.
-
-An updated version of the previous SNI configuration:
+To add a PROXY lister with Istio several resources must be created - a dedicated `Gateway`, dummy `VirtualService` and `EnvoyFilter` which adds listener filter (`envoy.listener.proxy_protocol`) on `8443` port:
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: kube-apiserver-gateway
-  namespace: <shoot-namespace>
+  name: blackhole
+  namespace: istio-system
 spec:
   selector:
     istio: ingressgateway
   servers:
   - port:
-      number: 443
-      name: tls
-      protocol: TLS
-    tls:
-      mode: PASSTHROUGH
+      number: 8443
+      name: tcp
+      protocol: TCP
     hosts:
-    - api.<external-domain>
-    - api.<shoot>.<project>.<internal-domain>
-  - port:
-      number: 9443
-      name: tls
-      protocol: TLS
-    tls:
-      mode: PASSTHROUGH
-    hosts:
-    - api.<shoot>.<project>.<internal-domain>
+    - "*"
+
 ---
+
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: kube-apiserver
-  namespace: <shoot-namespace>
+  name: blackhole
+  namespace: istio-system
 spec:
   hosts:
-  - api.<external-domain>
-  - api.<shoot>.<project>.<internal-domain>
+  - blackhole.local
   gateways:
-  - kube-apiserver-gateway
-  tls:
+  - blackhole
+  tcp:
   - match:
-    - port: 443
-      sniHosts:
-      - api.<external-domain>
-      - api.<shoot>.<project>.<internal-domain>
+    - port: 8443
     route:
     - destination:
-        host: kube-apiserver.<shoot-namespace>.svc.cluster.local
+        host: localhost
         port:
-          number: 443
-  - match:
-    - port: 9443
-      sniHosts:
-      - api.<shoot>.<project>.<internal-domain>
-    route:
-    - destination:
-        host: proxy.<shoot-namespace>.svc.cluster.local
-        port:
-          number: 443
+          number: 9999 # any dummy port will work
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: proxy-protocol
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+  - applyTo: LISTENER
+    match:
+      context: ANY
+      listener:
+        portNumber: 8443
+        name: 0.0.0.0_8443
+    patch:
+      operation: MERGE
+      value:
+        listener_filters:
+        - name: envoy.listener.proxy_protocol
 ```
 
-Chisel works by creating logical TCP connections via SSH, but it uses only one TCP connection per client/Shoot Node.
-With this approach a Chisel server (with appropriate replica count) can be deployed and it'll serve as a proxy into the cluster for those Nodes.
+For each individual `Shoot` cluster, a dedicated [FilterChainMatch](https://www.envoyproxy.io/docs/envoy/v1.13.0/api-v2/api/v2/listener/listener_components.proto#listener-filterchainmatch) is added. It ensures that only Shoot API servers can receive traffic from this listener:
 
-The given that the master service ip address is `10.0.0.1`, a Pod attempting to communicate with it's API server will do the following:
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: <shoot-namespace>
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+  - applyTo: FILTER_CHAIN
+    match:
+      context: ANY
+      listener:
+        portNumber: 8443
+        name: 0.0.0.0_8443
+    patch:
+      operation: ADD
+      value:
+        filters:
+        - name: envoy.tcp_proxy
+          typed_config:
+            "@type": "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy"
+            stat_prefix: outbound|443||kube-apiserver.<shoot-namespace>.svc.cluster.local
+            cluster: outbound|443||kube-apiserver.<shoot-namespace>.svc.cluster.local
+        filter_chain_match:
+          destination_port: 443
+          prefix_ranges:
+          - address_prefix: 10.1.2.3 # kube-apiserver's cluster-ip
+            prefix_len: 32
+```
 
-- `GET https://10.0.0.1/` with it's private and public keys.
-- due to the proxy's sidecar, all traffic does to the `chisel-client` listening on `10.0.0.1`.
-- `chisel-client` has already opened a TCP connection to the upstream server and it creates a new SSH channel, sending the data to `chisel-server`.
-- `chisel-server` is assigned to a specific `kube-apiserver` and sends data to it.
+> Note: this additional `EnvoyFilter` can be removed when Istio supports full [L4 matching](https://istio.io/docs/reference/config/networking/virtual-service/#L4MatchAttributes).
 
-One problem with chisel is the lack of custom certificate authority support in the client, but there is an opened PR to [fix it](https://github.com/jpillora/chisel/pull/129).
+A nginx proxy client in the Shoot cluster on every node could have the following configuration:
 
-> As a fun fact, the fastest proxy (in terms of overhead/latency) is based on the new [QUIC transport protocol](https://tools.ietf.org/html/draft-ietf-quic-transport-24). This protocol is used as the transport protocol for HTTP3 and supports multiplexing, multiple streams and TLSv1.3. The proxy + client is only several hundreds LoC written for this tunneling feature. The only downside is that it's UDP-based and support for UDP is lacking (different OpenStack deployments may not support it). Support for QUIC in Envoy is also [coming soon™](https://github.com/envoyproxy/envoy/issues/2557).
+```conf
+error_log /dev/stdout;
+stream {
+    server {
+        listen 10.1.2.3:443;
+        proxy_pass api.<external-domain>:8443;
+        proxy_protocol on;
+
+        proxy_protocol_timeout 5s;
+        resolver_timeout 5s;
+        proxy_connect_timeout 5s;
+    }
+}
+
+events { }
+```
 
 ### In-cluster communication to the apiserver when ExernalName is supported
 
@@ -387,8 +419,6 @@ So when a client requests `kubernetes.default.svc.cluster.local`, it'll be send 
 
 While out of scope of this GEP, several things can be improved:
 
-- The Shoot proxy can be replaced with better 2-way tunneling solution removing the need for LoadBalancer in the Shoot cluster for VPN.
-- The Shoot proxy can be replaced with QUIC-based implementation.
 - Make the sidecar work with eBPF and environments where iptables/nftables are not enabled.
 
 ## References
