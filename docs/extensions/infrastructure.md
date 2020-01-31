@@ -114,11 +114,11 @@ If the `Shoot` resource already specifies a nodes CIDR in `.spec.networking.node
 ## Non-provider specific information required for infrastructure creation
 
 Some providers might require further information that is not provider specific but already part of the shoot resource.
-One example for this is the [GCP infrastructure controller](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-gcp/pkg/controller/infrastructure) which needs the pod and the service network of the cluster in order to prepare and configure the infrastructure correctly.
+One example for this is the [GCP infrastructure controller](https://github.com/gardener/gardener-extension-provider-gcp/pkg/controller/infrastructure) which needs the pod and the service network of the cluster in order to prepare and configure the infrastructure correctly.
 As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
 
 ## References and additional resources
 
 * [`Infrastructure` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_infrastructure.go)
-* [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-azure/pkg/controller/infrastructure)
+* [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extension-provider-azure/pkg/controller/infrastructure)

@@ -20,28 +20,28 @@ test:
           repo: "https://github.com/gardener/external-dns-management.git"
           version: "latest"
       networking-calico:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-networking-calico.git"
           version: "latest"
       os-coreos:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-os-coreos.git"
           version: "latest"
       os-suse-jeos:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-os-suse-jeos.git"
           version: "latest"
       os-ubuntu:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-os-ubuntu.git"
           version: "latest"
       provider-aws:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-provider-aws.git"
           version: "latest"
       provider-azure:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-provider-azure.git"
           version: "latest"
       provider-gcp:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-provider-gcp.git"
           version: "latest"
       provider-openstack:
-          repo: "https://github.com/gardener/gardener-extensions.git"
+          repo: "https://github.com/gardener/gardener-extension-provider-openstack.git"
           version: "latest"
 
   # test a gcp and aws shoot with version 1.15.5 by default with all gardener tests labeled default

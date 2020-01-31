@@ -59,11 +59,11 @@ You can take a look at the below referenced example implementation for the Alicl
 ## Non-provider specific information required for infrastructure creation
 
 Most providers might require further information that is not provider specific but already part of the shoot resource.
-One example for this is the [GCP control plane controller](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-gcp/pkg/controller/controlplane) which needs the Kubernetes version of the shoot cluster (because it already uses the in-tree Kubernetes cloud-controller-manager).
+One example for this is the [GCP control plane controller](https://github.com/gardener/gardener-extension-provider-gcp/pkg/controller/controlplane) which needs the Kubernetes version of the shoot cluster (because it already uses the in-tree Kubernetes cloud-controller-manager).
 As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
 
 ## References and additional resources
 
 * [`ControlPlane` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
-* [Exemplary implementation for the Alicloud provider](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-alicloud/pkg/controller/controlplane)
+* [Exemplary implementation for the Alicloud provider](https://github.com/gardener/gardener-extension-provider-alicloud/pkg/controller/controlplane)
