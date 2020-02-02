@@ -99,7 +99,8 @@ Since each operating system distribution has different methods of installing sof
     4. Docker pull images in OSC should be changed to the Docker ctr equivalent command. 
 
 2. Validate workers additional runtime configurations:
-   1. kata-container validation: Machine type support nested virtualization.
+   1. Disallow additional runtimes with shoots < 1.14.
+   2. kata-container validation: Machine type support nested virtualization.
 3. Add support for each additional container runtime in the cluster.   
     1. In order to install each additional available runtime in the cluster we should:
         1. Install the runtime binaries in each Worker's pool nodes that specified the runtime support.
