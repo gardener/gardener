@@ -26,8 +26,9 @@ const separator = ","
 // AddTasks adds a task to the ShootTasks annotation of the passed map.
 func AddTasks(existingAnnotations map[string]string, tasksToAdd ...string) {
 	var tasks []string
-	if len(existingAnnotations[common.ShootTasks]) > 0 {
-		tasks = strings.Split(existingAnnotations[common.ShootTasks], separator)
+	existingTasks, _ := common.GetTasksAnnotation(existingAnnotations)
+	if len(existingTasks) > 0 {
+		tasks = strings.Split(existingTasks, separator)
 	}
 	for _, taskToAdd := range tasksToAdd {
 		if utils.ValueExists(taskToAdd, tasks) {
@@ -36,11 +37,12 @@ func AddTasks(existingAnnotations map[string]string, tasksToAdd ...string) {
 		tasks = append(tasks, taskToAdd)
 	}
 	existingAnnotations[common.ShootTasks] = strings.Join(tasks, separator)
+	existingAnnotations[common.ShootTasksDeprecated] = strings.Join(tasks, separator)
 }
 
 // HasTask checks if the passed task is part of the ShootTasks annotation.
 func HasTask(existingAnnotations map[string]string, taskToCheck string) bool {
-	existingTasks, ok := existingAnnotations[common.ShootTasks]
+	existingTasks, ok := common.GetTasksAnnotation(existingAnnotations)
 	if !ok {
 		return false
 	}
@@ -51,4 +53,5 @@ func HasTask(existingAnnotations map[string]string, taskToCheck string) bool {
 // RemoveAllTasks removes the ShootTasks annotation from the passed map.
 func RemoveAllTasks(existingAnnotations map[string]string) {
 	delete(existingAnnotations, common.ShootTasks)
+	delete(existingAnnotations, common.ShootTasksDeprecated)
 }

@@ -260,7 +260,9 @@ func checkIfDeletionIsConfirmed(obj metav1.Object) error {
 	if annotations == nil {
 		return annotationRequiredError()
 	}
-	if present, _ := strconv.ParseBool(annotations[common.ConfirmationDeletion]); !present {
+
+	value, _ := common.GetConfirmationDeletionAnnotation(annotations)
+	if present, _ := strconv.ParseBool(value); !present {
 		return annotationRequiredError()
 	}
 	return nil
@@ -272,7 +274,7 @@ func shootIgnored(obj metav1.Object) bool {
 		return false
 	}
 	ignore := false
-	if value, ok := annotations[common.ShootIgnore]; ok {
+	if value, ok := common.GetShootIgnoreAnnotation(annotations); ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore

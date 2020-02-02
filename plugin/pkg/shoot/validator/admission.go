@@ -262,15 +262,18 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
 		// except changes to the deletion confirmation annotation
 		if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-			newConfirmation, newHasConfirmation := newMeta.Annotations[common.ConfirmationDeletion]
+			confimationAnnotations := []string{common.ConfirmationDeletion, common.ConfirmationDeletionDeprecated}
+			for _, annotation := range confimationAnnotations {
+				newConfirmation, newHasConfirmation := newMeta.Annotations[annotation]
 
-			// copy the new confirmation value to the old annotations to see if
-			// anything else was changed other than the confirmation annotation
-			if newHasConfirmation {
-				if oldMeta.Annotations == nil {
-					oldMeta.Annotations = make(map[string]string)
+				// copy the new confirmation value to the old annotations to see if
+				// anything else was changed other than the confirmation annotation
+				if newHasConfirmation {
+					if oldMeta.Annotations == nil {
+						oldMeta.Annotations = make(map[string]string)
+					}
+					oldMeta.Annotations[annotation] = newConfirmation
 				}
-				oldMeta.Annotations[common.ConfirmationDeletion] = newConfirmation
 			}
 
 			if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {

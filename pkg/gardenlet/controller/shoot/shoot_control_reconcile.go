@@ -316,6 +316,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Maintain shoot annotations",
+			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
 		f = g.Compile()
 	)
 

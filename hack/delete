@@ -22,5 +22,5 @@ if [[ "$1" != "project" ]]; then
   NAMESPACE="--namespace ${3:-$(id -u -n)}"
 fi
 
-kubectl $NAMESPACE annotate "$RESOURCE" "$NAME" confirmation.garden.sapcloud.io/deletion=true --overwrite
+kubectl $NAMESPACE annotate "$RESOURCE" "$NAME" confirmation.gardener.cloud/deletion=true --overwrite
 kubectl $NAMESPACE delete   "$RESOURCE" "$NAME" --wait=false
