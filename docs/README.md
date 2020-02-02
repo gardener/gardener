@@ -15,6 +15,7 @@
 ## Usage
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
+* [Cluster purposes](usage/shoot_purposes.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Gardener configuration and usage](usage/configuration.md)
@@ -34,6 +35,7 @@
 * [GEP-7: Shoot Control Plane Migration](proposals/07-shoot-control-plane-migration.md)
 * [GEP-8: SNI Passthrough proxy for kube-apiservers](proposals/08-shoot-apiserver-via-sni.md)
 * [GEP-9: Gardener integration test framework](proposals/09-test-framework.md)
+* [GEP-10: Support additional container runtimes](proposals/10-shoot-additional-container-runtimes.md)
 
 ## Development
 
@@ -43,8 +45,6 @@
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
-* [User Alerts](development/user_alerts.md)
-* [Operator Alerts](development/operator_alerts.md)
 
 ## Extensions
 
@@ -89,3 +89,5 @@
 ## Monitoring
 
 * [Alerting](monitoring/alerting.md)
+* [User Alerts](monitoring/user_alerts.md)
+* [Operator Alerts](monitoring/operator_alerts.md)
