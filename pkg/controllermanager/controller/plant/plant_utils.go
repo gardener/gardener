@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +48,7 @@ func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryCli
 // getClusterInfo gets the kubernetes cluster zones and Region by inspecting labels on nodes in the cluster.
 func getClusterInfo(ctx context.Context, cl client.Client, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
 	nodes := &corev1.NodeList{}
-	if err := cl.List(ctx, nodes, utilclient.Limit(1)); err != nil {
+	if err := cl.List(ctx, nodes, client.Limit(1)); err != nil {
 		return nil, err
 	}
 
