@@ -58,13 +58,11 @@ workers:
 
 Each extension will need to address the following concern:
 
-1. Add the low-level runtime binaries to the worker nodes. Each extension should store the runtime binary in a way that is accessible to a node to download and install during startup.
+1. Add the low-level runtime binaries to the worker nodes. Each extension should get the runtime binaries from a container.
 1. Hook the runtime binary into the containerd configuration file, so that the runtime becomes available to containerd.
 1. Apply a label to each node that allows identifying nodes where the runtime is available.
 1. Apply the relevant `RuntimeClass` to the Shoot cluster, to expose the functionality to users.
 1. Provide a separate binary with a `ValidatingWebhook` (deployable to the garden cluster) to catch invalid configurations. For example, Kata Containers on AWS requires a `machineType` of `i3.metal`, so any `Shoot` requests with a Kata Containers runtime and a different machine type on AWS should be rejected.
-
-Since each operating system distribution has different methods of installing software (apt on ubuntu, zypper on SuSE, Torcx on CoreOS/Flatcar), we will enhance the operating system extensions to add a standard `installSoftware` script which can abstract the mechanics of installing new software on a node. The new runtime extensions will use this new functionality to install the relevant runtimes to the worker nodes.
 
 ## Design Details
 
@@ -95,11 +93,12 @@ Since each operating system distribution has different methods of installing sof
            2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration.
         
     3. Docker-monitor daemon and conatinerd service. For CRI it is possible to send parameters to Kubelet to do the log rotation:
-       CRIContainerLogRotation=true
+       CRIContainerLogRotation=true. It will be done by the OS controller by default.
+       Containerd monitor will check that containerd process is running every 30 seconds.
     4. Docker pull images in OSC should be changed to the Docker ctr equivalent command. 
 
 2. Validate workers additional runtime configurations:
-   1. Disallow additional runtimes with shoots < 1.14.
+   1. Disallow additional runtimes with shoots < 1.14
    2. kata-container validation: Machine type support nested virtualization.
 3. Add support for each additional container runtime in the cluster.   
     1. In order to install each additional available runtime in the cluster we should:
