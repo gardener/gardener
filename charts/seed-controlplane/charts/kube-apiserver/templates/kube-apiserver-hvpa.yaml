@@ -8,18 +8,21 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
-{{- if .Values.scaleUpStabilization }}
-  scaleUpStabilization:
-{{ toYaml .Values.scaleUpStabilization | indent 4 }}
-{{- end }}
-{{- if .Values.scaleDownStabilization }}
-  scaleDownStabilization:
-{{ toYaml .Values.scaleDownStabilization | indent 4 }}
+{{- if .Values.maintenanceWindow }}
+  maintenanceTimeWindow:
+{{ toYaml .Values.maintenanceWindow | indent 4 }}
 {{- end }}
   hpa:
     selector:
       matchLabels:
         role: apiserver-hpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+    scaleDown:
+      updatePolicy:
+        updateMode: "Auto"
     template:
       metadata:
         labels:
@@ -30,18 +33,36 @@ spec:
         metrics:
         - resource:
             name: memory
-            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.targetAverageUtilizationMemory }}
           type: Resource
         - resource:
             name: cpu
-            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.targetAverageUtilizationCpu }}
           type: Resource
-    updatePolicy:
-      updateMode: "Auto"
   vpa:
     selector:
       matchLabels:
         role: apiserver-vpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.scaleUpStabilization }}
+{{ toYaml .Values.scaleUpStabilization | indent 6 }}
+{{- end }}
+    scaleDown:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.scaleDownStabilization }}
+{{ toYaml .Values.scaleDownStabilization | indent 6 }}
+{{- end }}
+    limitsRequestsGapScaleParams:
+      cpu:
+        value: "3"
+        percentage: 80
+      memory:
+        value: "5G"
+        percentage: 80
     template:
       metadata:
         labels:
@@ -60,12 +81,12 @@ spec:
               mode: "Off"
             - containerName: blackbox-exporter
               mode: "Off"
-    updatePolicy:
-      updateMode: "Auto"
   weightBasedScalingIntervals:
+{{- if gt (int .Values.maxReplicas) (int .Values.minReplicas) }}
     - vpaWeight: 0
       startReplicaCount: {{ .Values.minReplicas }}
-      lastReplicaCount: {{ .Values.lastReplicaCountForHpa }}
+      lastReplicaCount: {{ sub (int .Values.maxReplicas) 1 }}
+{{- end }}
     - vpaWeight: 100
       startReplicaCount: {{ .Values.maxReplicas }}
       lastReplicaCount: {{ .Values.maxReplicas }}

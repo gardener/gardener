@@ -17,32 +17,37 @@ servicePorts:
 metrics: basic
 
 scaleUpStabilization:
-  duration: "5m"
-  minCpuChange:
-    value: "1"
-    percentage: 80
-  minMemChange:
-    value: 2G
-    percentage: 80
+  stabilizationDuration: "5m"
+  minChange:
+    cpu:
+      value: "1"
+      percentage: 80
+    memory:
+      value: 2G
+      percentage: 80
 
 scaleDownStabilization:
-  duration: "15m"
-  minCpuChange:
-    value: "1"
-    percentage: 80
-  minMemChange:
-    value: 2G
-    percentage: 80
+  stabilizationDuration: "15m"
+  minChange:
+    cpu:
+      value: "1"
+      percentage: 80
+    memory:
+      value: 2G
+      percentage: 80
 
-targetAverageUtilization: 80
+targetAverageUtilizationCpu: 80
+targetAverageUtilizationMemory: 80
+
+maintenanceWindow: {}
 
 etcdResources:
   requests:
     cpu: 300m
-    memory: 1000M
+    memory: 1G
   limits:
-    cpu: "4"
-    memory: 30G
+    cpu: 900m
+    memory: 3G
 
 hvpa:
   enabled: false
