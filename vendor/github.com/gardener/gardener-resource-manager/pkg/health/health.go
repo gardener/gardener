@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,26 +26,47 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// CheckManagedResource checks if the conditions of ManagedResources are healthy.
-// It additionally checks whether at least the `v1alpha1.ResourcesApplied` has been reported.
+// CheckManagedResource checks if all conditions of a ManagedResource ('ResourcesApplied' and 'ResourcesHealthy')
+// are True and .status.observedGeneration matches the current .metadata.generation
 func CheckManagedResource(mr *v1alpha1.ManagedResource) error {
+	if err := CheckManagedResourceApplied(mr); err != nil {
+		return err
+	}
+	if err := CheckManagedResourceHealthy(mr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CheckManagedResourceApplied checks if the condition 'ResourcesApplied' of a ManagedResource
+// is True and the .status.observedGeneration matches the current .metadata.generation
+func CheckManagedResourceApplied(mr *v1alpha1.ManagedResource) error {
 	status := mr.Status
 	if status.ObservedGeneration != mr.GetGeneration() {
 		return fmt.Errorf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.GetNamespace(), mr.GetName(), status.ObservedGeneration, mr.GetGeneration())
 	}
 
-	appliedCondition := false
-	for _, cond := range status.Conditions {
-		if cond.Status != v1alpha1.ConditionTrue {
-			return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", cond.Type, mr.GetNamespace(), mr.GetName(), cond.Status, cond.Message)
-		}
-		if cond.Type == v1alpha1.ResourcesApplied {
-			appliedCondition = true
-		}
+	conditionApplied := helper.GetCondition(status.Conditions, v1alpha1.ResourcesApplied)
+
+	if conditionApplied == nil {
+		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", v1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName())
+	} else if conditionApplied.Status != v1alpha1.ConditionTrue {
+		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", v1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName(), conditionApplied.Status, conditionApplied.Message)
 	}
 
-	if !appliedCondition {
-		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", v1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName())
+	return nil
+}
+
+// CheckManagedResourceHealthy checks if the condition 'ResourcesHealthy' of a ManagedResource is True
+func CheckManagedResourceHealthy(mr *v1alpha1.ManagedResource) error {
+	status := mr.Status
+	conditionHealthy := helper.GetCondition(status.Conditions, v1alpha1.ResourcesHealthy)
+
+	if conditionHealthy == nil {
+		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", v1alpha1.ResourcesHealthy, mr.GetNamespace(), mr.GetName())
+	} else if conditionHealthy.Status != v1alpha1.ConditionTrue {
+		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", v1alpha1.ResourcesHealthy, mr.GetNamespace(), mr.GetName(), conditionHealthy.Status, conditionHealthy.Message)
 	}
 
 	return nil
