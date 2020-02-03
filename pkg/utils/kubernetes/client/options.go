@@ -15,7 +15,6 @@
 package client
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,18 +76,4 @@ type TolerateErrors []TolerateErrorFunc
 // ApplyToClean specifies a errors to be tolerated for a clean operation.
 func (m TolerateErrors) ApplyToClean(opts *CleanOptions) {
 	opts.ErrorToleration = append(opts.ErrorToleration, m...)
-}
-
-// Limit sets the given Limit on client.ListOptions.
-//
-// TODO: Replace this with client.Limit (available from v0.3.0)
-// https://github.com/kubernetes-sigs/controller-runtime/pull/341
-type Limit int64
-
-// ApplyToList restricts the list operation to gven limit.
-func (l Limit) ApplyToList(opts *client.ListOptions) {
-	if opts.Raw == nil {
-		opts.Raw = &metav1.ListOptions{}
-	}
-	opts.Raw.Limit = int64(l)
 }

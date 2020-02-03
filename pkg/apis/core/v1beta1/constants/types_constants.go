@@ -43,22 +43,6 @@ const (
 	// privileges.
 	SecretNameGardener = "gardener"
 
-	// ConfigMapNameDependencyWatchdog is a constant for the name of a Kubernetes configmap object that used to
-	// configure the dependency-watchdog pod.
-	ConfigMapNameDependencyWatchdog = "dependency-watchdog-config"
-	// VPANameDependencyWatchdog is a constant for the name of a Kubernetes VPA object that used to
-	// scale the dependency-watchdog pod.
-	VPANameDependencyWatchdog = "dependency-watchdog-vpa"
-	// ServiceAccountNameDependencyWatchdog is a constant for the name of a Kubernetes serviceaccount object that used to
-	// authorise the dependency-watchdog pod.
-	ServiceAccountNameDependencyWatchdog = "dependency-watchdog"
-	// RoleBindingNameDependencyWatchdog is a constant for the name of a Kubernetes rolebinding object that used to
-	// authorise the dependency-watchdog pod.
-	RoleBindingNameDependencyWatchdog = "gardener.cloud:dependency-watchdog:role-binding"
-	// RoleNameDependencyWatchdog is a constant for the name of a Kubernetes role object that used to
-	// authorise the dependency-watchdog pod.
-	RoleNameDependencyWatchdog = "gardener.cloud:dependency-watchdog:role"
-
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
 	DeploymentNameClusterAutoscaler = "cluster-autoscaler"
