@@ -14,8 +14,8 @@ global:
         cpu: 100m
         memory: 100Mi
       limits:
-        cpu: 300m
-        memory: 256Mi
+        cpu: "8"
+        memory: 25G
     encryption:
       config: |
         apiVersion: apiserver.config.k8s.io/v1
@@ -60,6 +60,29 @@ global:
         -----END RSA PRIVATE KEY-----
     featureGates: {}
     vpa: false
+    hvpa:
+      enabled: false
+      maxReplicas: 4
+      minReplicas: 1
+      lastReplicaCountForHpa: 3
+      targetAverageUtilization: 80
+      scaleUpStabilization:
+        duration: "3m"
+        minCpuChange:
+          value: 300m
+          percentage: 80
+        minMemChange:
+          value: 200M
+          percentage: 80
+      scaleDownStabilization:
+        duration: "15m"
+        minCpuChange:
+          value: 600m
+          percentage: 80
+        minMemChange:
+          value: 600M
+          percentage: 80
+
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:

@@ -186,6 +186,13 @@ spec:
         - --tls-cert-file=/etc/gardener-apiserver/srv/gardener-apiserver.crt
         - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
         - --v=2
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 5
         {{- if .Values.global.apiserver.resources }}
         resources:
 {{ toYaml .Values.global.apiserver.resources | indent 10 }}
