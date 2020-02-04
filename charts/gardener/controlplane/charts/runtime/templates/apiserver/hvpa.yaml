@@ -1,0 +1,81 @@
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.hvpa.enabled }}
+{{- /* .Values.global.apiserver.replicaCount is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+{{- if ne (.Values.global.apiserver.replicaCount | toString) "0" }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  name: gardner-apiserver-hvpa
+  namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: 1
+{{- if .Values.global.apiserver.hvpa.scaleUpStabilization }}
+  scaleUpStabilization:
+{{ toYaml .Values.global.apiserver.hvpa.scaleUpStabilization | indent 4 }}
+{{- end }}
+{{- if .Values.global.apiserver.hvpa.scaleDownStabilization }}
+  scaleDownStabilization:
+{{ toYaml .Values.global.apiserver.hvpa.scaleDownStabilization | indent 4 }}
+{{- end }}
+  hpa:
+    selector:
+      matchLabels:
+        role: gardener-apiserver-hpa
+    template:
+      metadata:
+        labels:
+          role: gardener-apiserver-hpa
+      spec:
+        maxReplicas: {{ .Values.global.apiserver.hvpa.maxReplicas }}
+        minReplicas: {{ .Values.global.apiserver.hvpa.minReplicas }}
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilizationMemory }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilizationCpu }}
+          type: Resource
+    updatePolicy:
+      updateMode: "Auto"
+  vpa:
+    selector:
+      matchLabels:
+        role: gardener-apiserver-vpa
+    template:
+      metadata:
+        labels:
+          role: gardener-apiserver-vpa
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: gardener-apiserver
+              maxAllowed:
+                memory: 25G
+                cpu: "8"
+              minAllowed:
+                memory: 400M
+                cpu: 400m
+    updatePolicy:
+      updateMode: "Auto"
+  weightBasedScalingIntervals:
+{{- if gt (int .Values.global.apiserver.hvpa.maxReplicas) (int .Values.global.apiserver.hvpa.minReplicas) }}
+    - vpaWeight: 0
+      startReplicaCount: {{ .Values.global.apiserver.hvpa.minReplicas }}
+      lastReplicaCount: {{ sub (int .Values.global.apiserver.hvpa.maxReplicas) 1 }}
+{{- end }}
+    - vpaWeight: 100
+      startReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
+      lastReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: gardener-apiserver
+{{ end }}
+{{ end }}
