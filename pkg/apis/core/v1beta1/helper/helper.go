@@ -167,6 +167,8 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 	switch {
 	case meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate:
 		return gardencorev1beta1.LastOperationTypeMigrate
+	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+		return gardencorev1beta1.LastOperationTypeMigrate
 	case meta.DeletionTimestamp != nil:
 		return gardencorev1beta1.LastOperationTypeDelete
 	case lastOperation == nil:
