@@ -64,8 +64,8 @@ global:
       enabled: false
       maxReplicas: 4
       minReplicas: 1
-      lastReplicaCountForHpa: 3
-      targetAverageUtilization: 80
+      targetAverageUtilizationCpu: 80
+      targetAverageUtilizationMemory: 80
       scaleUpStabilization:
         duration: "3m"
         minCpuChange:

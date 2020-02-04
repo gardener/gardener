@@ -1,4 +1,4 @@
-{{- if .Values.global.apiserver.hvpa.enabled }}
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.hvpa.enabled }}
 {{- /* .Values.global.apiserver.replicaCount is of type 'float64', so let's cast it to string to have proper types for comparison */}}
 {{- if ne (.Values.global.apiserver.replicaCount | toString) "0" }}
 apiVersion: autoscaling.k8s.io/v1alpha1
@@ -6,6 +6,12 @@ kind: Hvpa
 metadata:
   name: gardner-apiserver-hvpa
   namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
 spec:
   replicas: 1
 {{- if .Values.global.apiserver.hvpa.scaleUpStabilization }}
@@ -30,11 +36,11 @@ spec:
         metrics:
         - resource:
             name: memory
-            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilizationMemory }}
           type: Resource
         - resource:
             name: cpu
-            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilizationCpu }}
           type: Resource
     updatePolicy:
       updateMode: "Auto"
@@ -59,9 +65,11 @@ spec:
     updatePolicy:
       updateMode: "Auto"
   weightBasedScalingIntervals:
+{{- if gt (int .Values.global.apiserver.hvpa.maxReplicas) (int .Values.global.apiserver.hvpa.minReplicas) }}
     - vpaWeight: 0
       startReplicaCount: {{ .Values.global.apiserver.hvpa.minReplicas }}
-      lastReplicaCount: {{ .Values.global.apiserver.hvpa.lastReplicaCountForHpa }}
+      lastReplicaCount: {{ sub (int .Values.global.apiserver.hvpa.maxReplicas) 1 }}
+{{- end }}
     - vpaWeight: 100
       startReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
       lastReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
