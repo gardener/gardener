@@ -35,3 +35,5 @@ roleRef:
 subjects:
 - kind: User
   name: garden.sapcloud.io:monitoring:prometheus
+- kind: User
+  name: gardener.cloud:monitoring:prometheus

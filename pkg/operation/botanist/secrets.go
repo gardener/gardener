@@ -21,7 +21,6 @@ import (
 	"net"
 	"os/exec"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -294,8 +293,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "kube-state-metrics",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:kube-state-metrics", core.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", core.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:kube-state-metrics",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -314,8 +313,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", core.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", core.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:prometheus",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -334,8 +333,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus-kubelet",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", core.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", core.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:prometheus",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -490,7 +489,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.AlertManagerTLS,
 
 			CommonName:   "alertmanager",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", core.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputeAlertManagerHosts(),
 			IPAddresses:  nil,
 
@@ -504,7 +503,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", core.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputeGrafanaHosts(),
 			IPAddresses:  nil,
 
@@ -518,7 +517,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.PrometheusTLS,
 
 			CommonName:   "prometheus",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", core.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputePrometheusHosts(),
 			IPAddresses:  nil,
 
@@ -592,7 +591,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				Name: common.KibanaTLS,
 
 				CommonName:   "kibana",
-				Organization: []string{fmt.Sprintf("%s:logging:ingress", core.GroupName)},
+				Organization: []string{"gardener.cloud:logging:ingress"},
 				DNSNames:     b.ComputeKibanaHosts(),
 				IPAddresses:  nil,
 
