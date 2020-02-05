@@ -810,6 +810,13 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			}
 			delete(existingSecretsMap, name)
 		}
+
+		if name == "etcd-server-tls" {
+			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			delete(existingSecretsMap, name)
+		}
 	}
 
 	if err := b.generateShootSecrets(ctx, existingSecretsMap, wantedSecretsList); err != nil {

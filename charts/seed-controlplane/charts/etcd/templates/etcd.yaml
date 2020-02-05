@@ -4,7 +4,7 @@ metadata:
   name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
-    gardener.cloud/role: controlplane
+    garden.sapcloud.io/role: controlplane
     role: {{ .Values.role }}
 {{- if .Values.labels }}
 {{ toYaml .Values.labels | indent 4 }}
@@ -16,11 +16,11 @@ spec:
 {{- end }}
   selector:
     matchLabels:
-      gardener.cloud/role: controlplane
+      garden.sapcloud.io/role: controlplane
       app: etcd-statefulset
       role: {{ .Values.role }}
   labels:
-    gardener.cloud/role: controlplane
+    garden.sapcloud.io/role: controlplane
     app: etcd-statefulset
     role: {{ .Values.role }}
     networking.gardener.cloud/to-dns: allowed
@@ -30,33 +30,36 @@ spec:
     tls:
       serverTLSSecretRef:
         name: {{ .Values.tlsServerSecretName }}
+        namespace: {{ .Release.Namespace }}
       clientTLSSecretRef:
         name: {{ .Values.tlsClientSecretName }}
+        namespace: {{ .Release.Namespace }}
       tlsCASecretRef:
         name: {{ .Values.tlsCASecretName }}
+        namespace: {{ .Release.Namespace }}
     metrics: {{ .Values.metrics }}
     image: {{ index .Values.images "etcd" }}
-    defragmentationSchedule: {{ .Values.defragmentSchedule }}
-{{- if .Values.etcdResources }}
+    defragmentationSchedule: {{ .Values.etcd.defragmentSchedule }}
+{{- if .Values.etcd.resources }}
     resources:
-{{ toYaml .Values.etcdResources | indent 6 }}
+{{ toYaml .Values.etcd.resources | indent 6 }}
 {{- end }}
     clientPort: {{ .Values.servicePorts.client }}
     serverPort: {{ .Values.servicePorts.server }}
   backup:
     image: {{ index .Values.images "etcd-backup-restore" }}
     port: 8080
-{{- if .Values.sidecarResources }}
+{{- if .Values.sidecar.resources }}
     resources:
-{{ toYaml .Values.sidecarResources | indent 6 }}
+{{ toYaml .Values.sidecar.resources | indent 6 }}
 {{- end }}
     garbageCollectionPolicy: Exponential
-    quota: 8Gi
-    garbageCollectionPeriod: 12h
+    quota: {{ .Values.sidecar.quota }}
+    garbageCollectionPeriod: {{ .Values.sidecar.garbageCollectionPeriod }}
 {{- if .Values.backupEnabled }}
-    fullSnapshotSchedule: {{ .Values.snapshotSchedule }}
-    deltaSnapshotPeriod: 5m
-    deltaSnapshotMemoryLimit: 100MiB
+    fullSnapshotSchedule: {{ .Values.fullSnapshotSchedule }}
+    deltaSnapshotPeriod: {{ .Values.sidecar.deltaSnapshotPeriod }}
+    deltaSnapshotMemoryLimit: {{ .Values.sidecar.deltaSnapshotMemoryLimit }}
     store:
       secretRef:
         name: etcd-backup

@@ -549,9 +549,9 @@ var (
 		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
-	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
-	// sets running in the seed.
-	RequiredControlPlaneStatefulSets = sets.NewString(
+	// RequiredControlPlaneEtcds is a set of the required shoot control plane etcds
+	// running in the seed.
+	RequiredControlPlaneEtcds = sets.NewString(
 		v1beta1constants.ETCDMain,
 		v1beta1constants.ETCDEvents,
 	)

@@ -29,6 +29,7 @@ rules:
   - update
   - watch
   - create
+  - delete
 - apiGroups:
   - ""
   resources:
@@ -51,6 +52,7 @@ rules:
   - update
   - watch
   - create
+  - delete
 - apiGroups:
   - druid.gardener.cloud
   resources:
@@ -59,10 +61,8 @@ rules:
   - get
   - list
   - watch
-  - create
   - update
   - patch
-  - delete
 - apiGroups:
   - druid.gardener.cloud
   resources:
