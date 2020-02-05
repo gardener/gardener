@@ -250,6 +250,9 @@ const (
 	// DependencyWatchdogInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
 	DependencyWatchdogInternalProbeSecretName = "dependency-watchdog-internal-probe"
 
+	// DependencyWatchdogUserName is the user name of the dependency-watchdog.
+	DependencyWatchdogUserName = "gardener.cloud:system:dependency-watchdog"
+
 	// DeprecatedKubecfgInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
 	DeprecatedKubecfgInternalProbeSecretName = "kubecfg-internal"
 

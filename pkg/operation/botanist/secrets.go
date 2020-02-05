@@ -552,13 +552,16 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	// Secret definition for dependency-watchdog-internal-probe
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.DependencyWatchdogInternalProbeSecretName,
+			Name: common.DependencyWatchdogInternalProbeSecretName,
+
+			CommonName:   common.DependencyWatchdogUserName,
+			Organization: nil,
+			DNSNames:     nil,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
@@ -568,13 +571,16 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	// Secret definition for dependency-watchdog-external-probe
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.DependencyWatchdogExternalProbeSecretName,
+			Name: common.DependencyWatchdogExternalProbeSecretName,
+
+			CommonName:   common.DependencyWatchdogUserName,
+			Organization: nil,
+			DNSNames:     nil,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
@@ -722,6 +728,26 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.KubecfgSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+	}
+
+	// The kubeconfig secrets for the dependency-watchdog probes have now stopped using token to avoid the need for reconciliation
+	// on rotation. The old secrets containing tokens must be removed so that new secrets without token can be generated.
+	for _, secretName := range []string{common.DependencyWatchdogInternalProbeSecretName, common.DependencyWatchdogExternalProbeSecretName} {
+		secret := &corev1.Secret{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, secretName), secret); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		if _, ok := secret.Data[secrets.DataKeyToken]; ok {
+			// The kubeconfig uses bearer token. Delete it to regenerate the new kubeconfig without bearer token.
+			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+
+		// The kubeconfig does not use bearer token. No change required.
 	}
 
 	existingSecretsMap, err := b.fetchExistingSecrets(ctx)
