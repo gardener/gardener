@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -45,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -68,15 +65,13 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	}
 
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
-		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
-			v1beta1constants.DeprecatedGardenRole:      v1beta1constants.GardenRoleShoot,
-			v1beta1constants.GardenRole:                v1beta1constants.GardenRoleShoot,
-			v1beta1constants.DeprecatedShootHibernated: strconv.FormatBool(b.Shoot.HibernationEnabled),
-			v1beta1constants.LabelSeedProvider:         string(b.Seed.Info.Spec.Provider.Type),
-			v1beta1constants.LabelShootProvider:        string(b.Shoot.Info.Spec.Provider.Type),
-			v1beta1constants.LabelNetworkingProvider:   string(b.Shoot.Info.Spec.Networking.Type),
-			v1beta1constants.LabelBackupProvider:       string(b.Seed.Info.Spec.Provider.Type),
+			v1beta1constants.DeprecatedGardenRole:    v1beta1constants.GardenRoleShoot,
+			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
+			v1beta1constants.LabelSeedProvider:       string(b.Seed.Info.Spec.Provider.Type),
+			v1beta1constants.LabelShootProvider:      string(b.Shoot.Info.Spec.Provider.Type),
+			v1beta1constants.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
+			v1beta1constants.LabelBackupProvider:     string(b.Seed.Info.Spec.Provider.Type),
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
@@ -90,18 +85,6 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 
 	b.SeedNamespaceObject = namespace
 	return nil
-}
-
-func getShootAnnotations(annotations map[string]string, uid types.UID) map[string]string {
-	shootAnnotations := map[string]string{
-		v1beta1constants.DeprecatedShootUID: string(uid),
-	}
-	for key, value := range annotations {
-		if strings.HasPrefix(key, v1beta1constants.AnnotationShootCustom) {
-			shootAnnotations[key] = value
-		}
-	}
-	return shootAnnotations
 }
 
 // DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
