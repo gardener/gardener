@@ -66,15 +66,15 @@ require (
 
 replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
-	k8s.io/api => k8s.io/api v0.16.6
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.16.6
-	k8s.io/apiserver => k8s.io/apiserver v0.16.6
-	k8s.io/client-go => k8s.io/client-go v0.16.6
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.16.6
-	k8s.io/code-generator => k8s.io/code-generator v0.16.6
-	k8s.io/component-base => k8s.io/component-base v0.16.6
+	k8s.io/api => k8s.io/api v0.16.0
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.16.0
+	k8s.io/apiserver => k8s.io/apiserver v0.16.0
+	k8s.io/client-go => k8s.io/client-go v0.16.0
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.16.0
+	k8s.io/code-generator => k8s.io/code-generator v0.16.0
+	k8s.io/component-base => k8s.io/component-base v0.16.0
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.16.6
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.16.6
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.16.0
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.16.0
 )
