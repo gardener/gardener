@@ -29,9 +29,9 @@ docker-preload "{{ $name }}" "{{ $image }}"
 {{ end }}
 
 {{- if semverCompare "< 1.17" .kubernetesVersion }}
-docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubectl /opt/bin && cp /usr/local/bin/kubelet /opt/bin"
+docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubectl /opt/bin"
 {{- else }}
-docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .images.hyperkube }} -c "cp /usr/local/bin/kubectl /opt/bin && cp /usr/local/bin/kubelet /opt/bin"
+docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .images.hyperkube }} -c "cp /usr/local/bin/kubectl /opt/bin"
 {{- end }}
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"

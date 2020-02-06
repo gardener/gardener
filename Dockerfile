@@ -1,5 +1,5 @@
 #############      builder       #############
-FROM golang:1.13.5 AS builder
+FROM golang:1.13.6 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
@@ -13,9 +13,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
   ./...
 
 #############      apiserver     #############
-FROM alpine:3.10.3 AS apiserver
+FROM alpine:3.11.3 AS apiserver
 
-RUN apk add --update bash curl tzdata
+RUN apk add --update tzdata
 
 COPY --from=builder /go/bin/gardener-apiserver /gardener-apiserver
 
@@ -24,9 +24,9 @@ WORKDIR /
 ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
-FROM alpine:3.10.3 AS controller-manager
+FROM alpine:3.11.3 AS controller-manager
 
-RUN apk add --update bash curl tzdata
+RUN apk add --update tzdata
 
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
@@ -36,9 +36,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-controller-manager"]
 
 ############# scheduler #############
-FROM alpine:3.10.3 AS scheduler
-
-RUN apk add --update bash curl
+FROM alpine:3.11.3 AS scheduler
 
 COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
 
@@ -47,9 +45,9 @@ WORKDIR /
 ENTRYPOINT ["/gardener-scheduler"]
 
 ############# gardenlet #############
-FROM alpine:3.10.3 AS gardenlet
+FROM alpine:3.11.3 AS gardenlet
 
-RUN apk add --update bash curl openvpn tzdata
+RUN apk add --update openvpn tzdata
 
 COPY --from=builder /go/bin/gardenlet /gardenlet
 COPY charts /charts
@@ -57,3 +55,12 @@ COPY charts /charts
 WORKDIR /
 
 ENTRYPOINT ["/gardenlet"]
+
+############# registry-migrator #############
+FROM alpine:3.11.3 AS registry-migrator
+
+COPY --from=builder /go/bin/registry-migrator /registry-migrator
+
+WORKDIR /
+
+ENTRYPOINT ["/registry-migrator"]

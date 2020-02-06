@@ -18,4 +18,4 @@ NAME="$1"
 NAMESPACE="${2:-$(id -u -n)}"
 OPERATION="${3:-reconcile}"
 
-kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" shoot.garden.sapcloud.io/operation="$OPERATION" --overwrite
+kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" gardener.cloud/operation="$OPERATION" --overwrite

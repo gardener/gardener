@@ -106,6 +106,20 @@ BackupBucketProvider
 </tr>
 <tr>
 <td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>secretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
@@ -1446,6 +1460,20 @@ Provider
 </tr>
 <tr>
 <td>
+<code>purpose</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>region</code></br>
 <em>
 string
@@ -1506,7 +1534,7 @@ ShootStatus
 <a href="#core.gardener.cloud/v1beta1.NginxIngress">NginxIngress</a>)
 </p>
 <p>
-<p>Addon also enabling or disabling a specific addon and is used to derive from.</p>
+<p>Addon allows enabling or disabling a specific addon and is used to derive from.</p>
 </p>
 <table>
 <thead>
@@ -1845,6 +1873,20 @@ BackupBucketProvider
 </tr>
 <tr>
 <td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>secretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
@@ -1887,6 +1929,20 @@ string
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>providerStatus</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderStatus is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>lastOperation</code></br>
@@ -3105,37 +3161,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.GardenerDuration">GardenerDuration
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.HorizontalPodAutoscalerConfig">HorizontalPodAutoscalerConfig</a>)
-</p>
-<p>
-<p>GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>Duration</code></br>
-<em>
-<a href="https://godoc.org/time#Duration">
-time.Duration
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.Hibernation">Hibernation
 </h3>
 <p>
@@ -3261,8 +3286,8 @@ Note: Descriptions were taken from the Kubernetes documentation.</p>
 <td>
 <code>cpuInitializationPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3275,8 +3300,8 @@ GardenerDuration
 <td>
 <code>downscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3289,8 +3314,8 @@ GardenerDuration
 <td>
 <code>downscaleStabilization</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3303,8 +3328,8 @@ GardenerDuration
 <td>
 <code>initialReadinessDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3317,8 +3342,8 @@ GardenerDuration
 <td>
 <code>syncPeriod</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -3343,8 +3368,8 @@ float64
 <td>
 <code>upscaleDelay</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.GardenerDuration">
-GardenerDuration
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
 </a>
 </em>
 </td>
@@ -5645,12 +5670,15 @@ definition in the documentation of your provider extension.</p>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.AdmissionPlugin">AdmissionPlugin</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.Extension">Extension</a>, 
 <a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
 <a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedBackup">SeedBackup</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage</a>, 
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
@@ -5825,6 +5853,20 @@ string
 </td>
 <td>
 <p>Provider is a provider name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
 </td>
 </tr>
 <tr>
@@ -6475,6 +6517,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootPurpose">ShootPurpose
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ShootPurpose is a type alias for string.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>
@@ -6625,6 +6676,20 @@ Provider
 </td>
 <td>
 <p>Provider contains all provider-specific and provider-relevant information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
 </td>
 </tr>
 <tr>
@@ -7159,5 +7224,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>864ace2ad</code>.
+on git commit <code>62e1b589a</code>.
 </em></p>

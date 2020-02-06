@@ -195,9 +195,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				},
 			},
 		}
-		clusterAutoscaler = map[string]interface{}{
-			"enabled": b.Shoot.WantsClusterAutoscaler,
-		}
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
@@ -315,20 +312,23 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
-		"global":              global,
-		"cluster-autoscaler":  clusterAutoscaler,
-		"podsecuritypolicies": podSecurityPolicies,
-		"coredns":             coreDNS,
-		"kube-proxy":          kubeProxy,
-		"vpn-shoot":           vpnShoot,
-		"metrics-server":      metricsServer,
-		"monitoring": map[string]interface{}{
+		"global":                  global,
+		"cluster-autoscaler":      common.GenerateAddonConfig(nil, b.Shoot.WantsClusterAutoscaler),
+		"coredns":                 coreDNS,
+		"kube-apiserver-kubelet":  common.GenerateAddonConfig(nil, true),
+		"kube-controller-manager": common.GenerateAddonConfig(nil, true),
+		"kube-proxy":              common.GenerateAddonConfig(kubeProxy, true),
+		"kube-scheduler":          common.GenerateAddonConfig(nil, true),
+		"metrics-server":          common.GenerateAddonConfig(metricsServer, true),
+		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
-		},
-		"network-policies":      networkPolicyConfig,
-		"node-problem-detector": nodeProblemDetector,
-		"shoot-info":            shootInfo,
+		}, b.Shoot.GetPurpose() != gardencorev1beta1.ShootPurposeTesting),
+		"network-policies":      common.GenerateAddonConfig(networkPolicyConfig, true),
+		"node-problem-detector": common.GenerateAddonConfig(nodeProblemDetector, true),
+		"podsecuritypolicies":   common.GenerateAddonConfig(podSecurityPolicies, true),
+		"shoot-info":            common.GenerateAddonConfig(shootInfo, true),
+		"vpn-shoot":             common.GenerateAddonConfig(vpnShoot, true),
 	})
 }
 

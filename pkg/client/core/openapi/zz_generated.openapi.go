@@ -72,7 +72,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension":                            schema_pkg_apis_core_v1alpha1_Extension(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionResourceState":               schema_pkg_apis_core_v1alpha1_ExtensionResourceState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener":                             schema_pkg_apis_core_v1alpha1_Gardener(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration":                     schema_pkg_apis_core_v1alpha1_GardenerDuration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerResourceData":                 schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation":                          schema_pkg_apis_core_v1alpha1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HibernationSchedule":                  schema_pkg_apis_core_v1alpha1_HibernationSchedule(ref),
@@ -185,7 +184,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                      schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                             schema_pkg_apis_core_v1beta1_Extension(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                              schema_pkg_apis_core_v1beta1_Gardener(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration":                      schema_pkg_apis_core_v1beta1_GardenerDuration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                           schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                   schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":         schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
@@ -313,7 +311,7 @@ func schema_pkg_apis_core_v1alpha1_Addon(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Addon also enabling or disabling a specific addon and is used to derive from.",
+				Description: "Addon allows enabling or disabling a specific addon and is used to derive from.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -642,6 +640,12 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider"),
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretRef is a reference to a secret that contains the credentials to access object store.",
@@ -660,7 +664,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -671,6 +675,12 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 				Description: "BackupBucketStatus holds the most recently observed status of the Backup Bucket.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"providerStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupBucket.",
@@ -700,7 +710,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -1895,18 +1905,6 @@ func schema_pkg_apis_core_v1alpha1_Gardener(ref common.ReferenceCallback) common
 	}
 }
 
-func schema_pkg_apis_core_v1alpha1_GardenerDuration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.",
-				Type:        v1alpha1.GardenerDuration{}.OpenAPISchemaType(),
-				Format:      v1alpha1.GardenerDuration{}.OpenAPISchemaFormat(),
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2022,31 +2020,31 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 					"cpuInitializationPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period after which a ready pod transition is considered to be the first.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"initialReadinessDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period for syncing the number of pods in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"tolerance": {
@@ -2059,14 +2057,14 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 					"upscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.GardenerDuration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -4115,6 +4113,12 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a region name.",
@@ -4133,7 +4137,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -4768,6 +4772,13 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider"),
 						},
 					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose class for this cluster.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a name of a region.",
@@ -5286,7 +5297,7 @@ func schema_pkg_apis_core_v1beta1_Addon(ref common.ReferenceCallback) common.Ope
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Addon also enabling or disabling a specific addon and is used to derive from.",
+				Description: "Addon allows enabling or disabling a specific addon and is used to derive from.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -5615,6 +5626,12 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider"),
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretRef is a reference to a secret that contains the credentials to access object store.",
@@ -5633,7 +5650,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -5644,6 +5661,12 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 				Description: "BackupBucketStatus holds the most recently observed status of the Backup Bucket.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"providerStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupBucket.",
@@ -5673,7 +5696,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -6825,18 +6848,6 @@ func schema_pkg_apis_core_v1beta1_Gardener(ref common.ReferenceCallback) common.
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_GardenerDuration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.",
-				Type:        v1beta1.GardenerDuration{}.OpenAPISchemaType(),
-				Format:      v1beta1.GardenerDuration{}.OpenAPISchemaFormat(),
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_Hibernation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6916,31 +6927,31 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 					"cpuInitializationPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period after which a ready pod transition is considered to be the first.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"initialReadinessDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period for syncing the number of pods in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"tolerance": {
@@ -6953,14 +6964,14 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 					"upscaleDelay": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"),
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerDuration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9009,6 +9020,12 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a region name.",
@@ -9027,7 +9044,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -9660,6 +9677,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 						SchemaProps: spec.SchemaProps{
 							Description: "Provider contains all provider-specific and provider-relevant information.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider"),
+						},
+					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose class for this cluster.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"region": {

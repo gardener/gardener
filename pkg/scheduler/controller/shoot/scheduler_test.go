@@ -202,7 +202,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
 
-		It("should find a seed cluster  ) referencing the same profile 2) different region 3) indicating availability 4) only one seed existing", func() {
+		It("should find a seed cluster from other region: shoot in non-existing region, only one seed existing", func() {
 			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
 			anotherRegion := "another-region"
@@ -218,7 +218,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(shoot.Spec.Region).NotTo(Equal(bestSeed.Spec.Provider.Region))
 		})
 
-		It("should find the seed cluster with the minimal distance 1) referencing the same profile 2) different region 3) indicating availability 4) multiple seeds existing", func() {
+		It("should find a seed cluster from other region: shoot in non-existing region, multiple seeds existing", func() {
 			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
 			// add 3 seeds with different names and regions
@@ -248,7 +248,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(shoot.Spec.Region).NotTo(Equal(bestSeed.Spec.Provider.Region))
 		})
 
-		It("should find the best seed cluster 1) referencing the same profile 2) same region 3) indicating availability 4) multiple seeds existing", func() {
+		It("should pick candidate with least shoots deployed", func() {
 			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
 			secondSeed := seedBase
@@ -268,6 +268,54 @@ var _ = Describe("Scheduler_Control", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
+		It("should find seed cluster that matches the seed selector and is from another region", func() {
+			oldOsEuDe200 := cloudProfile
+			oldOsEuDe200.Name = "os-eu-de-200"
+			oldOsEuDe200.Spec.SeedSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"environment": "ccie",
+				},
+			}
+			oldOsEuDe200.Spec.Regions = []gardencorev1beta1.Region{{Name: "name: eu-de-200"}}
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&oldOsEuDe200)
+
+			newConvergedCloud := cloudProfile
+			newConvergedCloud.Name = "converged-cloud"
+			newConvergedCloud.Spec.SeedSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"environment": "ccee",
+				},
+			}
+			newConvergedCloud.Spec.Regions = []gardencorev1beta1.Region{{Name: "name: eu-nl-1"}}
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&newConvergedCloud)
+
+			// seeds
+			oldSeedOsEuDe200 := seed
+			oldSeedOsEuDe200.Spec.Provider.Type = "openstack"
+			oldSeedOsEuDe200.Spec.Provider.Region = "eu-de-200"
+			oldSeedOsEuDe200.Name = "os-eu-de-200"
+			oldSeedOsEuDe200.Labels = map[string]string{"environment": "ccie"}
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&oldSeedOsEuDe200)
+
+			newSeedCCEE := seed
+			newSeedCCEE.Spec.Provider.Type = "openstack"
+			newSeedCCEE.Spec.Provider.Region = "eu-nl-1"
+			newSeedCCEE.Name = "ccee-m3-eu1"
+			newSeedCCEE.Labels = map[string]string{"environment": "ccee"}
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&newSeedCCEE)
+
+			// shoot
+			testShoot := shoot
+			testShoot.Spec.Region = "eu-de-2"
+			testShoot.Spec.CloudProfileName = "converged-cloud"
+			testShoot.Spec.Provider.Type = "openstack"
+
+			bestSeed, err := determineSeed(&testShoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(newSeedCCEE.Name))
 		})
 	})
 
@@ -445,6 +493,76 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
+	})
+
+	Context("#DetermineBestSeedCandidate", func() {
+		BeforeEach(func() {
+			seed = *seedBase.DeepCopy()
+			shoot = *shootBase.DeepCopy()
+			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
+			// no seed referenced
+			shoot.Spec.SeedName = nil
+			schedulerConfiguration.Schedulers.Shoot.Strategy = config.MinimalDistance
+		})
+		It("should find two seeds candidates having the same amount of matching characters", func() {
+			oldSeedOsEuDe200 := seed
+			oldSeedOsEuDe200.Spec.Provider.Type = "openstack"
+			oldSeedOsEuDe200.Spec.Provider.Region = "eu-de-200"
+			oldSeedOsEuDe200.Name = "os-eu-de-200"
+
+			newSeedCCEE := seed
+			newSeedCCEE.Spec.Provider.Type = "openstack"
+			newSeedCCEE.Spec.Provider.Region = "eu-de-2111"
+			newSeedCCEE.Name = "ccee-m3-eu1"
+
+			otherSeedCCEE := seed
+			otherSeedCCEE.Spec.Provider.Type = "openstack"
+			otherSeedCCEE.Spec.Provider.Region = "eu-nl-1"
+			otherSeedCCEE.Name = "xyz"
+
+			// shoot
+			testShoot := shoot
+			testShoot.Spec.Region = "eu-de-2xzxzzx"
+			testShoot.Spec.CloudProfileName = "converged-cloud"
+			testShoot.Spec.Provider.Type = "openstack"
+
+			candidates, err := getCandidates(&testShoot, []*gardencorev1beta1.Seed{&newSeedCCEE, &oldSeedOsEuDe200, &otherSeedCCEE}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(candidates)).To(Equal(2))
+			Expect(candidates[0].Name).To(Equal(newSeedCCEE.Name))
+			Expect(candidates[1].Name).To(Equal(oldSeedOsEuDe200.Name))
+		})
+
+		It("should find single seed candidate", func() {
+			oldSeedOsEuDe200 := seed
+			oldSeedOsEuDe200.Spec.Provider.Type = "openstack"
+			oldSeedOsEuDe200.Spec.Provider.Region = "eu-de-200"
+			oldSeedOsEuDe200.Name = "os-eu-de-200"
+
+			newSeedCCEE := seed
+			newSeedCCEE.Spec.Provider.Type = "openstack"
+			newSeedCCEE.Spec.Provider.Region = "eu-de-2111"
+			newSeedCCEE.Name = "ccee-m3-eu1"
+
+			otherSeedCCEE := seed
+			otherSeedCCEE.Spec.Provider.Type = "openstack"
+			otherSeedCCEE.Spec.Provider.Region = "eu-nl-1"
+			otherSeedCCEE.Name = "xyz"
+
+			// shoot
+			testShoot := shoot
+			testShoot.Spec.Region = "eu-de-20"
+			testShoot.Spec.CloudProfileName = "converged-cloud"
+			testShoot.Spec.Provider.Type = "openstack"
+
+			candidates, err := getCandidates(&testShoot, []*gardencorev1beta1.Seed{&newSeedCCEE, &oldSeedOsEuDe200, &otherSeedCCEE}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(candidates)).To(Equal(1))
+			Expect(candidates[0].Name).To(Equal(oldSeedOsEuDe200.Name))
+		})
+
 	})
 
 	Context("Scheduling", func() {

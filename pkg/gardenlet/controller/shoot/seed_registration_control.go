@@ -43,6 +43,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -290,6 +291,9 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 	if shootedSeedConfig.DisableDNS != nil && *shootedSeedConfig.DisableDNS {
 		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableDNS})
 	}
+	if shootedSeedConfig.DisableCapacityReservation != nil && *shootedSeedConfig.DisableCapacityReservation {
+		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableCapacityReservation})
+	}
 	if shootedSeedConfig.Protected != nil && *shootedSeedConfig.Protected {
 		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintProtected})
 	}
@@ -417,43 +421,14 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		return err
 	}
 
-	// create bootstrap token and bootstrap kubeconfig in case there is no existing gardenlet kubeconfig yet
+	// create bootstrap kubeconfig in case there is no existing gardenlet kubeconfig yet
 	var bootstrapKubeconfigValues map[string]interface{}
 	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, gardenletKubeconfigSecretName), &corev1.Secret{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
 
-		var (
-			tokenID               = utils.ComputeSHA256Hex([]byte(shoot.Name))[:6]
-			validity              = 24 * time.Hour
-			refreshBootstrapToken = true
-			bootstrapTokenSecret  *corev1.Secret
-		)
-
-		secret := &corev1.Secret{}
-		if err := k8sGardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-
-		if expirationTime, ok := secret.Data[bootstraptokenapi.BootstrapTokenExpirationKey]; ok {
-			t, err := time.Parse(time.RFC3339, string(expirationTime))
-			if err != nil {
-				return err
-			}
-
-			if !t.Before(metav1.Now().UTC()) {
-				bootstrapTokenSecret = secret
-				refreshBootstrapToken = false
-			}
-		}
-
-		if refreshBootstrapToken {
-			bootstrapTokenSecret, err = kutil.ComputeBootstrapToken(ctx, k8sGardenClient.Client(), tokenID, fmt.Sprintf("A bootstrap token for the Gardenlet for shooted seed %q.", shoot.Name), validity)
-			if err != nil {
-				return err
-			}
-		}
+		var bootstrapKubeconfig []byte
 
 		restConfig := *k8sGardenClient.RESTConfig()
 		if addr := cfg.GardenClientConnection.GardenClusterAddress; addr != nil {
@@ -465,9 +440,92 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 			}
 		}
 
-		bootstrapKubeconfig, err := bootstrap.MarshalKubeconfigFromBootstrapToken(&restConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
-		if err != nil {
-			return err
+		if shootedSeedConfig.UseServiceAccountBootstrapping {
+			// create temporary service account with bootstrap kubeconfig in order to create CSR
+			saName := "gardenlet-bootstrap-" + shoot.Name
+			sa := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      saName,
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+			}
+			if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), sa, func() error { return nil }); err != nil {
+				return err
+			}
+
+			if len(sa.Secrets) == 0 {
+				return fmt.Errorf("service account token controller has not yet created a secret for the service account")
+			}
+
+			saSecret := &corev1.Secret{}
+			if err := k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
+				return err
+			}
+
+			clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: bootstrap.BuildBootstrapperName(shoot.Name),
+				},
+			}
+			if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), clusterRoleBinding, func() error {
+				clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "ClusterRole",
+					Name:     bootstrap.GardenerSeedBootstrapper,
+				}
+				clusterRoleBinding.Subjects = []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      saName,
+						Namespace: v1beta1constants.GardenNamespace,
+					},
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+
+			bootstrapKubeconfig, err = bootstrap.MarshalKubeconfigWithToken(&restConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+			if err != nil {
+				return err
+			}
+		} else {
+			// create bootstrap token with bootstrap kubeconfig in order to create CSR
+			var (
+				tokenID               = utils.ComputeSHA256Hex([]byte(shoot.Name))[:6]
+				validity              = 24 * time.Hour
+				refreshBootstrapToken = true
+				bootstrapTokenSecret  *corev1.Secret
+			)
+
+			secret := &corev1.Secret{}
+			if err := k8sGardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+
+			if expirationTime, ok := secret.Data[bootstraptokenapi.BootstrapTokenExpirationKey]; ok {
+				t, err := time.Parse(time.RFC3339, string(expirationTime))
+				if err != nil {
+					return err
+				}
+
+				if !t.Before(metav1.Now().UTC()) {
+					bootstrapTokenSecret = secret
+					refreshBootstrapToken = false
+				}
+			}
+
+			if refreshBootstrapToken {
+				bootstrapTokenSecret, err = kutil.ComputeBootstrapToken(ctx, k8sGardenClient.Client(), tokenID, fmt.Sprintf("A bootstrap token for the Gardenlet for shooted seed %q.", shoot.Name), validity)
+				if err != nil {
+					return err
+				}
+			}
+
+			bootstrapKubeconfig, err = bootstrap.MarshalKubeconfigWithToken(&restConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
+			if err != nil {
+				return err
+			}
 		}
 
 		bootstrapKubeconfigValues = map[string]interface{}{

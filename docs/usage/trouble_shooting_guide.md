@@ -28,11 +28,11 @@ This guide records the issues that are quite possible across upgrade of Gardener
 
 #### Action
 
-1. Disable the Gardener reconciliation for Shoot by annotating it with `shoot.garden.sapcloud.io/ignore=true`
+1. Disable the Gardener reconciliation for Shoot by annotating it with `shoot.gardener.cloud/ignore=true`
 2. Scale down the etcd-main statefulset in seed cluster.
 3. Find out the latest full snapshot and delta snapshot from old backup bucket. The old backup bucket name is same as the backupInfra resource associated with Shoot in Garden cluster.
 4. Move them manually to new backup bucket.
-5. Enable the Gardener reconciliation for shoot by removing annotation `shoot.garden.sapcloud.io/ignore=true`.
+5. Enable the Gardener reconciliation for shoot by removing annotation `shoot.gardener.cloud/ignore=true`.
 
 ### After upgrading/restarting a local Gardener setup, the DNSEntries on the seeds show the error "... already busy for owner ..."
 

@@ -44,12 +44,12 @@ spec:
       type: host-local
 ```
 
-The above resources is divided into two parts (more information can be found [here](https://github.com/gardener/gardener-extensions/blob/master/controllers/networking-calico/docs/usage-as-end-user.md)):
+The above resources is divided into two parts (more information can be found [here](https://github.com/gardener/gardener-extension-networking-calico/docs/usage-as-end-user.md)):
 
 - global configuration (e.g., podCIDR, serviceCIDR, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)
 
-> **Note**: certain cloud-provider extensions might have webhooks that would modify the network-resource to fit into their network specific context. As previously mentioned, Azure does not support IPIP, as a result, the [Azure provider extension](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-azure) implements a [webhook](https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/pkg/webhook/network/mutate.go) to mutate the backend and set it to `None` instead of `bird`.
+> **Note**: certain cloud-provider extensions might have webhooks that would modify the network-resource to fit into their network specific context. As previously mentioned, Azure does not support IPIP, as a result, the [Azure provider extension](https://github.com/gardener/gardener-extension-provider-azure) implements a [webhook](https://github.com/gardener/gardener-extension-provider-azure/pkg/webhook/network/mutate.go) to mutate the backend and set it to `None` instead of `bird`.
 
 ## Supporting a new Network Extension Provider
 
@@ -76,7 +76,7 @@ spec:
 
 Once applied, the presumably implemented `Gardenet` extension controller, would pick the configuration up, parse the `providerConfig` and create the necessary resources in the shoot.
 
-For additional reference, please have a look at the [networking-calico](https://github.com/gardener/gardener-extensions/tree/master/controllers/networking-calico) provider extension, which provides more information on how to configure the necessary charts as well as the actuators required to reconcile networking inside the `Shoot` cluster to the desired state.
+For additional reference, please have a look at the [networking-calico](https://github.com/gardener/gardener-extension-networking-calico) provider extension, which provides more information on how to configure the necessary charts as well as the actuators required to reconcile networking inside the `Shoot` cluster to the desired state.
 
 
 ## References

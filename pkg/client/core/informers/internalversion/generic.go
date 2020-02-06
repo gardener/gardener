@@ -57,12 +57,24 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().BackupBuckets().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("backupentries"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().BackupEntries().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("cloudprofiles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().CloudProfiles().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("controllerinstallations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ControllerInstallations().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("controllerregistrations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ControllerRegistrations().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("plants"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Plants().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("projects"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Projects().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("quotas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Quotas().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("secretbindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().SecretBindings().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("seeds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Seeds().Informer()}, nil
+	case core.SchemeGroupVersion.WithResource("shoots"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Shoots().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("shootstates"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ShootStates().Informer()}, nil
 

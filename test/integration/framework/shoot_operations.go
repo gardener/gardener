@@ -94,7 +94,7 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*gardencorev1beta1
 
 	shoot := s.Shoot
 	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		_, err = s.CreateShootResource(ctx, shoot)
+		err = s.GardenClient.Client().Create(ctx, shoot)
 		if err != nil {
 			s.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
 			return retry.MinorError(err)

@@ -18,7 +18,6 @@ import (
 	"context"
 
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
-	gardeninstall "github.com/gardener/gardener/pkg/apis/garden/install"
 	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +30,7 @@ import (
 // CreateRecorder creates a record.EventRecorder that is not limited to a namespace having a specific eventSourceName
 func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.EventRecorder {
 	scheme := scheme.Scheme
-	gardeninstall.Install(scheme)
+
 	coreinstall.Install(scheme)
 
 	eventBroadcaster := record.NewBroadcaster()

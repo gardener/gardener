@@ -17,9 +17,9 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo"
@@ -100,7 +100,7 @@ var _ = Describe("validation", func() {
 			resource := core.ControllerResource{
 				Kind:            v1alpha1.ExtensionResource,
 				Type:            "arbitrary",
-				GloballyEnabled: test.MakeBoolPointer(true),
+				GloballyEnabled: pointer.BoolPtr(true),
 			}
 
 			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
@@ -110,7 +110,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set required field for kind != Extension", func() {
-			ctrlResource.GloballyEnabled = test.MakeBoolPointer(true)
+			ctrlResource.GloballyEnabled = pointer.BoolPtr(true)
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)

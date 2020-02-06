@@ -290,13 +290,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		return err
 	}
 
-	// Fetching associated shoots for the current seed
-	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(seed, c.shootLister)
-	if err != nil {
-		seedLogger.Error(err.Error())
-		return err
-	}
-
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 	seedKubernetesVersion, err := seedObj.CheckMinimumK8SVersion(ctx, c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil)
 	if err != nil {
@@ -310,7 +303,10 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	if c.config.Controllers.Seed.ReserveExcessCapacity != nil {
 		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
 	}
-	if err := seedpkg.BootstrapCluster(c.k8sGardenClient, seedObj, c.config, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
+	if gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableCapacityReservation) {
+		seedObj.MustReserveExcessCapacity(false)
+	}
+	if err := seedpkg.BootstrapCluster(c.k8sGardenClient, seedObj, c.config, c.secrets, c.imageVector); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
 		seedLogger.Error(err.Error())
@@ -379,11 +375,12 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 				Type:   string(seed.Spec.Backup.Provider),
 				Region: region,
 			},
+			ProviderConfig: seed.Spec.Backup.ProviderConfig,
 			SecretRef: corev1.SecretReference{
 				Name:      seed.Spec.Backup.SecretRef.Name,
 				Namespace: seed.Spec.Backup.SecretRef.Namespace,
 			},
-			SeedName: &seed.Name, // In future this will be moved to scheduler.
+			SeedName: &seed.Name, // In future this will be moved to gardener-scheduler.
 		}
 		return nil
 	})

@@ -133,5 +133,5 @@ data:
 ## References and additional resources
 
 * [GitHub issue describing the concept](https://github.com/gardener/gardener/issues/1351)
-* [Exemplary implementation (monitoring) for the GCP provider](https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/charts/internal/cloud-controller-manager/templates/configmap-monitoring.yaml)
-* [Exemplary implementation (logging) for the OpenStack provider](https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/charts/provider-openstack/templates/configmap-logging.yaml)
+* [Exemplary implementation (monitoring) for the GCP provider](https://github.com/gardener/gardener-extension-provider-gcp/charts/internal/cloud-controller-manager/templates/configmap-monitoring.yaml)
+* [Exemplary implementation (logging) for the OpenStack provider](https://github.com/gardener/gardener-extension-provider-openstack/charts/provider-openstack/templates/configmap-logging.yaml)

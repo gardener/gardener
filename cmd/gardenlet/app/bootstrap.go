@@ -40,29 +40,34 @@ func bootstrapKubeconfig(
 	gardenClientConnection *config.GardenClientConnection,
 	seedClientConnection componentbaseconfig.ClientConnectionConfiguration,
 	seedConfig *config.SeedConfig,
-) ([]byte, string, error) {
+) (
+	[]byte,
+	string,
+	string,
+	error,
+) {
 	seedRESTCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&seedClientConnection, nil)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	k8sSeedClient, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(seedRESTCfg))
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
 	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	if len(kubeconfigSecret.Data[kubernetes.KubeConfig]) > 0 {
 		logger.Info("Found kubeconfig generated from bootstrap process. Using it")
-		return kubeconfigSecret.Data[kubernetes.KubeConfig], "", nil
+		return kubeconfigSecret.Data[kubernetes.KubeConfig], "", "", nil
 	}
 
 	// kubeconfig secret not found or empty - trigger bootstrap process
 	if gardenClientConnection.BootstrapKubeconfig == nil {
-		return nil, "", fmt.Errorf("cannot trigger kubeconfig bootstrap process because `.gardenClientConnection.bootstrapKubeconfig` is not set")
+		return nil, "", "", fmt.Errorf("cannot trigger kubeconfig bootstrap process because `.gardenClientConnection.bootstrapKubeconfig` is not set")
 	}
 
 	logger.Info("No kubeconfig for garden cluster found, but bootstrap kubeconfig was given.")
@@ -70,24 +75,24 @@ func bootstrapKubeconfig(
 	// check if we got a kubeconfig for bootstrapping
 	bootstrapKubeconfigSecret := &corev1.Secret{}
 	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name), bootstrapKubeconfigSecret); err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	if len(bootstrapKubeconfigSecret.Data[kubernetes.KubeConfig]) == 0 {
-		return nil, "", fmt.Errorf("bootstrap kubeconfig secret does not contain a kubeconfig")
+		return nil, "", "", fmt.Errorf("bootstrap kubeconfig secret does not contain a kubeconfig")
 	}
 
 	// create certificate client with bootstrap kubeconfig in order to create CSR
 	bootstrapClientConfig, err := clientcmd.NewClientConfigFromBytes(bootstrapKubeconfigSecret.Data[kubernetes.KubeConfig])
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	bootstrapConfig, err := bootstrapClientConfig.ClientConfig()
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	bootstrapClient, err := certificatesv1beta1client.NewForConfig(bootstrapConfig)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to create certificates signing request client: %v", err)
+		return nil, "", "", fmt.Errorf("unable to create certificates signing request client: %v", err)
 	}
 
 	logger.Info("Creating certificate signing request...")
@@ -99,19 +104,19 @@ func bootstrapKubeconfig(
 	}
 	privateKeyData, err := keyutil.MakeEllipticPrivateKeyPEM()
 	if err != nil {
-		return nil, "", fmt.Errorf("error generating key: %v", err)
+		return nil, "", "", fmt.Errorf("error generating key: %v", err)
 	}
 	certData, csrName, err := bootstrap.RequestSeedCertificate(ctx, bootstrapClient.CertificateSigningRequests(), privateKeyData, seedName)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	logger.Infof("Certificate signing request got approved! Creating kubeconfig and storing it in secret %s/%s", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name)
 
 	// marshal kubeconfig with just derived client certificate
-	kubeconfig, err := bootstrap.MarshalKubeconfigFromBootstrapping(bootstrapConfig, privateKeyData, certData)
+	kubeconfig, err := bootstrap.MarshalKubeconfigWithClientCertificate(bootstrapConfig, privateKeyData, certData)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	// store kubeconfig in kubeconfig secret in seed cluster and delete bootstrap kubeconfig secret
@@ -123,14 +128,14 @@ func bootstrapKubeconfig(
 		kubeconfigSecret.Data = map[string][]byte{kubernetes.KubeConfig: kubeconfig}
 		return nil
 	}); err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	logger.Infof("Deleting secret %s/%s holding bootstrap kubeconfig", gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name)
 
 	if err := k8sSeedClient.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
-	return kubeconfig, csrName, nil
+	return kubeconfig, csrName, seedName, nil
 }

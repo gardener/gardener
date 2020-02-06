@@ -17,7 +17,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ Object = (*Infrastructure)(nil)
@@ -64,10 +63,6 @@ type InfrastructureList struct {
 type InfrastructureSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-
-	// ProviderConfig contains provider-specific configuration for this infrastructure.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 	// Region is the region of this infrastructure.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
@@ -81,14 +76,9 @@ type InfrastructureSpec struct {
 type InfrastructureStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
-
 	// NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
 	// This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
 	// be statically defined in the Shoot resource but must be computed dynamically.
 	// +optional
 	NodesCIDR *string `json:"nodesCIDR,omitempty"`
-
-	// ProviderStatus contains provider-specific output for this infrastructure.
-	// +optional
-	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }

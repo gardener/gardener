@@ -163,7 +163,6 @@ service/gardener-apiserver created
 service/gardener-controller-manager created
 endpoints/gardener-apiserver created
 endpoints/gardener-controller-manager created
-apiservice.apiregistration.k8s.io/v1beta1.garden.sapcloud.io created
 apiservice.apiregistration.k8s.io/v1alpha1.core.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1beta1.core.gardener.cloud created
 validatingwebhookconfiguration.admissionregistration.k8s.io/gardener-controller-manager created

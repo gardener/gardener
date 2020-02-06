@@ -37,9 +37,9 @@ var _ = Describe("Extension validation tests", func() {
 			},
 			Spec: extensionsv1alpha1.ExtensionSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "provider",
+					Type:           "provider",
+					ProviderConfig: &runtime.RawExtension{},
 				},
-				ProviderConfig: &runtime.RawExtension{},
 			},
 		}
 	})

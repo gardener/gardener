@@ -22,6 +22,8 @@ import (
 
 // Status is the status of an Object.
 type Status interface {
+	// GetProviderStatus retrieves the provider status.
+	GetProviderStatus() *runtime.RawExtension
 	// GetConditions retrieves the Conditions of a status.
 	// Conditions may be nil.
 	GetConditions() []gardencorev1beta1.Condition
@@ -69,9 +71,10 @@ type LastError interface {
 type Spec interface {
 	// GetExtensionType retrieves the extension type.
 	GetExtensionType() string
-
 	// GetExtensionPurpose retrieves the extension purpose.
 	GetExtensionPurpose() *string
+	// GetProviderConfig retrieves the provider config.
+	GetProviderConfig() *runtime.RawExtension
 }
 
 // Object is an extension object resource.

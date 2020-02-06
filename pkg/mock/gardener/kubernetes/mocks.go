@@ -6,7 +6,6 @@ package kubernetes
 
 import (
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	versioned0 "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -124,20 +123,6 @@ func (m *MockInterface) ForwardPodPort(arg0, arg1 string, arg2, arg3 int) (chan 
 func (mr *MockInterfaceMockRecorder) ForwardPodPort(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardPodPort", reflect.TypeOf((*MockInterface)(nil).ForwardPodPort), arg0, arg1, arg2, arg3)
-}
-
-// Garden mocks base method
-func (m *MockInterface) Garden() versioned0.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Garden")
-	ret0, _ := ret[0].(versioned0.Interface)
-	return ret0
-}
-
-// Garden indicates an expected call of Garden
-func (mr *MockInterfaceMockRecorder) Garden() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Garden", reflect.TypeOf((*MockInterface)(nil).Garden))
 }
 
 // GardenCore mocks base method

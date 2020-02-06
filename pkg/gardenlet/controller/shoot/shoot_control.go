@@ -335,7 +335,14 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 			return reconcile.Result{}, err
 		}
 
-		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusProcessing(shoot, message))
+		if err := c.updateShootStatusProcessing(shoot, message); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: 30 * time.Second,
+		}, nil
 	}
 
 	if failedOrIgnored {

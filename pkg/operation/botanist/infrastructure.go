@@ -72,7 +72,8 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 
 		infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: b.Shoot.Info.Spec.Provider.Type,
+				Type:           b.Shoot.Info.Spec.Provider.Type,
+				ProviderConfig: providerConfig,
 			},
 			Region:       b.Shoot.Info.Spec.Region,
 			SSHPublicKey: b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys],
@@ -80,7 +81,6 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: infrastructure.Namespace,
 			},
-			ProviderConfig: providerConfig,
 		}
 		return nil
 	})

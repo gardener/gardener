@@ -43,22 +43,6 @@ const (
 	// privileges.
 	SecretNameGardener = "gardener"
 
-	// ConfigMapNameDependencyWatchdog is a constant for the name of a Kubernetes configmap object that used to
-	// configure the dependency-watchdog pod.
-	ConfigMapNameDependencyWatchdog = "dependency-watchdog-config"
-	// VPANameDependencyWatchdog is a constant for the name of a Kubernetes VPA object that used to
-	// scale the dependency-watchdog pod.
-	VPANameDependencyWatchdog = "dependency-watchdog-vpa"
-	// ServiceAccountNameDependencyWatchdog is a constant for the name of a Kubernetes serviceaccount object that used to
-	// authorise the dependency-watchdog pod.
-	ServiceAccountNameDependencyWatchdog = "dependency-watchdog"
-	// RoleBindingNameDependencyWatchdog is a constant for the name of a Kubernetes rolebinding object that used to
-	// authorise the dependency-watchdog pod.
-	RoleBindingNameDependencyWatchdog = "gardener.cloud:dependency-watchdog:role-binding"
-	// RoleNameDependencyWatchdog is a constant for the name of a Kubernetes role object that used to
-	// authorise the dependency-watchdog pod.
-	RoleNameDependencyWatchdog = "gardener.cloud:dependency-watchdog:role"
-
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
 	DeploymentNameClusterAutoscaler = "cluster-autoscaler"
@@ -97,12 +81,10 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
-	// StatefulSetNameETCDMain is a constant for the name of a Kubernetes stateful set object that contains
-	// the etcd-main pod.
-	StatefulSetNameETCDMain = "etcd-main"
-	// StatefulSetNameETCDEvents is a constant for the name of a Kubernetes stateful set object that contains
-	// the etcd-events pod.
-	StatefulSetNameETCDEvents = "etcd-events"
+	// ETCDMain is a constant for the name of etcd-main Etcd object.
+	ETCDMain = "etcd-main"
+	// ETCDEvents is a constant for the name of etcd-events Etcd object.
+	ETCDEvents = "etcd-events"
 	// StatefulSetNameElasticSearch is a constant for the name of a Kubernetes stateful set object that contains
 	// the elasticsearch-logging pod.
 	StatefulSetNameElasticSearch = "elasticsearch-logging"
@@ -151,13 +133,6 @@ const (
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
 
-	// DeprecatedShootHibernated is a constant for a label on the Shoot namespace in the Seed indicating the Shoot's hibernation status.
-	// +deprecated: Use `Cluster` resource instead.
-	DeprecatedShootHibernated = "shoot.garden.sapcloud.io/hibernated"
-	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
-	// which value will be the value of `shoot.status.uid`
-	// +deprecated: Use `Cluster` resource instead.
-	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
 	// DeprecatedGardenRoleBackup is the value of GardenRole key indicating type 'backup'.
 	// +deprecated
 	DeprecatedGardenRoleBackup = "backup"
@@ -239,11 +214,6 @@ const (
 	// AnnotationShootOperatedBy is the key for an annotation of a Shoot cluster whose value must be a valid email address and
 	// is used to send alerts to.
 	AnnotationShootOperatedBy = "garden.sapcloud.io/operatedBy"
-	// AnnotationShootCustom is such a prefix so that the shoot namespace in the seed cluster
-	// will be annotated with the annotations of the shoot resource starting with it.
-	// For example, if the shoot is annotated with <AnnotationShootCustom>key=value,
-	// then the namespace in the seed will be annotated with <AnnotationShootCustom>key=value, as well.
-	AnnotationShootCustom = "custom.shoot.sapcloud.io/"
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"

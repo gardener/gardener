@@ -16,7 +16,6 @@ package controllerinstallation
 
 import (
 	"context"
-	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -60,19 +59,6 @@ func (c *Controller) reconcileControllerInstallationCareKey(key string) error {
 		return err
 	}
 
-	var installed bool
-	for _, condition := range controllerInstallation.Status.Conditions {
-		if condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status == gardencorev1beta1.ConditionTrue {
-			installed = true
-			break
-		}
-	}
-
-	// if controllerInstallation has not been installed yet, requeue
-	if !installed {
-		return fmt.Errorf("ControllerInstallation %s has not yet been installed", key)
-	}
-
 	if err := c.careControl.Care(controllerInstallation, key); err != nil {
 		return err
 	}
@@ -106,7 +92,8 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 		controllerInstallation       = controllerInstallationObj.DeepCopy()
 		controllerInstallationLogger = logger.NewFieldLogger(logger.Logger, "controllerinstallation-care", controllerInstallation.Name)
 
-		conditionControllerInstallationHealthy = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
+		conditionControllerInstallationHealthy   = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
 	)
 
 	controllerInstallationLogger.Debugf("[CONTROLLERINSTALLATION CARE] %s", key)
@@ -123,7 +110,13 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	if err := resourceshealth.CheckManagedResource(managedResource); err != nil {
+	if err := resourceshealth.CheckManagedResourceApplied(managedResource); err != nil {
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", err.Error())
+	} else {
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful", "The controller was successfully installed in the seed cluster.")
+	}
+
+	if err := resourceshealth.CheckManagedResourceHealthy(managedResource); err != nil {
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionFalse, "ControllerNotHealthy", err.Error())
 	} else {
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
@@ -131,7 +124,7 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 
 	if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy)
+			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled)
 			return controllerInstallation, nil
 		}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
 			return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)

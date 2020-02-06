@@ -22,6 +22,10 @@ metadata:
   name: shoot--foo--bar
 spec:
   type: azure
+  providerConfig:
+    <some-optional-provider-specific-backup-bucket-configuration>
+  backupBucketProviderStatus:
+    <some-optional-provider-specific-backup-bucket-status>
   region: eu-west-1
   bucketName: foo
   secretRef:
@@ -38,7 +42,7 @@ In order to support a new infrastructure provider you need to write a controller
 ## References and additional resources
 
 * [`BackupEntry` API Reference](https://gardener.cloud/api-reference/extensions/#extensions.gardener.cloud/v1alpha1.BackupBucket)
-* [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-azure/pkg/controller/backupentry)
+* [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extension-provider-azure/pkg/controller/backupentry)
 * [`BackupBucket` resource documentation](./backupbucket.md)
 * [Shared bucket proposal](../proposals/02-backupinfra.md)
 * [Gardener-controller-manager-component-config API specification](https://github.com/gardener/gardener/blob/master/pkg/controllermanager/apis/config/types.go#L101-#L107)

@@ -19,24 +19,21 @@ import (
 	"testing"
 	"time"
 
-	mockutilclient "github.com/gardener/gardener/pkg/mock/gardener/utils/kubernetes/client"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockutilclient "github.com/gardener/gardener/pkg/mock/gardener/utils/kubernetes/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/gardener/utils/time"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestClient(t *testing.T) {

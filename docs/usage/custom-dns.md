@@ -28,7 +28,7 @@ data:
             cache 30
             forward . 1.2.3.4
         }
-   Corefile.override: |
+  corefile.override: |
          # <some-plugin> <some-plugin-config>
          debug
          whoami
@@ -40,7 +40,7 @@ if you want to customize the current server configuration (it is optional settin
 Once this `ConfigMap` is applied, you can roll-out your CoreDNS deployment using:
 
 ```bash
-kubectl -n kube-system rollout restart deploy CoreDNS
+kubectl -n kube-system rollout restart deploy coredns
 ```
 
 This will reload the config into CoreDNS.

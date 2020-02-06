@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -274,11 +273,6 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	garden, err := gardenclientset.NewForConfig(conf.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	gardenCore, err := gardencoreclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
@@ -304,7 +298,6 @@ func new(conf *config) (Interface, error) {
 		client: c,
 
 		kubernetes:      kubernetes,
-		garden:          garden,
 		gardenCore:      gardenCore,
 		apiregistration: apiRegistration,
 		apiextension:    apiExtension,

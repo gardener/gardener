@@ -278,11 +278,12 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	var (
 		kubeconfigFromBootstrap []byte
 		csrName                 string
+		seedName                string
 		err                     error
 	)
 
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, err = bootstrapKubeconfig(ctx, logger, cfg.GardenClientConnection, cfg.SeedClientConnection.ClientConnectionConfiguration, cfg.SeedConfig)
+		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, cfg.GardenClientConnection, cfg.SeedClientConnection.ClientConnectionConfiguration, cfg.SeedConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -314,10 +315,10 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
-	// Delete bootstrap token if certificate was freshly acquired
+	// Delete bootstrap auth data if certificate was freshly acquired
 	if len(csrName) > 0 {
-		logger.Infof("Deleting bootstrap token secret used to request a certificate")
-		if err := bootstrap.DeleteBootstrapToken(ctx, k8sGardenClient.Client(), csrName); err != nil {
+		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
+		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.Client(), csrName, seedName); err != nil {
 			return nil, err
 		}
 	}

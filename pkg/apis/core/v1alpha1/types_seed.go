@@ -100,6 +100,9 @@ type SeedStatus struct {
 type SeedBackup struct {
 	// Provider is a provider name.
 	Provider string `json:"provider"`
+	// ProviderConfig is the configuration passed to BackupBucket resource.
+	// +optional
+	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
 	// Region is a region name.
 	// +optional
 	Region *string `json:"region,omitempty"`
@@ -168,6 +171,10 @@ const (
 	// SeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
 	// are not considered by the gardener-scheduler.
 	SeedTaintInvisible = "seed.gardener.cloud/invisible"
+	// SeedTaintDisableCapacityReservation is a constant for a taint key on a seed that marks it for disabling
+	// excess capacity reservation. This can be useful for seed clusters which only host shooted seeds to reduce
+	// costs.
+	SeedTaintDisableCapacityReservation = "seed.gardener.cloud/disable-capacity-reservation"
 )
 
 // SeedVolume contains settings for persistentvolumes created in the seed cluster.

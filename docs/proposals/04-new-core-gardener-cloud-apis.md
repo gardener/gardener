@@ -217,11 +217,11 @@ metadata:
 type: Opaque
 data:
   # <some-provider-specific data keys>
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-backupbucket.yaml#L9-L11
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-backupbucket.yaml#L9
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
+  # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-backupbucket.yaml#L9-L11
+  # https://github.com/gardener/gardener-extension-provider-aws/example/30-infrastructure.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-azure/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-gcp/example/30-backupbucket.yaml#L9
+  # https://github.com/gardener/gardener-extension-provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
 apiVersion: core.gardener.cloud/v1beta1
@@ -325,12 +325,12 @@ metadata:
 type: Opaque
 data:
   # <some-provider-specific data keys>
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-infrastructure.yaml#L14-L15
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-infrastructure.yaml#L14-L17
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-infrastructure.yaml#L14
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-infrastructure.yaml#L15-L18
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-infrastructure.yaml#L14-L15
+  # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-infrastructure.yaml#L14-L15
+  # https://github.com/gardener/gardener-extension-provider-aws/example/30-infrastructure.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-azure/example/30-infrastructure.yaml#L14-L17
+  # https://github.com/gardener/gardener-extension-provider-gcp/example/30-infrastructure.yaml#L14
+  # https://github.com/gardener/gardener-extension-provider-openstack/example/30-infrastructure.yaml#L15-L18
+  # https://github.com/gardener/gardener-extension-provider-packet/example/30-infrastructure.yaml#L14-L15
   #
   # If you use your own domain (not the default domain of your landscape) then you have to add additional keys to this secret.
   # The reason is that the DNS management is not part of the Gardener core code base but externalized, hence, it might use other
@@ -392,11 +392,11 @@ metadata:
 type: Opaque
 data:
   # <some-provider-specific data keys>
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-backupbucket.yaml#L9-L11
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-backupbucket.yaml#L9
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
+  # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-backupbucket.yaml#L9-L11
+  # https://github.com/gardener/gardener-extension-provider-aws/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-azure/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-gcp/example/30-backupbucket.yaml#L9
+  # https://github.com/gardener/gardener-extension-provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
 apiVersion: core.gardener.cloud/v1beta1
@@ -439,11 +439,11 @@ metadata:
 type: Opaque
 data:
   # <some-provider-specific data keys>
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-backupbucket.yaml#L9-L11
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-backupbucket.yaml#L9-L10
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-backupbucket.yaml#L9
-  # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-backupbucket.yaml#L9-L13
+  # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-backupbucket.yaml#L9-L11
+  # https://github.com/gardener/gardener-extension-provider-aws/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-azure/example/30-backupbucket.yaml#L9-L10
+  # https://github.com/gardener/gardener-extension-provider-gcp/example/30-backupbucket.yaml#L9
+  # https://github.com/gardener/gardener-extension-provider-openstack/example/30-backupbucket.yaml#L9-L13
 
 ---
 apiVersion: core.gardener.cloud/v1beta1
@@ -493,20 +493,20 @@ spec:
     type: <some-provider-name> # {aws,azure,gcp,...}
     infrastructureConfig:
       <some-provider-specific-infrastructure-config>
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-infrastructure.yaml#L56-L64
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-infrastructure.yaml#L43-L53
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-infrastructure.yaml#L63-L71
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-infrastructure.yaml#L53-L57
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-infrastructure.yaml#L56-L64
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-infrastructure.yaml#L48-L49
+      # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-infrastructure.yaml#L56-L64
+      # https://github.com/gardener/gardener-extension-provider-aws/example/30-infrastructure.yaml#L43-L53
+      # https://github.com/gardener/gardener-extension-provider-azure/example/30-infrastructure.yaml#L63-L71
+      # https://github.com/gardener/gardener-extension-provider-gcp/example/30-infrastructure.yaml#L53-L57
+      # https://github.com/gardener/gardener-extension-provider-openstack/example/30-infrastructure.yaml#L56-L64
+      # https://github.com/gardener/gardener-extension-provider-packet/example/30-infrastructure.yaml#L48-L49
     controlPlaneConfig:
       <some-provider-specific-controlplane-config>
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-alicloud/example/30-controlplane.yaml#L60-L65
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-aws/example/30-controlplane.yaml#L60-L64
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-azure/example/30-controlplane.yaml#L61-L66
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-gcp/example/30-controlplane.yaml#L59-L64
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-openstack/example/30-controlplane.yaml#L64-L70
-      # https://github.com/gardener/gardener-extensions/blob/master/controllers/provider-packet/example/30-controlplane.yaml#L60-L61
+      # https://github.com/gardener/gardener-extension-provider-alicloud/example/30-controlplane.yaml#L60-L65
+      # https://github.com/gardener/gardener-extension-provider-aws/example/30-controlplane.yaml#L60-L64
+      # https://github.com/gardener/gardener-extension-provider-azure/example/30-controlplane.yaml#L61-L66
+      # https://github.com/gardener/gardener-extension-provider-gcp/example/30-controlplane.yaml#L59-L64
+      # https://github.com/gardener/gardener-extension-provider-openstack/example/30-controlplane.yaml#L64-L70
+      # https://github.com/gardener/gardener-extension-provider-packet/example/30-controlplane.yaml#L60-L61
     workers:
     - name: cpu-worker
       minimum: 3

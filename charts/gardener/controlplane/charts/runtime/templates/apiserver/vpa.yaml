@@ -1,9 +1,16 @@
-{{- if .Values.global.apiserver.vpa }}
+{{- if not .Values.global.apiserver.hvpa.enabled }}
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.vpa }}
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: gardener-apiserver-vpa
   namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
 spec:
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
@@ -11,4 +18,5 @@ spec:
     name: gardener-apiserver
   updatePolicy:
     updateMode: Auto
+{{- end }}
 {{- end }}

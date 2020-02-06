@@ -56,9 +56,15 @@ const (
 	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
 	CloudPurposeSeed = "seed"
 
-	// ConfirmationDeletion is an annotation on a Shoot resource whose value must be set to "true" in order to
+	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
+	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
+	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
+
+	// ConfirmationDeletionDeprecated is an annotation on a Shoot resource whose value must be set to "true" in order to
 	// allow deleting the Shoot (if the annotation is not set any DELETE request will be denied).
-	ConfirmationDeletion = "confirmation.garden.sapcloud.io/deletion"
+	//
+	// Deprecated: Use `ConfirmationDeletion` instead.
+	ConfirmationDeletionDeprecated = "confirmation.garden.sapcloud.io/deletion"
 
 	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
 	// manager stores its configuration.
@@ -66,12 +72,14 @@ const (
 
 	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
-	// deprecated
+	//
+	// Deprecated: Use `DNSProvider` instead.
 	DNSProviderDeprecated = "dns.garden.sapcloud.io/provider"
 
 	// DNSDomainDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// domain name.
-	// deprecated
+	//
+	// Deprecated: Use `DNSDomain` instead.
 	DNSDomainDeprecated = "dns.garden.sapcloud.io/domain"
 
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
@@ -156,13 +164,25 @@ const (
 
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
-	GardenCreatedBy = "garden.sapcloud.io/createdBy"
+	GardenCreatedBy = "gardener.cloud/created-by"
+
+	// GardenCreatedByDeprecated is the key for an annotation of a Shoot cluster whose value indicates contains the username
+	// of the user that created the resource.
+	//
+	// Deprecated: Use `GardenCreatedBy` instead.
+	GardenCreatedByDeprecated = "garden.sapcloud.io/createdBy"
 
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
 	GrafanaOperatorsPrefix = "go"
 
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
+
+	// GrafanaOperatorsRole is a constant for the operators role.
+	GrafanaOperatorsRole = "operators"
+
+	// GrafanaUsersRole is a constant for the users role.
+	GrafanaUsersRole = "users"
 
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"
@@ -209,6 +229,9 @@ const (
 	// NodeProblemDetectorDaemonSetName is the name of the node-problem-detector daemon set.
 	NodeProblemDetectorDaemonSetName = "node-problem-detector"
 
+	// BlackboxExporterDeploymentName is the name of the blackbox-exporter deployment.
+	BlackboxExporterDeploymentName = "blackbox-exporter"
+
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
 
@@ -226,6 +249,9 @@ const (
 
 	// DependencyWatchdogInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
 	DependencyWatchdogInternalProbeSecretName = "dependency-watchdog-internal-probe"
+
+	// DependencyWatchdogUserName is the user name of the dependency-watchdog.
+	DependencyWatchdogUserName = "gardener.cloud:system:dependency-watchdog"
 
 	// DeprecatedKubecfgInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
 	DeprecatedKubecfgInternalProbeSecretName = "kubecfg-internal"
@@ -245,12 +271,21 @@ const (
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 
-	// ProjectName is they key of a label on namespaces whose value holds the project name. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectName = "project.garden.sapcloud.io/name"
+	// ProjectName is they key of a label on namespaces whose value holds the project name.
+	ProjectName = "project.gardener.cloud/name"
 
-	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
-	NamespaceProject = "namespace.garden.sapcloud.io/project"
+	// ProjectNameDeprecated is they key of a label on namespaces whose value holds the project name.
+	//
+	// Deprecated: Use `ProjectName` instead.
+	ProjectNameDeprecated = "project.garden.sapcloud.io/name"
+
+	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
+	NamespaceProject = "namespace.gardener.cloud/project"
+
+	// NamespaceProjectDeprecated is they key of an annotation on namespace whose value holds the project uid.
+	//
+	// Deprecated: Use `NamespaceProject` instead.
+	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
 
 	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
 	SecretRefChecksumAnnotation = "checksum/secret.data"
@@ -262,23 +297,31 @@ const (
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
-	ShootExpirationTimestamp = "shoot.garden.sapcloud.io/expirationTimestamp"
+	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
+
+	// ShootExpirationTimestampDeprecated is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
+	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
+	// of referenced quotas.
+	//
+	// Deprecated: Use `ShootExpirationTimestamp` instead.
+	ShootExpirationTimestampDeprecated = "shoot.garden.sapcloud.io/expirationTimestamp"
 
 	// ShootNoCleanup is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 
 	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
-	// Shoot Care controller and can be used to easily identify Shoot clusters with certain states.
-	ShootStatus = "shoot.garden.sapcloud.io/status"
+	ShootStatus = "shoot.gardener.cloud/status"
 
-	// ShootUnhealthy is a constant for a label on a Shoot resource indicating that the Shoot is unhealthy. It is set and unset by the
-	// Shoot Care controller and can be used to easily identify Shoot clusters with issues.
-	// Deprecated: Use ShootStatus instead
-	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
+	// ShootStatusDeprecated is a constant for a label on a Shoot resource indicating that the Shoot's health.
+	//
+	// Deprecated: Use `ShootStatus` instead.
+	ShootStatusDeprecated = "shoot.garden.sapcloud.io/status"
 
-	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
-	ShootOperation = "shoot.garden.sapcloud.io/operation"
+	// ShootOperationDeprecated is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
+	//
+	// Deprecated: Use `v1beta1constants.GardenerOperation` instead.
+	ShootOperationDeprecated = "shoot.garden.sapcloud.io/operation"
 
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be executed as soon as
 	// possible.
@@ -289,7 +332,12 @@ const (
 	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials"
 
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
-	ShootTasks = "shoot.garden.sapcloud.io/tasks"
+	ShootTasks = "shoot.gardener.cloud/tasks"
+
+	// ShootTasksDeprecated is a constant for an annotation on a Shoot which states that certain tasks should be done.
+	//
+	// Deprecated: Use `ShootTasks` instead.
+	ShootTasksDeprecated = "shoot.garden.sapcloud.io/tasks"
 
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
@@ -304,17 +352,36 @@ const (
 	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
 	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
 	// changed then the reconciliation flow will be executed.
-	ShootSyncPeriod = "shoot.garden.sapcloud.io/sync-period"
+	ShootSyncPeriod = "shoot.gardener.cloud/sync-period"
+
+	// ShootSyncPeriodDeprecated is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
+	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
+	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
+	// changed then the reconciliation flow will be executed.
+	//
+	// Deprecated: Use `ShootSyncPeriod` instead.
+	ShootSyncPeriodDeprecated = "shoot.garden.sapcloud.io/sync-period"
 
 	// ShootIgnore is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
 	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
 	// delete)).
-	ShootIgnore = "shoot.garden.sapcloud.io/ignore"
+	ShootIgnore = "shoot.gardener.cloud/ignore"
+
+	// ShootIgnoreDeprecated is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
+	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
+	// delete)).
+	//
+	// Deprecated: Use `ShootIgnore` instead.
+	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
 	// AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
+	//
+	// Deprecated: Use `corev1beta1.Seed` instead.
 	AnnotatePersistentVolumeMinimumSize = "persistentvolume.garden.sapcloud.io/minimumSize"
 
 	// AnnotatePersistentVolumeProvider is used to tell volume provider in the k8s cluster
+	//
+	// Deprecated: Use `corev1beta1.Seed` instead.
 	AnnotatePersistentVolumeProvider = "persistentvolume.garden.sapcloud.io/provider"
 
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
@@ -394,15 +461,6 @@ const (
 
 	// ETCDImageName is the name of the ETCD image.
 	ETCDImageName = "etcd"
-
-	// CSINodeDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/node-driver-registrar
-	CSINodeDriverRegistrarImageName = "csi-node-driver-registrar"
-
-	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
-	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
-
-	// CSIPluginPacketImageName is the name of csi plugin for Packet - https://github.com/packethost/csi-packet
-	CSIPluginPacketImageName = "packet-storage-interface"
 
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
@@ -494,8 +552,8 @@ var (
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		v1beta1constants.StatefulSetNameETCDMain,
-		v1beta1constants.StatefulSetNameETCDEvents,
+		v1beta1constants.ETCDMain,
+		v1beta1constants.ETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
@@ -517,6 +575,11 @@ var (
 		v1beta1constants.DeploymentNameGrafanaUsers,
 		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
 		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+	)
+
+	// RequiredMonitoringShootDeployments is a set of the required shoot monitoring deployments.
+	RequiredMonitoringShootDeployments = sets.NewString(
+		BlackboxExporterDeploymentName,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.

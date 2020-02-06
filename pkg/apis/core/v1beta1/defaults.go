@@ -17,6 +17,7 @@ package v1beta1
 import (
 	"math"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -119,12 +120,26 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
 		var defaultAuthMode string
-		if k8sVersionLessThan116 {
+		if *obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication {
 			defaultAuthMode = KubernetesDashboardAuthModeBasic
 		} else {
 			defaultAuthMode = KubernetesDashboardAuthModeToken
 		}
 		obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+	}
+
+	if obj.Spec.Purpose == nil {
+		p := ShootPurposeEvaluation
+
+		// backwards compatibility - take purpose from annotation if given. If not, default.
+		// TODO: This code can be removed in a future version
+		if v, ok := obj.Annotations[v1beta1constants.GardenerPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
+			p = ShootPurpose(v)
+		} else if v, ok := obj.Annotations[v1beta1constants.GardenPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1beta1constants.GardenNamespace)) {
+			p = ShootPurpose(v)
+		}
+
+		obj.Spec.Purpose = &p
 	}
 }
 

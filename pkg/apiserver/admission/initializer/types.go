@@ -17,8 +17,6 @@ package initializer
 import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
 	"k8s.io/apiserver/pkg/admission"
@@ -36,18 +34,6 @@ type WantsInternalCoreInformerFactory interface {
 // WantsInternalCoreClientset defines a function which sets Core Clientset for admission plugins that need it.
 type WantsInternalCoreClientset interface {
 	SetInternalCoreClientset(coreclientset.Interface)
-	admission.InitializationValidator
-}
-
-// WantsInternalGardenInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
-type WantsInternalGardenInformerFactory interface {
-	SetInternalGardenInformerFactory(gardeninformers.SharedInformerFactory)
-	admission.InitializationValidator
-}
-
-// WantsInternalGardenClientset defines a function which sets Garden Clientset for admission plugins that need it.
-type WantsInternalGardenClientset interface {
-	SetInternalGardenClientset(gardenclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -78,9 +64,6 @@ type WantsAuthorizer interface {
 type pluginInitializer struct {
 	coreInformers coreinformers.SharedInformerFactory
 	coreClient    coreclientset.Interface
-
-	gardenInformers gardeninformers.SharedInformerFactory
-	gardenClient    gardenclientset.Interface
 
 	settingsInformers settingsinformer.SharedInformerFactory
 

@@ -125,6 +125,7 @@ allowedMetrics:
   - etcdbr_validation_duration_seconds_count
   - etcdbr_validation_duration_seconds_sum
   - process_resident_memory_bytes
+  - process_cpu_seconds_total
   kubeProxy:
   - kubeproxy_network_programming_duration_seconds_bucket
   - kubeproxy_network_programming_duration_seconds_count
@@ -181,57 +182,29 @@ allowedMetrics:
   - kube_statefulset_status_replicas_ready
   - kube_statefulset_status_replicas_updated
   machineControllerManager:
-  - machine_adds
-  - machine_depth
-  - machine_queue_latency
-  - machine_retries
-  - machine_work_duration
-  - machinedeployment_adds
-  - machinedeployment_depth
-  - machinedeployment_queue_latency
-  - machinedeployment_retries
-  - machinedeployment_work_duration
-  - machinesafetyapiserver_adds
-  - machinesafetyapiserver_depth
-  - machinesafetyapiserver_queue_latency
-  - machinesafetyapiserver_retries
-  - machinesafetyapiserver_work_duration
-  - machinesafetyorphanvms_adds
-  - machinesafetyorphanvms_depth
-  - machinesafetyorphanvms_queue_latency
-  - machinesafetyorphanvms_retries
-  - machinesafetyorphanvms_work_duration
-  - machinesafetyovershooting_adds
-  - machinesafetyovershooting_depth
-  - machinesafetyovershooting_latency
-  - machinesafetyovershooting_retries
-  - machinesafetyovershooting_work_duration
-  - machineset_adds
-  - machineset_depth
-  - machineset_queue_latency
-  - machineset_retries
-  - machineset_work_duration
+  - mcm_workqueue_adds_total
+  - mcm_workqueue_depth
+  - mcm_workqueue_queue_duration_seconds_bucket
+  - mcm_workqueue_queue_duration_seconds_sum
+  - mcm_workqueue_queue_duration_seconds_count
+  - mcm_workqueue_work_duration_seconds_bucket
+  - mcm_workqueue_work_duration_seconds_sum
+  - mcm_workqueue_work_duration_seconds_count
+  - mcm_workqueue_unfinished_work_seconds
+  - mcm_workqueue_longest_running_processor_seconds
+  - mcm_workqueue_retries_total
   - mcm_cloud_api_requests_failed_total
   - mcm_cloud_api_requests_total
   - mcm_machine_controller_frozen
   - mcm_machine_deployment_failed_machines
   - mcm_machine_items_total
   - mcm_machine_set_failed_machines
-  - mcm_machinedeployment_items_total
-  - mcm_machineset_items_total
+  - mcm_machine_deployment_items_total
+  - mcm_machine_set_items_total
   - mcm_scrape_failure_total
-  - node_adds
-  - node_depth
-  - node_queue_latency
-  - node_retries
-  - node_work_duration
+  - mcm_machine_current_status_phase
   - process_max_fds
   - process_open_fds
-  - secret_adds
-  - secret_depth
-  - secret_queue_latency
-  - secret_retries
-  - secret_work_duration
   nodeExporter:
   - node_cpu_seconds_total
   - node_filesystem_avail_bytes

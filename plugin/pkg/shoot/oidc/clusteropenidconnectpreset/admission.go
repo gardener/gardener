@@ -22,11 +22,10 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/garden"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	settingslister "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	applier "github.com/gardener/gardener/plugin/pkg/shoot/oidc"
@@ -53,13 +52,13 @@ func Register(plugins *admission.Plugins) {
 type ClusterOpenIDConnectPreset struct {
 	*admission.Handler
 
-	projectLister     gardenlisters.ProjectLister
+	projectLister     corelisters.ProjectLister
 	clusterOIDCLister settingslister.ClusterOpenIDConnectPresetLister
 	readyFunc         admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ClusterOpenIDConnectPreset{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ClusterOpenIDConnectPreset{})
 	_ = admissioninitializer.WantsSettingsInformerFactory(&ClusterOpenIDConnectPreset{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -78,9 +77,9 @@ func (c *ClusterOpenIDConnectPreset) AssignReadyFunc(f admission.ReadyFunc) {
 	c.SetReadyFunc(f)
 }
 
-// SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (c *ClusterOpenIDConnectPreset) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	projectInformer := f.Garden().InternalVersion().Projects()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (c *ClusterOpenIDConnectPreset) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().InternalVersion().Projects()
 	c.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced)
@@ -129,10 +128,10 @@ func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attr
 	// Ignore all kinds other than Shoot
 	// Ignore all subresource calls
 	// Ignore all operations other than CREATE
-	if len(a.GetSubresource()) != 0 || (a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot")) || a.GetOperation() != admission.Create {
+	if len(a.GetSubresource()) != 0 || a.GetKind().GroupKind() != core.Kind("Shoot") || a.GetOperation() != admission.Create {
 		return nil
 	}
-	shoot, ok := a.GetObject().(*garden.Shoot)
+	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
@@ -157,9 +156,9 @@ func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attr
 	if len(projects) == 0 {
 		return nil
 	}
-	var foundProject *garden.Project
+	var foundProject *core.Project
 	for _, project := range projects {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == shoot.Namespace && project.Status.Phase == garden.ProjectReady {
+		if project.Spec.Namespace != nil && *project.Spec.Namespace == shoot.Namespace && project.Status.Phase == core.ProjectReady {
 			foundProject = project
 			break
 		}
@@ -181,7 +180,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attr
 	return nil
 }
 
-func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *garden.Shoot, project *garden.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
+func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, shoot *core.Shoot, project *core.Project) (*settingsv1alpha1.OpenIDConnectPresetSpec, error) {
 	var matchedPreset *settingsv1alpha1.ClusterOpenIDConnectPreset
 
 	for _, oidc := range oidcs {

@@ -15,7 +15,6 @@
 package v1beta1
 
 import (
-	"encoding/json"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -82,6 +81,9 @@ type ShootSpec struct {
 	Monitoring *Monitoring `json:"monitoring,omitempty"`
 	// Provider contains all provider-specific and provider-relevant information.
 	Provider Provider `json:"provider"`
+	// Purpose is the purpose class for this cluster.
+	// +optional
+	Purpose *ShootPurpose `json:"purpose,omitempty"`
 	// Region is a name of a region.
 	Region string `json:"region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
@@ -148,7 +150,7 @@ type Addons struct {
 	NginxIngress *NginxIngress `json:"nginxIngress,omitempty"`
 }
 
-// Addon also enabling or disabling a specific addon and is used to derive from.
+// Addon allows enabling or disabling a specific addon and is used to derive from.
 type Addon struct {
 	// Enabled indicates whether the addon is enabled or not.
 	Enabled bool `json:"enabled"`
@@ -466,66 +468,30 @@ type KubeControllerManagerConfig struct {
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty"`
 }
 
-// GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.
-type GardenerDuration struct {
-	time.Duration `protobuf:"varint,1,opt,name=duration,casttype=time.Duration"`
-}
-
-// OpenAPISchemaType is used by the kube-openapi generator when constructing
-// the OpenAPI spec of this type.
-//
-// See: https://github.com/kubernetes/kube-openapi/tree/master/pkg/generators
-func (GardenerDuration) OpenAPISchemaType() []string { return []string{"string"} }
-
-// OpenAPISchemaFormat is used by the kube-openapi generator when constructing
-// the OpenAPI spec of this type.
-func (GardenerDuration) OpenAPISchemaFormat() string { return "date-time" }
-
-// UnmarshalJSON implements the json.Unmarshaller interface.
-func (d *GardenerDuration) UnmarshalJSON(b []byte) error {
-	var str string
-	if err := json.Unmarshal(b, &str); err != nil {
-		return err
-	}
-
-	pd, err := time.ParseDuration(str)
-	if err != nil {
-		return err
-	}
-	d.Duration = pd
-
-	return nil
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-func (d *GardenerDuration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.Duration.String())
-}
-
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 // Note: Descriptions were taken from the Kubernetes documentation.
 type HorizontalPodAutoscalerConfig struct {
 	// The period after which a ready pod transition is considered to be the first.
 	// +optional
-	CPUInitializationPeriod *GardenerDuration `json:"cpuInitializationPeriod,omitempty"`
+	CPUInitializationPeriod *metav1.Duration `json:"cpuInitializationPeriod,omitempty"`
 	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
 	// +optional
-	DownscaleDelay *GardenerDuration `json:"downscaleDelay,omitempty"`
+	DownscaleDelay *metav1.Duration `json:"downscaleDelay,omitempty"`
 	// The configurable window at which the controller will choose the highest recommendation for autoscaling.
 	// +optional
-	DownscaleStabilization *GardenerDuration `json:"downscaleStabilization,omitempty"`
+	DownscaleStabilization *metav1.Duration `json:"downscaleStabilization,omitempty"`
 	// The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.
 	// +optional
-	InitialReadinessDelay *GardenerDuration `json:"initialReadinessDelay,omitempty"`
+	InitialReadinessDelay *metav1.Duration `json:"initialReadinessDelay,omitempty"`
 	// The period for syncing the number of pods in horizontal pod autoscaler.
 	// +optional
-	SyncPeriod *GardenerDuration `json:"syncPeriod,omitempty"`
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
 	// +optional
 	Tolerance *float64 `json:"tolerance,omitempty"`
 	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
 	// +optional
-	UpscaleDelay *GardenerDuration `json:"upscaleDelay,omitempty"`
+	UpscaleDelay *metav1.Duration `json:"upscaleDelay,omitempty"`
 }
 
 const (
@@ -906,4 +872,20 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+)
+
+// ShootPurpose is a type alias for string.
+type ShootPurpose string
+
+const (
+	// ShootPurposeEvaluation is a constant for the evaluation purpose.
+	ShootPurposeEvaluation ShootPurpose = "evaluation"
+	// ShootPurposeTesting is a constant for the testing purpose.
+	ShootPurposeTesting ShootPurpose = "testing"
+	// ShootPurposeDevelopment is a constant for the development purpose.
+	ShootPurposeDevelopment ShootPurpose = "development"
+	// ShootPurposeProduction is a constant for the production purpose.
+	ShootPurposeProduction ShootPurpose = "production"
+	// ShootPurposeInfrastructure is a constant for the infrastructure purpose.
+	ShootPurposeInfrastructure ShootPurpose = "infrastructure"
 )

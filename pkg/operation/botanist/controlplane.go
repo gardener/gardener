@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,13 +37,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metaerrors "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -68,15 +65,13 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	}
 
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
-		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
 		namespace.Labels = map[string]string{
-			v1beta1constants.DeprecatedGardenRole:      v1beta1constants.GardenRoleShoot,
-			v1beta1constants.GardenRole:                v1beta1constants.GardenRoleShoot,
-			v1beta1constants.DeprecatedShootHibernated: strconv.FormatBool(b.Shoot.HibernationEnabled),
-			v1beta1constants.LabelSeedProvider:         string(b.Seed.Info.Spec.Provider.Type),
-			v1beta1constants.LabelShootProvider:        string(b.Shoot.Info.Spec.Provider.Type),
-			v1beta1constants.LabelNetworkingProvider:   string(b.Shoot.Info.Spec.Networking.Type),
-			v1beta1constants.LabelBackupProvider:       string(b.Seed.Info.Spec.Provider.Type),
+			v1beta1constants.DeprecatedGardenRole:    v1beta1constants.GardenRoleShoot,
+			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
+			v1beta1constants.LabelSeedProvider:       string(b.Seed.Info.Spec.Provider.Type),
+			v1beta1constants.LabelShootProvider:      string(b.Shoot.Info.Spec.Provider.Type),
+			v1beta1constants.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
+			v1beta1constants.LabelBackupProvider:     string(b.Seed.Info.Spec.Provider.Type),
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
@@ -90,18 +85,6 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 
 	b.SeedNamespaceObject = namespace
 	return nil
-}
-
-func getShootAnnotations(annotations map[string]string, uid types.UID) map[string]string {
-	shootAnnotations := map[string]string{
-		v1beta1constants.DeprecatedShootUID: string(uid),
-	}
-	for key, value := range annotations {
-		if strings.HasPrefix(key, v1beta1constants.AnnotationShootCustom) {
-			shootAnnotations[key] = value
-		}
-	}
-	return shootAnnotations
 }
 
 // DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
@@ -215,7 +198,7 @@ func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
-	for _, statefulset := range []string{v1beta1constants.StatefulSetNameETCDEvents, v1beta1constants.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 1); err != nil {
 			return err
 		}
@@ -292,7 +275,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
-		if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
@@ -303,7 +286,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	for _, statefulset := range []string{v1beta1constants.StatefulSetNameETCDEvents, v1beta1constants.StatefulSetNameETCDMain} {
+	for _, statefulset := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, c, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -339,14 +322,14 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.Info.Spec.Provider.Type),
+				Type:           string(b.Shoot.Info.Spec.Provider.Type),
+				ProviderConfig: providerConfig,
 			},
 			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: cp.Namespace,
 			},
-			ProviderConfig: providerConfig,
 			InfrastructureProviderStatus: &runtime.RawExtension{
 				Raw: b.Shoot.InfrastructureStatus,
 			},
@@ -928,7 +911,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			Kind:    "Hvpa",
 		})
 		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); err != nil {
-			if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 				return err
 			}
 		}
@@ -996,11 +979,15 @@ func (b *Botanist) DeployKubeControllerManager() error {
 		},
 	}
 
-	replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
-	if err != nil {
-		return err
+	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
+		// Keep the replica count same if the shoot is not transitioning from/to hibernation state
+		// otherwise this may interfere with dependency-watchdog
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
+		if err != nil {
+			return err
+		}
+		defaultValues["replicas"] = replicaCount
 	}
-	defaultValues["replicas"] = replicaCount
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {
@@ -1136,7 +1123,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				Kind:    "Hvpa",
 			})
 			if err := b.K8sSeedClient.Client().Delete(ctx, u); err != nil {
-				if !apierrors.IsNotFound(err) && !metaerrors.IsNoMatchError(err) {
+				if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 					return err
 				}
 			}

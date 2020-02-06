@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ Object = (*Extension)(nil)
@@ -62,17 +61,10 @@ type ExtensionList struct {
 type ExtensionSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-	// ProviderConfig is the configuration for the respective extension controller.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // ExtensionStatus is the status for a Extension resource.
 type ExtensionStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
-
-	// ProviderStatus contains provider-specific output for this extension.
-	// +optional
-	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }

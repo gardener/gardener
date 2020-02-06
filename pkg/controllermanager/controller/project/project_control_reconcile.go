@@ -117,7 +117,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
-	// We also create a RoleBinding in the namespace that binds all members to the garden.sapcloud.io:system:project-member
+	// We also create a RoleBinding in the namespace that binds all members to the gardener.cloud:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
 	var (
 		admins  []rbacv1.Subject
@@ -148,16 +148,10 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	}
 
 	// Delete legacy resources
-	// TODO: This can be removed in a future version of Gardener.
+	// TODO: This can be removed in a future version of Gardener (post v1.0 release).
 	for _, obj := range []runtime.Object{
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-member:%s", project.Name)}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("garden.sapcloud.io:system:project-viewer:%s", project.Name)}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: project.Name}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: project.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: namespace.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: namespace.Name}},
 	} {
 		if err := c.k8sGardenClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while cleaning up legacy RBAC rules for namespace %q: %+v", namespace.Name, err)
@@ -202,15 +196,18 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 	}
 
 	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		if !apiequality.Semantic.DeepDerivative(projectLabels, ns.Labels) {
-			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
+		projectLabelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
+		if !apiequality.Semantic.DeepDerivative(projectLabelsDeprecated, ns.Labels) {
+			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabelsDeprecated)
 		}
 
-		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, ns.Annotations) {
+		projectAnnotationsDeprecated := namespaceAnnotationsFromProjectDeprecated(project)
+		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProjectDeprecated) && !apiequality.Semantic.DeepDerivative(projectAnnotationsDeprecated, ns.Annotations) {
 			return nil, fmt.Errorf("namespace is already in-use by another project")
 		}
 
 		ns.OwnerReferences = common.MergeOwnerReferences(ns.OwnerReferences, *ownerReference)
+		ns.Labels = utils.MergeStringMaps(ns.Labels, projectLabels)
 		ns.Annotations = utils.MergeStringMaps(ns.Annotations, projectAnnotations)
 
 		return ns, nil

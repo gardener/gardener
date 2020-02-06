@@ -162,9 +162,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	var (
-		newConditions      = helper.MergeConditions(controllerInstallation.Status.Conditions, helper.InitCondition(gardencorev1beta1.ControllerInstallationValid), helper.InitCondition(gardencorev1beta1.ControllerInstallationInstalled))
-		conditionValid     = newConditions[0]
-		conditionInstalled = newConditions[1]
+		conditionValid     = helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationValid)
+		conditionInstalled = helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
 	)
 
 	defer func() {
@@ -285,7 +284,12 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful", "Installation of new resources succeeded.")
+	if conditionInstalled.Status == gardencorev1beta1.ConditionUnknown {
+		// initially set condition to Pending
+		// care controller will update condition based on 'ResourcesApplied' condition of ManagedResource
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", fmt.Sprintf("Installation of ManagedResource %q is still pending.", controllerInstallation.Name))
+	}
+
 	return nil
 }
 

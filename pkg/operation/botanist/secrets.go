@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -294,8 +293,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "kube-state-metrics",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:kube-state-metrics", garden.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:kube-state-metrics",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -314,8 +313,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", garden.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:prometheus",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -334,8 +333,8 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus-kubelet",
 
-				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", garden.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
+				CommonName:   "gardener.cloud:monitoring:prometheus",
+				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
 				IPAddresses:  nil,
 
@@ -490,7 +489,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.AlertManagerTLS,
 
 			CommonName:   "alertmanager",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputeAlertManagerHosts(),
 			IPAddresses:  nil,
 
@@ -504,7 +503,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputeGrafanaHosts(),
 			IPAddresses:  nil,
 
@@ -518,7 +517,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			Name: common.PrometheusTLS,
 
 			CommonName:   "prometheus",
-			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     b.ComputePrometheusHosts(),
 			IPAddresses:  nil,
 
@@ -552,13 +551,16 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	// Secret definition for dependency-watchdog-internal-probe
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.DependencyWatchdogInternalProbeSecretName,
+			Name: common.DependencyWatchdogInternalProbeSecretName,
+
+			CommonName:   common.DependencyWatchdogUserName,
+			Organization: nil,
+			DNSNames:     nil,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
@@ -568,13 +570,16 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	// Secret definition for dependency-watchdog-external-probe
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.DependencyWatchdogExternalProbeSecretName,
+			Name: common.DependencyWatchdogExternalProbeSecretName,
+
+			CommonName:   common.DependencyWatchdogUserName,
+			Organization: nil,
+			DNSNames:     nil,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
@@ -592,7 +597,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				Name: common.KibanaTLS,
 
 				CommonName:   "kibana",
-				Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
+				Organization: []string{"gardener.cloud:logging:ingress"},
 				DNSNames:     b.ComputeKibanaHosts(),
 				IPAddresses:  nil,
 
@@ -681,7 +686,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	// If the rotate-kubeconfig operation annotation is set then we delete the existing kubecfg and basic-auth
 	// secrets. This will trigger the regeneration, incorporating new credentials. After successful deletion of all
 	// old secrets we remove the operation annotation.
-	if kutil.HasMetaDataAnnotation(b.Shoot.Info, common.ShootOperation, common.ShootOperationRotateKubeconfigCredentials) {
+	if val, ok := common.GetShootOperationAnnotation(b.Shoot.Info.Annotations); ok && val == common.ShootOperationRotateKubeconfigCredentials {
 		b.Logger.Infof("Rotating kubeconfig credentials")
 
 		for _, secretName := range []string{common.StaticTokenSecretName, common.BasicAuthSecretName, common.KubecfgSecretName} {
@@ -691,7 +696,8 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		}
 
 		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			delete(shoot.Annotations, common.ShootOperation)
+			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+			delete(shoot.Annotations, common.ShootOperationDeprecated)
 			return shoot, nil
 		}); err != nil {
 			return err
@@ -721,6 +727,26 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.KubecfgSecretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+	}
+
+	// The kubeconfig secrets for the dependency-watchdog probes have now stopped using token to avoid the need for reconciliation
+	// on rotation. The old secrets containing tokens must be removed so that new secrets without token can be generated.
+	for _, secretName := range []string{common.DependencyWatchdogInternalProbeSecretName, common.DependencyWatchdogExternalProbeSecretName} {
+		secret := &corev1.Secret{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, secretName), secret); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		if _, ok := secret.Data[secrets.DataKeyToken]; ok {
+			// The kubeconfig uses bearer token. Delete it to regenerate the new kubeconfig without bearer token.
+			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+
+		// The kubeconfig does not use bearer token. No change required.
 	}
 
 	existingSecretsMap, err := b.fetchExistingSecrets(ctx)
@@ -1166,10 +1192,10 @@ func dnsNamesForService(name, namespace string) []string {
 
 func dnsNamesForEtcd(namespace string) []string {
 	names := []string{
-		fmt.Sprintf("%s-0", v1beta1constants.StatefulSetNameETCDMain),
-		fmt.Sprintf("%s-0", v1beta1constants.StatefulSetNameETCDEvents),
+		fmt.Sprintf("%s-0", v1beta1constants.ETCDMain),
+		fmt.Sprintf("%s-0", v1beta1constants.ETCDEvents),
 	}
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDMain), namespace)...)
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.StatefulSetNameETCDEvents), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
 	return names
 }

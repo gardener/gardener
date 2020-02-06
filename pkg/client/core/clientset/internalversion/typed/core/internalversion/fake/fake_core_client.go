@@ -36,6 +36,10 @@ func (c *FakeCore) BackupEntries(namespace string) internalversion.BackupEntryIn
 	return &FakeBackupEntries{c, namespace}
 }
 
+func (c *FakeCore) CloudProfiles() internalversion.CloudProfileInterface {
+	return &FakeCloudProfiles{c}
+}
+
 func (c *FakeCore) ControllerInstallations() internalversion.ControllerInstallationInterface {
 	return &FakeControllerInstallations{c}
 }
@@ -46,6 +50,26 @@ func (c *FakeCore) ControllerRegistrations() internalversion.ControllerRegistrat
 
 func (c *FakeCore) Plants(namespace string) internalversion.PlantInterface {
 	return &FakePlants{c, namespace}
+}
+
+func (c *FakeCore) Projects() internalversion.ProjectInterface {
+	return &FakeProjects{c}
+}
+
+func (c *FakeCore) Quotas(namespace string) internalversion.QuotaInterface {
+	return &FakeQuotas{c, namespace}
+}
+
+func (c *FakeCore) SecretBindings(namespace string) internalversion.SecretBindingInterface {
+	return &FakeSecretBindings{c, namespace}
+}
+
+func (c *FakeCore) Seeds() internalversion.SeedInterface {
+	return &FakeSeeds{c}
+}
+
+func (c *FakeCore) Shoots(namespace string) internalversion.ShootInterface {
+	return &FakeShoots{c, namespace}
 }
 
 func (c *FakeCore) ShootStates(namespace string) internalversion.ShootStateInterface {

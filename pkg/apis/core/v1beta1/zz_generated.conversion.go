@@ -24,7 +24,6 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
-	garden "github.com/gardener/gardener/pkg/apis/garden"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -42,73 +41,73 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*Addon)(nil), (*garden.Addon)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Addon_To_garden_Addon(a.(*Addon), b.(*garden.Addon), scope)
+	if err := s.AddGeneratedConversionFunc((*Addon)(nil), (*core.Addon)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Addon_To_core_Addon(a.(*Addon), b.(*core.Addon), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Addon)(nil), (*Addon)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Addon_To_v1beta1_Addon(a.(*garden.Addon), b.(*Addon), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Addon)(nil), (*Addon)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Addon_To_v1beta1_Addon(a.(*core.Addon), b.(*Addon), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Addons)(nil), (*garden.Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Addons_To_garden_Addons(a.(*Addons), b.(*garden.Addons), scope)
+	if err := s.AddGeneratedConversionFunc((*Addons)(nil), (*core.Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Addons_To_core_Addons(a.(*Addons), b.(*core.Addons), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Addons)(nil), (*Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Addons_To_v1beta1_Addons(a.(*garden.Addons), b.(*Addons), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Addons)(nil), (*Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Addons_To_v1beta1_Addons(a.(*core.Addons), b.(*Addons), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*AdmissionPlugin)(nil), (*garden.AdmissionPlugin)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_AdmissionPlugin_To_garden_AdmissionPlugin(a.(*AdmissionPlugin), b.(*garden.AdmissionPlugin), scope)
+	if err := s.AddGeneratedConversionFunc((*AdmissionPlugin)(nil), (*core.AdmissionPlugin)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin(a.(*AdmissionPlugin), b.(*core.AdmissionPlugin), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.AdmissionPlugin)(nil), (*AdmissionPlugin)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin(a.(*garden.AdmissionPlugin), b.(*AdmissionPlugin), scope)
+	if err := s.AddGeneratedConversionFunc((*core.AdmissionPlugin)(nil), (*AdmissionPlugin)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin(a.(*core.AdmissionPlugin), b.(*AdmissionPlugin), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Alerting)(nil), (*garden.Alerting)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Alerting_To_garden_Alerting(a.(*Alerting), b.(*garden.Alerting), scope)
+	if err := s.AddGeneratedConversionFunc((*Alerting)(nil), (*core.Alerting)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Alerting_To_core_Alerting(a.(*Alerting), b.(*core.Alerting), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Alerting)(nil), (*Alerting)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Alerting_To_v1beta1_Alerting(a.(*garden.Alerting), b.(*Alerting), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Alerting)(nil), (*Alerting)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Alerting_To_v1beta1_Alerting(a.(*core.Alerting), b.(*Alerting), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*AuditConfig)(nil), (*garden.AuditConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_AuditConfig_To_garden_AuditConfig(a.(*AuditConfig), b.(*garden.AuditConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*AuditConfig)(nil), (*core.AuditConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_AuditConfig_To_core_AuditConfig(a.(*AuditConfig), b.(*core.AuditConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.AuditConfig)(nil), (*AuditConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_AuditConfig_To_v1beta1_AuditConfig(a.(*garden.AuditConfig), b.(*AuditConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.AuditConfig)(nil), (*AuditConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_AuditConfig_To_v1beta1_AuditConfig(a.(*core.AuditConfig), b.(*AuditConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*AuditPolicy)(nil), (*garden.AuditPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_AuditPolicy_To_garden_AuditPolicy(a.(*AuditPolicy), b.(*garden.AuditPolicy), scope)
+	if err := s.AddGeneratedConversionFunc((*AuditPolicy)(nil), (*core.AuditPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_AuditPolicy_To_core_AuditPolicy(a.(*AuditPolicy), b.(*core.AuditPolicy), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.AuditPolicy)(nil), (*AuditPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_AuditPolicy_To_v1beta1_AuditPolicy(a.(*garden.AuditPolicy), b.(*AuditPolicy), scope)
+	if err := s.AddGeneratedConversionFunc((*core.AuditPolicy)(nil), (*AuditPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_AuditPolicy_To_v1beta1_AuditPolicy(a.(*core.AuditPolicy), b.(*AuditPolicy), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*AvailabilityZone)(nil), (*garden.AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_AvailabilityZone_To_garden_AvailabilityZone(a.(*AvailabilityZone), b.(*garden.AvailabilityZone), scope)
+	if err := s.AddGeneratedConversionFunc((*AvailabilityZone)(nil), (*core.AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_AvailabilityZone_To_core_AvailabilityZone(a.(*AvailabilityZone), b.(*core.AvailabilityZone), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.AvailabilityZone)(nil), (*AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_AvailabilityZone_To_v1beta1_AvailabilityZone(a.(*garden.AvailabilityZone), b.(*AvailabilityZone), scope)
+	if err := s.AddGeneratedConversionFunc((*core.AvailabilityZone)(nil), (*AvailabilityZone)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_AvailabilityZone_To_v1beta1_AvailabilityZone(a.(*core.AvailabilityZone), b.(*AvailabilityZone), scope)
 	}); err != nil {
 		return err
 	}
@@ -212,43 +211,43 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*CloudProfile)(nil), (*garden.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_CloudProfile_To_garden_CloudProfile(a.(*CloudProfile), b.(*garden.CloudProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*CloudProfile)(nil), (*core.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CloudProfile_To_core_CloudProfile(a.(*CloudProfile), b.(*core.CloudProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.CloudProfile)(nil), (*CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_CloudProfile_To_v1beta1_CloudProfile(a.(*garden.CloudProfile), b.(*CloudProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*core.CloudProfile)(nil), (*CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CloudProfile_To_v1beta1_CloudProfile(a.(*core.CloudProfile), b.(*CloudProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*CloudProfileList)(nil), (*garden.CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_CloudProfileList_To_garden_CloudProfileList(a.(*CloudProfileList), b.(*garden.CloudProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*CloudProfileList)(nil), (*core.CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CloudProfileList_To_core_CloudProfileList(a.(*CloudProfileList), b.(*core.CloudProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.CloudProfileList)(nil), (*CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_CloudProfileList_To_v1beta1_CloudProfileList(a.(*garden.CloudProfileList), b.(*CloudProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.CloudProfileList)(nil), (*CloudProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CloudProfileList_To_v1beta1_CloudProfileList(a.(*core.CloudProfileList), b.(*CloudProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*CloudProfileSpec)(nil), (*garden.CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(a.(*CloudProfileSpec), b.(*garden.CloudProfileSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*CloudProfileSpec)(nil), (*core.CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(a.(*CloudProfileSpec), b.(*core.CloudProfileSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.CloudProfileSpec)(nil), (*CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(a.(*garden.CloudProfileSpec), b.(*CloudProfileSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*core.CloudProfileSpec)(nil), (*CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(a.(*core.CloudProfileSpec), b.(*CloudProfileSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClusterAutoscaler)(nil), (*garden.ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(a.(*ClusterAutoscaler), b.(*garden.ClusterAutoscaler), scope)
+	if err := s.AddGeneratedConversionFunc((*ClusterAutoscaler)(nil), (*core.ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(a.(*ClusterAutoscaler), b.(*core.ClusterAutoscaler), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ClusterAutoscaler)(nil), (*ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(a.(*garden.ClusterAutoscaler), b.(*ClusterAutoscaler), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ClusterAutoscaler)(nil), (*ClusterAutoscaler)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(a.(*core.ClusterAutoscaler), b.(*ClusterAutoscaler), scope)
 	}); err != nil {
 		return err
 	}
@@ -362,33 +361,33 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DNS)(nil), (*garden.DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_DNS_To_garden_DNS(a.(*DNS), b.(*garden.DNS), scope)
+	if err := s.AddGeneratedConversionFunc((*DNS)(nil), (*core.DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_DNS_To_core_DNS(a.(*DNS), b.(*core.DNS), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.DNS)(nil), (*DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_DNS_To_v1beta1_DNS(a.(*garden.DNS), b.(*DNS), scope)
+	if err := s.AddGeneratedConversionFunc((*core.DNS)(nil), (*DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_DNS_To_v1beta1_DNS(a.(*core.DNS), b.(*DNS), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DNSIncludeExclude)(nil), (*garden.DNSIncludeExclude)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_DNSIncludeExclude_To_garden_DNSIncludeExclude(a.(*DNSIncludeExclude), b.(*garden.DNSIncludeExclude), scope)
+	if err := s.AddGeneratedConversionFunc((*DNSIncludeExclude)(nil), (*core.DNSIncludeExclude)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_DNSIncludeExclude_To_core_DNSIncludeExclude(a.(*DNSIncludeExclude), b.(*core.DNSIncludeExclude), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.DNSIncludeExclude)(nil), (*DNSIncludeExclude)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(a.(*garden.DNSIncludeExclude), b.(*DNSIncludeExclude), scope)
+	if err := s.AddGeneratedConversionFunc((*core.DNSIncludeExclude)(nil), (*DNSIncludeExclude)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(a.(*core.DNSIncludeExclude), b.(*DNSIncludeExclude), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DNSProvider)(nil), (*garden.DNSProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_DNSProvider_To_garden_DNSProvider(a.(*DNSProvider), b.(*garden.DNSProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*DNSProvider)(nil), (*core.DNSProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_DNSProvider_To_core_DNSProvider(a.(*DNSProvider), b.(*core.DNSProvider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.DNSProvider)(nil), (*DNSProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_DNSProvider_To_v1beta1_DNSProvider(a.(*garden.DNSProvider), b.(*DNSProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*core.DNSProvider)(nil), (*DNSProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_DNSProvider_To_v1beta1_DNSProvider(a.(*core.DNSProvider), b.(*DNSProvider), scope)
 	}); err != nil {
 		return err
 	}
@@ -402,173 +401,173 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ExpirableVersion)(nil), (*garden.ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ExpirableVersion_To_garden_ExpirableVersion(a.(*ExpirableVersion), b.(*garden.ExpirableVersion), scope)
+	if err := s.AddGeneratedConversionFunc((*ExpirableVersion)(nil), (*core.ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExpirableVersion_To_core_ExpirableVersion(a.(*ExpirableVersion), b.(*core.ExpirableVersion), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ExpirableVersion)(nil), (*ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ExpirableVersion_To_v1beta1_ExpirableVersion(a.(*garden.ExpirableVersion), b.(*ExpirableVersion), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ExpirableVersion)(nil), (*ExpirableVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(a.(*core.ExpirableVersion), b.(*ExpirableVersion), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Extension)(nil), (*garden.Extension)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Extension_To_garden_Extension(a.(*Extension), b.(*garden.Extension), scope)
+	if err := s.AddGeneratedConversionFunc((*Extension)(nil), (*core.Extension)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Extension_To_core_Extension(a.(*Extension), b.(*core.Extension), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Extension)(nil), (*Extension)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Extension_To_v1beta1_Extension(a.(*garden.Extension), b.(*Extension), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Extension)(nil), (*Extension)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Extension_To_v1beta1_Extension(a.(*core.Extension), b.(*Extension), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Gardener)(nil), (*garden.Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Gardener_To_garden_Gardener(a.(*Gardener), b.(*garden.Gardener), scope)
+	if err := s.AddGeneratedConversionFunc((*Gardener)(nil), (*core.Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Gardener_To_core_Gardener(a.(*Gardener), b.(*core.Gardener), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Gardener)(nil), (*Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Gardener_To_v1beta1_Gardener(a.(*garden.Gardener), b.(*Gardener), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Gardener)(nil), (*Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Gardener_To_v1beta1_Gardener(a.(*core.Gardener), b.(*Gardener), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Hibernation)(nil), (*garden.Hibernation)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Hibernation_To_garden_Hibernation(a.(*Hibernation), b.(*garden.Hibernation), scope)
+	if err := s.AddGeneratedConversionFunc((*Hibernation)(nil), (*core.Hibernation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Hibernation_To_core_Hibernation(a.(*Hibernation), b.(*core.Hibernation), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Hibernation)(nil), (*Hibernation)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Hibernation_To_v1beta1_Hibernation(a.(*garden.Hibernation), b.(*Hibernation), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Hibernation)(nil), (*Hibernation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Hibernation_To_v1beta1_Hibernation(a.(*core.Hibernation), b.(*Hibernation), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*HibernationSchedule)(nil), (*garden.HibernationSchedule)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(a.(*HibernationSchedule), b.(*garden.HibernationSchedule), scope)
+	if err := s.AddGeneratedConversionFunc((*HibernationSchedule)(nil), (*core.HibernationSchedule)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_HibernationSchedule_To_core_HibernationSchedule(a.(*HibernationSchedule), b.(*core.HibernationSchedule), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.HibernationSchedule)(nil), (*HibernationSchedule)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule(a.(*garden.HibernationSchedule), b.(*HibernationSchedule), scope)
+	if err := s.AddGeneratedConversionFunc((*core.HibernationSchedule)(nil), (*HibernationSchedule)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_HibernationSchedule_To_v1beta1_HibernationSchedule(a.(*core.HibernationSchedule), b.(*HibernationSchedule), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*HorizontalPodAutoscalerConfig)(nil), (*garden.HorizontalPodAutoscalerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig(a.(*HorizontalPodAutoscalerConfig), b.(*garden.HorizontalPodAutoscalerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*HorizontalPodAutoscalerConfig)(nil), (*core.HorizontalPodAutoscalerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_HorizontalPodAutoscalerConfig_To_core_HorizontalPodAutoscalerConfig(a.(*HorizontalPodAutoscalerConfig), b.(*core.HorizontalPodAutoscalerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.HorizontalPodAutoscalerConfig)(nil), (*HorizontalPodAutoscalerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(a.(*garden.HorizontalPodAutoscalerConfig), b.(*HorizontalPodAutoscalerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.HorizontalPodAutoscalerConfig)(nil), (*HorizontalPodAutoscalerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(a.(*core.HorizontalPodAutoscalerConfig), b.(*HorizontalPodAutoscalerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeAPIServerConfig)(nil), (*garden.KubeAPIServerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(a.(*KubeAPIServerConfig), b.(*garden.KubeAPIServerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeAPIServerConfig)(nil), (*core.KubeAPIServerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(a.(*KubeAPIServerConfig), b.(*core.KubeAPIServerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeAPIServerConfig)(nil), (*KubeAPIServerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(a.(*garden.KubeAPIServerConfig), b.(*KubeAPIServerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeAPIServerConfig)(nil), (*KubeAPIServerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(a.(*core.KubeAPIServerConfig), b.(*KubeAPIServerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeControllerManagerConfig)(nil), (*garden.KubeControllerManagerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(a.(*KubeControllerManagerConfig), b.(*garden.KubeControllerManagerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeControllerManagerConfig)(nil), (*core.KubeControllerManagerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig(a.(*KubeControllerManagerConfig), b.(*core.KubeControllerManagerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeControllerManagerConfig)(nil), (*KubeControllerManagerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(a.(*garden.KubeControllerManagerConfig), b.(*KubeControllerManagerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeControllerManagerConfig)(nil), (*KubeControllerManagerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(a.(*core.KubeControllerManagerConfig), b.(*KubeControllerManagerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeProxyConfig)(nil), (*garden.KubeProxyConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig(a.(*KubeProxyConfig), b.(*garden.KubeProxyConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeProxyConfig)(nil), (*core.KubeProxyConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig(a.(*KubeProxyConfig), b.(*core.KubeProxyConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeProxyConfig)(nil), (*KubeProxyConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig(a.(*garden.KubeProxyConfig), b.(*KubeProxyConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeProxyConfig)(nil), (*KubeProxyConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig(a.(*core.KubeProxyConfig), b.(*KubeProxyConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeSchedulerConfig)(nil), (*garden.KubeSchedulerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig(a.(*KubeSchedulerConfig), b.(*garden.KubeSchedulerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeSchedulerConfig)(nil), (*core.KubeSchedulerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(a.(*KubeSchedulerConfig), b.(*core.KubeSchedulerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeSchedulerConfig)(nil), (*KubeSchedulerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(a.(*garden.KubeSchedulerConfig), b.(*KubeSchedulerConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeSchedulerConfig)(nil), (*KubeSchedulerConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(a.(*core.KubeSchedulerConfig), b.(*KubeSchedulerConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeletConfig)(nil), (*garden.KubeletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig(a.(*KubeletConfig), b.(*garden.KubeletConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeletConfig)(nil), (*core.KubeletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfig_To_core_KubeletConfig(a.(*KubeletConfig), b.(*core.KubeletConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfig)(nil), (*KubeletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(a.(*garden.KubeletConfig), b.(*KubeletConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeletConfig)(nil), (*KubeletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeletConfig_To_v1beta1_KubeletConfig(a.(*core.KubeletConfig), b.(*KubeletConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeletConfigEviction)(nil), (*garden.KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(a.(*KubeletConfigEviction), b.(*garden.KubeletConfigEviction), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEviction)(nil), (*core.KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEviction_To_core_KubeletConfigEviction(a.(*KubeletConfigEviction), b.(*core.KubeletConfigEviction), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEviction)(nil), (*KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(a.(*garden.KubeletConfigEviction), b.(*KubeletConfigEviction), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeletConfigEviction)(nil), (*KubeletConfigEviction)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(a.(*core.KubeletConfigEviction), b.(*KubeletConfigEviction), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionMinimumReclaim)(nil), (*garden.KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(a.(*KubeletConfigEvictionMinimumReclaim), b.(*garden.KubeletConfigEvictionMinimumReclaim), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionMinimumReclaim)(nil), (*core.KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_core_KubeletConfigEvictionMinimumReclaim(a.(*KubeletConfigEvictionMinimumReclaim), b.(*core.KubeletConfigEvictionMinimumReclaim), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEvictionMinimumReclaim)(nil), (*KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(a.(*garden.KubeletConfigEvictionMinimumReclaim), b.(*KubeletConfigEvictionMinimumReclaim), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeletConfigEvictionMinimumReclaim)(nil), (*KubeletConfigEvictionMinimumReclaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(a.(*core.KubeletConfigEvictionMinimumReclaim), b.(*KubeletConfigEvictionMinimumReclaim), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionSoftGracePeriod)(nil), (*garden.KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(a.(*KubeletConfigEvictionSoftGracePeriod), b.(*garden.KubeletConfigEvictionSoftGracePeriod), scope)
+	if err := s.AddGeneratedConversionFunc((*KubeletConfigEvictionSoftGracePeriod)(nil), (*core.KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_core_KubeletConfigEvictionSoftGracePeriod(a.(*KubeletConfigEvictionSoftGracePeriod), b.(*core.KubeletConfigEvictionSoftGracePeriod), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubeletConfigEvictionSoftGracePeriod)(nil), (*KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(a.(*garden.KubeletConfigEvictionSoftGracePeriod), b.(*KubeletConfigEvictionSoftGracePeriod), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubeletConfigEvictionSoftGracePeriod)(nil), (*KubeletConfigEvictionSoftGracePeriod)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(a.(*core.KubeletConfigEvictionSoftGracePeriod), b.(*KubeletConfigEvictionSoftGracePeriod), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Kubernetes)(nil), (*garden.Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Kubernetes_To_garden_Kubernetes(a.(*Kubernetes), b.(*garden.Kubernetes), scope)
+	if err := s.AddGeneratedConversionFunc((*Kubernetes)(nil), (*core.Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Kubernetes_To_core_Kubernetes(a.(*Kubernetes), b.(*core.Kubernetes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Kubernetes)(nil), (*Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Kubernetes_To_v1beta1_Kubernetes(a.(*garden.Kubernetes), b.(*Kubernetes), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Kubernetes)(nil), (*Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Kubernetes_To_v1beta1_Kubernetes(a.(*core.Kubernetes), b.(*Kubernetes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubernetesConfig)(nil), (*garden.KubernetesConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(a.(*KubernetesConfig), b.(*garden.KubernetesConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*KubernetesConfig)(nil), (*core.KubernetesConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(a.(*KubernetesConfig), b.(*core.KubernetesConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubernetesConfig)(nil), (*KubernetesConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(a.(*garden.KubernetesConfig), b.(*KubernetesConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubernetesConfig)(nil), (*KubernetesConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(a.(*core.KubernetesConfig), b.(*KubernetesConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubernetesDashboard)(nil), (*garden.KubernetesDashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(a.(*KubernetesDashboard), b.(*garden.KubernetesDashboard), scope)
+	if err := s.AddGeneratedConversionFunc((*KubernetesDashboard)(nil), (*core.KubernetesDashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubernetesDashboard_To_core_KubernetesDashboard(a.(*KubernetesDashboard), b.(*core.KubernetesDashboard), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubernetesDashboard)(nil), (*KubernetesDashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(a.(*garden.KubernetesDashboard), b.(*KubernetesDashboard), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubernetesDashboard)(nil), (*KubernetesDashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubernetesDashboard_To_v1beta1_KubernetesDashboard(a.(*core.KubernetesDashboard), b.(*KubernetesDashboard), scope)
 	}); err != nil {
 		return err
 	}
@@ -582,13 +581,13 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*KubernetesSettings)(nil), (*garden.KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings(a.(*KubernetesSettings), b.(*garden.KubernetesSettings), scope)
+	if err := s.AddGeneratedConversionFunc((*KubernetesSettings)(nil), (*core.KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_KubernetesSettings_To_core_KubernetesSettings(a.(*KubernetesSettings), b.(*core.KubernetesSettings), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.KubernetesSettings)(nil), (*KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings(a.(*garden.KubernetesSettings), b.(*KubernetesSettings), scope)
+	if err := s.AddGeneratedConversionFunc((*core.KubernetesSettings)(nil), (*KubernetesSettings)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(a.(*core.KubernetesSettings), b.(*KubernetesSettings), scope)
 	}); err != nil {
 		return err
 	}
@@ -612,123 +611,123 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Machine)(nil), (*garden.Machine)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Machine_To_garden_Machine(a.(*Machine), b.(*garden.Machine), scope)
+	if err := s.AddGeneratedConversionFunc((*Machine)(nil), (*core.Machine)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Machine_To_core_Machine(a.(*Machine), b.(*core.Machine), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Machine)(nil), (*Machine)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Machine_To_v1beta1_Machine(a.(*garden.Machine), b.(*Machine), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Machine)(nil), (*Machine)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Machine_To_v1beta1_Machine(a.(*core.Machine), b.(*Machine), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*garden.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineImage_To_garden_MachineImage(a.(*MachineImage), b.(*garden.MachineImage), scope)
+	if err := s.AddGeneratedConversionFunc((*MachineImage)(nil), (*core.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineImage_To_core_MachineImage(a.(*MachineImage), b.(*core.MachineImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_MachineImage_To_v1beta1_MachineImage(a.(*garden.MachineImage), b.(*MachineImage), scope)
+	if err := s.AddGeneratedConversionFunc((*core.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MachineImage_To_v1beta1_MachineImage(a.(*core.MachineImage), b.(*MachineImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MachineType)(nil), (*garden.MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineType_To_garden_MachineType(a.(*MachineType), b.(*garden.MachineType), scope)
+	if err := s.AddGeneratedConversionFunc((*MachineType)(nil), (*core.MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineType_To_core_MachineType(a.(*MachineType), b.(*core.MachineType), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.MachineType)(nil), (*MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_MachineType_To_v1beta1_MachineType(a.(*garden.MachineType), b.(*MachineType), scope)
+	if err := s.AddGeneratedConversionFunc((*core.MachineType)(nil), (*MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MachineType_To_v1beta1_MachineType(a.(*core.MachineType), b.(*MachineType), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MachineTypeStorage)(nil), (*garden.MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineTypeStorage_To_garden_MachineTypeStorage(a.(*MachineTypeStorage), b.(*garden.MachineTypeStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*MachineTypeStorage)(nil), (*core.MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineTypeStorage_To_core_MachineTypeStorage(a.(*MachineTypeStorage), b.(*core.MachineTypeStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.MachineTypeStorage)(nil), (*MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_MachineTypeStorage_To_v1beta1_MachineTypeStorage(a.(*garden.MachineTypeStorage), b.(*MachineTypeStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*core.MachineTypeStorage)(nil), (*MachineTypeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage(a.(*core.MachineTypeStorage), b.(*MachineTypeStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Maintenance)(nil), (*garden.Maintenance)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Maintenance_To_garden_Maintenance(a.(*Maintenance), b.(*garden.Maintenance), scope)
+	if err := s.AddGeneratedConversionFunc((*Maintenance)(nil), (*core.Maintenance)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Maintenance_To_core_Maintenance(a.(*Maintenance), b.(*core.Maintenance), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Maintenance)(nil), (*Maintenance)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Maintenance_To_v1beta1_Maintenance(a.(*garden.Maintenance), b.(*Maintenance), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Maintenance)(nil), (*Maintenance)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Maintenance_To_v1beta1_Maintenance(a.(*core.Maintenance), b.(*Maintenance), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MaintenanceAutoUpdate)(nil), (*garden.MaintenanceAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(a.(*MaintenanceAutoUpdate), b.(*garden.MaintenanceAutoUpdate), scope)
+	if err := s.AddGeneratedConversionFunc((*MaintenanceAutoUpdate)(nil), (*core.MaintenanceAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(a.(*MaintenanceAutoUpdate), b.(*core.MaintenanceAutoUpdate), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.MaintenanceAutoUpdate)(nil), (*MaintenanceAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(a.(*garden.MaintenanceAutoUpdate), b.(*MaintenanceAutoUpdate), scope)
+	if err := s.AddGeneratedConversionFunc((*core.MaintenanceAutoUpdate)(nil), (*MaintenanceAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(a.(*core.MaintenanceAutoUpdate), b.(*MaintenanceAutoUpdate), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MaintenanceTimeWindow)(nil), (*garden.MaintenanceTimeWindow)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MaintenanceTimeWindow_To_garden_MaintenanceTimeWindow(a.(*MaintenanceTimeWindow), b.(*garden.MaintenanceTimeWindow), scope)
+	if err := s.AddGeneratedConversionFunc((*MaintenanceTimeWindow)(nil), (*core.MaintenanceTimeWindow)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MaintenanceTimeWindow_To_core_MaintenanceTimeWindow(a.(*MaintenanceTimeWindow), b.(*core.MaintenanceTimeWindow), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.MaintenanceTimeWindow)(nil), (*MaintenanceTimeWindow)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(a.(*garden.MaintenanceTimeWindow), b.(*MaintenanceTimeWindow), scope)
+	if err := s.AddGeneratedConversionFunc((*core.MaintenanceTimeWindow)(nil), (*MaintenanceTimeWindow)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(a.(*core.MaintenanceTimeWindow), b.(*MaintenanceTimeWindow), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Monitoring)(nil), (*garden.Monitoring)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Monitoring_To_garden_Monitoring(a.(*Monitoring), b.(*garden.Monitoring), scope)
+	if err := s.AddGeneratedConversionFunc((*Monitoring)(nil), (*core.Monitoring)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Monitoring_To_core_Monitoring(a.(*Monitoring), b.(*core.Monitoring), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Monitoring)(nil), (*Monitoring)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Monitoring_To_v1beta1_Monitoring(a.(*garden.Monitoring), b.(*Monitoring), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Monitoring)(nil), (*Monitoring)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Monitoring_To_v1beta1_Monitoring(a.(*core.Monitoring), b.(*Monitoring), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Networking)(nil), (*garden.Networking)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Networking_To_garden_Networking(a.(*Networking), b.(*garden.Networking), scope)
+	if err := s.AddGeneratedConversionFunc((*Networking)(nil), (*core.Networking)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Networking_To_core_Networking(a.(*Networking), b.(*core.Networking), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Networking)(nil), (*Networking)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Networking_To_v1beta1_Networking(a.(*garden.Networking), b.(*Networking), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Networking)(nil), (*Networking)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Networking_To_v1beta1_Networking(a.(*core.Networking), b.(*Networking), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NginxIngress)(nil), (*garden.NginxIngress)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_NginxIngress_To_garden_NginxIngress(a.(*NginxIngress), b.(*garden.NginxIngress), scope)
+	if err := s.AddGeneratedConversionFunc((*NginxIngress)(nil), (*core.NginxIngress)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_NginxIngress_To_core_NginxIngress(a.(*NginxIngress), b.(*core.NginxIngress), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.NginxIngress)(nil), (*NginxIngress)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_NginxIngress_To_v1beta1_NginxIngress(a.(*garden.NginxIngress), b.(*NginxIngress), scope)
+	if err := s.AddGeneratedConversionFunc((*core.NginxIngress)(nil), (*NginxIngress)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_NginxIngress_To_v1beta1_NginxIngress(a.(*core.NginxIngress), b.(*NginxIngress), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*OIDCConfig)(nil), (*garden.OIDCConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OIDCConfig_To_garden_OIDCConfig(a.(*OIDCConfig), b.(*garden.OIDCConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*OIDCConfig)(nil), (*core.OIDCConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OIDCConfig_To_core_OIDCConfig(a.(*OIDCConfig), b.(*core.OIDCConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.OIDCConfig)(nil), (*OIDCConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig(a.(*garden.OIDCConfig), b.(*OIDCConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.OIDCConfig)(nil), (*OIDCConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_OIDCConfig_To_v1beta1_OIDCConfig(a.(*core.OIDCConfig), b.(*OIDCConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*OpenIDConnectClientAuthentication)(nil), (*garden.OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(a.(*OpenIDConnectClientAuthentication), b.(*garden.OpenIDConnectClientAuthentication), scope)
+	if err := s.AddGeneratedConversionFunc((*OpenIDConnectClientAuthentication)(nil), (*core.OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OpenIDConnectClientAuthentication_To_core_OpenIDConnectClientAuthentication(a.(*OpenIDConnectClientAuthentication), b.(*core.OpenIDConnectClientAuthentication), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.OpenIDConnectClientAuthentication)(nil), (*OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(a.(*garden.OpenIDConnectClientAuthentication), b.(*OpenIDConnectClientAuthentication), scope)
+	if err := s.AddGeneratedConversionFunc((*core.OpenIDConnectClientAuthentication)(nil), (*OpenIDConnectClientAuthentication)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(a.(*core.OpenIDConnectClientAuthentication), b.(*OpenIDConnectClientAuthentication), scope)
 	}); err != nil {
 		return err
 	}
@@ -772,63 +771,63 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Project)(nil), (*garden.Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Project_To_garden_Project(a.(*Project), b.(*garden.Project), scope)
+	if err := s.AddGeneratedConversionFunc((*Project)(nil), (*core.Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Project_To_core_Project(a.(*Project), b.(*core.Project), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Project)(nil), (*Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Project_To_v1beta1_Project(a.(*garden.Project), b.(*Project), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Project)(nil), (*Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Project_To_v1beta1_Project(a.(*core.Project), b.(*Project), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ProjectList)(nil), (*garden.ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectList_To_garden_ProjectList(a.(*ProjectList), b.(*garden.ProjectList), scope)
+	if err := s.AddGeneratedConversionFunc((*ProjectList)(nil), (*core.ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ProjectList_To_core_ProjectList(a.(*ProjectList), b.(*core.ProjectList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ProjectList)(nil), (*ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ProjectList_To_v1beta1_ProjectList(a.(*garden.ProjectList), b.(*ProjectList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ProjectList)(nil), (*ProjectList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectList_To_v1beta1_ProjectList(a.(*core.ProjectList), b.(*ProjectList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ProjectMember)(nil), (*garden.ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectMember_To_garden_ProjectMember(a.(*ProjectMember), b.(*garden.ProjectMember), scope)
+	if err := s.AddGeneratedConversionFunc((*ProjectMember)(nil), (*core.ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ProjectMember_To_core_ProjectMember(a.(*ProjectMember), b.(*core.ProjectMember), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ProjectMember)(nil), (*ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ProjectMember_To_v1beta1_ProjectMember(a.(*garden.ProjectMember), b.(*ProjectMember), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ProjectMember)(nil), (*ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectMember_To_v1beta1_ProjectMember(a.(*core.ProjectMember), b.(*ProjectMember), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ProjectSpec)(nil), (*garden.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(a.(*ProjectSpec), b.(*garden.ProjectSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*ProjectSpec)(nil), (*core.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(a.(*ProjectSpec), b.(*core.ProjectSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(a.(*garden.ProjectSpec), b.(*ProjectSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(a.(*core.ProjectSpec), b.(*ProjectSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ProjectStatus)(nil), (*garden.ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus(a.(*ProjectStatus), b.(*garden.ProjectStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ProjectStatus)(nil), (*core.ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ProjectStatus_To_core_ProjectStatus(a.(*ProjectStatus), b.(*core.ProjectStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ProjectStatus)(nil), (*ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ProjectStatus_To_v1beta1_ProjectStatus(a.(*garden.ProjectStatus), b.(*ProjectStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ProjectStatus)(nil), (*ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ProjectStatus_To_v1beta1_ProjectStatus(a.(*core.ProjectStatus), b.(*ProjectStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Provider)(nil), (*garden.Provider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Provider_To_garden_Provider(a.(*Provider), b.(*garden.Provider), scope)
+	if err := s.AddGeneratedConversionFunc((*Provider)(nil), (*core.Provider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Provider_To_core_Provider(a.(*Provider), b.(*core.Provider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Provider)(nil), (*Provider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Provider_To_v1beta1_Provider(a.(*garden.Provider), b.(*Provider), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Provider)(nil), (*Provider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Provider_To_v1beta1_Provider(a.(*core.Provider), b.(*Provider), scope)
 	}); err != nil {
 		return err
 	}
@@ -842,520 +841,435 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Quota)(nil), (*garden.Quota)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Quota_To_garden_Quota(a.(*Quota), b.(*garden.Quota), scope)
+	if err := s.AddGeneratedConversionFunc((*Quota)(nil), (*core.Quota)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Quota_To_core_Quota(a.(*Quota), b.(*core.Quota), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Quota)(nil), (*Quota)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Quota_To_v1beta1_Quota(a.(*garden.Quota), b.(*Quota), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Quota)(nil), (*Quota)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Quota_To_v1beta1_Quota(a.(*core.Quota), b.(*Quota), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*QuotaList)(nil), (*garden.QuotaList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_QuotaList_To_garden_QuotaList(a.(*QuotaList), b.(*garden.QuotaList), scope)
+	if err := s.AddGeneratedConversionFunc((*QuotaList)(nil), (*core.QuotaList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_QuotaList_To_core_QuotaList(a.(*QuotaList), b.(*core.QuotaList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.QuotaList)(nil), (*QuotaList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_QuotaList_To_v1beta1_QuotaList(a.(*garden.QuotaList), b.(*QuotaList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.QuotaList)(nil), (*QuotaList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_QuotaList_To_v1beta1_QuotaList(a.(*core.QuotaList), b.(*QuotaList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*QuotaSpec)(nil), (*garden.QuotaSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_QuotaSpec_To_garden_QuotaSpec(a.(*QuotaSpec), b.(*garden.QuotaSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*QuotaSpec)(nil), (*core.QuotaSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_QuotaSpec_To_core_QuotaSpec(a.(*QuotaSpec), b.(*core.QuotaSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.QuotaSpec)(nil), (*QuotaSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec(a.(*garden.QuotaSpec), b.(*QuotaSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*core.QuotaSpec)(nil), (*QuotaSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_QuotaSpec_To_v1beta1_QuotaSpec(a.(*core.QuotaSpec), b.(*QuotaSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Region)(nil), (*garden.Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Region_To_garden_Region(a.(*Region), b.(*garden.Region), scope)
+	if err := s.AddGeneratedConversionFunc((*Region)(nil), (*core.Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Region_To_core_Region(a.(*Region), b.(*core.Region), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Region)(nil), (*Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Region_To_v1beta1_Region(a.(*garden.Region), b.(*Region), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Region)(nil), (*Region)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Region_To_v1beta1_Region(a.(*core.Region), b.(*Region), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SecretBinding)(nil), (*garden.SecretBinding)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SecretBinding_To_garden_SecretBinding(a.(*SecretBinding), b.(*garden.SecretBinding), scope)
+	if err := s.AddGeneratedConversionFunc((*SecretBinding)(nil), (*core.SecretBinding)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SecretBinding_To_core_SecretBinding(a.(*SecretBinding), b.(*core.SecretBinding), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SecretBinding)(nil), (*SecretBinding)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SecretBinding_To_v1beta1_SecretBinding(a.(*garden.SecretBinding), b.(*SecretBinding), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SecretBinding)(nil), (*SecretBinding)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SecretBinding_To_v1beta1_SecretBinding(a.(*core.SecretBinding), b.(*SecretBinding), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SecretBindingList)(nil), (*garden.SecretBindingList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SecretBindingList_To_garden_SecretBindingList(a.(*SecretBindingList), b.(*garden.SecretBindingList), scope)
+	if err := s.AddGeneratedConversionFunc((*SecretBindingList)(nil), (*core.SecretBindingList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SecretBindingList_To_core_SecretBindingList(a.(*SecretBindingList), b.(*core.SecretBindingList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SecretBindingList)(nil), (*SecretBindingList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SecretBindingList_To_v1beta1_SecretBindingList(a.(*garden.SecretBindingList), b.(*SecretBindingList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SecretBindingList)(nil), (*SecretBindingList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SecretBindingList_To_v1beta1_SecretBindingList(a.(*core.SecretBindingList), b.(*SecretBindingList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Seed)(nil), (*garden.Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Seed_To_garden_Seed(a.(*Seed), b.(*garden.Seed), scope)
+	if err := s.AddGeneratedConversionFunc((*Seed)(nil), (*core.Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Seed_To_core_Seed(a.(*Seed), b.(*core.Seed), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Seed_To_v1beta1_Seed(a.(*garden.Seed), b.(*Seed), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Seed_To_v1beta1_Seed(a.(*core.Seed), b.(*Seed), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedBackup)(nil), (*garden.SeedBackup)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedBackup_To_garden_SeedBackup(a.(*SeedBackup), b.(*garden.SeedBackup), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedBackup)(nil), (*core.SeedBackup)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedBackup_To_core_SeedBackup(a.(*SeedBackup), b.(*core.SeedBackup), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedBackup)(nil), (*SeedBackup)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedBackup_To_v1beta1_SeedBackup(a.(*garden.SeedBackup), b.(*SeedBackup), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedBackup)(nil), (*SeedBackup)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedBackup_To_v1beta1_SeedBackup(a.(*core.SeedBackup), b.(*SeedBackup), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedList)(nil), (*garden.SeedList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedList_To_garden_SeedList(a.(*SeedList), b.(*garden.SeedList), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedDNS)(nil), (*core.SeedDNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedDNS_To_core_SeedDNS(a.(*SeedDNS), b.(*core.SeedDNS), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedList)(nil), (*SeedList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedList_To_v1beta1_SeedList(a.(*garden.SeedList), b.(*SeedList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedDNS)(nil), (*SeedDNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedDNS_To_v1beta1_SeedDNS(a.(*core.SeedDNS), b.(*SeedDNS), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedNetworks)(nil), (*garden.SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(a.(*SeedNetworks), b.(*garden.SeedNetworks), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedList)(nil), (*core.SeedList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedList_To_core_SeedList(a.(*SeedList), b.(*core.SeedList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedNetworks)(nil), (*SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(a.(*garden.SeedNetworks), b.(*SeedNetworks), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedList)(nil), (*SeedList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedList_To_v1beta1_SeedList(a.(*core.SeedList), b.(*SeedList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedProvider)(nil), (*garden.SeedProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedProvider_To_garden_SeedProvider(a.(*SeedProvider), b.(*garden.SeedProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedNetworks)(nil), (*core.SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedNetworks_To_core_SeedNetworks(a.(*SeedNetworks), b.(*core.SeedNetworks), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedProvider)(nil), (*SeedProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedProvider_To_v1beta1_SeedProvider(a.(*garden.SeedProvider), b.(*SeedProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedNetworks)(nil), (*SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedNetworks_To_v1beta1_SeedNetworks(a.(*core.SeedNetworks), b.(*SeedNetworks), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedSpec)(nil), (*garden.SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedSpec_To_garden_SeedSpec(a.(*SeedSpec), b.(*garden.SeedSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedProvider)(nil), (*core.SeedProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedProvider_To_core_SeedProvider(a.(*SeedProvider), b.(*core.SeedProvider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedSpec)(nil), (*SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedSpec_To_v1beta1_SeedSpec(a.(*garden.SeedSpec), b.(*SeedSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedProvider)(nil), (*SeedProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedProvider_To_v1beta1_SeedProvider(a.(*core.SeedProvider), b.(*SeedProvider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedStatus)(nil), (*garden.SeedStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedStatus_To_garden_SeedStatus(a.(*SeedStatus), b.(*garden.SeedStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedSpec)(nil), (*core.SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedSpec_To_core_SeedSpec(a.(*SeedSpec), b.(*core.SeedSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedStatus)(nil), (*SeedStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedStatus_To_v1beta1_SeedStatus(a.(*garden.SeedStatus), b.(*SeedStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedSpec)(nil), (*SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSpec_To_v1beta1_SeedSpec(a.(*core.SeedSpec), b.(*SeedSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedTaint)(nil), (*garden.SeedTaint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedTaint_To_garden_SeedTaint(a.(*SeedTaint), b.(*garden.SeedTaint), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedStatus)(nil), (*core.SeedStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedStatus_To_core_SeedStatus(a.(*SeedStatus), b.(*core.SeedStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedTaint)(nil), (*SeedTaint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedTaint_To_v1beta1_SeedTaint(a.(*garden.SeedTaint), b.(*SeedTaint), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedStatus)(nil), (*SeedStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedStatus_To_v1beta1_SeedStatus(a.(*core.SeedStatus), b.(*SeedStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedVolume)(nil), (*garden.SeedVolume)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedVolume_To_garden_SeedVolume(a.(*SeedVolume), b.(*garden.SeedVolume), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedTaint)(nil), (*core.SeedTaint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedTaint_To_core_SeedTaint(a.(*SeedTaint), b.(*core.SeedTaint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedVolume)(nil), (*SeedVolume)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedVolume_To_v1beta1_SeedVolume(a.(*garden.SeedVolume), b.(*SeedVolume), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedTaint)(nil), (*SeedTaint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedTaint_To_v1beta1_SeedTaint(a.(*core.SeedTaint), b.(*SeedTaint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SeedVolumeProvider)(nil), (*garden.SeedVolumeProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedVolumeProvider_To_garden_SeedVolumeProvider(a.(*SeedVolumeProvider), b.(*garden.SeedVolumeProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedVolume)(nil), (*core.SeedVolume)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedVolume_To_core_SeedVolume(a.(*SeedVolume), b.(*core.SeedVolume), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.SeedVolumeProvider)(nil), (*SeedVolumeProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(a.(*garden.SeedVolumeProvider), b.(*SeedVolumeProvider), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedVolume)(nil), (*SeedVolume)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedVolume_To_v1beta1_SeedVolume(a.(*core.SeedVolume), b.(*SeedVolume), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServiceAccountConfig)(nil), (*garden.ServiceAccountConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ServiceAccountConfig_To_garden_ServiceAccountConfig(a.(*ServiceAccountConfig), b.(*garden.ServiceAccountConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*SeedVolumeProvider)(nil), (*core.SeedVolumeProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedVolumeProvider_To_core_SeedVolumeProvider(a.(*SeedVolumeProvider), b.(*core.SeedVolumeProvider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ServiceAccountConfig)(nil), (*ServiceAccountConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(a.(*garden.ServiceAccountConfig), b.(*ServiceAccountConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*core.SeedVolumeProvider)(nil), (*SeedVolumeProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(a.(*core.SeedVolumeProvider), b.(*SeedVolumeProvider), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Shoot)(nil), (*garden.Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Shoot_To_garden_Shoot(a.(*Shoot), b.(*garden.Shoot), scope)
+	if err := s.AddGeneratedConversionFunc((*ServiceAccountConfig)(nil), (*core.ServiceAccountConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig(a.(*ServiceAccountConfig), b.(*core.ServiceAccountConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Shoot)(nil), (*Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Shoot_To_v1beta1_Shoot(a.(*garden.Shoot), b.(*Shoot), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ServiceAccountConfig)(nil), (*ServiceAccountConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(a.(*core.ServiceAccountConfig), b.(*ServiceAccountConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootList)(nil), (*garden.ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootList_To_garden_ShootList(a.(*ShootList), b.(*garden.ShootList), scope)
+	if err := s.AddGeneratedConversionFunc((*Shoot)(nil), (*core.Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Shoot_To_core_Shoot(a.(*Shoot), b.(*core.Shoot), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ShootList)(nil), (*ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootList_To_v1beta1_ShootList(a.(*garden.ShootList), b.(*ShootList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Shoot)(nil), (*Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Shoot_To_v1beta1_Shoot(a.(*core.Shoot), b.(*Shoot), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootMachineImage)(nil), (*garden.ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(a.(*ShootMachineImage), b.(*garden.ShootMachineImage), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootList)(nil), (*core.ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootList_To_core_ShootList(a.(*ShootList), b.(*core.ShootList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ShootMachineImage)(nil), (*ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(a.(*garden.ShootMachineImage), b.(*ShootMachineImage), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootList)(nil), (*ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootList_To_v1beta1_ShootList(a.(*core.ShootList), b.(*ShootList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootNetworks)(nil), (*garden.ShootNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootNetworks_To_garden_ShootNetworks(a.(*ShootNetworks), b.(*garden.ShootNetworks), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootMachineImage)(nil), (*core.ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootMachineImage_To_core_ShootMachineImage(a.(*ShootMachineImage), b.(*core.ShootMachineImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ShootNetworks)(nil), (*ShootNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootNetworks_To_v1beta1_ShootNetworks(a.(*garden.ShootNetworks), b.(*ShootNetworks), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootMachineImage)(nil), (*ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootMachineImage_To_v1beta1_ShootMachineImage(a.(*core.ShootMachineImage), b.(*ShootMachineImage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootSpec)(nil), (*garden.ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootSpec_To_garden_ShootSpec(a.(*ShootSpec), b.(*garden.ShootSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootNetworks)(nil), (*core.ShootNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootNetworks_To_core_ShootNetworks(a.(*ShootNetworks), b.(*core.ShootNetworks), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ShootSpec)(nil), (*ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootSpec_To_v1beta1_ShootSpec(a.(*garden.ShootSpec), b.(*ShootSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootNetworks)(nil), (*ShootNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootNetworks_To_v1beta1_ShootNetworks(a.(*core.ShootNetworks), b.(*ShootNetworks), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootStatus)(nil), (*garden.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootStatus_To_garden_ShootStatus(a.(*ShootStatus), b.(*garden.ShootStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootSpec)(nil), (*core.ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootSpec_To_core_ShootSpec(a.(*ShootSpec), b.(*core.ShootSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootStatus_To_v1beta1_ShootStatus(a.(*garden.ShootStatus), b.(*ShootStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootSpec)(nil), (*ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootSpec_To_v1beta1_ShootSpec(a.(*core.ShootSpec), b.(*ShootSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Volume)(nil), (*garden.Volume)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Volume_To_garden_Volume(a.(*Volume), b.(*garden.Volume), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootStatus)(nil), (*core.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootStatus_To_core_ShootStatus(a.(*ShootStatus), b.(*core.ShootStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Volume)(nil), (*Volume)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Volume_To_v1beta1_Volume(a.(*garden.Volume), b.(*Volume), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootStatus_To_v1beta1_ShootStatus(a.(*core.ShootStatus), b.(*ShootStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*VolumeType)(nil), (*garden.VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_VolumeType_To_garden_VolumeType(a.(*VolumeType), b.(*garden.VolumeType), scope)
+	if err := s.AddGeneratedConversionFunc((*Volume)(nil), (*core.Volume)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Volume_To_core_Volume(a.(*Volume), b.(*core.Volume), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.VolumeType)(nil), (*VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_VolumeType_To_v1beta1_VolumeType(a.(*garden.VolumeType), b.(*VolumeType), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Volume)(nil), (*Volume)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Volume_To_v1beta1_Volume(a.(*core.Volume), b.(*Volume), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Worker)(nil), (*garden.Worker)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Worker_To_garden_Worker(a.(*Worker), b.(*garden.Worker), scope)
+	if err := s.AddGeneratedConversionFunc((*VolumeType)(nil), (*core.VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_VolumeType_To_core_VolumeType(a.(*VolumeType), b.(*core.VolumeType), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.Worker)(nil), (*Worker)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Worker_To_v1beta1_Worker(a.(*garden.Worker), b.(*Worker), scope)
+	if err := s.AddGeneratedConversionFunc((*core.VolumeType)(nil), (*VolumeType)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_VolumeType_To_v1beta1_VolumeType(a.(*core.VolumeType), b.(*VolumeType), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*WorkerKubernetes)(nil), (*garden.WorkerKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes(a.(*WorkerKubernetes), b.(*garden.WorkerKubernetes), scope)
+	if err := s.AddGeneratedConversionFunc((*Worker)(nil), (*core.Worker)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_Worker_To_core_Worker(a.(*Worker), b.(*core.Worker), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*garden.WorkerKubernetes)(nil), (*WorkerKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes(a.(*garden.WorkerKubernetes), b.(*WorkerKubernetes), scope)
+	if err := s.AddGeneratedConversionFunc((*core.Worker)(nil), (*Worker)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Worker_To_v1beta1_Worker(a.(*core.Worker), b.(*Worker), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*garden.Addons)(nil), (*Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Addons_To_v1beta1_Addons(a.(*garden.Addons), b.(*Addons), scope)
+	if err := s.AddGeneratedConversionFunc((*WorkerKubernetes)(nil), (*core.WorkerKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(a.(*WorkerKubernetes), b.(*core.WorkerKubernetes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*garden.CloudProfileSpec)(nil), (*CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(a.(*garden.CloudProfileSpec), b.(*CloudProfileSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.CloudProfile)(nil), (*CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_CloudProfile_To_v1beta1_CloudProfile(a.(*garden.CloudProfile), b.(*CloudProfile), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.Kubernetes)(nil), (*Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Kubernetes_To_v1beta1_Kubernetes(a.(*garden.Kubernetes), b.(*Kubernetes), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(a.(*garden.ProjectSpec), b.(*ProjectSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.SeedSpec)(nil), (*SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_SeedSpec_To_v1beta1_SeedSpec(a.(*garden.SeedSpec), b.(*SeedSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Seed_To_v1beta1_Seed(a.(*garden.Seed), b.(*Seed), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.ShootSpec)(nil), (*ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootSpec_To_v1beta1_ShootSpec(a.(*garden.ShootSpec), b.(*ShootSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_ShootStatus_To_v1beta1_ShootStatus(a.(*garden.ShootStatus), b.(*ShootStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*garden.Shoot)(nil), (*Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Shoot_To_v1beta1_Shoot(a.(*garden.Shoot), b.(*Shoot), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*Addons)(nil), (*garden.Addons)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Addons_To_garden_Addons(a.(*Addons), b.(*garden.Addons), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*CloudProfileSpec)(nil), (*garden.CloudProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(a.(*CloudProfileSpec), b.(*garden.CloudProfileSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*CloudProfile)(nil), (*garden.CloudProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_CloudProfile_To_garden_CloudProfile(a.(*CloudProfile), b.(*garden.CloudProfile), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*Kubernetes)(nil), (*garden.Kubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Kubernetes_To_garden_Kubernetes(a.(*Kubernetes), b.(*garden.Kubernetes), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*ProjectSpec)(nil), (*garden.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(a.(*ProjectSpec), b.(*garden.ProjectSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*SeedSpec)(nil), (*garden.SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_SeedSpec_To_garden_SeedSpec(a.(*SeedSpec), b.(*garden.SeedSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*Seed)(nil), (*garden.Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Seed_To_garden_Seed(a.(*Seed), b.(*garden.Seed), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*ShootSpec)(nil), (*garden.ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootSpec_To_garden_ShootSpec(a.(*ShootSpec), b.(*garden.ShootSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*ShootStatus)(nil), (*garden.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ShootStatus_To_garden_ShootStatus(a.(*ShootStatus), b.(*garden.ShootStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddConversionFunc((*Shoot)(nil), (*garden.Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Shoot_To_garden_Shoot(a.(*Shoot), b.(*garden.Shoot), scope)
+	if err := s.AddGeneratedConversionFunc((*core.WorkerKubernetes)(nil), (*WorkerKubernetes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(a.(*core.WorkerKubernetes), b.(*WorkerKubernetes), scope)
 	}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1beta1_Addon_To_garden_Addon(in *Addon, out *garden.Addon, s conversion.Scope) error {
+func autoConvert_v1beta1_Addon_To_core_Addon(in *Addon, out *core.Addon, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	return nil
 }
 
-// Convert_v1beta1_Addon_To_garden_Addon is an autogenerated conversion function.
-func Convert_v1beta1_Addon_To_garden_Addon(in *Addon, out *garden.Addon, s conversion.Scope) error {
-	return autoConvert_v1beta1_Addon_To_garden_Addon(in, out, s)
+// Convert_v1beta1_Addon_To_core_Addon is an autogenerated conversion function.
+func Convert_v1beta1_Addon_To_core_Addon(in *Addon, out *core.Addon, s conversion.Scope) error {
+	return autoConvert_v1beta1_Addon_To_core_Addon(in, out, s)
 }
 
-func autoConvert_garden_Addon_To_v1beta1_Addon(in *garden.Addon, out *Addon, s conversion.Scope) error {
+func autoConvert_core_Addon_To_v1beta1_Addon(in *core.Addon, out *Addon, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	return nil
 }
 
-// Convert_garden_Addon_To_v1beta1_Addon is an autogenerated conversion function.
-func Convert_garden_Addon_To_v1beta1_Addon(in *garden.Addon, out *Addon, s conversion.Scope) error {
-	return autoConvert_garden_Addon_To_v1beta1_Addon(in, out, s)
+// Convert_core_Addon_To_v1beta1_Addon is an autogenerated conversion function.
+func Convert_core_Addon_To_v1beta1_Addon(in *core.Addon, out *Addon, s conversion.Scope) error {
+	return autoConvert_core_Addon_To_v1beta1_Addon(in, out, s)
 }
 
-func autoConvert_v1beta1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s conversion.Scope) error {
-	out.KubernetesDashboard = (*garden.KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
-	out.NginxIngress = (*garden.NginxIngress)(unsafe.Pointer(in.NginxIngress))
+func autoConvert_v1beta1_Addons_To_core_Addons(in *Addons, out *core.Addons, s conversion.Scope) error {
+	out.KubernetesDashboard = (*core.KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
+	out.NginxIngress = (*core.NginxIngress)(unsafe.Pointer(in.NginxIngress))
 	return nil
 }
 
-func autoConvert_garden_Addons_To_v1beta1_Addons(in *garden.Addons, out *Addons, s conversion.Scope) error {
+// Convert_v1beta1_Addons_To_core_Addons is an autogenerated conversion function.
+func Convert_v1beta1_Addons_To_core_Addons(in *Addons, out *core.Addons, s conversion.Scope) error {
+	return autoConvert_v1beta1_Addons_To_core_Addons(in, out, s)
+}
+
+func autoConvert_core_Addons_To_v1beta1_Addons(in *core.Addons, out *Addons, s conversion.Scope) error {
 	out.KubernetesDashboard = (*KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
 	out.NginxIngress = (*NginxIngress)(unsafe.Pointer(in.NginxIngress))
-	// WARNING: in.ClusterAutoscaler requires manual conversion: does not exist in peer-type
-	// WARNING: in.Heapster requires manual conversion: does not exist in peer-type
-	// WARNING: in.Kube2IAM requires manual conversion: does not exist in peer-type
-	// WARNING: in.KubeLego requires manual conversion: does not exist in peer-type
-	// WARNING: in.Monocular requires manual conversion: does not exist in peer-type
 	return nil
 }
 
-func autoConvert_v1beta1_AdmissionPlugin_To_garden_AdmissionPlugin(in *AdmissionPlugin, out *garden.AdmissionPlugin, s conversion.Scope) error {
+// Convert_core_Addons_To_v1beta1_Addons is an autogenerated conversion function.
+func Convert_core_Addons_To_v1beta1_Addons(in *core.Addons, out *Addons, s conversion.Scope) error {
+	return autoConvert_core_Addons_To_v1beta1_Addons(in, out, s)
+}
+
+func autoConvert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionPlugin, out *core.AdmissionPlugin, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Config = (*garden.ProviderConfig)(unsafe.Pointer(in.Config))
+	out.Config = (*core.ProviderConfig)(unsafe.Pointer(in.Config))
 	return nil
 }
 
-// Convert_v1beta1_AdmissionPlugin_To_garden_AdmissionPlugin is an autogenerated conversion function.
-func Convert_v1beta1_AdmissionPlugin_To_garden_AdmissionPlugin(in *AdmissionPlugin, out *garden.AdmissionPlugin, s conversion.Scope) error {
-	return autoConvert_v1beta1_AdmissionPlugin_To_garden_AdmissionPlugin(in, out, s)
+// Convert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin is an autogenerated conversion function.
+func Convert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionPlugin, out *core.AdmissionPlugin, s conversion.Scope) error {
+	return autoConvert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin(in, out, s)
 }
 
-func autoConvert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *garden.AdmissionPlugin, out *AdmissionPlugin, s conversion.Scope) error {
+func autoConvert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *core.AdmissionPlugin, out *AdmissionPlugin, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Config = (*ProviderConfig)(unsafe.Pointer(in.Config))
 	return nil
 }
 
-// Convert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin is an autogenerated conversion function.
-func Convert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *garden.AdmissionPlugin, out *AdmissionPlugin, s conversion.Scope) error {
-	return autoConvert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in, out, s)
+// Convert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin is an autogenerated conversion function.
+func Convert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *core.AdmissionPlugin, out *AdmissionPlugin, s conversion.Scope) error {
+	return autoConvert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in, out, s)
 }
 
-func autoConvert_v1beta1_Alerting_To_garden_Alerting(in *Alerting, out *garden.Alerting, s conversion.Scope) error {
+func autoConvert_v1beta1_Alerting_To_core_Alerting(in *Alerting, out *core.Alerting, s conversion.Scope) error {
 	out.EmailReceivers = *(*[]string)(unsafe.Pointer(&in.EmailReceivers))
 	return nil
 }
 
-// Convert_v1beta1_Alerting_To_garden_Alerting is an autogenerated conversion function.
-func Convert_v1beta1_Alerting_To_garden_Alerting(in *Alerting, out *garden.Alerting, s conversion.Scope) error {
-	return autoConvert_v1beta1_Alerting_To_garden_Alerting(in, out, s)
+// Convert_v1beta1_Alerting_To_core_Alerting is an autogenerated conversion function.
+func Convert_v1beta1_Alerting_To_core_Alerting(in *Alerting, out *core.Alerting, s conversion.Scope) error {
+	return autoConvert_v1beta1_Alerting_To_core_Alerting(in, out, s)
 }
 
-func autoConvert_garden_Alerting_To_v1beta1_Alerting(in *garden.Alerting, out *Alerting, s conversion.Scope) error {
+func autoConvert_core_Alerting_To_v1beta1_Alerting(in *core.Alerting, out *Alerting, s conversion.Scope) error {
 	out.EmailReceivers = *(*[]string)(unsafe.Pointer(&in.EmailReceivers))
 	return nil
 }
 
-// Convert_garden_Alerting_To_v1beta1_Alerting is an autogenerated conversion function.
-func Convert_garden_Alerting_To_v1beta1_Alerting(in *garden.Alerting, out *Alerting, s conversion.Scope) error {
-	return autoConvert_garden_Alerting_To_v1beta1_Alerting(in, out, s)
+// Convert_core_Alerting_To_v1beta1_Alerting is an autogenerated conversion function.
+func Convert_core_Alerting_To_v1beta1_Alerting(in *core.Alerting, out *Alerting, s conversion.Scope) error {
+	return autoConvert_core_Alerting_To_v1beta1_Alerting(in, out, s)
 }
 
-func autoConvert_v1beta1_AuditConfig_To_garden_AuditConfig(in *AuditConfig, out *garden.AuditConfig, s conversion.Scope) error {
-	out.AuditPolicy = (*garden.AuditPolicy)(unsafe.Pointer(in.AuditPolicy))
+func autoConvert_v1beta1_AuditConfig_To_core_AuditConfig(in *AuditConfig, out *core.AuditConfig, s conversion.Scope) error {
+	out.AuditPolicy = (*core.AuditPolicy)(unsafe.Pointer(in.AuditPolicy))
 	return nil
 }
 
-// Convert_v1beta1_AuditConfig_To_garden_AuditConfig is an autogenerated conversion function.
-func Convert_v1beta1_AuditConfig_To_garden_AuditConfig(in *AuditConfig, out *garden.AuditConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_AuditConfig_To_garden_AuditConfig(in, out, s)
+// Convert_v1beta1_AuditConfig_To_core_AuditConfig is an autogenerated conversion function.
+func Convert_v1beta1_AuditConfig_To_core_AuditConfig(in *AuditConfig, out *core.AuditConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_AuditConfig_To_core_AuditConfig(in, out, s)
 }
 
-func autoConvert_garden_AuditConfig_To_v1beta1_AuditConfig(in *garden.AuditConfig, out *AuditConfig, s conversion.Scope) error {
+func autoConvert_core_AuditConfig_To_v1beta1_AuditConfig(in *core.AuditConfig, out *AuditConfig, s conversion.Scope) error {
 	out.AuditPolicy = (*AuditPolicy)(unsafe.Pointer(in.AuditPolicy))
 	return nil
 }
 
-// Convert_garden_AuditConfig_To_v1beta1_AuditConfig is an autogenerated conversion function.
-func Convert_garden_AuditConfig_To_v1beta1_AuditConfig(in *garden.AuditConfig, out *AuditConfig, s conversion.Scope) error {
-	return autoConvert_garden_AuditConfig_To_v1beta1_AuditConfig(in, out, s)
+// Convert_core_AuditConfig_To_v1beta1_AuditConfig is an autogenerated conversion function.
+func Convert_core_AuditConfig_To_v1beta1_AuditConfig(in *core.AuditConfig, out *AuditConfig, s conversion.Scope) error {
+	return autoConvert_core_AuditConfig_To_v1beta1_AuditConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_AuditPolicy_To_garden_AuditPolicy(in *AuditPolicy, out *garden.AuditPolicy, s conversion.Scope) error {
+func autoConvert_v1beta1_AuditPolicy_To_core_AuditPolicy(in *AuditPolicy, out *core.AuditPolicy, s conversion.Scope) error {
 	out.ConfigMapRef = (*v1.ObjectReference)(unsafe.Pointer(in.ConfigMapRef))
 	return nil
 }
 
-// Convert_v1beta1_AuditPolicy_To_garden_AuditPolicy is an autogenerated conversion function.
-func Convert_v1beta1_AuditPolicy_To_garden_AuditPolicy(in *AuditPolicy, out *garden.AuditPolicy, s conversion.Scope) error {
-	return autoConvert_v1beta1_AuditPolicy_To_garden_AuditPolicy(in, out, s)
+// Convert_v1beta1_AuditPolicy_To_core_AuditPolicy is an autogenerated conversion function.
+func Convert_v1beta1_AuditPolicy_To_core_AuditPolicy(in *AuditPolicy, out *core.AuditPolicy, s conversion.Scope) error {
+	return autoConvert_v1beta1_AuditPolicy_To_core_AuditPolicy(in, out, s)
 }
 
-func autoConvert_garden_AuditPolicy_To_v1beta1_AuditPolicy(in *garden.AuditPolicy, out *AuditPolicy, s conversion.Scope) error {
+func autoConvert_core_AuditPolicy_To_v1beta1_AuditPolicy(in *core.AuditPolicy, out *AuditPolicy, s conversion.Scope) error {
 	out.ConfigMapRef = (*v1.ObjectReference)(unsafe.Pointer(in.ConfigMapRef))
 	return nil
 }
 
-// Convert_garden_AuditPolicy_To_v1beta1_AuditPolicy is an autogenerated conversion function.
-func Convert_garden_AuditPolicy_To_v1beta1_AuditPolicy(in *garden.AuditPolicy, out *AuditPolicy, s conversion.Scope) error {
-	return autoConvert_garden_AuditPolicy_To_v1beta1_AuditPolicy(in, out, s)
+// Convert_core_AuditPolicy_To_v1beta1_AuditPolicy is an autogenerated conversion function.
+func Convert_core_AuditPolicy_To_v1beta1_AuditPolicy(in *core.AuditPolicy, out *AuditPolicy, s conversion.Scope) error {
+	return autoConvert_core_AuditPolicy_To_v1beta1_AuditPolicy(in, out, s)
 }
 
-func autoConvert_v1beta1_AvailabilityZone_To_garden_AvailabilityZone(in *AvailabilityZone, out *garden.AvailabilityZone, s conversion.Scope) error {
+func autoConvert_v1beta1_AvailabilityZone_To_core_AvailabilityZone(in *AvailabilityZone, out *core.AvailabilityZone, s conversion.Scope) error {
 	out.Name = in.Name
 	out.UnavailableMachineTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableMachineTypes))
 	out.UnavailableVolumeTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableVolumeTypes))
 	return nil
 }
 
-// Convert_v1beta1_AvailabilityZone_To_garden_AvailabilityZone is an autogenerated conversion function.
-func Convert_v1beta1_AvailabilityZone_To_garden_AvailabilityZone(in *AvailabilityZone, out *garden.AvailabilityZone, s conversion.Scope) error {
-	return autoConvert_v1beta1_AvailabilityZone_To_garden_AvailabilityZone(in, out, s)
+// Convert_v1beta1_AvailabilityZone_To_core_AvailabilityZone is an autogenerated conversion function.
+func Convert_v1beta1_AvailabilityZone_To_core_AvailabilityZone(in *AvailabilityZone, out *core.AvailabilityZone, s conversion.Scope) error {
+	return autoConvert_v1beta1_AvailabilityZone_To_core_AvailabilityZone(in, out, s)
 }
 
-func autoConvert_garden_AvailabilityZone_To_v1beta1_AvailabilityZone(in *garden.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
+func autoConvert_core_AvailabilityZone_To_v1beta1_AvailabilityZone(in *core.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
 	out.Name = in.Name
 	out.UnavailableMachineTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableMachineTypes))
 	out.UnavailableVolumeTypes = *(*[]string)(unsafe.Pointer(&in.UnavailableVolumeTypes))
 	return nil
 }
 
-// Convert_garden_AvailabilityZone_To_v1beta1_AvailabilityZone is an autogenerated conversion function.
-func Convert_garden_AvailabilityZone_To_v1beta1_AvailabilityZone(in *garden.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
-	return autoConvert_garden_AvailabilityZone_To_v1beta1_AvailabilityZone(in, out, s)
+// Convert_core_AvailabilityZone_To_v1beta1_AvailabilityZone is an autogenerated conversion function.
+func Convert_core_AvailabilityZone_To_v1beta1_AvailabilityZone(in *core.AvailabilityZone, out *AvailabilityZone, s conversion.Scope) error {
+	return autoConvert_core_AvailabilityZone_To_v1beta1_AvailabilityZone(in, out, s)
 }
 
 func autoConvert_v1beta1_BackupBucket_To_core_BackupBucket(in *BackupBucket, out *core.BackupBucket, s conversion.Scope) error {
@@ -1438,6 +1352,7 @@ func autoConvert_v1beta1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBuc
 	if err := Convert_v1beta1_BackupBucketProvider_To_core_BackupBucketProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	return nil
@@ -1452,6 +1367,7 @@ func autoConvert_core_BackupBucketSpec_To_v1beta1_BackupBucketSpec(in *core.Back
 	if err := Convert_core_BackupBucketProvider_To_v1beta1_BackupBucketProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	return nil
@@ -1463,6 +1379,7 @@ func Convert_core_BackupBucketSpec_To_v1beta1_BackupBucketSpec(in *core.BackupBu
 }
 
 func autoConvert_v1beta1_BackupBucketStatus_To_core_BackupBucketStatus(in *BackupBucketStatus, out *core.BackupBucketStatus, s conversion.Scope) error {
+	out.ProviderStatus = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
@@ -1476,6 +1393,7 @@ func Convert_v1beta1_BackupBucketStatus_To_core_BackupBucketStatus(in *BackupBuc
 }
 
 func autoConvert_core_BackupBucketStatus_To_v1beta1_BackupBucketStatus(in *core.BackupBucketStatus, out *BackupBucketStatus, s conversion.Scope) error {
+	out.ProviderStatus = (*ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
@@ -1610,141 +1528,95 @@ func Convert_core_CloudInfo_To_v1beta1_CloudInfo(in *core.CloudInfo, out *CloudI
 	return autoConvert_core_CloudInfo_To_v1beta1_CloudInfo(in, out, s)
 }
 
-func autoConvert_v1beta1_CloudProfile_To_garden_CloudProfile(in *CloudProfile, out *garden.CloudProfile, s conversion.Scope) error {
+func autoConvert_v1beta1_CloudProfile_To_core_CloudProfile(in *CloudProfile, out *core.CloudProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_garden_CloudProfile_To_v1beta1_CloudProfile(in *garden.CloudProfile, out *CloudProfile, s conversion.Scope) error {
+// Convert_v1beta1_CloudProfile_To_core_CloudProfile is an autogenerated conversion function.
+func Convert_v1beta1_CloudProfile_To_core_CloudProfile(in *CloudProfile, out *core.CloudProfile, s conversion.Scope) error {
+	return autoConvert_v1beta1_CloudProfile_To_core_CloudProfile(in, out, s)
+}
+
+func autoConvert_core_CloudProfile_To_v1beta1_CloudProfile(in *core.CloudProfile, out *CloudProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1beta1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfileList, out *garden.CloudProfileList, s conversion.Scope) error {
+// Convert_core_CloudProfile_To_v1beta1_CloudProfile is an autogenerated conversion function.
+func Convert_core_CloudProfile_To_v1beta1_CloudProfile(in *core.CloudProfile, out *CloudProfile, s conversion.Scope) error {
+	return autoConvert_core_CloudProfile_To_v1beta1_CloudProfile(in, out, s)
+}
+
+func autoConvert_v1beta1_CloudProfileList_To_core_CloudProfileList(in *CloudProfileList, out *core.CloudProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]garden.CloudProfile, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_CloudProfile_To_garden_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]core.CloudProfile)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1beta1_CloudProfileList_To_garden_CloudProfileList is an autogenerated conversion function.
-func Convert_v1beta1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfileList, out *garden.CloudProfileList, s conversion.Scope) error {
-	return autoConvert_v1beta1_CloudProfileList_To_garden_CloudProfileList(in, out, s)
+// Convert_v1beta1_CloudProfileList_To_core_CloudProfileList is an autogenerated conversion function.
+func Convert_v1beta1_CloudProfileList_To_core_CloudProfileList(in *CloudProfileList, out *core.CloudProfileList, s conversion.Scope) error {
+	return autoConvert_v1beta1_CloudProfileList_To_core_CloudProfileList(in, out, s)
 }
 
-func autoConvert_garden_CloudProfileList_To_v1beta1_CloudProfileList(in *garden.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
+func autoConvert_core_CloudProfileList_To_v1beta1_CloudProfileList(in *core.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]CloudProfile, len(*in))
-		for i := range *in {
-			if err := Convert_garden_CloudProfile_To_v1beta1_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]CloudProfile)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_garden_CloudProfileList_To_v1beta1_CloudProfileList is an autogenerated conversion function.
-func Convert_garden_CloudProfileList_To_v1beta1_CloudProfileList(in *garden.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
-	return autoConvert_garden_CloudProfileList_To_v1beta1_CloudProfileList(in, out, s)
+// Convert_core_CloudProfileList_To_v1beta1_CloudProfileList is an autogenerated conversion function.
+func Convert_core_CloudProfileList_To_v1beta1_CloudProfileList(in *core.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
+	return autoConvert_core_CloudProfileList_To_v1beta1_CloudProfileList(in, out, s)
 }
 
-func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudProfileSpec, out *garden.CloudProfileSpec, s conversion.Scope) error {
+func autoConvert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in *CloudProfileSpec, out *core.CloudProfileSpec, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	if err := Convert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+	if err := Convert_v1beta1_KubernetesSettings_To_core_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.CloudProfileMachineImage)(unsafe.Pointer(&in.MachineImages))
-	if in.MachineTypes != nil {
-		in, out := &in.MachineTypes, &out.MachineTypes
-		*out = make([]garden.MachineType, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_MachineType_To_garden_MachineType(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.MachineTypes = nil
-	}
-	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
-	out.Regions = *(*[]garden.Region)(unsafe.Pointer(&in.Regions))
+	out.MachineImages = *(*[]core.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	out.MachineTypes = *(*[]core.MachineType)(unsafe.Pointer(&in.MachineTypes))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.Regions = *(*[]core.Region)(unsafe.Pointer(&in.Regions))
 	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Type = in.Type
-	if in.VolumeTypes != nil {
-		in, out := &in.VolumeTypes, &out.VolumeTypes
-		*out = make([]garden.VolumeType, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_VolumeType_To_garden_VolumeType(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.VolumeTypes = nil
-	}
+	out.VolumeTypes = *(*[]core.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	return nil
 }
 
-func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
-	// WARNING: in.AWS requires manual conversion: does not exist in peer-type
-	// WARNING: in.Azure requires manual conversion: does not exist in peer-type
-	// WARNING: in.GCP requires manual conversion: does not exist in peer-type
-	// WARNING: in.OpenStack requires manual conversion: does not exist in peer-type
-	// WARNING: in.Alicloud requires manual conversion: does not exist in peer-type
-	// WARNING: in.Packet requires manual conversion: does not exist in peer-type
+// Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec is an autogenerated conversion function.
+func Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in *CloudProfileSpec, out *core.CloudProfileSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in, out, s)
+}
+
+func autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	if err := Convert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+	if err := Convert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
 	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
-	if in.MachineTypes != nil {
-		in, out := &in.MachineTypes, &out.MachineTypes
-		*out = make([]MachineType, len(*in))
-		for i := range *in {
-			if err := Convert_garden_MachineType_To_v1beta1_MachineType(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.MachineTypes = nil
-	}
+	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Regions = *(*[]Region)(unsafe.Pointer(&in.Regions))
 	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Type = in.Type
-	if in.VolumeTypes != nil {
-		in, out := &in.VolumeTypes, &out.VolumeTypes
-		*out = make([]VolumeType, len(*in))
-		for i := range *in {
-			if err := Convert_garden_VolumeType_To_v1beta1_VolumeType(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.VolumeTypes = nil
-	}
+	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	return nil
 }
 
-func autoConvert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *ClusterAutoscaler, out *garden.ClusterAutoscaler, s conversion.Scope) error {
+// Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec is an autogenerated conversion function.
+func Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
+	return autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *ClusterAutoscaler, out *core.ClusterAutoscaler, s conversion.Scope) error {
 	out.ScaleDownDelayAfterAdd = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterAdd))
 	out.ScaleDownDelayAfterDelete = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterDelete))
 	out.ScaleDownDelayAfterFailure = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterFailure))
@@ -1754,24 +1626,24 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *Clust
 	return nil
 }
 
-// Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler is an autogenerated conversion function.
-func Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *ClusterAutoscaler, out *garden.ClusterAutoscaler, s conversion.Scope) error {
-	return autoConvert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in, out, s)
+// Convert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler is an autogenerated conversion function.
+func Convert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *ClusterAutoscaler, out *core.ClusterAutoscaler, s conversion.Scope) error {
+	return autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in, out, s)
 }
 
-func autoConvert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
-	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
-	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
+func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
 	out.ScaleDownDelayAfterAdd = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterAdd))
-	out.ScaleDownDelayAfterFailure = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterFailure))
 	out.ScaleDownDelayAfterDelete = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterDelete))
+	out.ScaleDownDelayAfterFailure = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterFailure))
+	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
+	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	return nil
 }
 
-// Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler is an autogenerated conversion function.
-func Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
-	return autoConvert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in, out, s)
+// Convert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler is an autogenerated conversion function.
+func Convert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
+	return autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in, out, s)
 }
 
 func autoConvert_v1beta1_ClusterInfo_To_core_ClusterInfo(in *ClusterInfo, out *core.ClusterInfo, s conversion.Scope) error {
@@ -2050,64 +1922,64 @@ func Convert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.Cont
 	return autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in, out, s)
 }
 
-func autoConvert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
+func autoConvert_v1beta1_DNS_To_core_DNS(in *DNS, out *core.DNS, s conversion.Scope) error {
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
-	out.Providers = *(*[]garden.DNSProvider)(unsafe.Pointer(&in.Providers))
+	out.Providers = *(*[]core.DNSProvider)(unsafe.Pointer(&in.Providers))
 	return nil
 }
 
-// Convert_v1beta1_DNS_To_garden_DNS is an autogenerated conversion function.
-func Convert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
-	return autoConvert_v1beta1_DNS_To_garden_DNS(in, out, s)
+// Convert_v1beta1_DNS_To_core_DNS is an autogenerated conversion function.
+func Convert_v1beta1_DNS_To_core_DNS(in *DNS, out *core.DNS, s conversion.Scope) error {
+	return autoConvert_v1beta1_DNS_To_core_DNS(in, out, s)
 }
 
-func autoConvert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Scope) error {
+func autoConvert_core_DNS_To_v1beta1_DNS(in *core.DNS, out *DNS, s conversion.Scope) error {
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
 	out.Providers = *(*[]DNSProvider)(unsafe.Pointer(&in.Providers))
 	return nil
 }
 
-// Convert_garden_DNS_To_v1beta1_DNS is an autogenerated conversion function.
-func Convert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Scope) error {
-	return autoConvert_garden_DNS_To_v1beta1_DNS(in, out, s)
+// Convert_core_DNS_To_v1beta1_DNS is an autogenerated conversion function.
+func Convert_core_DNS_To_v1beta1_DNS(in *core.DNS, out *DNS, s conversion.Scope) error {
+	return autoConvert_core_DNS_To_v1beta1_DNS(in, out, s)
 }
 
-func autoConvert_v1beta1_DNSIncludeExclude_To_garden_DNSIncludeExclude(in *DNSIncludeExclude, out *garden.DNSIncludeExclude, s conversion.Scope) error {
+func autoConvert_v1beta1_DNSIncludeExclude_To_core_DNSIncludeExclude(in *DNSIncludeExclude, out *core.DNSIncludeExclude, s conversion.Scope) error {
 	out.Include = *(*[]string)(unsafe.Pointer(&in.Include))
 	out.Exclude = *(*[]string)(unsafe.Pointer(&in.Exclude))
 	return nil
 }
 
-// Convert_v1beta1_DNSIncludeExclude_To_garden_DNSIncludeExclude is an autogenerated conversion function.
-func Convert_v1beta1_DNSIncludeExclude_To_garden_DNSIncludeExclude(in *DNSIncludeExclude, out *garden.DNSIncludeExclude, s conversion.Scope) error {
-	return autoConvert_v1beta1_DNSIncludeExclude_To_garden_DNSIncludeExclude(in, out, s)
+// Convert_v1beta1_DNSIncludeExclude_To_core_DNSIncludeExclude is an autogenerated conversion function.
+func Convert_v1beta1_DNSIncludeExclude_To_core_DNSIncludeExclude(in *DNSIncludeExclude, out *core.DNSIncludeExclude, s conversion.Scope) error {
+	return autoConvert_v1beta1_DNSIncludeExclude_To_core_DNSIncludeExclude(in, out, s)
 }
 
-func autoConvert_garden_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in *garden.DNSIncludeExclude, out *DNSIncludeExclude, s conversion.Scope) error {
+func autoConvert_core_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in *core.DNSIncludeExclude, out *DNSIncludeExclude, s conversion.Scope) error {
 	out.Include = *(*[]string)(unsafe.Pointer(&in.Include))
 	out.Exclude = *(*[]string)(unsafe.Pointer(&in.Exclude))
 	return nil
 }
 
-// Convert_garden_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude is an autogenerated conversion function.
-func Convert_garden_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in *garden.DNSIncludeExclude, out *DNSIncludeExclude, s conversion.Scope) error {
-	return autoConvert_garden_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in, out, s)
+// Convert_core_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude is an autogenerated conversion function.
+func Convert_core_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in *core.DNSIncludeExclude, out *DNSIncludeExclude, s conversion.Scope) error {
+	return autoConvert_core_DNSIncludeExclude_To_v1beta1_DNSIncludeExclude(in, out, s)
 }
 
-func autoConvert_v1beta1_DNSProvider_To_garden_DNSProvider(in *DNSProvider, out *garden.DNSProvider, s conversion.Scope) error {
-	out.Domains = (*garden.DNSIncludeExclude)(unsafe.Pointer(in.Domains))
+func autoConvert_v1beta1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core.DNSProvider, s conversion.Scope) error {
+	out.Domains = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Domains))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
-	out.Zones = (*garden.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
+	out.Zones = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
 	return nil
 }
 
-// Convert_v1beta1_DNSProvider_To_garden_DNSProvider is an autogenerated conversion function.
-func Convert_v1beta1_DNSProvider_To_garden_DNSProvider(in *DNSProvider, out *garden.DNSProvider, s conversion.Scope) error {
-	return autoConvert_v1beta1_DNSProvider_To_garden_DNSProvider(in, out, s)
+// Convert_v1beta1_DNSProvider_To_core_DNSProvider is an autogenerated conversion function.
+func Convert_v1beta1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core.DNSProvider, s conversion.Scope) error {
+	return autoConvert_v1beta1_DNSProvider_To_core_DNSProvider(in, out, s)
 }
 
-func autoConvert_garden_DNSProvider_To_v1beta1_DNSProvider(in *garden.DNSProvider, out *DNSProvider, s conversion.Scope) error {
+func autoConvert_core_DNSProvider_To_v1beta1_DNSProvider(in *core.DNSProvider, out *DNSProvider, s conversion.Scope) error {
 	out.Domains = (*DNSIncludeExclude)(unsafe.Pointer(in.Domains))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
@@ -2115,9 +1987,9 @@ func autoConvert_garden_DNSProvider_To_v1beta1_DNSProvider(in *garden.DNSProvide
 	return nil
 }
 
-// Convert_garden_DNSProvider_To_v1beta1_DNSProvider is an autogenerated conversion function.
-func Convert_garden_DNSProvider_To_v1beta1_DNSProvider(in *garden.DNSProvider, out *DNSProvider, s conversion.Scope) error {
-	return autoConvert_garden_DNSProvider_To_v1beta1_DNSProvider(in, out, s)
+// Convert_core_DNSProvider_To_v1beta1_DNSProvider is an autogenerated conversion function.
+func Convert_core_DNSProvider_To_v1beta1_DNSProvider(in *core.DNSProvider, out *DNSProvider, s conversion.Scope) error {
+	return autoConvert_core_DNSProvider_To_v1beta1_DNSProvider(in, out, s)
 }
 
 func autoConvert_v1beta1_Endpoint_To_core_Endpoint(in *Endpoint, out *core.Endpoint, s conversion.Scope) error {
@@ -2144,121 +2016,121 @@ func Convert_core_Endpoint_To_v1beta1_Endpoint(in *core.Endpoint, out *Endpoint,
 	return autoConvert_core_Endpoint_To_v1beta1_Endpoint(in, out, s)
 }
 
-func autoConvert_v1beta1_ExpirableVersion_To_garden_ExpirableVersion(in *ExpirableVersion, out *garden.ExpirableVersion, s conversion.Scope) error {
+func autoConvert_v1beta1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVersion, out *core.ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
 	return nil
 }
 
-// Convert_v1beta1_ExpirableVersion_To_garden_ExpirableVersion is an autogenerated conversion function.
-func Convert_v1beta1_ExpirableVersion_To_garden_ExpirableVersion(in *ExpirableVersion, out *garden.ExpirableVersion, s conversion.Scope) error {
-	return autoConvert_v1beta1_ExpirableVersion_To_garden_ExpirableVersion(in, out, s)
+// Convert_v1beta1_ExpirableVersion_To_core_ExpirableVersion is an autogenerated conversion function.
+func Convert_v1beta1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVersion, out *core.ExpirableVersion, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExpirableVersion_To_core_ExpirableVersion(in, out, s)
 }
 
-func autoConvert_garden_ExpirableVersion_To_v1beta1_ExpirableVersion(in *garden.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
+func autoConvert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in *core.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
 	return nil
 }
 
-// Convert_garden_ExpirableVersion_To_v1beta1_ExpirableVersion is an autogenerated conversion function.
-func Convert_garden_ExpirableVersion_To_v1beta1_ExpirableVersion(in *garden.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
-	return autoConvert_garden_ExpirableVersion_To_v1beta1_ExpirableVersion(in, out, s)
+// Convert_core_ExpirableVersion_To_v1beta1_ExpirableVersion is an autogenerated conversion function.
+func Convert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in *core.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
+	return autoConvert_core_ExpirableVersion_To_v1beta1_ExpirableVersion(in, out, s)
 }
 
-func autoConvert_v1beta1_Extension_To_garden_Extension(in *Extension, out *garden.Extension, s conversion.Scope) error {
+func autoConvert_v1beta1_Extension_To_core_Extension(in *Extension, out *core.Extension, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
-// Convert_v1beta1_Extension_To_garden_Extension is an autogenerated conversion function.
-func Convert_v1beta1_Extension_To_garden_Extension(in *Extension, out *garden.Extension, s conversion.Scope) error {
-	return autoConvert_v1beta1_Extension_To_garden_Extension(in, out, s)
+// Convert_v1beta1_Extension_To_core_Extension is an autogenerated conversion function.
+func Convert_v1beta1_Extension_To_core_Extension(in *Extension, out *core.Extension, s conversion.Scope) error {
+	return autoConvert_v1beta1_Extension_To_core_Extension(in, out, s)
 }
 
-func autoConvert_garden_Extension_To_v1beta1_Extension(in *garden.Extension, out *Extension, s conversion.Scope) error {
+func autoConvert_core_Extension_To_v1beta1_Extension(in *core.Extension, out *Extension, s conversion.Scope) error {
 	out.Type = in.Type
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
-// Convert_garden_Extension_To_v1beta1_Extension is an autogenerated conversion function.
-func Convert_garden_Extension_To_v1beta1_Extension(in *garden.Extension, out *Extension, s conversion.Scope) error {
-	return autoConvert_garden_Extension_To_v1beta1_Extension(in, out, s)
+// Convert_core_Extension_To_v1beta1_Extension is an autogenerated conversion function.
+func Convert_core_Extension_To_v1beta1_Extension(in *core.Extension, out *Extension, s conversion.Scope) error {
+	return autoConvert_core_Extension_To_v1beta1_Extension(in, out, s)
 }
 
-func autoConvert_v1beta1_Gardener_To_garden_Gardener(in *Gardener, out *garden.Gardener, s conversion.Scope) error {
+func autoConvert_v1beta1_Gardener_To_core_Gardener(in *Gardener, out *core.Gardener, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
 	out.Version = in.Version
 	return nil
 }
 
-// Convert_v1beta1_Gardener_To_garden_Gardener is an autogenerated conversion function.
-func Convert_v1beta1_Gardener_To_garden_Gardener(in *Gardener, out *garden.Gardener, s conversion.Scope) error {
-	return autoConvert_v1beta1_Gardener_To_garden_Gardener(in, out, s)
+// Convert_v1beta1_Gardener_To_core_Gardener is an autogenerated conversion function.
+func Convert_v1beta1_Gardener_To_core_Gardener(in *Gardener, out *core.Gardener, s conversion.Scope) error {
+	return autoConvert_v1beta1_Gardener_To_core_Gardener(in, out, s)
 }
 
-func autoConvert_garden_Gardener_To_v1beta1_Gardener(in *garden.Gardener, out *Gardener, s conversion.Scope) error {
+func autoConvert_core_Gardener_To_v1beta1_Gardener(in *core.Gardener, out *Gardener, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
 	out.Version = in.Version
 	return nil
 }
 
-// Convert_garden_Gardener_To_v1beta1_Gardener is an autogenerated conversion function.
-func Convert_garden_Gardener_To_v1beta1_Gardener(in *garden.Gardener, out *Gardener, s conversion.Scope) error {
-	return autoConvert_garden_Gardener_To_v1beta1_Gardener(in, out, s)
+// Convert_core_Gardener_To_v1beta1_Gardener is an autogenerated conversion function.
+func Convert_core_Gardener_To_v1beta1_Gardener(in *core.Gardener, out *Gardener, s conversion.Scope) error {
+	return autoConvert_core_Gardener_To_v1beta1_Gardener(in, out, s)
 }
 
-func autoConvert_v1beta1_Hibernation_To_garden_Hibernation(in *Hibernation, out *garden.Hibernation, s conversion.Scope) error {
+func autoConvert_v1beta1_Hibernation_To_core_Hibernation(in *Hibernation, out *core.Hibernation, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
-	out.Schedules = *(*[]garden.HibernationSchedule)(unsafe.Pointer(&in.Schedules))
+	out.Schedules = *(*[]core.HibernationSchedule)(unsafe.Pointer(&in.Schedules))
 	return nil
 }
 
-// Convert_v1beta1_Hibernation_To_garden_Hibernation is an autogenerated conversion function.
-func Convert_v1beta1_Hibernation_To_garden_Hibernation(in *Hibernation, out *garden.Hibernation, s conversion.Scope) error {
-	return autoConvert_v1beta1_Hibernation_To_garden_Hibernation(in, out, s)
+// Convert_v1beta1_Hibernation_To_core_Hibernation is an autogenerated conversion function.
+func Convert_v1beta1_Hibernation_To_core_Hibernation(in *Hibernation, out *core.Hibernation, s conversion.Scope) error {
+	return autoConvert_v1beta1_Hibernation_To_core_Hibernation(in, out, s)
 }
 
-func autoConvert_garden_Hibernation_To_v1beta1_Hibernation(in *garden.Hibernation, out *Hibernation, s conversion.Scope) error {
+func autoConvert_core_Hibernation_To_v1beta1_Hibernation(in *core.Hibernation, out *Hibernation, s conversion.Scope) error {
 	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Schedules = *(*[]HibernationSchedule)(unsafe.Pointer(&in.Schedules))
 	return nil
 }
 
-// Convert_garden_Hibernation_To_v1beta1_Hibernation is an autogenerated conversion function.
-func Convert_garden_Hibernation_To_v1beta1_Hibernation(in *garden.Hibernation, out *Hibernation, s conversion.Scope) error {
-	return autoConvert_garden_Hibernation_To_v1beta1_Hibernation(in, out, s)
+// Convert_core_Hibernation_To_v1beta1_Hibernation is an autogenerated conversion function.
+func Convert_core_Hibernation_To_v1beta1_Hibernation(in *core.Hibernation, out *Hibernation, s conversion.Scope) error {
+	return autoConvert_core_Hibernation_To_v1beta1_Hibernation(in, out, s)
 }
 
-func autoConvert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(in *HibernationSchedule, out *garden.HibernationSchedule, s conversion.Scope) error {
+func autoConvert_v1beta1_HibernationSchedule_To_core_HibernationSchedule(in *HibernationSchedule, out *core.HibernationSchedule, s conversion.Scope) error {
 	out.Start = (*string)(unsafe.Pointer(in.Start))
 	out.End = (*string)(unsafe.Pointer(in.End))
 	out.Location = (*string)(unsafe.Pointer(in.Location))
 	return nil
 }
 
-// Convert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule is an autogenerated conversion function.
-func Convert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(in *HibernationSchedule, out *garden.HibernationSchedule, s conversion.Scope) error {
-	return autoConvert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(in, out, s)
+// Convert_v1beta1_HibernationSchedule_To_core_HibernationSchedule is an autogenerated conversion function.
+func Convert_v1beta1_HibernationSchedule_To_core_HibernationSchedule(in *HibernationSchedule, out *core.HibernationSchedule, s conversion.Scope) error {
+	return autoConvert_v1beta1_HibernationSchedule_To_core_HibernationSchedule(in, out, s)
 }
 
-func autoConvert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule(in *garden.HibernationSchedule, out *HibernationSchedule, s conversion.Scope) error {
+func autoConvert_core_HibernationSchedule_To_v1beta1_HibernationSchedule(in *core.HibernationSchedule, out *HibernationSchedule, s conversion.Scope) error {
 	out.Start = (*string)(unsafe.Pointer(in.Start))
 	out.End = (*string)(unsafe.Pointer(in.End))
 	out.Location = (*string)(unsafe.Pointer(in.Location))
 	return nil
 }
 
-// Convert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule is an autogenerated conversion function.
-func Convert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule(in *garden.HibernationSchedule, out *HibernationSchedule, s conversion.Scope) error {
-	return autoConvert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule(in, out, s)
+// Convert_core_HibernationSchedule_To_v1beta1_HibernationSchedule is an autogenerated conversion function.
+func Convert_core_HibernationSchedule_To_v1beta1_HibernationSchedule(in *core.HibernationSchedule, out *HibernationSchedule, s conversion.Scope) error {
+	return autoConvert_core_HibernationSchedule_To_v1beta1_HibernationSchedule(in, out, s)
 }
 
-func autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig(in *HorizontalPodAutoscalerConfig, out *garden.HorizontalPodAutoscalerConfig, s conversion.Scope) error {
+func autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_core_HorizontalPodAutoscalerConfig(in *HorizontalPodAutoscalerConfig, out *core.HorizontalPodAutoscalerConfig, s conversion.Scope) error {
 	out.CPUInitializationPeriod = (*metav1.Duration)(unsafe.Pointer(in.CPUInitializationPeriod))
 	out.DownscaleDelay = (*metav1.Duration)(unsafe.Pointer(in.DownscaleDelay))
 	out.DownscaleStabilization = (*metav1.Duration)(unsafe.Pointer(in.DownscaleStabilization))
@@ -2269,232 +2141,188 @@ func autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAu
 	return nil
 }
 
-// Convert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig is an autogenerated conversion function.
-func Convert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig(in *HorizontalPodAutoscalerConfig, out *garden.HorizontalPodAutoscalerConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig(in, out, s)
+// Convert_v1beta1_HorizontalPodAutoscalerConfig_To_core_HorizontalPodAutoscalerConfig is an autogenerated conversion function.
+func Convert_v1beta1_HorizontalPodAutoscalerConfig_To_core_HorizontalPodAutoscalerConfig(in *HorizontalPodAutoscalerConfig, out *core.HorizontalPodAutoscalerConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_core_HorizontalPodAutoscalerConfig(in, out, s)
 }
 
-func autoConvert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in *garden.HorizontalPodAutoscalerConfig, out *HorizontalPodAutoscalerConfig, s conversion.Scope) error {
-	out.DownscaleDelay = (*GardenerDuration)(unsafe.Pointer(in.DownscaleDelay))
-	out.SyncPeriod = (*GardenerDuration)(unsafe.Pointer(in.SyncPeriod))
+func autoConvert_core_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in *core.HorizontalPodAutoscalerConfig, out *HorizontalPodAutoscalerConfig, s conversion.Scope) error {
+	out.CPUInitializationPeriod = (*metav1.Duration)(unsafe.Pointer(in.CPUInitializationPeriod))
+	out.DownscaleDelay = (*metav1.Duration)(unsafe.Pointer(in.DownscaleDelay))
+	out.DownscaleStabilization = (*metav1.Duration)(unsafe.Pointer(in.DownscaleStabilization))
+	out.InitialReadinessDelay = (*metav1.Duration)(unsafe.Pointer(in.InitialReadinessDelay))
+	out.SyncPeriod = (*metav1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.Tolerance = (*float64)(unsafe.Pointer(in.Tolerance))
-	out.UpscaleDelay = (*GardenerDuration)(unsafe.Pointer(in.UpscaleDelay))
-	out.DownscaleStabilization = (*GardenerDuration)(unsafe.Pointer(in.DownscaleStabilization))
-	out.InitialReadinessDelay = (*GardenerDuration)(unsafe.Pointer(in.InitialReadinessDelay))
-	out.CPUInitializationPeriod = (*GardenerDuration)(unsafe.Pointer(in.CPUInitializationPeriod))
+	out.UpscaleDelay = (*metav1.Duration)(unsafe.Pointer(in.UpscaleDelay))
 	return nil
 }
 
-// Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig is an autogenerated conversion function.
-func Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in *garden.HorizontalPodAutoscalerConfig, out *HorizontalPodAutoscalerConfig, s conversion.Scope) error {
-	return autoConvert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in, out, s)
+// Convert_core_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig is an autogenerated conversion function.
+func Convert_core_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in *core.HorizontalPodAutoscalerConfig, out *HorizontalPodAutoscalerConfig, s conversion.Scope) error {
+	return autoConvert_core_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(in *KubeAPIServerConfig, out *garden.KubeAPIServerConfig, s conversion.Scope) error {
-	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *KubeAPIServerConfig, out *core.KubeAPIServerConfig, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.AdmissionPlugins = *(*[]garden.AdmissionPlugin)(unsafe.Pointer(&in.AdmissionPlugins))
+	out.AdmissionPlugins = *(*[]core.AdmissionPlugin)(unsafe.Pointer(&in.AdmissionPlugins))
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
-	out.AuditConfig = (*garden.AuditConfig)(unsafe.Pointer(in.AuditConfig))
+	out.AuditConfig = (*core.AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
-	if in.OIDCConfig != nil {
-		in, out := &in.OIDCConfig, &out.OIDCConfig
-		*out = new(garden.OIDCConfig)
-		if err := Convert_v1beta1_OIDCConfig_To_garden_OIDCConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.OIDCConfig = nil
-	}
+	out.OIDCConfig = (*core.OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
-	out.ServiceAccountConfig = (*garden.ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
+	out.ServiceAccountConfig = (*core.ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
 	return nil
 }
 
-// Convert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(in *KubeAPIServerConfig, out *garden.KubeAPIServerConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(in, out, s)
+// Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *KubeAPIServerConfig, out *core.KubeAPIServerConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in, out, s)
 }
 
-func autoConvert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *garden.KubeAPIServerConfig, out *KubeAPIServerConfig, s conversion.Scope) error {
-	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *core.KubeAPIServerConfig, out *KubeAPIServerConfig, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
 	out.AdmissionPlugins = *(*[]AdmissionPlugin)(unsafe.Pointer(&in.AdmissionPlugins))
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*AuditConfig)(unsafe.Pointer(in.AuditConfig))
 	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
-	if in.OIDCConfig != nil {
-		in, out := &in.OIDCConfig, &out.OIDCConfig
-		*out = new(OIDCConfig)
-		if err := Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.OIDCConfig = nil
-	}
+	out.OIDCConfig = (*OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
 	out.ServiceAccountConfig = (*ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
 	return nil
 }
 
-// Convert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig is an autogenerated conversion function.
-func Convert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *garden.KubeAPIServerConfig, out *KubeAPIServerConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in, out, s)
+// Convert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig is an autogenerated conversion function.
+func Convert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in *core.KubeAPIServerConfig, out *KubeAPIServerConfig, s conversion.Scope) error {
+	return autoConvert_core_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(in *KubeControllerManagerConfig, out *garden.KubeControllerManagerConfig, s conversion.Scope) error {
-	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig(in *KubeControllerManagerConfig, out *core.KubeControllerManagerConfig, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	if in.HorizontalPodAutoscalerConfig != nil {
-		in, out := &in.HorizontalPodAutoscalerConfig, &out.HorizontalPodAutoscalerConfig
-		*out = new(garden.HorizontalPodAutoscalerConfig)
-		if err := Convert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAutoscalerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.HorizontalPodAutoscalerConfig = nil
-	}
-	if in.NodeCIDRMaskSize != nil {
-		in, out := &in.NodeCIDRMaskSize, &out.NodeCIDRMaskSize
-		*out = new(int)
-		**out = int(**in)
-	} else {
-		out.NodeCIDRMaskSize = nil
-	}
+	out.HorizontalPodAutoscalerConfig = (*core.HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
+	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	return nil
 }
 
-// Convert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(in *KubeControllerManagerConfig, out *garden.KubeControllerManagerConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(in, out, s)
+// Convert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig(in *KubeControllerManagerConfig, out *core.KubeControllerManagerConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManagerConfig(in, out, s)
 }
 
-func autoConvert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in *garden.KubeControllerManagerConfig, out *KubeControllerManagerConfig, s conversion.Scope) error {
-	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in *core.KubeControllerManagerConfig, out *KubeControllerManagerConfig, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	if in.HorizontalPodAutoscalerConfig != nil {
-		in, out := &in.HorizontalPodAutoscalerConfig, &out.HorizontalPodAutoscalerConfig
-		*out = new(HorizontalPodAutoscalerConfig)
-		if err := Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.HorizontalPodAutoscalerConfig = nil
-	}
-	if in.NodeCIDRMaskSize != nil {
-		in, out := &in.NodeCIDRMaskSize, &out.NodeCIDRMaskSize
-		*out = new(int32)
-		**out = int32(**in)
-	} else {
-		out.NodeCIDRMaskSize = nil
-	}
+	out.HorizontalPodAutoscalerConfig = (*HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
+	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	return nil
 }
 
-// Convert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig is an autogenerated conversion function.
-func Convert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in *garden.KubeControllerManagerConfig, out *KubeControllerManagerConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in, out, s)
+// Convert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig is an autogenerated conversion function.
+func Convert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in *core.KubeControllerManagerConfig, out *KubeControllerManagerConfig, s conversion.Scope) error {
+	return autoConvert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig(in *KubeProxyConfig, out *garden.KubeProxyConfig, s conversion.Scope) error {
-	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig(in *KubeProxyConfig, out *core.KubeProxyConfig, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.Mode = (*garden.ProxyMode)(unsafe.Pointer(in.Mode))
+	out.Mode = (*core.ProxyMode)(unsafe.Pointer(in.Mode))
 	return nil
 }
 
-// Convert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig(in *KubeProxyConfig, out *garden.KubeProxyConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig(in, out, s)
+// Convert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig(in *KubeProxyConfig, out *core.KubeProxyConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig(in, out, s)
 }
 
-func autoConvert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in *garden.KubeProxyConfig, out *KubeProxyConfig, s conversion.Scope) error {
-	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in *core.KubeProxyConfig, out *KubeProxyConfig, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
 	out.Mode = (*ProxyMode)(unsafe.Pointer(in.Mode))
 	return nil
 }
 
-// Convert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig is an autogenerated conversion function.
-func Convert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in *garden.KubeProxyConfig, out *KubeProxyConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in, out, s)
+// Convert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig is an autogenerated conversion function.
+func Convert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in *core.KubeProxyConfig, out *KubeProxyConfig, s conversion.Scope) error {
+	return autoConvert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig(in *KubeSchedulerConfig, out *garden.KubeSchedulerConfig, s conversion.Scope) error {
-	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(in *KubeSchedulerConfig, out *core.KubeSchedulerConfig, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig(in *KubeSchedulerConfig, out *garden.KubeSchedulerConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig(in, out, s)
+// Convert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(in *KubeSchedulerConfig, out *core.KubeSchedulerConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(in, out, s)
 }
 
-func autoConvert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in *garden.KubeSchedulerConfig, out *KubeSchedulerConfig, s conversion.Scope) error {
-	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in *core.KubeSchedulerConfig, out *KubeSchedulerConfig, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig is an autogenerated conversion function.
-func Convert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in *garden.KubeSchedulerConfig, out *KubeSchedulerConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in, out, s)
+// Convert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig is an autogenerated conversion function.
+func Convert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in *core.KubeSchedulerConfig, out *KubeSchedulerConfig, s conversion.Scope) error {
+	return autoConvert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in *KubeletConfig, out *garden.KubeletConfig, s conversion.Scope) error {
-	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, out *core.KubeletConfig, s conversion.Scope) error {
+	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))
-	out.EvictionHard = (*garden.KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
+	out.EvictionHard = (*core.KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
 	out.EvictionMaxPodGracePeriod = (*int32)(unsafe.Pointer(in.EvictionMaxPodGracePeriod))
-	out.EvictionMinimumReclaim = (*garden.KubeletConfigEvictionMinimumReclaim)(unsafe.Pointer(in.EvictionMinimumReclaim))
+	out.EvictionMinimumReclaim = (*core.KubeletConfigEvictionMinimumReclaim)(unsafe.Pointer(in.EvictionMinimumReclaim))
 	out.EvictionPressureTransitionPeriod = (*metav1.Duration)(unsafe.Pointer(in.EvictionPressureTransitionPeriod))
-	out.EvictionSoft = (*garden.KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
-	out.EvictionSoftGracePeriod = (*garden.KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
+	out.EvictionSoft = (*core.KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
+	out.EvictionSoftGracePeriod = (*core.KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
 	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	return nil
 }
 
-// Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in *KubeletConfig, out *garden.KubeletConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in, out, s)
+// Convert_v1beta1_KubeletConfig_To_core_KubeletConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, out *core.KubeletConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in, out, s)
 }
 
-func autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
-	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
+func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
+	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
-	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	out.CPUManagerPolicy = (*string)(unsafe.Pointer(in.CPUManagerPolicy))
-	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.EvictionHard = (*KubeletConfigEviction)(unsafe.Pointer(in.EvictionHard))
-	out.EvictionSoft = (*KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
-	out.EvictionSoftGracePeriod = (*KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
+	out.EvictionMaxPodGracePeriod = (*int32)(unsafe.Pointer(in.EvictionMaxPodGracePeriod))
 	out.EvictionMinimumReclaim = (*KubeletConfigEvictionMinimumReclaim)(unsafe.Pointer(in.EvictionMinimumReclaim))
 	out.EvictionPressureTransitionPeriod = (*metav1.Duration)(unsafe.Pointer(in.EvictionPressureTransitionPeriod))
-	out.EvictionMaxPodGracePeriod = (*int32)(unsafe.Pointer(in.EvictionMaxPodGracePeriod))
+	out.EvictionSoft = (*KubeletConfigEviction)(unsafe.Pointer(in.EvictionSoft))
+	out.EvictionSoftGracePeriod = (*KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
+	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
+	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	return nil
 }
 
-// Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig is an autogenerated conversion function.
-func Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in, out, s)
+// Convert_core_KubeletConfig_To_v1beta1_KubeletConfig is an autogenerated conversion function.
+func Convert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletConfig, out *KubeletConfig, s conversion.Scope) error {
+	return autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in *KubeletConfigEviction, out *garden.KubeletConfigEviction, s conversion.Scope) error {
+func autoConvert_v1beta1_KubeletConfigEviction_To_core_KubeletConfigEviction(in *KubeletConfigEviction, out *core.KubeletConfigEviction, s conversion.Scope) error {
 	out.MemoryAvailable = (*string)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*string)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*string)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2503,12 +2331,12 @@ func autoConvert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(i
 	return nil
 }
 
-// Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction is an autogenerated conversion function.
-func Convert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in *KubeletConfigEviction, out *garden.KubeletConfigEviction, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeletConfigEviction_To_garden_KubeletConfigEviction(in, out, s)
+// Convert_v1beta1_KubeletConfigEviction_To_core_KubeletConfigEviction is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEviction_To_core_KubeletConfigEviction(in *KubeletConfigEviction, out *core.KubeletConfigEviction, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEviction_To_core_KubeletConfigEviction(in, out, s)
 }
 
-func autoConvert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *garden.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
+func autoConvert_core_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *core.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
 	out.MemoryAvailable = (*string)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*string)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*string)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2517,12 +2345,12 @@ func autoConvert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(i
 	return nil
 }
 
-// Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction is an autogenerated conversion function.
-func Convert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *garden.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
-	return autoConvert_garden_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in, out, s)
+// Convert_core_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction is an autogenerated conversion function.
+func Convert_core_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in *core.KubeletConfigEviction, out *KubeletConfigEviction, s conversion.Scope) error {
+	return autoConvert_core_KubeletConfigEviction_To_v1beta1_KubeletConfigEviction(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *garden.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+func autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_core_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *core.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
 	out.MemoryAvailable = (*resource.Quantity)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2531,12 +2359,12 @@ func autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletCo
 	return nil
 }
 
-// Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
-func Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *garden.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_garden_KubeletConfigEvictionMinimumReclaim(in, out, s)
+// Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_core_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_core_KubeletConfigEvictionMinimumReclaim(in *KubeletConfigEvictionMinimumReclaim, out *core.KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEvictionMinimumReclaim_To_core_KubeletConfigEvictionMinimumReclaim(in, out, s)
 }
 
-func autoConvert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *garden.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+func autoConvert_core_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *core.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
 	out.MemoryAvailable = (*resource.Quantity)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*resource.Quantity)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*resource.Quantity)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2545,12 +2373,12 @@ func autoConvert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletCo
 	return nil
 }
 
-// Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
-func Convert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *garden.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
-	return autoConvert_garden_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in, out, s)
+// Convert_core_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim is an autogenerated conversion function.
+func Convert_core_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in *core.KubeletConfigEvictionMinimumReclaim, out *KubeletConfigEvictionMinimumReclaim, s conversion.Scope) error {
+	return autoConvert_core_KubeletConfigEvictionMinimumReclaim_To_v1beta1_KubeletConfigEvictionMinimumReclaim(in, out, s)
 }
 
-func autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *garden.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+func autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_core_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *core.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
 	out.MemoryAvailable = (*metav1.Duration)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2559,12 +2387,12 @@ func autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletC
 	return nil
 }
 
-// Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
-func Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *garden.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_garden_KubeletConfigEvictionSoftGracePeriod(in, out, s)
+// Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_core_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
+func Convert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_core_KubeletConfigEvictionSoftGracePeriod(in *KubeletConfigEvictionSoftGracePeriod, out *core.KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubeletConfigEvictionSoftGracePeriod_To_core_KubeletConfigEvictionSoftGracePeriod(in, out, s)
 }
 
-func autoConvert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *garden.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+func autoConvert_core_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *core.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
 	out.MemoryAvailable = (*metav1.Duration)(unsafe.Pointer(in.MemoryAvailable))
 	out.ImageFSAvailable = (*metav1.Duration)(unsafe.Pointer(in.ImageFSAvailable))
 	out.ImageFSInodesFree = (*metav1.Duration)(unsafe.Pointer(in.ImageFSInodesFree))
@@ -2573,144 +2401,89 @@ func autoConvert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletC
 	return nil
 }
 
-// Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
-func Convert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *garden.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
-	return autoConvert_garden_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in, out, s)
+// Convert_core_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod is an autogenerated conversion function.
+func Convert_core_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in *core.KubeletConfigEvictionSoftGracePeriod, out *KubeletConfigEvictionSoftGracePeriod, s conversion.Scope) error {
+	return autoConvert_core_KubeletConfigEvictionSoftGracePeriod_To_v1beta1_KubeletConfigEvictionSoftGracePeriod(in, out, s)
 }
 
-func autoConvert_v1beta1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *garden.Kubernetes, s conversion.Scope) error {
+func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
-	if in.ClusterAutoscaler != nil {
-		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
-		*out = new(garden.ClusterAutoscaler)
-		if err := Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ClusterAutoscaler = nil
-	}
-	if in.KubeAPIServer != nil {
-		in, out := &in.KubeAPIServer, &out.KubeAPIServer
-		*out = new(garden.KubeAPIServerConfig)
-		if err := Convert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.KubeAPIServer = nil
-	}
-	if in.KubeControllerManager != nil {
-		in, out := &in.KubeControllerManager, &out.KubeControllerManager
-		*out = new(garden.KubeControllerManagerConfig)
-		if err := Convert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.KubeControllerManager = nil
-	}
-	out.KubeScheduler = (*garden.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
-	out.KubeProxy = (*garden.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
-	if in.Kubelet != nil {
-		in, out := &in.Kubelet, &out.Kubelet
-		*out = new(garden.KubeletConfig)
-		if err := Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubelet = nil
-	}
+	out.ClusterAutoscaler = (*core.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	out.KubeAPIServer = (*core.KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	out.KubeControllerManager = (*core.KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
+	out.KubeScheduler = (*core.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
+	out.KubeProxy = (*core.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
+	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	return nil
 }
 
-func autoConvert_garden_Kubernetes_To_v1beta1_Kubernetes(in *garden.Kubernetes, out *Kubernetes, s conversion.Scope) error {
+// Convert_v1beta1_Kubernetes_To_core_Kubernetes is an autogenerated conversion function.
+func Convert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kubernetes, s conversion.Scope) error {
+	return autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in, out, s)
+}
+
+func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out *Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
-	if in.KubeAPIServer != nil {
-		in, out := &in.KubeAPIServer, &out.KubeAPIServer
-		*out = new(KubeAPIServerConfig)
-		if err := Convert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.KubeAPIServer = nil
-	}
-	// WARNING: in.CloudControllerManager requires manual conversion: does not exist in peer-type
-	if in.KubeControllerManager != nil {
-		in, out := &in.KubeControllerManager, &out.KubeControllerManager
-		*out = new(KubeControllerManagerConfig)
-		if err := Convert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.KubeControllerManager = nil
-	}
+	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	out.KubeAPIServer = (*KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	out.KubeControllerManager = (*KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
 	out.KubeScheduler = (*KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
 	out.KubeProxy = (*KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
-	if in.Kubelet != nil {
-		in, out := &in.Kubelet, &out.Kubelet
-		*out = new(KubeletConfig)
-		if err := Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubelet = nil
-	}
+	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
-	if in.ClusterAutoscaler != nil {
-		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
-		*out = new(ClusterAutoscaler)
-		if err := Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ClusterAutoscaler = nil
-	}
 	return nil
 }
 
-func autoConvert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(in *KubernetesConfig, out *garden.KubernetesConfig, s conversion.Scope) error {
+// Convert_core_Kubernetes_To_v1beta1_Kubernetes is an autogenerated conversion function.
+func Convert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out *Kubernetes, s conversion.Scope) error {
+	return autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in, out, s)
+}
+
+func autoConvert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(in *KubernetesConfig, out *core.KubernetesConfig, s conversion.Scope) error {
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
-// Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig is an autogenerated conversion function.
-func Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(in *KubernetesConfig, out *garden.KubernetesConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(in, out, s)
+// Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig is an autogenerated conversion function.
+func Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(in *KubernetesConfig, out *core.KubernetesConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(in, out, s)
 }
 
-func autoConvert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(in *garden.KubernetesConfig, out *KubernetesConfig, s conversion.Scope) error {
+func autoConvert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(in *core.KubernetesConfig, out *KubernetesConfig, s conversion.Scope) error {
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
-// Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig is an autogenerated conversion function.
-func Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(in *garden.KubernetesConfig, out *KubernetesConfig, s conversion.Scope) error {
-	return autoConvert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(in, out, s)
+// Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig is an autogenerated conversion function.
+func Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(in *core.KubernetesConfig, out *KubernetesConfig, s conversion.Scope) error {
+	return autoConvert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(in *KubernetesDashboard, out *garden.KubernetesDashboard, s conversion.Scope) error {
-	if err := Convert_v1beta1_Addon_To_garden_Addon(&in.Addon, &out.Addon, s); err != nil {
+func autoConvert_v1beta1_KubernetesDashboard_To_core_KubernetesDashboard(in *KubernetesDashboard, out *core.KubernetesDashboard, s conversion.Scope) error {
+	if err := Convert_v1beta1_Addon_To_core_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
 	out.AuthenticationMode = (*string)(unsafe.Pointer(in.AuthenticationMode))
 	return nil
 }
 
-// Convert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard is an autogenerated conversion function.
-func Convert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(in *KubernetesDashboard, out *garden.KubernetesDashboard, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(in, out, s)
+// Convert_v1beta1_KubernetesDashboard_To_core_KubernetesDashboard is an autogenerated conversion function.
+func Convert_v1beta1_KubernetesDashboard_To_core_KubernetesDashboard(in *KubernetesDashboard, out *core.KubernetesDashboard, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubernetesDashboard_To_core_KubernetesDashboard(in, out, s)
 }
 
-func autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garden.KubernetesDashboard, out *KubernetesDashboard, s conversion.Scope) error {
-	if err := Convert_garden_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
+func autoConvert_core_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *core.KubernetesDashboard, out *KubernetesDashboard, s conversion.Scope) error {
+	if err := Convert_core_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
 	out.AuthenticationMode = (*string)(unsafe.Pointer(in.AuthenticationMode))
 	return nil
 }
 
-// Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard is an autogenerated conversion function.
-func Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garden.KubernetesDashboard, out *KubernetesDashboard, s conversion.Scope) error {
-	return autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in, out, s)
+// Convert_core_KubernetesDashboard_To_v1beta1_KubernetesDashboard is an autogenerated conversion function.
+func Convert_core_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *core.KubernetesDashboard, out *KubernetesDashboard, s conversion.Scope) error {
+	return autoConvert_core_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in, out, s)
 }
 
 func autoConvert_v1beta1_KubernetesInfo_To_core_KubernetesInfo(in *KubernetesInfo, out *core.KubernetesInfo, s conversion.Scope) error {
@@ -2733,24 +2506,24 @@ func Convert_core_KubernetesInfo_To_v1beta1_KubernetesInfo(in *core.KubernetesIn
 	return autoConvert_core_KubernetesInfo_To_v1beta1_KubernetesInfo(in, out, s)
 }
 
-func autoConvert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings(in *KubernetesSettings, out *garden.KubernetesSettings, s conversion.Scope) error {
-	out.Versions = *(*[]garden.ExpirableVersion)(unsafe.Pointer(&in.Versions))
+func autoConvert_v1beta1_KubernetesSettings_To_core_KubernetesSettings(in *KubernetesSettings, out *core.KubernetesSettings, s conversion.Scope) error {
+	out.Versions = *(*[]core.ExpirableVersion)(unsafe.Pointer(&in.Versions))
 	return nil
 }
 
-// Convert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings is an autogenerated conversion function.
-func Convert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings(in *KubernetesSettings, out *garden.KubernetesSettings, s conversion.Scope) error {
-	return autoConvert_v1beta1_KubernetesSettings_To_garden_KubernetesSettings(in, out, s)
+// Convert_v1beta1_KubernetesSettings_To_core_KubernetesSettings is an autogenerated conversion function.
+func Convert_v1beta1_KubernetesSettings_To_core_KubernetesSettings(in *KubernetesSettings, out *core.KubernetesSettings, s conversion.Scope) error {
+	return autoConvert_v1beta1_KubernetesSettings_To_core_KubernetesSettings(in, out, s)
 }
 
-func autoConvert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings(in *garden.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
+func autoConvert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(in *core.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
 	out.Versions = *(*[]ExpirableVersion)(unsafe.Pointer(&in.Versions))
 	return nil
 }
 
-// Convert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings is an autogenerated conversion function.
-func Convert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings(in *garden.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
-	return autoConvert_garden_KubernetesSettings_To_v1beta1_KubernetesSettings(in, out, s)
+// Convert_core_KubernetesSettings_To_v1beta1_KubernetesSettings is an autogenerated conversion function.
+func Convert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(in *core.KubernetesSettings, out *KubernetesSettings, s conversion.Scope) error {
+	return autoConvert_core_KubernetesSettings_To_v1beta1_KubernetesSettings(in, out, s)
 }
 
 func autoConvert_v1beta1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
@@ -2807,225 +2580,205 @@ func Convert_core_LastOperation_To_v1beta1_LastOperation(in *core.LastOperation,
 	return autoConvert_core_LastOperation_To_v1beta1_LastOperation(in, out, s)
 }
 
-func autoConvert_v1beta1_Machine_To_garden_Machine(in *Machine, out *garden.Machine, s conversion.Scope) error {
+func autoConvert_v1beta1_Machine_To_core_Machine(in *Machine, out *core.Machine, s conversion.Scope) error {
 	out.Type = in.Type
-	out.Image = (*garden.ShootMachineImage)(unsafe.Pointer(in.Image))
+	out.Image = (*core.ShootMachineImage)(unsafe.Pointer(in.Image))
 	return nil
 }
 
-// Convert_v1beta1_Machine_To_garden_Machine is an autogenerated conversion function.
-func Convert_v1beta1_Machine_To_garden_Machine(in *Machine, out *garden.Machine, s conversion.Scope) error {
-	return autoConvert_v1beta1_Machine_To_garden_Machine(in, out, s)
+// Convert_v1beta1_Machine_To_core_Machine is an autogenerated conversion function.
+func Convert_v1beta1_Machine_To_core_Machine(in *Machine, out *core.Machine, s conversion.Scope) error {
+	return autoConvert_v1beta1_Machine_To_core_Machine(in, out, s)
 }
 
-func autoConvert_garden_Machine_To_v1beta1_Machine(in *garden.Machine, out *Machine, s conversion.Scope) error {
+func autoConvert_core_Machine_To_v1beta1_Machine(in *core.Machine, out *Machine, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Image = (*ShootMachineImage)(unsafe.Pointer(in.Image))
 	return nil
 }
 
-// Convert_garden_Machine_To_v1beta1_Machine is an autogenerated conversion function.
-func Convert_garden_Machine_To_v1beta1_Machine(in *garden.Machine, out *Machine, s conversion.Scope) error {
-	return autoConvert_garden_Machine_To_v1beta1_Machine(in, out, s)
+// Convert_core_Machine_To_v1beta1_Machine is an autogenerated conversion function.
+func Convert_core_Machine_To_v1beta1_Machine(in *core.Machine, out *Machine, s conversion.Scope) error {
+	return autoConvert_core_Machine_To_v1beta1_Machine(in, out, s)
 }
 
-func autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
+func autoConvert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *core.MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Versions = *(*[]garden.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	out.Versions = *(*[]core.ExpirableVersion)(unsafe.Pointer(&in.Versions))
 	return nil
 }
 
-// Convert_v1beta1_MachineImage_To_garden_MachineImage is an autogenerated conversion function.
-func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in, out, s)
+// Convert_v1beta1_MachineImage_To_core_MachineImage is an autogenerated conversion function.
+func Convert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *core.MachineImage, s conversion.Scope) error {
+	return autoConvert_v1beta1_MachineImage_To_core_MachineImage(in, out, s)
 }
 
-func autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
+func autoConvert_core_MachineImage_To_v1beta1_MachineImage(in *core.MachineImage, out *MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Versions = *(*[]ExpirableVersion)(unsafe.Pointer(&in.Versions))
 	return nil
 }
 
-// Convert_garden_MachineImage_To_v1beta1_MachineImage is an autogenerated conversion function.
-func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
-	return autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in, out, s)
+// Convert_core_MachineImage_To_v1beta1_MachineImage is an autogenerated conversion function.
+func Convert_core_MachineImage_To_v1beta1_MachineImage(in *core.MachineImage, out *MachineImage, s conversion.Scope) error {
+	return autoConvert_core_MachineImage_To_v1beta1_MachineImage(in, out, s)
 }
 
-func autoConvert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
+func autoConvert_v1beta1_MachineType_To_core_MachineType(in *MachineType, out *core.MachineType, s conversion.Scope) error {
 	out.CPU = in.CPU
 	out.GPU = in.GPU
 	out.Memory = in.Memory
 	out.Name = in.Name
-	out.Storage = (*garden.MachineTypeStorage)(unsafe.Pointer(in.Storage))
+	out.Storage = (*core.MachineTypeStorage)(unsafe.Pointer(in.Storage))
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	return nil
 }
 
-// Convert_v1beta1_MachineType_To_garden_MachineType is an autogenerated conversion function.
-func Convert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineType_To_garden_MachineType(in, out, s)
+// Convert_v1beta1_MachineType_To_core_MachineType is an autogenerated conversion function.
+func Convert_v1beta1_MachineType_To_core_MachineType(in *MachineType, out *core.MachineType, s conversion.Scope) error {
+	return autoConvert_v1beta1_MachineType_To_core_MachineType(in, out, s)
 }
 
-func autoConvert_garden_MachineType_To_v1beta1_MachineType(in *garden.MachineType, out *MachineType, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+func autoConvert_core_MachineType_To_v1beta1_MachineType(in *core.MachineType, out *MachineType, s conversion.Scope) error {
 	out.CPU = in.CPU
 	out.GPU = in.GPU
+	out.Memory = in.Memory
+	out.Name = in.Name
 	out.Storage = (*MachineTypeStorage)(unsafe.Pointer(in.Storage))
-	out.Memory = in.Memory
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	return nil
 }
 
-// Convert_garden_MachineType_To_v1beta1_MachineType is an autogenerated conversion function.
-func Convert_garden_MachineType_To_v1beta1_MachineType(in *garden.MachineType, out *MachineType, s conversion.Scope) error {
-	return autoConvert_garden_MachineType_To_v1beta1_MachineType(in, out, s)
+// Convert_core_MachineType_To_v1beta1_MachineType is an autogenerated conversion function.
+func Convert_core_MachineType_To_v1beta1_MachineType(in *core.MachineType, out *MachineType, s conversion.Scope) error {
+	return autoConvert_core_MachineType_To_v1beta1_MachineType(in, out, s)
 }
 
-func autoConvert_v1beta1_MachineTypeStorage_To_garden_MachineTypeStorage(in *MachineTypeStorage, out *garden.MachineTypeStorage, s conversion.Scope) error {
+func autoConvert_v1beta1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineTypeStorage, out *core.MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
 	out.Size = in.Size
 	out.Type = in.Type
 	return nil
 }
 
-// Convert_v1beta1_MachineTypeStorage_To_garden_MachineTypeStorage is an autogenerated conversion function.
-func Convert_v1beta1_MachineTypeStorage_To_garden_MachineTypeStorage(in *MachineTypeStorage, out *garden.MachineTypeStorage, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineTypeStorage_To_garden_MachineTypeStorage(in, out, s)
+// Convert_v1beta1_MachineTypeStorage_To_core_MachineTypeStorage is an autogenerated conversion function.
+func Convert_v1beta1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineTypeStorage, out *core.MachineTypeStorage, s conversion.Scope) error {
+	return autoConvert_v1beta1_MachineTypeStorage_To_core_MachineTypeStorage(in, out, s)
 }
 
-func autoConvert_garden_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in *garden.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
+func autoConvert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in *core.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
 	out.Size = in.Size
 	out.Type = in.Type
 	return nil
 }
 
-// Convert_garden_MachineTypeStorage_To_v1beta1_MachineTypeStorage is an autogenerated conversion function.
-func Convert_garden_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in *garden.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
-	return autoConvert_garden_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in, out, s)
+// Convert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage is an autogenerated conversion function.
+func Convert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in *core.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
+	return autoConvert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in, out, s)
 }
 
-func autoConvert_v1beta1_Maintenance_To_garden_Maintenance(in *Maintenance, out *garden.Maintenance, s conversion.Scope) error {
-	if in.AutoUpdate != nil {
-		in, out := &in.AutoUpdate, &out.AutoUpdate
-		*out = new(garden.MaintenanceAutoUpdate)
-		if err := Convert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.AutoUpdate = nil
-	}
-	out.TimeWindow = (*garden.MaintenanceTimeWindow)(unsafe.Pointer(in.TimeWindow))
+func autoConvert_v1beta1_Maintenance_To_core_Maintenance(in *Maintenance, out *core.Maintenance, s conversion.Scope) error {
+	out.AutoUpdate = (*core.MaintenanceAutoUpdate)(unsafe.Pointer(in.AutoUpdate))
+	out.TimeWindow = (*core.MaintenanceTimeWindow)(unsafe.Pointer(in.TimeWindow))
 	return nil
 }
 
-// Convert_v1beta1_Maintenance_To_garden_Maintenance is an autogenerated conversion function.
-func Convert_v1beta1_Maintenance_To_garden_Maintenance(in *Maintenance, out *garden.Maintenance, s conversion.Scope) error {
-	return autoConvert_v1beta1_Maintenance_To_garden_Maintenance(in, out, s)
+// Convert_v1beta1_Maintenance_To_core_Maintenance is an autogenerated conversion function.
+func Convert_v1beta1_Maintenance_To_core_Maintenance(in *Maintenance, out *core.Maintenance, s conversion.Scope) error {
+	return autoConvert_v1beta1_Maintenance_To_core_Maintenance(in, out, s)
 }
 
-func autoConvert_garden_Maintenance_To_v1beta1_Maintenance(in *garden.Maintenance, out *Maintenance, s conversion.Scope) error {
-	if in.AutoUpdate != nil {
-		in, out := &in.AutoUpdate, &out.AutoUpdate
-		*out = new(MaintenanceAutoUpdate)
-		if err := Convert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.AutoUpdate = nil
-	}
+func autoConvert_core_Maintenance_To_v1beta1_Maintenance(in *core.Maintenance, out *Maintenance, s conversion.Scope) error {
+	out.AutoUpdate = (*MaintenanceAutoUpdate)(unsafe.Pointer(in.AutoUpdate))
 	out.TimeWindow = (*MaintenanceTimeWindow)(unsafe.Pointer(in.TimeWindow))
 	return nil
 }
 
-// Convert_garden_Maintenance_To_v1beta1_Maintenance is an autogenerated conversion function.
-func Convert_garden_Maintenance_To_v1beta1_Maintenance(in *garden.Maintenance, out *Maintenance, s conversion.Scope) error {
-	return autoConvert_garden_Maintenance_To_v1beta1_Maintenance(in, out, s)
+// Convert_core_Maintenance_To_v1beta1_Maintenance is an autogenerated conversion function.
+func Convert_core_Maintenance_To_v1beta1_Maintenance(in *core.Maintenance, out *Maintenance, s conversion.Scope) error {
+	return autoConvert_core_Maintenance_To_v1beta1_Maintenance(in, out, s)
 }
 
-func autoConvert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *garden.MaintenanceAutoUpdate, s conversion.Scope) error {
+func autoConvert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *core.MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	if err := metav1.Convert_bool_To_Pointer_bool(&in.MachineImageVersion, &out.MachineImageVersion, s); err != nil {
-		return err
-	}
+	out.MachineImageVersion = in.MachineImageVersion
 	return nil
 }
 
-// Convert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate is an autogenerated conversion function.
-func Convert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *garden.MaintenanceAutoUpdate, s conversion.Scope) error {
-	return autoConvert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(in, out, s)
+// Convert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate is an autogenerated conversion function.
+func Convert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *core.MaintenanceAutoUpdate, s conversion.Scope) error {
+	return autoConvert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in, out, s)
 }
 
-func autoConvert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *garden.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
+func autoConvert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *core.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	if err := metav1.Convert_Pointer_bool_To_bool(&in.MachineImageVersion, &out.MachineImageVersion, s); err != nil {
-		return err
-	}
+	out.MachineImageVersion = in.MachineImageVersion
 	return nil
 }
 
-// Convert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate is an autogenerated conversion function.
-func Convert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *garden.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
-	return autoConvert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in, out, s)
+// Convert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate is an autogenerated conversion function.
+func Convert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *core.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
+	return autoConvert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in, out, s)
 }
 
-func autoConvert_v1beta1_MaintenanceTimeWindow_To_garden_MaintenanceTimeWindow(in *MaintenanceTimeWindow, out *garden.MaintenanceTimeWindow, s conversion.Scope) error {
+func autoConvert_v1beta1_MaintenanceTimeWindow_To_core_MaintenanceTimeWindow(in *MaintenanceTimeWindow, out *core.MaintenanceTimeWindow, s conversion.Scope) error {
 	out.Begin = in.Begin
 	out.End = in.End
 	return nil
 }
 
-// Convert_v1beta1_MaintenanceTimeWindow_To_garden_MaintenanceTimeWindow is an autogenerated conversion function.
-func Convert_v1beta1_MaintenanceTimeWindow_To_garden_MaintenanceTimeWindow(in *MaintenanceTimeWindow, out *garden.MaintenanceTimeWindow, s conversion.Scope) error {
-	return autoConvert_v1beta1_MaintenanceTimeWindow_To_garden_MaintenanceTimeWindow(in, out, s)
+// Convert_v1beta1_MaintenanceTimeWindow_To_core_MaintenanceTimeWindow is an autogenerated conversion function.
+func Convert_v1beta1_MaintenanceTimeWindow_To_core_MaintenanceTimeWindow(in *MaintenanceTimeWindow, out *core.MaintenanceTimeWindow, s conversion.Scope) error {
+	return autoConvert_v1beta1_MaintenanceTimeWindow_To_core_MaintenanceTimeWindow(in, out, s)
 }
 
-func autoConvert_garden_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in *garden.MaintenanceTimeWindow, out *MaintenanceTimeWindow, s conversion.Scope) error {
+func autoConvert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in *core.MaintenanceTimeWindow, out *MaintenanceTimeWindow, s conversion.Scope) error {
 	out.Begin = in.Begin
 	out.End = in.End
 	return nil
 }
 
-// Convert_garden_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow is an autogenerated conversion function.
-func Convert_garden_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in *garden.MaintenanceTimeWindow, out *MaintenanceTimeWindow, s conversion.Scope) error {
-	return autoConvert_garden_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in, out, s)
+// Convert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow is an autogenerated conversion function.
+func Convert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in *core.MaintenanceTimeWindow, out *MaintenanceTimeWindow, s conversion.Scope) error {
+	return autoConvert_core_MaintenanceTimeWindow_To_v1beta1_MaintenanceTimeWindow(in, out, s)
 }
 
-func autoConvert_v1beta1_Monitoring_To_garden_Monitoring(in *Monitoring, out *garden.Monitoring, s conversion.Scope) error {
-	out.Alerting = (*garden.Alerting)(unsafe.Pointer(in.Alerting))
+func autoConvert_v1beta1_Monitoring_To_core_Monitoring(in *Monitoring, out *core.Monitoring, s conversion.Scope) error {
+	out.Alerting = (*core.Alerting)(unsafe.Pointer(in.Alerting))
 	return nil
 }
 
-// Convert_v1beta1_Monitoring_To_garden_Monitoring is an autogenerated conversion function.
-func Convert_v1beta1_Monitoring_To_garden_Monitoring(in *Monitoring, out *garden.Monitoring, s conversion.Scope) error {
-	return autoConvert_v1beta1_Monitoring_To_garden_Monitoring(in, out, s)
+// Convert_v1beta1_Monitoring_To_core_Monitoring is an autogenerated conversion function.
+func Convert_v1beta1_Monitoring_To_core_Monitoring(in *Monitoring, out *core.Monitoring, s conversion.Scope) error {
+	return autoConvert_v1beta1_Monitoring_To_core_Monitoring(in, out, s)
 }
 
-func autoConvert_garden_Monitoring_To_v1beta1_Monitoring(in *garden.Monitoring, out *Monitoring, s conversion.Scope) error {
+func autoConvert_core_Monitoring_To_v1beta1_Monitoring(in *core.Monitoring, out *Monitoring, s conversion.Scope) error {
 	out.Alerting = (*Alerting)(unsafe.Pointer(in.Alerting))
 	return nil
 }
 
-// Convert_garden_Monitoring_To_v1beta1_Monitoring is an autogenerated conversion function.
-func Convert_garden_Monitoring_To_v1beta1_Monitoring(in *garden.Monitoring, out *Monitoring, s conversion.Scope) error {
-	return autoConvert_garden_Monitoring_To_v1beta1_Monitoring(in, out, s)
+// Convert_core_Monitoring_To_v1beta1_Monitoring is an autogenerated conversion function.
+func Convert_core_Monitoring_To_v1beta1_Monitoring(in *core.Monitoring, out *Monitoring, s conversion.Scope) error {
+	return autoConvert_core_Monitoring_To_v1beta1_Monitoring(in, out, s)
 }
 
-func autoConvert_v1beta1_Networking_To_garden_Networking(in *Networking, out *garden.Networking, s conversion.Scope) error {
+func autoConvert_v1beta1_Networking_To_core_Networking(in *Networking, out *core.Networking, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
 	return nil
 }
 
-// Convert_v1beta1_Networking_To_garden_Networking is an autogenerated conversion function.
-func Convert_v1beta1_Networking_To_garden_Networking(in *Networking, out *garden.Networking, s conversion.Scope) error {
-	return autoConvert_v1beta1_Networking_To_garden_Networking(in, out, s)
+// Convert_v1beta1_Networking_To_core_Networking is an autogenerated conversion function.
+func Convert_v1beta1_Networking_To_core_Networking(in *Networking, out *core.Networking, s conversion.Scope) error {
+	return autoConvert_v1beta1_Networking_To_core_Networking(in, out, s)
 }
 
-func autoConvert_garden_Networking_To_v1beta1_Networking(in *garden.Networking, out *Networking, s conversion.Scope) error {
+func autoConvert_core_Networking_To_v1beta1_Networking(in *core.Networking, out *Networking, s conversion.Scope) error {
 	out.Type = in.Type
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
@@ -3034,13 +2787,13 @@ func autoConvert_garden_Networking_To_v1beta1_Networking(in *garden.Networking, 
 	return nil
 }
 
-// Convert_garden_Networking_To_v1beta1_Networking is an autogenerated conversion function.
-func Convert_garden_Networking_To_v1beta1_Networking(in *garden.Networking, out *Networking, s conversion.Scope) error {
-	return autoConvert_garden_Networking_To_v1beta1_Networking(in, out, s)
+// Convert_core_Networking_To_v1beta1_Networking is an autogenerated conversion function.
+func Convert_core_Networking_To_v1beta1_Networking(in *core.Networking, out *Networking, s conversion.Scope) error {
+	return autoConvert_core_Networking_To_v1beta1_Networking(in, out, s)
 }
 
-func autoConvert_v1beta1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, out *garden.NginxIngress, s conversion.Scope) error {
-	if err := Convert_v1beta1_Addon_To_garden_Addon(&in.Addon, &out.Addon, s); err != nil {
+func autoConvert_v1beta1_NginxIngress_To_core_NginxIngress(in *NginxIngress, out *core.NginxIngress, s conversion.Scope) error {
+	if err := Convert_v1beta1_Addon_To_core_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
@@ -3049,13 +2802,13 @@ func autoConvert_v1beta1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, o
 	return nil
 }
 
-// Convert_v1beta1_NginxIngress_To_garden_NginxIngress is an autogenerated conversion function.
-func Convert_v1beta1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, out *garden.NginxIngress, s conversion.Scope) error {
-	return autoConvert_v1beta1_NginxIngress_To_garden_NginxIngress(in, out, s)
+// Convert_v1beta1_NginxIngress_To_core_NginxIngress is an autogenerated conversion function.
+func Convert_v1beta1_NginxIngress_To_core_NginxIngress(in *NginxIngress, out *core.NginxIngress, s conversion.Scope) error {
+	return autoConvert_v1beta1_NginxIngress_To_core_NginxIngress(in, out, s)
 }
 
-func autoConvert_garden_NginxIngress_To_v1beta1_NginxIngress(in *garden.NginxIngress, out *NginxIngress, s conversion.Scope) error {
-	if err := Convert_garden_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
+func autoConvert_core_NginxIngress_To_v1beta1_NginxIngress(in *core.NginxIngress, out *NginxIngress, s conversion.Scope) error {
+	if err := Convert_core_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
 	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
@@ -3064,22 +2817,14 @@ func autoConvert_garden_NginxIngress_To_v1beta1_NginxIngress(in *garden.NginxIng
 	return nil
 }
 
-// Convert_garden_NginxIngress_To_v1beta1_NginxIngress is an autogenerated conversion function.
-func Convert_garden_NginxIngress_To_v1beta1_NginxIngress(in *garden.NginxIngress, out *NginxIngress, s conversion.Scope) error {
-	return autoConvert_garden_NginxIngress_To_v1beta1_NginxIngress(in, out, s)
+// Convert_core_NginxIngress_To_v1beta1_NginxIngress is an autogenerated conversion function.
+func Convert_core_NginxIngress_To_v1beta1_NginxIngress(in *core.NginxIngress, out *NginxIngress, s conversion.Scope) error {
+	return autoConvert_core_NginxIngress_To_v1beta1_NginxIngress(in, out, s)
 }
 
-func autoConvert_v1beta1_OIDCConfig_To_garden_OIDCConfig(in *OIDCConfig, out *garden.OIDCConfig, s conversion.Scope) error {
+func autoConvert_v1beta1_OIDCConfig_To_core_OIDCConfig(in *OIDCConfig, out *core.OIDCConfig, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	if in.ClientAuthentication != nil {
-		in, out := &in.ClientAuthentication, &out.ClientAuthentication
-		*out = new(garden.OpenIDConnectClientAuthentication)
-		if err := Convert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ClientAuthentication = nil
-	}
+	out.ClientAuthentication = (*core.OpenIDConnectClientAuthentication)(unsafe.Pointer(in.ClientAuthentication))
 	out.ClientID = (*string)(unsafe.Pointer(in.ClientID))
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
@@ -3091,13 +2836,14 @@ func autoConvert_v1beta1_OIDCConfig_To_garden_OIDCConfig(in *OIDCConfig, out *ga
 	return nil
 }
 
-// Convert_v1beta1_OIDCConfig_To_garden_OIDCConfig is an autogenerated conversion function.
-func Convert_v1beta1_OIDCConfig_To_garden_OIDCConfig(in *OIDCConfig, out *garden.OIDCConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_OIDCConfig_To_garden_OIDCConfig(in, out, s)
+// Convert_v1beta1_OIDCConfig_To_core_OIDCConfig is an autogenerated conversion function.
+func Convert_v1beta1_OIDCConfig_To_core_OIDCConfig(in *OIDCConfig, out *core.OIDCConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_OIDCConfig_To_core_OIDCConfig(in, out, s)
 }
 
-func autoConvert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
+func autoConvert_core_OIDCConfig_To_v1beta1_OIDCConfig(in *core.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	out.ClientAuthentication = (*OpenIDConnectClientAuthentication)(unsafe.Pointer(in.ClientAuthentication))
 	out.ClientID = (*string)(unsafe.Pointer(in.ClientID))
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
@@ -3106,43 +2852,34 @@ func autoConvert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, 
 	out.SigningAlgs = *(*[]string)(unsafe.Pointer(&in.SigningAlgs))
 	out.UsernameClaim = (*string)(unsafe.Pointer(in.UsernameClaim))
 	out.UsernamePrefix = (*string)(unsafe.Pointer(in.UsernamePrefix))
-	if in.ClientAuthentication != nil {
-		in, out := &in.ClientAuthentication, &out.ClientAuthentication
-		*out = new(OpenIDConnectClientAuthentication)
-		if err := Convert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ClientAuthentication = nil
-	}
 	return nil
 }
 
-// Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig is an autogenerated conversion function.
-func Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
-	return autoConvert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in, out, s)
+// Convert_core_OIDCConfig_To_v1beta1_OIDCConfig is an autogenerated conversion function.
+func Convert_core_OIDCConfig_To_v1beta1_OIDCConfig(in *core.OIDCConfig, out *OIDCConfig, s conversion.Scope) error {
+	return autoConvert_core_OIDCConfig_To_v1beta1_OIDCConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *garden.OpenIDConnectClientAuthentication, s conversion.Scope) error {
+func autoConvert_v1beta1_OpenIDConnectClientAuthentication_To_core_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *core.OpenIDConnectClientAuthentication, s conversion.Scope) error {
 	out.ExtraConfig = *(*map[string]string)(unsafe.Pointer(&in.ExtraConfig))
 	out.Secret = (*string)(unsafe.Pointer(in.Secret))
 	return nil
 }
 
-// Convert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication is an autogenerated conversion function.
-func Convert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *garden.OpenIDConnectClientAuthentication, s conversion.Scope) error {
-	return autoConvert_v1beta1_OpenIDConnectClientAuthentication_To_garden_OpenIDConnectClientAuthentication(in, out, s)
+// Convert_v1beta1_OpenIDConnectClientAuthentication_To_core_OpenIDConnectClientAuthentication is an autogenerated conversion function.
+func Convert_v1beta1_OpenIDConnectClientAuthentication_To_core_OpenIDConnectClientAuthentication(in *OpenIDConnectClientAuthentication, out *core.OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	return autoConvert_v1beta1_OpenIDConnectClientAuthentication_To_core_OpenIDConnectClientAuthentication(in, out, s)
 }
 
-func autoConvert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in *garden.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
-	out.Secret = (*string)(unsafe.Pointer(in.Secret))
+func autoConvert_core_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in *core.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
 	out.ExtraConfig = *(*map[string]string)(unsafe.Pointer(&in.ExtraConfig))
+	out.Secret = (*string)(unsafe.Pointer(in.Secret))
 	return nil
 }
 
-// Convert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication is an autogenerated conversion function.
-func Convert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in *garden.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
-	return autoConvert_garden_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in, out, s)
+// Convert_core_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication is an autogenerated conversion function.
+func Convert_core_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in *core.OpenIDConnectClientAuthentication, out *OpenIDConnectClientAuthentication, s conversion.Scope) error {
+	return autoConvert_core_OpenIDConnectClientAuthentication_To_v1beta1_OpenIDConnectClientAuthentication(in, out, s)
 }
 
 func autoConvert_v1beta1_Plant_To_core_Plant(in *Plant, out *core.Plant, s conversion.Scope) error {
@@ -3245,188 +2982,158 @@ func Convert_core_PlantStatus_To_v1beta1_PlantStatus(in *core.PlantStatus, out *
 	return autoConvert_core_PlantStatus_To_v1beta1_PlantStatus(in, out, s)
 }
 
-func autoConvert_v1beta1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {
+func autoConvert_v1beta1_Project_To_core_Project(in *Project, out *core.Project, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1beta1_ProjectStatus_To_core_ProjectStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1beta1_Project_To_garden_Project is an autogenerated conversion function.
-func Convert_v1beta1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {
-	return autoConvert_v1beta1_Project_To_garden_Project(in, out, s)
+// Convert_v1beta1_Project_To_core_Project is an autogenerated conversion function.
+func Convert_v1beta1_Project_To_core_Project(in *Project, out *core.Project, s conversion.Scope) error {
+	return autoConvert_v1beta1_Project_To_core_Project(in, out, s)
 }
 
-func autoConvert_garden_Project_To_v1beta1_Project(in *garden.Project, out *Project, s conversion.Scope) error {
+func autoConvert_core_Project_To_v1beta1_Project(in *core.Project, out *Project, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_garden_ProjectStatus_To_v1beta1_ProjectStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_core_ProjectStatus_To_v1beta1_ProjectStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_garden_Project_To_v1beta1_Project is an autogenerated conversion function.
-func Convert_garden_Project_To_v1beta1_Project(in *garden.Project, out *Project, s conversion.Scope) error {
-	return autoConvert_garden_Project_To_v1beta1_Project(in, out, s)
+// Convert_core_Project_To_v1beta1_Project is an autogenerated conversion function.
+func Convert_core_Project_To_v1beta1_Project(in *core.Project, out *Project, s conversion.Scope) error {
+	return autoConvert_core_Project_To_v1beta1_Project(in, out, s)
 }
 
-func autoConvert_v1beta1_ProjectList_To_garden_ProjectList(in *ProjectList, out *garden.ProjectList, s conversion.Scope) error {
+func autoConvert_v1beta1_ProjectList_To_core_ProjectList(in *ProjectList, out *core.ProjectList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]garden.Project, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_Project_To_garden_Project(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]core.Project)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1beta1_ProjectList_To_garden_ProjectList is an autogenerated conversion function.
-func Convert_v1beta1_ProjectList_To_garden_ProjectList(in *ProjectList, out *garden.ProjectList, s conversion.Scope) error {
-	return autoConvert_v1beta1_ProjectList_To_garden_ProjectList(in, out, s)
+// Convert_v1beta1_ProjectList_To_core_ProjectList is an autogenerated conversion function.
+func Convert_v1beta1_ProjectList_To_core_ProjectList(in *ProjectList, out *core.ProjectList, s conversion.Scope) error {
+	return autoConvert_v1beta1_ProjectList_To_core_ProjectList(in, out, s)
 }
 
-func autoConvert_garden_ProjectList_To_v1beta1_ProjectList(in *garden.ProjectList, out *ProjectList, s conversion.Scope) error {
+func autoConvert_core_ProjectList_To_v1beta1_ProjectList(in *core.ProjectList, out *ProjectList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]Project, len(*in))
-		for i := range *in {
-			if err := Convert_garden_Project_To_v1beta1_Project(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]Project)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_garden_ProjectList_To_v1beta1_ProjectList is an autogenerated conversion function.
-func Convert_garden_ProjectList_To_v1beta1_ProjectList(in *garden.ProjectList, out *ProjectList, s conversion.Scope) error {
-	return autoConvert_garden_ProjectList_To_v1beta1_ProjectList(in, out, s)
+// Convert_core_ProjectList_To_v1beta1_ProjectList is an autogenerated conversion function.
+func Convert_core_ProjectList_To_v1beta1_ProjectList(in *core.ProjectList, out *ProjectList, s conversion.Scope) error {
+	return autoConvert_core_ProjectList_To_v1beta1_ProjectList(in, out, s)
 }
 
-func autoConvert_v1beta1_ProjectMember_To_garden_ProjectMember(in *ProjectMember, out *garden.ProjectMember, s conversion.Scope) error {
+func autoConvert_v1beta1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
 	out.Subject = in.Subject
 	out.Role = in.Role
 	return nil
 }
 
-// Convert_v1beta1_ProjectMember_To_garden_ProjectMember is an autogenerated conversion function.
-func Convert_v1beta1_ProjectMember_To_garden_ProjectMember(in *ProjectMember, out *garden.ProjectMember, s conversion.Scope) error {
-	return autoConvert_v1beta1_ProjectMember_To_garden_ProjectMember(in, out, s)
+// Convert_v1beta1_ProjectMember_To_core_ProjectMember is an autogenerated conversion function.
+func Convert_v1beta1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
+	return autoConvert_v1beta1_ProjectMember_To_core_ProjectMember(in, out, s)
 }
 
-func autoConvert_garden_ProjectMember_To_v1beta1_ProjectMember(in *garden.ProjectMember, out *ProjectMember, s conversion.Scope) error {
+func autoConvert_core_ProjectMember_To_v1beta1_ProjectMember(in *core.ProjectMember, out *ProjectMember, s conversion.Scope) error {
 	out.Subject = in.Subject
 	out.Role = in.Role
 	return nil
 }
 
-// Convert_garden_ProjectMember_To_v1beta1_ProjectMember is an autogenerated conversion function.
-func Convert_garden_ProjectMember_To_v1beta1_ProjectMember(in *garden.ProjectMember, out *ProjectMember, s conversion.Scope) error {
-	return autoConvert_garden_ProjectMember_To_v1beta1_ProjectMember(in, out, s)
+// Convert_core_ProjectMember_To_v1beta1_ProjectMember is an autogenerated conversion function.
+func Convert_core_ProjectMember_To_v1beta1_ProjectMember(in *core.ProjectMember, out *ProjectMember, s conversion.Scope) error {
+	return autoConvert_core_ProjectMember_To_v1beta1_ProjectMember(in, out, s)
 }
 
-func autoConvert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
+func autoConvert_v1beta1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
 	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	// WARNING: in.Members requires manual conversion: does not exist in peer-type
+	out.Members = *(*[]core.ProjectMember)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 
-func autoConvert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+// Convert_v1beta1_ProjectSpec_To_core_ProjectSpec is an autogenerated conversion function.
+func Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_ProjectSpec_To_core_ProjectSpec(in, out, s)
+}
+
+func autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
 	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	// WARNING: in.ProjectMembers requires manual conversion: does not exist in peer-type
+	out.Members = *(*[]ProjectMember)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 
-func autoConvert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
+// Convert_core_ProjectSpec_To_v1beta1_ProjectSpec is an autogenerated conversion function.
+func Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	return autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, out *core.ProjectStatus, s conversion.Scope) error {
 	out.ObservedGeneration = in.ObservedGeneration
-	out.Phase = garden.ProjectPhase(in.Phase)
+	out.Phase = core.ProjectPhase(in.Phase)
 	return nil
 }
 
-// Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus is an autogenerated conversion function.
-func Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
-	return autoConvert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in, out, s)
+// Convert_v1beta1_ProjectStatus_To_core_ProjectStatus is an autogenerated conversion function.
+func Convert_v1beta1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, out *core.ProjectStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_ProjectStatus_To_core_ProjectStatus(in, out, s)
 }
 
-func autoConvert_garden_ProjectStatus_To_v1beta1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
+func autoConvert_core_ProjectStatus_To_v1beta1_ProjectStatus(in *core.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
 	out.ObservedGeneration = in.ObservedGeneration
 	out.Phase = ProjectPhase(in.Phase)
 	return nil
 }
 
-// Convert_garden_ProjectStatus_To_v1beta1_ProjectStatus is an autogenerated conversion function.
-func Convert_garden_ProjectStatus_To_v1beta1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
-	return autoConvert_garden_ProjectStatus_To_v1beta1_ProjectStatus(in, out, s)
+// Convert_core_ProjectStatus_To_v1beta1_ProjectStatus is an autogenerated conversion function.
+func Convert_core_ProjectStatus_To_v1beta1_ProjectStatus(in *core.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
+	return autoConvert_core_ProjectStatus_To_v1beta1_ProjectStatus(in, out, s)
 }
 
-func autoConvert_v1beta1_Provider_To_garden_Provider(in *Provider, out *garden.Provider, s conversion.Scope) error {
+func autoConvert_v1beta1_Provider_To_core_Provider(in *Provider, out *core.Provider, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ControlPlaneConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ControlPlaneConfig))
-	out.InfrastructureConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.InfrastructureConfig))
-	if in.Workers != nil {
-		in, out := &in.Workers, &out.Workers
-		*out = make([]garden.Worker, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_Worker_To_garden_Worker(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Workers = nil
-	}
+	out.ControlPlaneConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ControlPlaneConfig))
+	out.InfrastructureConfig = (*core.ProviderConfig)(unsafe.Pointer(in.InfrastructureConfig))
+	out.Workers = *(*[]core.Worker)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
-// Convert_v1beta1_Provider_To_garden_Provider is an autogenerated conversion function.
-func Convert_v1beta1_Provider_To_garden_Provider(in *Provider, out *garden.Provider, s conversion.Scope) error {
-	return autoConvert_v1beta1_Provider_To_garden_Provider(in, out, s)
+// Convert_v1beta1_Provider_To_core_Provider is an autogenerated conversion function.
+func Convert_v1beta1_Provider_To_core_Provider(in *Provider, out *core.Provider, s conversion.Scope) error {
+	return autoConvert_v1beta1_Provider_To_core_Provider(in, out, s)
 }
 
-func autoConvert_garden_Provider_To_v1beta1_Provider(in *garden.Provider, out *Provider, s conversion.Scope) error {
+func autoConvert_core_Provider_To_v1beta1_Provider(in *core.Provider, out *Provider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.ControlPlaneConfig = (*ProviderConfig)(unsafe.Pointer(in.ControlPlaneConfig))
 	out.InfrastructureConfig = (*ProviderConfig)(unsafe.Pointer(in.InfrastructureConfig))
-	if in.Workers != nil {
-		in, out := &in.Workers, &out.Workers
-		*out = make([]Worker, len(*in))
-		for i := range *in {
-			if err := Convert_garden_Worker_To_v1beta1_Worker(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Workers = nil
-	}
+	out.Workers = *(*[]Worker)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
-// Convert_garden_Provider_To_v1beta1_Provider is an autogenerated conversion function.
-func Convert_garden_Provider_To_v1beta1_Provider(in *garden.Provider, out *Provider, s conversion.Scope) error {
-	return autoConvert_garden_Provider_To_v1beta1_Provider(in, out, s)
+// Convert_core_Provider_To_v1beta1_Provider is an autogenerated conversion function.
+func Convert_core_Provider_To_v1beta1_Provider(in *core.Provider, out *Provider, s conversion.Scope) error {
+	return autoConvert_core_Provider_To_v1beta1_Provider(in, out, s)
 }
 
 func autoConvert_v1beta1_ProviderConfig_To_core_ProviderConfig(in *ProviderConfig, out *core.ProviderConfig, s conversion.Scope) error {
@@ -3449,249 +3156,261 @@ func Convert_core_ProviderConfig_To_v1beta1_ProviderConfig(in *core.ProviderConf
 	return autoConvert_core_ProviderConfig_To_v1beta1_ProviderConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_Quota_To_garden_Quota(in *Quota, out *garden.Quota, s conversion.Scope) error {
+func autoConvert_v1beta1_Quota_To_core_Quota(in *Quota, out *core.Quota, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_QuotaSpec_To_garden_QuotaSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1beta1_QuotaSpec_To_core_QuotaSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1beta1_Quota_To_garden_Quota is an autogenerated conversion function.
-func Convert_v1beta1_Quota_To_garden_Quota(in *Quota, out *garden.Quota, s conversion.Scope) error {
-	return autoConvert_v1beta1_Quota_To_garden_Quota(in, out, s)
+// Convert_v1beta1_Quota_To_core_Quota is an autogenerated conversion function.
+func Convert_v1beta1_Quota_To_core_Quota(in *Quota, out *core.Quota, s conversion.Scope) error {
+	return autoConvert_v1beta1_Quota_To_core_Quota(in, out, s)
 }
 
-func autoConvert_garden_Quota_To_v1beta1_Quota(in *garden.Quota, out *Quota, s conversion.Scope) error {
+func autoConvert_core_Quota_To_v1beta1_Quota(in *core.Quota, out *Quota, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_core_QuotaSpec_To_v1beta1_QuotaSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_garden_Quota_To_v1beta1_Quota is an autogenerated conversion function.
-func Convert_garden_Quota_To_v1beta1_Quota(in *garden.Quota, out *Quota, s conversion.Scope) error {
-	return autoConvert_garden_Quota_To_v1beta1_Quota(in, out, s)
+// Convert_core_Quota_To_v1beta1_Quota is an autogenerated conversion function.
+func Convert_core_Quota_To_v1beta1_Quota(in *core.Quota, out *Quota, s conversion.Scope) error {
+	return autoConvert_core_Quota_To_v1beta1_Quota(in, out, s)
 }
 
-func autoConvert_v1beta1_QuotaList_To_garden_QuotaList(in *QuotaList, out *garden.QuotaList, s conversion.Scope) error {
+func autoConvert_v1beta1_QuotaList_To_core_QuotaList(in *QuotaList, out *core.QuotaList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]garden.Quota)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]core.Quota)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1beta1_QuotaList_To_garden_QuotaList is an autogenerated conversion function.
-func Convert_v1beta1_QuotaList_To_garden_QuotaList(in *QuotaList, out *garden.QuotaList, s conversion.Scope) error {
-	return autoConvert_v1beta1_QuotaList_To_garden_QuotaList(in, out, s)
+// Convert_v1beta1_QuotaList_To_core_QuotaList is an autogenerated conversion function.
+func Convert_v1beta1_QuotaList_To_core_QuotaList(in *QuotaList, out *core.QuotaList, s conversion.Scope) error {
+	return autoConvert_v1beta1_QuotaList_To_core_QuotaList(in, out, s)
 }
 
-func autoConvert_garden_QuotaList_To_v1beta1_QuotaList(in *garden.QuotaList, out *QuotaList, s conversion.Scope) error {
+func autoConvert_core_QuotaList_To_v1beta1_QuotaList(in *core.QuotaList, out *QuotaList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]Quota)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_garden_QuotaList_To_v1beta1_QuotaList is an autogenerated conversion function.
-func Convert_garden_QuotaList_To_v1beta1_QuotaList(in *garden.QuotaList, out *QuotaList, s conversion.Scope) error {
-	return autoConvert_garden_QuotaList_To_v1beta1_QuotaList(in, out, s)
+// Convert_core_QuotaList_To_v1beta1_QuotaList is an autogenerated conversion function.
+func Convert_core_QuotaList_To_v1beta1_QuotaList(in *core.QuotaList, out *QuotaList, s conversion.Scope) error {
+	return autoConvert_core_QuotaList_To_v1beta1_QuotaList(in, out, s)
 }
 
-func autoConvert_v1beta1_QuotaSpec_To_garden_QuotaSpec(in *QuotaSpec, out *garden.QuotaSpec, s conversion.Scope) error {
+func autoConvert_v1beta1_QuotaSpec_To_core_QuotaSpec(in *QuotaSpec, out *core.QuotaSpec, s conversion.Scope) error {
 	out.ClusterLifetimeDays = (*int)(unsafe.Pointer(in.ClusterLifetimeDays))
 	out.Metrics = *(*v1.ResourceList)(unsafe.Pointer(&in.Metrics))
 	out.Scope = in.Scope
 	return nil
 }
 
-// Convert_v1beta1_QuotaSpec_To_garden_QuotaSpec is an autogenerated conversion function.
-func Convert_v1beta1_QuotaSpec_To_garden_QuotaSpec(in *QuotaSpec, out *garden.QuotaSpec, s conversion.Scope) error {
-	return autoConvert_v1beta1_QuotaSpec_To_garden_QuotaSpec(in, out, s)
+// Convert_v1beta1_QuotaSpec_To_core_QuotaSpec is an autogenerated conversion function.
+func Convert_v1beta1_QuotaSpec_To_core_QuotaSpec(in *QuotaSpec, out *core.QuotaSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_QuotaSpec_To_core_QuotaSpec(in, out, s)
 }
 
-func autoConvert_garden_QuotaSpec_To_v1beta1_QuotaSpec(in *garden.QuotaSpec, out *QuotaSpec, s conversion.Scope) error {
+func autoConvert_core_QuotaSpec_To_v1beta1_QuotaSpec(in *core.QuotaSpec, out *QuotaSpec, s conversion.Scope) error {
 	out.ClusterLifetimeDays = (*int)(unsafe.Pointer(in.ClusterLifetimeDays))
 	out.Metrics = *(*v1.ResourceList)(unsafe.Pointer(&in.Metrics))
 	out.Scope = in.Scope
 	return nil
 }
 
-// Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec is an autogenerated conversion function.
-func Convert_garden_QuotaSpec_To_v1beta1_QuotaSpec(in *garden.QuotaSpec, out *QuotaSpec, s conversion.Scope) error {
-	return autoConvert_garden_QuotaSpec_To_v1beta1_QuotaSpec(in, out, s)
+// Convert_core_QuotaSpec_To_v1beta1_QuotaSpec is an autogenerated conversion function.
+func Convert_core_QuotaSpec_To_v1beta1_QuotaSpec(in *core.QuotaSpec, out *QuotaSpec, s conversion.Scope) error {
+	return autoConvert_core_QuotaSpec_To_v1beta1_QuotaSpec(in, out, s)
 }
 
-func autoConvert_v1beta1_Region_To_garden_Region(in *Region, out *garden.Region, s conversion.Scope) error {
+func autoConvert_v1beta1_Region_To_core_Region(in *Region, out *core.Region, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Zones = *(*[]garden.AvailabilityZone)(unsafe.Pointer(&in.Zones))
+	out.Zones = *(*[]core.AvailabilityZone)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
-// Convert_v1beta1_Region_To_garden_Region is an autogenerated conversion function.
-func Convert_v1beta1_Region_To_garden_Region(in *Region, out *garden.Region, s conversion.Scope) error {
-	return autoConvert_v1beta1_Region_To_garden_Region(in, out, s)
+// Convert_v1beta1_Region_To_core_Region is an autogenerated conversion function.
+func Convert_v1beta1_Region_To_core_Region(in *Region, out *core.Region, s conversion.Scope) error {
+	return autoConvert_v1beta1_Region_To_core_Region(in, out, s)
 }
 
-func autoConvert_garden_Region_To_v1beta1_Region(in *garden.Region, out *Region, s conversion.Scope) error {
+func autoConvert_core_Region_To_v1beta1_Region(in *core.Region, out *Region, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Zones = *(*[]AvailabilityZone)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
-// Convert_garden_Region_To_v1beta1_Region is an autogenerated conversion function.
-func Convert_garden_Region_To_v1beta1_Region(in *garden.Region, out *Region, s conversion.Scope) error {
-	return autoConvert_garden_Region_To_v1beta1_Region(in, out, s)
+// Convert_core_Region_To_v1beta1_Region is an autogenerated conversion function.
+func Convert_core_Region_To_v1beta1_Region(in *core.Region, out *Region, s conversion.Scope) error {
+	return autoConvert_core_Region_To_v1beta1_Region(in, out, s)
 }
 
-func autoConvert_v1beta1_SecretBinding_To_garden_SecretBinding(in *SecretBinding, out *garden.SecretBinding, s conversion.Scope) error {
+func autoConvert_v1beta1_SecretBinding_To_core_SecretBinding(in *SecretBinding, out *core.SecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.SecretRef = in.SecretRef
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
-// Convert_v1beta1_SecretBinding_To_garden_SecretBinding is an autogenerated conversion function.
-func Convert_v1beta1_SecretBinding_To_garden_SecretBinding(in *SecretBinding, out *garden.SecretBinding, s conversion.Scope) error {
-	return autoConvert_v1beta1_SecretBinding_To_garden_SecretBinding(in, out, s)
+// Convert_v1beta1_SecretBinding_To_core_SecretBinding is an autogenerated conversion function.
+func Convert_v1beta1_SecretBinding_To_core_SecretBinding(in *SecretBinding, out *core.SecretBinding, s conversion.Scope) error {
+	return autoConvert_v1beta1_SecretBinding_To_core_SecretBinding(in, out, s)
 }
 
-func autoConvert_garden_SecretBinding_To_v1beta1_SecretBinding(in *garden.SecretBinding, out *SecretBinding, s conversion.Scope) error {
+func autoConvert_core_SecretBinding_To_v1beta1_SecretBinding(in *core.SecretBinding, out *SecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.SecretRef = in.SecretRef
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
-// Convert_garden_SecretBinding_To_v1beta1_SecretBinding is an autogenerated conversion function.
-func Convert_garden_SecretBinding_To_v1beta1_SecretBinding(in *garden.SecretBinding, out *SecretBinding, s conversion.Scope) error {
-	return autoConvert_garden_SecretBinding_To_v1beta1_SecretBinding(in, out, s)
+// Convert_core_SecretBinding_To_v1beta1_SecretBinding is an autogenerated conversion function.
+func Convert_core_SecretBinding_To_v1beta1_SecretBinding(in *core.SecretBinding, out *SecretBinding, s conversion.Scope) error {
+	return autoConvert_core_SecretBinding_To_v1beta1_SecretBinding(in, out, s)
 }
 
-func autoConvert_v1beta1_SecretBindingList_To_garden_SecretBindingList(in *SecretBindingList, out *garden.SecretBindingList, s conversion.Scope) error {
+func autoConvert_v1beta1_SecretBindingList_To_core_SecretBindingList(in *SecretBindingList, out *core.SecretBindingList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]garden.SecretBinding)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]core.SecretBinding)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1beta1_SecretBindingList_To_garden_SecretBindingList is an autogenerated conversion function.
-func Convert_v1beta1_SecretBindingList_To_garden_SecretBindingList(in *SecretBindingList, out *garden.SecretBindingList, s conversion.Scope) error {
-	return autoConvert_v1beta1_SecretBindingList_To_garden_SecretBindingList(in, out, s)
+// Convert_v1beta1_SecretBindingList_To_core_SecretBindingList is an autogenerated conversion function.
+func Convert_v1beta1_SecretBindingList_To_core_SecretBindingList(in *SecretBindingList, out *core.SecretBindingList, s conversion.Scope) error {
+	return autoConvert_v1beta1_SecretBindingList_To_core_SecretBindingList(in, out, s)
 }
 
-func autoConvert_garden_SecretBindingList_To_v1beta1_SecretBindingList(in *garden.SecretBindingList, out *SecretBindingList, s conversion.Scope) error {
+func autoConvert_core_SecretBindingList_To_v1beta1_SecretBindingList(in *core.SecretBindingList, out *SecretBindingList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]SecretBinding)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_garden_SecretBindingList_To_v1beta1_SecretBindingList is an autogenerated conversion function.
-func Convert_garden_SecretBindingList_To_v1beta1_SecretBindingList(in *garden.SecretBindingList, out *SecretBindingList, s conversion.Scope) error {
-	return autoConvert_garden_SecretBindingList_To_v1beta1_SecretBindingList(in, out, s)
+// Convert_core_SecretBindingList_To_v1beta1_SecretBindingList is an autogenerated conversion function.
+func Convert_core_SecretBindingList_To_v1beta1_SecretBindingList(in *core.SecretBindingList, out *SecretBindingList, s conversion.Scope) error {
+	return autoConvert_core_SecretBindingList_To_v1beta1_SecretBindingList(in, out, s)
 }
 
-func autoConvert_v1beta1_Seed_To_garden_Seed(in *Seed, out *garden.Seed, s conversion.Scope) error {
+func autoConvert_v1beta1_Seed_To_core_Seed(in *Seed, out *core.Seed, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_SeedSpec_To_garden_SeedSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1beta1_SeedSpec_To_core_SeedSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_SeedStatus_To_garden_SeedStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1beta1_SeedStatus_To_core_SeedStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_garden_Seed_To_v1beta1_Seed(in *garden.Seed, out *Seed, s conversion.Scope) error {
+// Convert_v1beta1_Seed_To_core_Seed is an autogenerated conversion function.
+func Convert_v1beta1_Seed_To_core_Seed(in *Seed, out *core.Seed, s conversion.Scope) error {
+	return autoConvert_v1beta1_Seed_To_core_Seed(in, out, s)
+}
+
+func autoConvert_core_Seed_To_v1beta1_Seed(in *core.Seed, out *Seed, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_SeedSpec_To_v1beta1_SeedSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_core_SeedSpec_To_v1beta1_SeedSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_garden_SeedStatus_To_v1beta1_SeedStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_core_SeedStatus_To_v1beta1_SeedStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1beta1_SeedBackup_To_garden_SeedBackup(in *SeedBackup, out *garden.SeedBackup, s conversion.Scope) error {
-	out.Provider = garden.CloudProvider(in.Provider)
+// Convert_core_Seed_To_v1beta1_Seed is an autogenerated conversion function.
+func Convert_core_Seed_To_v1beta1_Seed(in *core.Seed, out *Seed, s conversion.Scope) error {
+	return autoConvert_core_Seed_To_v1beta1_Seed(in, out, s)
+}
+
+func autoConvert_v1beta1_SeedBackup_To_core_SeedBackup(in *SeedBackup, out *core.SeedBackup, s conversion.Scope) error {
+	out.Provider = in.Provider
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
 	return nil
 }
 
-// Convert_v1beta1_SeedBackup_To_garden_SeedBackup is an autogenerated conversion function.
-func Convert_v1beta1_SeedBackup_To_garden_SeedBackup(in *SeedBackup, out *garden.SeedBackup, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedBackup_To_garden_SeedBackup(in, out, s)
+// Convert_v1beta1_SeedBackup_To_core_SeedBackup is an autogenerated conversion function.
+func Convert_v1beta1_SeedBackup_To_core_SeedBackup(in *SeedBackup, out *core.SeedBackup, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedBackup_To_core_SeedBackup(in, out, s)
 }
 
-func autoConvert_garden_SeedBackup_To_v1beta1_SeedBackup(in *garden.SeedBackup, out *SeedBackup, s conversion.Scope) error {
-	out.Provider = string(in.Provider)
+func autoConvert_core_SeedBackup_To_v1beta1_SeedBackup(in *core.SeedBackup, out *SeedBackup, s conversion.Scope) error {
+	out.Provider = in.Provider
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
 	return nil
 }
 
-// Convert_garden_SeedBackup_To_v1beta1_SeedBackup is an autogenerated conversion function.
-func Convert_garden_SeedBackup_To_v1beta1_SeedBackup(in *garden.SeedBackup, out *SeedBackup, s conversion.Scope) error {
-	return autoConvert_garden_SeedBackup_To_v1beta1_SeedBackup(in, out, s)
+// Convert_core_SeedBackup_To_v1beta1_SeedBackup is an autogenerated conversion function.
+func Convert_core_SeedBackup_To_v1beta1_SeedBackup(in *core.SeedBackup, out *SeedBackup, s conversion.Scope) error {
+	return autoConvert_core_SeedBackup_To_v1beta1_SeedBackup(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedList_To_garden_SeedList(in *SeedList, out *garden.SeedList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]garden.Seed, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_Seed_To_garden_Seed(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+func autoConvert_v1beta1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s conversion.Scope) error {
+	out.IngressDomain = in.IngressDomain
 	return nil
 }
 
-// Convert_v1beta1_SeedList_To_garden_SeedList is an autogenerated conversion function.
-func Convert_v1beta1_SeedList_To_garden_SeedList(in *SeedList, out *garden.SeedList, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedList_To_garden_SeedList(in, out, s)
+// Convert_v1beta1_SeedDNS_To_core_SeedDNS is an autogenerated conversion function.
+func Convert_v1beta1_SeedDNS_To_core_SeedDNS(in *SeedDNS, out *core.SeedDNS, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedDNS_To_core_SeedDNS(in, out, s)
 }
 
-func autoConvert_garden_SeedList_To_v1beta1_SeedList(in *garden.SeedList, out *SeedList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]Seed, len(*in))
-		for i := range *in {
-			if err := Convert_garden_Seed_To_v1beta1_Seed(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+func autoConvert_core_SeedDNS_To_v1beta1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s conversion.Scope) error {
+	out.IngressDomain = in.IngressDomain
 	return nil
 }
 
-// Convert_garden_SeedList_To_v1beta1_SeedList is an autogenerated conversion function.
-func Convert_garden_SeedList_To_v1beta1_SeedList(in *garden.SeedList, out *SeedList, s conversion.Scope) error {
-	return autoConvert_garden_SeedList_To_v1beta1_SeedList(in, out, s)
+// Convert_core_SeedDNS_To_v1beta1_SeedDNS is an autogenerated conversion function.
+func Convert_core_SeedDNS_To_v1beta1_SeedDNS(in *core.SeedDNS, out *SeedDNS, s conversion.Scope) error {
+	return autoConvert_core_SeedDNS_To_v1beta1_SeedDNS(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
+func autoConvert_v1beta1_SeedList_To_core_SeedList(in *SeedList, out *core.SeedList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]core.Seed)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1beta1_SeedList_To_core_SeedList is an autogenerated conversion function.
+func Convert_v1beta1_SeedList_To_core_SeedList(in *SeedList, out *core.SeedList, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedList_To_core_SeedList(in, out, s)
+}
+
+func autoConvert_core_SeedList_To_v1beta1_SeedList(in *core.SeedList, out *SeedList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]Seed)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_core_SeedList_To_v1beta1_SeedList is an autogenerated conversion function.
+func Convert_core_SeedList_To_v1beta1_SeedList(in *core.SeedList, out *SeedList, s conversion.Scope) error {
+	return autoConvert_core_SeedList_To_v1beta1_SeedList(in, out, s)
+}
+
+func autoConvert_v1beta1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out *core.SeedNetworks, s conversion.Scope) error {
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Pods = in.Pods
 	out.Services = in.Services
-	out.ShootDefaults = (*garden.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
+	out.ShootDefaults = (*core.ShootNetworks)(unsafe.Pointer(in.ShootDefaults))
 	out.BlockCIDRs = *(*[]string)(unsafe.Pointer(&in.BlockCIDRs))
 	return nil
 }
 
-// Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks is an autogenerated conversion function.
-func Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in, out, s)
+// Convert_v1beta1_SeedNetworks_To_core_SeedNetworks is an autogenerated conversion function.
+func Convert_v1beta1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out *core.SeedNetworks, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedNetworks_To_core_SeedNetworks(in, out, s)
 }
 
-func autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+func autoConvert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
 	out.Pods = in.Pods
 	out.Services = in.Services
@@ -3700,378 +3419,358 @@ func autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetw
 	return nil
 }
 
-// Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks is an autogenerated conversion function.
-func Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
-	return autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in, out, s)
+// Convert_core_SeedNetworks_To_v1beta1_SeedNetworks is an autogenerated conversion function.
+func Convert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+	return autoConvert_core_SeedNetworks_To_v1beta1_SeedNetworks(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedProvider_To_garden_SeedProvider(in *SeedProvider, out *garden.SeedProvider, s conversion.Scope) error {
+func autoConvert_v1beta1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *core.SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Region = in.Region
 	return nil
 }
 
-// Convert_v1beta1_SeedProvider_To_garden_SeedProvider is an autogenerated conversion function.
-func Convert_v1beta1_SeedProvider_To_garden_SeedProvider(in *SeedProvider, out *garden.SeedProvider, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedProvider_To_garden_SeedProvider(in, out, s)
+// Convert_v1beta1_SeedProvider_To_core_SeedProvider is an autogenerated conversion function.
+func Convert_v1beta1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *core.SeedProvider, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedProvider_To_core_SeedProvider(in, out, s)
 }
 
-func autoConvert_garden_SeedProvider_To_v1beta1_SeedProvider(in *garden.SeedProvider, out *SeedProvider, s conversion.Scope) error {
+func autoConvert_core_SeedProvider_To_v1beta1_SeedProvider(in *core.SeedProvider, out *SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Region = in.Region
 	return nil
 }
 
-// Convert_garden_SeedProvider_To_v1beta1_SeedProvider is an autogenerated conversion function.
-func Convert_garden_SeedProvider_To_v1beta1_SeedProvider(in *garden.SeedProvider, out *SeedProvider, s conversion.Scope) error {
-	return autoConvert_garden_SeedProvider_To_v1beta1_SeedProvider(in, out, s)
+// Convert_core_SeedProvider_To_v1beta1_SeedProvider is an autogenerated conversion function.
+func Convert_core_SeedProvider_To_v1beta1_SeedProvider(in *core.SeedProvider, out *SeedProvider, s conversion.Scope) error {
+	return autoConvert_core_SeedProvider_To_v1beta1_SeedProvider(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
-	out.Backup = (*garden.SeedBackup)(unsafe.Pointer(in.Backup))
-	// WARNING: in.DNS requires manual conversion: does not exist in peer-type
-	if err := Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
+func autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedSpec, s conversion.Scope) error {
+	out.Backup = (*core.SeedBackup)(unsafe.Pointer(in.Backup))
+	if err := Convert_v1beta1_SeedDNS_To_core_SeedDNS(&in.DNS, &out.DNS, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_SeedProvider_To_garden_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
+	if err := Convert_v1beta1_SeedNetworks_To_core_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
+		return err
+	}
+	if err := Convert_v1beta1_SeedProvider_To_core_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
 	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
-	out.Taints = *(*[]garden.SeedTaint)(unsafe.Pointer(&in.Taints))
-	out.Volume = (*garden.SeedVolume)(unsafe.Pointer(in.Volume))
+	out.Taints = *(*[]core.SeedTaint)(unsafe.Pointer(&in.Taints))
+	out.Volume = (*core.SeedVolume)(unsafe.Pointer(in.Volume))
 	return nil
 }
 
-func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedSpec, s conversion.Scope) error {
-	// WARNING: in.Cloud requires manual conversion: does not exist in peer-type
-	if err := Convert_garden_SeedProvider_To_v1beta1_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
-		return err
-	}
-	// WARNING: in.IngressDomain requires manual conversion: does not exist in peer-type
-	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
-	if err := Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
-		return err
-	}
-	out.Taints = *(*[]SeedTaint)(unsafe.Pointer(&in.Taints))
+// Convert_v1beta1_SeedSpec_To_core_SeedSpec is an autogenerated conversion function.
+func Convert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in, out, s)
+}
+
+func autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedSpec, s conversion.Scope) error {
 	out.Backup = (*SeedBackup)(unsafe.Pointer(in.Backup))
+	if err := Convert_core_SeedDNS_To_v1beta1_SeedDNS(&in.DNS, &out.DNS, s); err != nil {
+		return err
+	}
+	if err := Convert_core_SeedNetworks_To_v1beta1_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
+		return err
+	}
+	if err := Convert_core_SeedProvider_To_v1beta1_SeedProvider(&in.Provider, &out.Provider, s); err != nil {
+		return err
+	}
+	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.Taints = *(*[]SeedTaint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*SeedVolume)(unsafe.Pointer(in.Volume))
 	return nil
 }
 
-func autoConvert_v1beta1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garden.SeedStatus, s conversion.Scope) error {
-	out.Gardener = (*garden.Gardener)(unsafe.Pointer(in.Gardener))
+// Convert_core_SeedSpec_To_v1beta1_SeedSpec is an autogenerated conversion function.
+func Convert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedSpec, s conversion.Scope) error {
+	return autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core.SeedStatus, s conversion.Scope) error {
+	out.Gardener = (*core.Gardener)(unsafe.Pointer(in.Gardener))
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
-	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
 
-// Convert_v1beta1_SeedStatus_To_garden_SeedStatus is an autogenerated conversion function.
-func Convert_v1beta1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garden.SeedStatus, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedStatus_To_garden_SeedStatus(in, out, s)
+// Convert_v1beta1_SeedStatus_To_core_SeedStatus is an autogenerated conversion function.
+func Convert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core.SeedStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in, out, s)
 }
 
-func autoConvert_garden_SeedStatus_To_v1beta1_SeedStatus(in *garden.SeedStatus, out *SeedStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
+func autoConvert_core_SeedStatus_To_v1beta1_SeedStatus(in *core.SeedStatus, out *SeedStatus, s conversion.Scope) error {
 	out.Gardener = (*Gardener)(unsafe.Pointer(in.Gardener))
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
+	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
 
-// Convert_garden_SeedStatus_To_v1beta1_SeedStatus is an autogenerated conversion function.
-func Convert_garden_SeedStatus_To_v1beta1_SeedStatus(in *garden.SeedStatus, out *SeedStatus, s conversion.Scope) error {
-	return autoConvert_garden_SeedStatus_To_v1beta1_SeedStatus(in, out, s)
+// Convert_core_SeedStatus_To_v1beta1_SeedStatus is an autogenerated conversion function.
+func Convert_core_SeedStatus_To_v1beta1_SeedStatus(in *core.SeedStatus, out *SeedStatus, s conversion.Scope) error {
+	return autoConvert_core_SeedStatus_To_v1beta1_SeedStatus(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedTaint_To_garden_SeedTaint(in *SeedTaint, out *garden.SeedTaint, s conversion.Scope) error {
+func autoConvert_v1beta1_SeedTaint_To_core_SeedTaint(in *SeedTaint, out *core.SeedTaint, s conversion.Scope) error {
 	out.Key = in.Key
 	out.Value = (*string)(unsafe.Pointer(in.Value))
 	return nil
 }
 
-// Convert_v1beta1_SeedTaint_To_garden_SeedTaint is an autogenerated conversion function.
-func Convert_v1beta1_SeedTaint_To_garden_SeedTaint(in *SeedTaint, out *garden.SeedTaint, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedTaint_To_garden_SeedTaint(in, out, s)
+// Convert_v1beta1_SeedTaint_To_core_SeedTaint is an autogenerated conversion function.
+func Convert_v1beta1_SeedTaint_To_core_SeedTaint(in *SeedTaint, out *core.SeedTaint, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedTaint_To_core_SeedTaint(in, out, s)
 }
 
-func autoConvert_garden_SeedTaint_To_v1beta1_SeedTaint(in *garden.SeedTaint, out *SeedTaint, s conversion.Scope) error {
+func autoConvert_core_SeedTaint_To_v1beta1_SeedTaint(in *core.SeedTaint, out *SeedTaint, s conversion.Scope) error {
 	out.Key = in.Key
 	out.Value = (*string)(unsafe.Pointer(in.Value))
 	return nil
 }
 
-// Convert_garden_SeedTaint_To_v1beta1_SeedTaint is an autogenerated conversion function.
-func Convert_garden_SeedTaint_To_v1beta1_SeedTaint(in *garden.SeedTaint, out *SeedTaint, s conversion.Scope) error {
-	return autoConvert_garden_SeedTaint_To_v1beta1_SeedTaint(in, out, s)
+// Convert_core_SeedTaint_To_v1beta1_SeedTaint is an autogenerated conversion function.
+func Convert_core_SeedTaint_To_v1beta1_SeedTaint(in *core.SeedTaint, out *SeedTaint, s conversion.Scope) error {
+	return autoConvert_core_SeedTaint_To_v1beta1_SeedTaint(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedVolume_To_garden_SeedVolume(in *SeedVolume, out *garden.SeedVolume, s conversion.Scope) error {
+func autoConvert_v1beta1_SeedVolume_To_core_SeedVolume(in *SeedVolume, out *core.SeedVolume, s conversion.Scope) error {
 	out.MinimumSize = (*resource.Quantity)(unsafe.Pointer(in.MinimumSize))
-	out.Providers = *(*[]garden.SeedVolumeProvider)(unsafe.Pointer(&in.Providers))
+	out.Providers = *(*[]core.SeedVolumeProvider)(unsafe.Pointer(&in.Providers))
 	return nil
 }
 
-// Convert_v1beta1_SeedVolume_To_garden_SeedVolume is an autogenerated conversion function.
-func Convert_v1beta1_SeedVolume_To_garden_SeedVolume(in *SeedVolume, out *garden.SeedVolume, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedVolume_To_garden_SeedVolume(in, out, s)
+// Convert_v1beta1_SeedVolume_To_core_SeedVolume is an autogenerated conversion function.
+func Convert_v1beta1_SeedVolume_To_core_SeedVolume(in *SeedVolume, out *core.SeedVolume, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedVolume_To_core_SeedVolume(in, out, s)
 }
 
-func autoConvert_garden_SeedVolume_To_v1beta1_SeedVolume(in *garden.SeedVolume, out *SeedVolume, s conversion.Scope) error {
+func autoConvert_core_SeedVolume_To_v1beta1_SeedVolume(in *core.SeedVolume, out *SeedVolume, s conversion.Scope) error {
 	out.MinimumSize = (*resource.Quantity)(unsafe.Pointer(in.MinimumSize))
 	out.Providers = *(*[]SeedVolumeProvider)(unsafe.Pointer(&in.Providers))
 	return nil
 }
 
-// Convert_garden_SeedVolume_To_v1beta1_SeedVolume is an autogenerated conversion function.
-func Convert_garden_SeedVolume_To_v1beta1_SeedVolume(in *garden.SeedVolume, out *SeedVolume, s conversion.Scope) error {
-	return autoConvert_garden_SeedVolume_To_v1beta1_SeedVolume(in, out, s)
+// Convert_core_SeedVolume_To_v1beta1_SeedVolume is an autogenerated conversion function.
+func Convert_core_SeedVolume_To_v1beta1_SeedVolume(in *core.SeedVolume, out *SeedVolume, s conversion.Scope) error {
+	return autoConvert_core_SeedVolume_To_v1beta1_SeedVolume(in, out, s)
 }
 
-func autoConvert_v1beta1_SeedVolumeProvider_To_garden_SeedVolumeProvider(in *SeedVolumeProvider, out *garden.SeedVolumeProvider, s conversion.Scope) error {
+func autoConvert_v1beta1_SeedVolumeProvider_To_core_SeedVolumeProvider(in *SeedVolumeProvider, out *core.SeedVolumeProvider, s conversion.Scope) error {
 	out.Purpose = in.Purpose
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_v1beta1_SeedVolumeProvider_To_garden_SeedVolumeProvider is an autogenerated conversion function.
-func Convert_v1beta1_SeedVolumeProvider_To_garden_SeedVolumeProvider(in *SeedVolumeProvider, out *garden.SeedVolumeProvider, s conversion.Scope) error {
-	return autoConvert_v1beta1_SeedVolumeProvider_To_garden_SeedVolumeProvider(in, out, s)
+// Convert_v1beta1_SeedVolumeProvider_To_core_SeedVolumeProvider is an autogenerated conversion function.
+func Convert_v1beta1_SeedVolumeProvider_To_core_SeedVolumeProvider(in *SeedVolumeProvider, out *core.SeedVolumeProvider, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedVolumeProvider_To_core_SeedVolumeProvider(in, out, s)
 }
 
-func autoConvert_garden_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in *garden.SeedVolumeProvider, out *SeedVolumeProvider, s conversion.Scope) error {
+func autoConvert_core_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in *core.SeedVolumeProvider, out *SeedVolumeProvider, s conversion.Scope) error {
 	out.Purpose = in.Purpose
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_garden_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider is an autogenerated conversion function.
-func Convert_garden_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in *garden.SeedVolumeProvider, out *SeedVolumeProvider, s conversion.Scope) error {
-	return autoConvert_garden_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in, out, s)
+// Convert_core_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider is an autogenerated conversion function.
+func Convert_core_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in *core.SeedVolumeProvider, out *SeedVolumeProvider, s conversion.Scope) error {
+	return autoConvert_core_SeedVolumeProvider_To_v1beta1_SeedVolumeProvider(in, out, s)
 }
 
-func autoConvert_v1beta1_ServiceAccountConfig_To_garden_ServiceAccountConfig(in *ServiceAccountConfig, out *garden.ServiceAccountConfig, s conversion.Scope) error {
+func autoConvert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *ServiceAccountConfig, out *core.ServiceAccountConfig, s conversion.Scope) error {
 	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	return nil
 }
 
-// Convert_v1beta1_ServiceAccountConfig_To_garden_ServiceAccountConfig is an autogenerated conversion function.
-func Convert_v1beta1_ServiceAccountConfig_To_garden_ServiceAccountConfig(in *ServiceAccountConfig, out *garden.ServiceAccountConfig, s conversion.Scope) error {
-	return autoConvert_v1beta1_ServiceAccountConfig_To_garden_ServiceAccountConfig(in, out, s)
+// Convert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig is an autogenerated conversion function.
+func Convert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *ServiceAccountConfig, out *core.ServiceAccountConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_ServiceAccountConfig_To_core_ServiceAccountConfig(in, out, s)
 }
 
-func autoConvert_garden_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in *garden.ServiceAccountConfig, out *ServiceAccountConfig, s conversion.Scope) error {
+func autoConvert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in *core.ServiceAccountConfig, out *ServiceAccountConfig, s conversion.Scope) error {
 	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	return nil
 }
 
-// Convert_garden_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig is an autogenerated conversion function.
-func Convert_garden_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in *garden.ServiceAccountConfig, out *ServiceAccountConfig, s conversion.Scope) error {
-	return autoConvert_garden_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in, out, s)
+// Convert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig is an autogenerated conversion function.
+func Convert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in *core.ServiceAccountConfig, out *ServiceAccountConfig, s conversion.Scope) error {
+	return autoConvert_core_ServiceAccountConfig_To_v1beta1_ServiceAccountConfig(in, out, s)
 }
 
-func autoConvert_v1beta1_Shoot_To_garden_Shoot(in *Shoot, out *garden.Shoot, s conversion.Scope) error {
+func autoConvert_v1beta1_Shoot_To_core_Shoot(in *Shoot, out *core.Shoot, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_ShootSpec_To_garden_ShootSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1beta1_ShootSpec_To_core_ShootSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_ShootStatus_To_garden_ShootStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1beta1_ShootStatus_To_core_ShootStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conversion.Scope) error {
+// Convert_v1beta1_Shoot_To_core_Shoot is an autogenerated conversion function.
+func Convert_v1beta1_Shoot_To_core_Shoot(in *Shoot, out *core.Shoot, s conversion.Scope) error {
+	return autoConvert_v1beta1_Shoot_To_core_Shoot(in, out, s)
+}
+
+func autoConvert_core_Shoot_To_v1beta1_Shoot(in *core.Shoot, out *Shoot, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_ShootSpec_To_v1beta1_ShootSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_core_ShootSpec_To_v1beta1_ShootSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_garden_ShootStatus_To_v1beta1_ShootStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_core_ShootStatus_To_v1beta1_ShootStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1beta1_ShootList_To_garden_ShootList(in *ShootList, out *garden.ShootList, s conversion.Scope) error {
+// Convert_core_Shoot_To_v1beta1_Shoot is an autogenerated conversion function.
+func Convert_core_Shoot_To_v1beta1_Shoot(in *core.Shoot, out *Shoot, s conversion.Scope) error {
+	return autoConvert_core_Shoot_To_v1beta1_Shoot(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootList_To_core_ShootList(in *ShootList, out *core.ShootList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]garden.Shoot, len(*in))
-		for i := range *in {
-			if err := Convert_v1beta1_Shoot_To_garden_Shoot(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]core.Shoot)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1beta1_ShootList_To_garden_ShootList is an autogenerated conversion function.
-func Convert_v1beta1_ShootList_To_garden_ShootList(in *ShootList, out *garden.ShootList, s conversion.Scope) error {
-	return autoConvert_v1beta1_ShootList_To_garden_ShootList(in, out, s)
+// Convert_v1beta1_ShootList_To_core_ShootList is an autogenerated conversion function.
+func Convert_v1beta1_ShootList_To_core_ShootList(in *ShootList, out *core.ShootList, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootList_To_core_ShootList(in, out, s)
 }
 
-func autoConvert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *ShootList, s conversion.Scope) error {
+func autoConvert_core_ShootList_To_v1beta1_ShootList(in *core.ShootList, out *ShootList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]Shoot, len(*in))
-		for i := range *in {
-			if err := Convert_garden_Shoot_To_v1beta1_Shoot(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]Shoot)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_garden_ShootList_To_v1beta1_ShootList is an autogenerated conversion function.
-func Convert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *ShootList, s conversion.Scope) error {
-	return autoConvert_garden_ShootList_To_v1beta1_ShootList(in, out, s)
+// Convert_core_ShootList_To_v1beta1_ShootList is an autogenerated conversion function.
+func Convert_core_ShootList_To_v1beta1_ShootList(in *core.ShootList, out *ShootList, s conversion.Scope) error {
+	return autoConvert_core_ShootList_To_v1beta1_ShootList(in, out, s)
 }
 
-func autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in *ShootMachineImage, out *garden.ShootMachineImage, s conversion.Scope) error {
+func autoConvert_v1beta1_ShootMachineImage_To_core_ShootMachineImage(in *ShootMachineImage, out *core.ShootMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Version = in.Version
 	return nil
 }
 
-// Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage is an autogenerated conversion function.
-func Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in *ShootMachineImage, out *garden.ShootMachineImage, s conversion.Scope) error {
-	return autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in, out, s)
+// Convert_v1beta1_ShootMachineImage_To_core_ShootMachineImage is an autogenerated conversion function.
+func Convert_v1beta1_ShootMachineImage_To_core_ShootMachineImage(in *ShootMachineImage, out *core.ShootMachineImage, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootMachineImage_To_core_ShootMachineImage(in, out, s)
 }
 
-func autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in *garden.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
+func autoConvert_core_ShootMachineImage_To_v1beta1_ShootMachineImage(in *core.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Version = in.Version
 	return nil
 }
 
-// Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage is an autogenerated conversion function.
-func Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in *garden.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
-	return autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in, out, s)
+// Convert_core_ShootMachineImage_To_v1beta1_ShootMachineImage is an autogenerated conversion function.
+func Convert_core_ShootMachineImage_To_v1beta1_ShootMachineImage(in *core.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
+	return autoConvert_core_ShootMachineImage_To_v1beta1_ShootMachineImage(in, out, s)
 }
 
-func autoConvert_v1beta1_ShootNetworks_To_garden_ShootNetworks(in *ShootNetworks, out *garden.ShootNetworks, s conversion.Scope) error {
+func autoConvert_v1beta1_ShootNetworks_To_core_ShootNetworks(in *ShootNetworks, out *core.ShootNetworks, s conversion.Scope) error {
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
 	return nil
 }
 
-// Convert_v1beta1_ShootNetworks_To_garden_ShootNetworks is an autogenerated conversion function.
-func Convert_v1beta1_ShootNetworks_To_garden_ShootNetworks(in *ShootNetworks, out *garden.ShootNetworks, s conversion.Scope) error {
-	return autoConvert_v1beta1_ShootNetworks_To_garden_ShootNetworks(in, out, s)
+// Convert_v1beta1_ShootNetworks_To_core_ShootNetworks is an autogenerated conversion function.
+func Convert_v1beta1_ShootNetworks_To_core_ShootNetworks(in *ShootNetworks, out *core.ShootNetworks, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootNetworks_To_core_ShootNetworks(in, out, s)
 }
 
-func autoConvert_garden_ShootNetworks_To_v1beta1_ShootNetworks(in *garden.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
+func autoConvert_core_ShootNetworks_To_v1beta1_ShootNetworks(in *core.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Services = (*string)(unsafe.Pointer(in.Services))
 	return nil
 }
 
-// Convert_garden_ShootNetworks_To_v1beta1_ShootNetworks is an autogenerated conversion function.
-func Convert_garden_ShootNetworks_To_v1beta1_ShootNetworks(in *garden.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
-	return autoConvert_garden_ShootNetworks_To_v1beta1_ShootNetworks(in, out, s)
+// Convert_core_ShootNetworks_To_v1beta1_ShootNetworks is an autogenerated conversion function.
+func Convert_core_ShootNetworks_To_v1beta1_ShootNetworks(in *core.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
+	return autoConvert_core_ShootNetworks_To_v1beta1_ShootNetworks(in, out, s)
 }
 
-func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {
-	if in.Addons != nil {
-		in, out := &in.Addons, &out.Addons
-		*out = new(garden.Addons)
-		if err := Convert_v1beta1_Addons_To_garden_Addons(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Addons = nil
-	}
+func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.ShootSpec, s conversion.Scope) error {
+	out.Addons = (*core.Addons)(unsafe.Pointer(in.Addons))
 	out.CloudProfileName = in.CloudProfileName
-	out.DNS = (*garden.DNS)(unsafe.Pointer(in.DNS))
-	out.Extensions = *(*[]garden.Extension)(unsafe.Pointer(&in.Extensions))
-	out.Hibernation = (*garden.Hibernation)(unsafe.Pointer(in.Hibernation))
-	if err := Convert_v1beta1_Kubernetes_To_garden_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+	out.DNS = (*core.DNS)(unsafe.Pointer(in.DNS))
+	out.Extensions = *(*[]core.Extension)(unsafe.Pointer(&in.Extensions))
+	out.Hibernation = (*core.Hibernation)(unsafe.Pointer(in.Hibernation))
+	if err := Convert_v1beta1_Kubernetes_To_core_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_Networking_To_garden_Networking(&in.Networking, &out.Networking, s); err != nil {
+	if err := Convert_v1beta1_Networking_To_core_Networking(&in.Networking, &out.Networking, s); err != nil {
 		return err
 	}
-	if in.Maintenance != nil {
-		in, out := &in.Maintenance, &out.Maintenance
-		*out = new(garden.Maintenance)
-		if err := Convert_v1beta1_Maintenance_To_garden_Maintenance(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Maintenance = nil
-	}
-	out.Monitoring = (*garden.Monitoring)(unsafe.Pointer(in.Monitoring))
-	if err := Convert_v1beta1_Provider_To_garden_Provider(&in.Provider, &out.Provider, s); err != nil {
+	out.Maintenance = (*core.Maintenance)(unsafe.Pointer(in.Maintenance))
+	out.Monitoring = (*core.Monitoring)(unsafe.Pointer(in.Monitoring))
+	if err := Convert_v1beta1_Provider_To_core_Provider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.Purpose = (*core.ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
 	out.SecretBindingName = in.SecretBindingName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	return nil
 }
 
-func autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out *ShootSpec, s conversion.Scope) error {
-	if in.Addons != nil {
-		in, out := &in.Addons, &out.Addons
-		*out = new(Addons)
-		if err := Convert_garden_Addons_To_v1beta1_Addons(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Addons = nil
-	}
-	// WARNING: in.Cloud requires manual conversion: does not exist in peer-type
+// Convert_v1beta1_ShootSpec_To_core_ShootSpec is an autogenerated conversion function.
+func Convert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.ShootSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in, out, s)
+}
+
+func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	out.Addons = (*Addons)(unsafe.Pointer(in.Addons))
 	out.CloudProfileName = in.CloudProfileName
 	out.DNS = (*DNS)(unsafe.Pointer(in.DNS))
 	out.Extensions = *(*[]Extension)(unsafe.Pointer(&in.Extensions))
 	out.Hibernation = (*Hibernation)(unsafe.Pointer(in.Hibernation))
-	if err := Convert_garden_Kubernetes_To_v1beta1_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+	if err := Convert_core_Kubernetes_To_v1beta1_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_garden_Networking_To_v1beta1_Networking(&in.Networking, &out.Networking, s); err != nil {
+	if err := Convert_core_Networking_To_v1beta1_Networking(&in.Networking, &out.Networking, s); err != nil {
 		return err
 	}
-	if in.Maintenance != nil {
-		in, out := &in.Maintenance, &out.Maintenance
-		*out = new(Maintenance)
-		if err := Convert_garden_Maintenance_To_v1beta1_Maintenance(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Maintenance = nil
-	}
+	out.Maintenance = (*Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*Monitoring)(unsafe.Pointer(in.Monitoring))
-	if err := Convert_garden_Provider_To_v1beta1_Provider(&in.Provider, &out.Provider, s); err != nil {
+	if err := Convert_core_Provider_To_v1beta1_Provider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
+	out.Purpose = (*ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
 	out.SecretBindingName = in.SecretBindingName
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	return nil
 }
 
-func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
-	out.Constraints = *(*[]garden.Condition)(unsafe.Pointer(&in.Constraints))
-	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
+// Convert_core_ShootSpec_To_v1beta1_ShootSpec is an autogenerated conversion function.
+func Convert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	return autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *core.ShootStatus, s conversion.Scope) error {
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Constraints = *(*[]core.Condition)(unsafe.Pointer(&in.Constraints))
+	if err := Convert_v1beta1_Gardener_To_core_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
-	if err := metav1.Convert_bool_To_Pointer_bool(&in.IsHibernated, &out.IsHibernated, s); err != nil {
-		return err
-	}
-	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastErrors = *(*[]garden.LastError)(unsafe.Pointer(&in.LastErrors))
+	out.IsHibernated = in.IsHibernated
+	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastErrors = *(*[]core.LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
@@ -4080,123 +3779,115 @@ func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out 
 	return nil
 }
 
-func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, out *ShootStatus, s conversion.Scope) error {
+// Convert_v1beta1_ShootStatus_To_core_ShootStatus is an autogenerated conversion function.
+func Convert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *core.ShootStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in, out, s)
+}
+
+func autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, out *ShootStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	out.Constraints = *(*[]Condition)(unsafe.Pointer(&in.Constraints))
-	if err := Convert_garden_Gardener_To_v1beta1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
+	if err := Convert_core_Gardener_To_v1beta1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
+	out.IsHibernated = in.IsHibernated
 	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastErrors = *(*[]LastError)(unsafe.Pointer(&in.LastErrors))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
-	if err := metav1.Convert_Pointer_bool_To_bool(&in.IsHibernated, &out.IsHibernated, s); err != nil {
-		return err
-	}
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
 	return nil
 }
 
-func autoConvert_v1beta1_Volume_To_garden_Volume(in *Volume, out *garden.Volume, s conversion.Scope) error {
+// Convert_core_ShootStatus_To_v1beta1_ShootStatus is an autogenerated conversion function.
+func Convert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, out *ShootStatus, s conversion.Scope) error {
+	return autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in, out, s)
+}
+
+func autoConvert_v1beta1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conversion.Scope) error {
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
 	return nil
 }
 
-// Convert_v1beta1_Volume_To_garden_Volume is an autogenerated conversion function.
-func Convert_v1beta1_Volume_To_garden_Volume(in *Volume, out *garden.Volume, s conversion.Scope) error {
-	return autoConvert_v1beta1_Volume_To_garden_Volume(in, out, s)
+// Convert_v1beta1_Volume_To_core_Volume is an autogenerated conversion function.
+func Convert_v1beta1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conversion.Scope) error {
+	return autoConvert_v1beta1_Volume_To_core_Volume(in, out, s)
 }
 
-func autoConvert_garden_Volume_To_v1beta1_Volume(in *garden.Volume, out *Volume, s conversion.Scope) error {
+func autoConvert_core_Volume_To_v1beta1_Volume(in *core.Volume, out *Volume, s conversion.Scope) error {
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
 	return nil
 }
 
-// Convert_garden_Volume_To_v1beta1_Volume is an autogenerated conversion function.
-func Convert_garden_Volume_To_v1beta1_Volume(in *garden.Volume, out *Volume, s conversion.Scope) error {
-	return autoConvert_garden_Volume_To_v1beta1_Volume(in, out, s)
+// Convert_core_Volume_To_v1beta1_Volume is an autogenerated conversion function.
+func Convert_core_Volume_To_v1beta1_Volume(in *core.Volume, out *Volume, s conversion.Scope) error {
+	return autoConvert_core_Volume_To_v1beta1_Volume(in, out, s)
 }
 
-func autoConvert_v1beta1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden.VolumeType, s conversion.Scope) error {
+func autoConvert_v1beta1_VolumeType_To_core_VolumeType(in *VolumeType, out *core.VolumeType, s conversion.Scope) error {
 	out.Class = in.Class
 	out.Name = in.Name
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	return nil
 }
 
-// Convert_v1beta1_VolumeType_To_garden_VolumeType is an autogenerated conversion function.
-func Convert_v1beta1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden.VolumeType, s conversion.Scope) error {
-	return autoConvert_v1beta1_VolumeType_To_garden_VolumeType(in, out, s)
+// Convert_v1beta1_VolumeType_To_core_VolumeType is an autogenerated conversion function.
+func Convert_v1beta1_VolumeType_To_core_VolumeType(in *VolumeType, out *core.VolumeType, s conversion.Scope) error {
+	return autoConvert_v1beta1_VolumeType_To_core_VolumeType(in, out, s)
 }
 
-func autoConvert_garden_VolumeType_To_v1beta1_VolumeType(in *garden.VolumeType, out *VolumeType, s conversion.Scope) error {
+func autoConvert_core_VolumeType_To_v1beta1_VolumeType(in *core.VolumeType, out *VolumeType, s conversion.Scope) error {
+	out.Class = in.Class
 	out.Name = in.Name
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
-	out.Class = in.Class
 	return nil
 }
 
-// Convert_garden_VolumeType_To_v1beta1_VolumeType is an autogenerated conversion function.
-func Convert_garden_VolumeType_To_v1beta1_VolumeType(in *garden.VolumeType, out *VolumeType, s conversion.Scope) error {
-	return autoConvert_garden_VolumeType_To_v1beta1_VolumeType(in, out, s)
+// Convert_core_VolumeType_To_v1beta1_VolumeType is an autogenerated conversion function.
+func Convert_core_VolumeType_To_v1beta1_VolumeType(in *core.VolumeType, out *VolumeType, s conversion.Scope) error {
+	return autoConvert_core_VolumeType_To_v1beta1_VolumeType(in, out, s)
 }
 
-func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
+func autoConvert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	if in.Kubernetes != nil {
-		in, out := &in.Kubernetes, &out.Kubernetes
-		*out = new(garden.WorkerKubernetes)
-		if err := Convert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubernetes = nil
-	}
+	out.Kubernetes = (*core.WorkerKubernetes)(unsafe.Pointer(in.Kubernetes))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Name = in.Name
-	if err := Convert_v1beta1_Machine_To_garden_Machine(&in.Machine, &out.Machine, s); err != nil {
+	if err := Convert_v1beta1_Machine_To_core_Machine(&in.Machine, &out.Machine, s); err != nil {
 		return err
 	}
-	out.Maximum = int(in.Maximum)
-	out.Minimum = int(in.Minimum)
+	out.Maximum = in.Maximum
+	out.Minimum = in.Minimum
 	out.MaxSurge = (*intstr.IntOrString)(unsafe.Pointer(in.MaxSurge))
 	out.MaxUnavailable = (*intstr.IntOrString)(unsafe.Pointer(in.MaxUnavailable))
-	out.ProviderConfig = (*garden.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
-	out.Volume = (*garden.Volume)(unsafe.Pointer(in.Volume))
+	out.Volume = (*core.Volume)(unsafe.Pointer(in.Volume))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
 
-// Convert_v1beta1_Worker_To_garden_Worker is an autogenerated conversion function.
-func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
-	return autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s)
+// Convert_v1beta1_Worker_To_core_Worker is an autogenerated conversion function.
+func Convert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s conversion.Scope) error {
+	return autoConvert_v1beta1_Worker_To_core_Worker(in, out, s)
 }
 
-func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
+func autoConvert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	if in.Kubernetes != nil {
-		in, out := &in.Kubernetes, &out.Kubernetes
-		*out = new(WorkerKubernetes)
-		if err := Convert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubernetes = nil
-	}
+	out.Kubernetes = (*WorkerKubernetes)(unsafe.Pointer(in.Kubernetes))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	out.Name = in.Name
-	if err := Convert_garden_Machine_To_v1beta1_Machine(&in.Machine, &out.Machine, s); err != nil {
+	if err := Convert_core_Machine_To_v1beta1_Machine(&in.Machine, &out.Machine, s); err != nil {
 		return err
 	}
-	out.Maximum = int32(in.Maximum)
-	out.Minimum = int32(in.Minimum)
+	out.Maximum = in.Maximum
+	out.Minimum = in.Minimum
 	out.MaxSurge = (*intstr.IntOrString)(unsafe.Pointer(in.MaxSurge))
 	out.MaxUnavailable = (*intstr.IntOrString)(unsafe.Pointer(in.MaxUnavailable))
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
@@ -4206,43 +3897,27 @@ func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker,
 	return nil
 }
 
-// Convert_garden_Worker_To_v1beta1_Worker is an autogenerated conversion function.
-func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
-	return autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s)
+// Convert_core_Worker_To_v1beta1_Worker is an autogenerated conversion function.
+func Convert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s conversion.Scope) error {
+	return autoConvert_core_Worker_To_v1beta1_Worker(in, out, s)
 }
 
-func autoConvert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes(in *WorkerKubernetes, out *garden.WorkerKubernetes, s conversion.Scope) error {
-	if in.Kubelet != nil {
-		in, out := &in.Kubelet, &out.Kubelet
-		*out = new(garden.KubeletConfig)
-		if err := Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubelet = nil
-	}
+func autoConvert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKubernetes, out *core.WorkerKubernetes, s conversion.Scope) error {
+	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	return nil
 }
 
-// Convert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes is an autogenerated conversion function.
-func Convert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes(in *WorkerKubernetes, out *garden.WorkerKubernetes, s conversion.Scope) error {
-	return autoConvert_v1beta1_WorkerKubernetes_To_garden_WorkerKubernetes(in, out, s)
+// Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes is an autogenerated conversion function.
+func Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKubernetes, out *core.WorkerKubernetes, s conversion.Scope) error {
+	return autoConvert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in, out, s)
 }
 
-func autoConvert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *garden.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
-	if in.Kubelet != nil {
-		in, out := &in.Kubelet, &out.Kubelet
-		*out = new(KubeletConfig)
-		if err := Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Kubelet = nil
-	}
+func autoConvert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *core.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
+	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	return nil
 }
 
-// Convert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes is an autogenerated conversion function.
-func Convert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *garden.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
-	return autoConvert_garden_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in, out, s)
+// Convert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes is an autogenerated conversion function.
+func Convert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *core.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
+	return autoConvert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in, out, s)
 }

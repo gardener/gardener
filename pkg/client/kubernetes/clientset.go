@@ -16,7 +16,7 @@ package kubernetes
 
 import (
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/kubernetes"
@@ -48,11 +48,6 @@ func (c *Clientset) RESTMapper() meta.RESTMapper {
 // Kubernetes will return the kubernetes attribute of the Client object.
 func (c *Clientset) Kubernetes() kubernetes.Interface {
 	return c.kubernetes
-}
-
-// Garden will return the garden attribute of the Client object.
-func (c *Clientset) Garden() gardenclientset.Interface {
-	return c.garden
 }
 
 // GardenCore will return the gardenCore attribute of the Client object.

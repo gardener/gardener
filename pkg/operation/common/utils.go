@@ -321,6 +321,16 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		}
 	}
 
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "elasticsearch-logging-elasticsearch-logging-0",
+			Namespace: namespace,
+		},
+	}
+	if err := k8sClient.Delete(ctx, pvc); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+		return err
+	}
+
 	return nil
 }
 
@@ -366,6 +376,12 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-config",
+				Namespace: namespace,
+			},
+		},
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-db-alertmanager-0",
 				Namespace: namespace,
 			},
 		},
@@ -480,7 +496,7 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1
 		return false
 	}
 
-	value, ok := shoot.Annotations[ShootIgnore]
+	value, ok := GetShootIgnoreAnnotation(shoot.Annotations)
 	if !ok {
 		return false
 	}
@@ -522,7 +538,7 @@ func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod tim
 		return defaultMinSyncPeriod
 	}
 
-	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
+	syncPeriodOverwrite, ok := GetShootSyncPeriodAnnotation(shoot.Annotations)
 	if !ok {
 		return defaultMinSyncPeriod
 	}
@@ -600,4 +616,49 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 		return nil, err
 	}
 	return secret, nil
+}
+
+// GetConfirmationDeletionAnnotation fetches the value for ConfirmationDeletion annotation.
+// If not present, it fallbacks to ConfirmationDeletionDeprecated.
+func GetConfirmationDeletionAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, ConfirmationDeletion, ConfirmationDeletionDeprecated)
+}
+
+// GetShootExpirationTimestampAnnotation fetches the value for ShootExpirationTimestamp annotation.
+// If not present, it fallbacks to ShootExpirationTimestampDeprecated.
+func GetShootExpirationTimestampAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, ShootExpirationTimestamp, ShootExpirationTimestampDeprecated)
+}
+
+// GetShootOperationAnnotation fetches the value for v1beta1constants.GardenerOperation annotation.
+// If not present, it fallbacks to ShootOperationDeprecated.
+func GetShootOperationAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, v1beta1constants.GardenerOperation, ShootOperationDeprecated)
+}
+
+// GetShootSyncPeriodAnnotation fetches the value for ShootSyncPeriod annotation.
+// If not present, it fallbacks to ShootSyncPeriodDeprecated.
+func GetShootSyncPeriodAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, ShootSyncPeriod, ShootSyncPeriodDeprecated)
+}
+
+// GetShootIgnoreAnnotation fetches the value for ShootIgnore annotation.
+// If not present, it fallbacks to ShootIgnoreDeprecated.
+func GetShootIgnoreAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, ShootIgnore, ShootIgnoreDeprecated)
+}
+
+// GetTasksAnnotation fetches the value for ShootTasks annotation.
+// If not present, it fallbacks to ShootTasksDeprecated.
+func GetTasksAnnotation(annotations map[string]string) (string, bool) {
+	return getDeprecatedAnnotation(annotations, ShootTasks, ShootTasksDeprecated)
+}
+
+func getDeprecatedAnnotation(annotations map[string]string, annotationKey, deprecatedAnnotationKey string) (string, bool) {
+	val, ok := annotations[annotationKey]
+	if !ok {
+		val, ok = annotations[deprecatedAnnotationKey]
+	}
+
+	return val, ok
 }

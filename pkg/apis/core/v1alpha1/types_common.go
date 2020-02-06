@@ -75,6 +75,8 @@ const (
 	LastOperationTypeReconcile LastOperationType = "Reconcile"
 	// LastOperationTypeDelete indicates a 'delete' operation.
 	LastOperationTypeDelete LastOperationType = "Delete"
+	// LastOperationTypeMigrate indicates a 'migrate' operation.
+	LastOperationTypeMigrate LastOperationType = "Migrate"
 )
 
 // LastOperationState is a string alias.

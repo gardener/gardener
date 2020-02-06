@@ -20,11 +20,6 @@ data:
       contentType: {{ required ".Values.global.gardenlet.config.gardenClientConnection.contentType is required" .Values.global.gardenlet.config.gardenClientConnection.contentType }}
       qps: {{ required ".Values.global.gardenlet.config.gardenClientConnection.qps is required" .Values.global.gardenlet.config.gardenClientConnection.qps }}
       burst: {{ required ".Values.global.gardenlet.config.gardenClientConnection.burst is required" .Values.global.gardenlet.config.gardenClientConnection.burst }}
-      {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
-      kubeconfig: {{ .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
-      {{- else if .Values.global.gardenlet.kubeconfig }}
-      kubeconfig: /etc/gardenlet/kubeconfig/kubeconfig
-      {{- end }}
       {{- if .Values.global.gardenlet.config.gardenClientConnection.gardenClusterAddress }}
       gardenClusterAddress: {{ .Values.global.gardenlet.config.gardenClientConnection.gardenClusterAddress }}
       {{- end }}
@@ -41,11 +36,17 @@ data:
         name: {{ required ".Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.name is required" .Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.name }}
         namespace: {{ required ".Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.namespace is required" .Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret.namespace }}
       {{- end }}
+      {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+      kubeconfig: /etc/gardenlet/kubeconfig-garden/kubeconfig
+      {{- end }}
     seedClientConnection:
       acceptContentTypes: {{ required ".Values.global.gardenlet.config.seedClientConnection.acceptContentTypes is required" .Values.global.gardenlet.config.seedClientConnection.acceptContentTypes }}
       contentType: {{ required ".Values.global.gardenlet.config.seedClientConnection.contentType is required" .Values.global.gardenlet.config.seedClientConnection.contentType }}
       qps: {{ required ".Values.global.gardenlet.config.seedClientConnection.qps is required" .Values.global.gardenlet.config.seedClientConnection.qps }}
       burst: {{ required ".Values.global.gardenlet.config.seedClientConnection.burst is required" .Values.global.gardenlet.config.seedClientConnection.burst }}
+      {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+      kubeconfig: /etc/gardenlet/kubeconfig-seed/kubeconfig
+      {{- end }}
     shootClientConnection:
       acceptContentTypes: {{ required ".Values.global.gardenlet.config.shootClientConnection.acceptContentTypes is required" .Values.global.gardenlet.config.shootClientConnection.acceptContentTypes }}
       contentType: {{ required ".Values.global.gardenlet.config.shootClientConnection.contentType is required" .Values.global.gardenlet.config.shootClientConnection.contentType }}

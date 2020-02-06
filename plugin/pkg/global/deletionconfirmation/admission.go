@@ -23,11 +23,10 @@ import (
 	"sync"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -55,15 +54,15 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
-	gardenClient  internalversion.Interface
-	shootLister   gardenlisters.ShootLister
-	projectLister gardenlisters.ProjectLister
-	readyFunc     admission.ReadyFunc
+	gardenCoreClient internalversion.Interface
+	shootLister      corelisters.ShootLister
+	projectLister    corelisters.ProjectLister
+	readyFunc        admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalGardenInformerFactory(&DeletionConfirmation{})
-	_ = admissioninitializer.WantsInternalGardenClientset(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsInternalCoreClientset(&DeletionConfirmation{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -81,20 +80,20 @@ func (d *DeletionConfirmation) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (d *DeletionConfirmation) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	shootInformer := f.Garden().InternalVersion().Shoots()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DeletionConfirmation) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().InternalVersion().Shoots()
 	d.shootLister = shootInformer.Lister()
 
-	projectInformer := f.Garden().InternalVersion().Projects()
+	projectInformer := f.Core().InternalVersion().Projects()
 	d.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
-// SetInternalGardenClientset gets the clientset from the Kubernetes client.
-func (d *DeletionConfirmation) SetInternalGardenClientset(c internalversion.Interface) {
-	d.gardenClient = c
+// SetInternalCoreClientset gets the clientset from the Kubernetes client.
+func (d *DeletionConfirmation) SetInternalCoreClientset(c internalversion.Interface) {
+	d.gardenCoreClient = c
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -124,7 +123,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	switch a.GetKind().GroupKind() {
-	case garden.Kind("Shoot"), core.Kind("Shoot"):
+	case core.Kind("Shoot"):
 		listFunc = func() ([]metav1.Object, error) {
 			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
@@ -140,7 +139,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
-			return d.gardenClient.Garden().Shoots(a.GetNamespace()).Get(a.GetName(), metav1.GetOptions{})
+			return d.gardenCoreClient.Core().Shoots(a.GetNamespace()).Get(a.GetName(), metav1.GetOptions{})
 		}
 		checkFunc = func(obj metav1.Object) error {
 			if shootIgnored(obj) {
@@ -149,7 +148,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return checkIfDeletionIsConfirmed(obj)
 		}
 
-	case garden.Kind("Project"), core.Kind("Project"):
+	case core.Kind("Project"):
 		listFunc = func() ([]metav1.Object, error) {
 			list, err := d.projectLister.List(labels.Everything())
 			if err != nil {
@@ -165,7 +164,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.projectLister.Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
-			return d.gardenClient.Garden().Projects().Get(a.GetName(), metav1.GetOptions{})
+			return d.gardenCoreClient.Core().Projects().Get(a.GetName(), metav1.GetOptions{})
 		}
 		checkFunc = checkIfDeletionIsConfirmed
 
@@ -261,7 +260,9 @@ func checkIfDeletionIsConfirmed(obj metav1.Object) error {
 	if annotations == nil {
 		return annotationRequiredError()
 	}
-	if present, _ := strconv.ParseBool(annotations[common.ConfirmationDeletion]); !present {
+
+	value, _ := common.GetConfirmationDeletionAnnotation(annotations)
+	if present, _ := strconv.ParseBool(value); !present {
 		return annotationRequiredError()
 	}
 	return nil
@@ -273,7 +274,7 @@ func shootIgnored(obj metav1.Object) bool {
 		return false
 	}
 	ignore := false
-	if value, ok := annotations[common.ShootIgnore]; ok {
+	if value, ok := common.GetShootIgnoreAnnotation(annotations); ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore

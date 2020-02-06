@@ -36,7 +36,10 @@ import (
 
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	certificatesv1beta1client "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -44,6 +47,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,9 +58,19 @@ import (
 // certificate (pem-encoded). If there is any errors, or the watch timeouts, it
 // will return an error. This is intended for use on seeds (gardenlet).
 func RequestSeedCertificate(ctx context.Context, certificateClient certificatesv1beta1client.CertificateSigningRequestInterface, privateKeyData []byte, seedName string) (certData []byte, csrName string, err error) {
+	return RequestCertificate(ctx, certificateClient, privateKeyData, "gardener.cloud:system:seed:"+string(seedName), []string{"gardener.cloud:system:seeds"})
+}
+
+// RequestCertificate will create a certificate signing request for a given
+// organization and common name for the CSR will be set as expected for seed
+// certificates) and send it to API server, then it will watch the object's
+// status, once approved by API server, it will return the API server's issued
+// certificate (pem-encoded). If there is any errors, or the watch timeouts, it
+// will return an error.
+func RequestCertificate(ctx context.Context, certificateClient certificatesv1beta1client.CertificateSigningRequestInterface, privateKeyData []byte, commonName string, organization []string) (certData []byte, csrName string, err error) {
 	subject := &pkix.Name{
-		Organization: []string{"gardener.cloud:system:seeds"},
-		CommonName:   "gardener.cloud:system:seed:" + string(seedName),
+		Organization: organization,
+		CommonName:   commonName,
 	}
 
 	privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
@@ -138,16 +152,16 @@ func digestedName(publicKey interface{}, subject *pkix.Name, usages []certificat
 	return fmt.Sprintf("seed-csr-%s", encode(hash.Sum(nil))), nil
 }
 
-// MarshalKubeconfigFromBootstrapping marshals the kubeconfig derived from the bootstrapping process.
-func MarshalKubeconfigFromBootstrapping(bootstrapClientConfig *rest.Config, privateKeyData, certDat []byte) ([]byte, error) {
-	return kubeconfigWithAuthInfo(bootstrapClientConfig, &clientcmdapi.AuthInfo{
+// MarshalKubeconfigWithClientCertificate marshals the kubeconfig derived from the bootstrapping process.
+func MarshalKubeconfigWithClientCertificate(config *rest.Config, privateKeyData, certDat []byte) ([]byte, error) {
+	return kubeconfigWithAuthInfo(config, &clientcmdapi.AuthInfo{
 		ClientCertificateData: certDat,
 		ClientKeyData:         privateKeyData,
 	})
 }
 
-// MarshalKubeconfigFromBootstrapToken marshals the kubeconfig derived with the given bootstrap token.
-func MarshalKubeconfigFromBootstrapToken(config *rest.Config, token string) ([]byte, error) {
+// MarshalKubeconfigWithToken marshals the kubeconfig derived with the given bootstrap token.
+func MarshalKubeconfigWithToken(config *rest.Config, token string) ([]byte, error) {
 	return kubeconfigWithAuthInfo(config, &clientcmdapi.AuthInfo{
 		Token: token,
 	})
@@ -176,19 +190,63 @@ func kubeconfigWithAuthInfo(config *rest.Config, authInfo *clientcmdapi.AuthInfo
 	})
 }
 
-// DeleteBootstrapToken deletes a bootstrap token that was used to request a certificate.
-func DeleteBootstrapToken(ctx context.Context, c client.Client, csrName string) error {
+// GardenerSeedBootstrapper is a constant for the gardener seed bootstrapper name.
+const GardenerSeedBootstrapper = "gardener.cloud:system:seed-bootstrapper"
+
+// BuildBootstrapperName concatenates the gardener seed bootstrapper group with the given name,
+// separated by a colon.
+func BuildBootstrapperName(name string) string {
+	return fmt.Sprintf("%s:%s", GardenerSeedBootstrapper, name)
+}
+
+// DeleteBootstrapAuth checks which authentication mechanism was used to request a certificate
+// (either a bootstrap token or a service account token was used). If the latter is true then it
+// also deletes the corresponding ClusterRoleBinding.
+func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName string) error {
 	csr := &certificatesv1beta1.CertificateSigningRequest{}
 	if err := c.Get(ctx, kutil.Key(csrName), csr); err != nil {
 		return err
 	}
 
-	bootstrapTokenSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:")),
-			Namespace: metav1.NamespaceSystem,
-		},
+	var resourcesToDelete []runtime.Object
+
+	switch {
+	case strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix):
+		resourcesToDelete = append(resourcesToDelete,
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:")),
+					Namespace: metav1.NamespaceSystem,
+				},
+			},
+		)
+
+	case strings.HasPrefix(csr.Spec.Username, serviceaccount.ServiceAccountUsernamePrefix):
+		namespace, name, err := serviceaccount.SplitUsername(csr.Spec.Username)
+		if err != nil {
+			return err
+		}
+
+		resourcesToDelete = append(resourcesToDelete,
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			},
+			&rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: BuildBootstrapperName(seedName),
+				},
+			},
+		)
 	}
 
-	return client.IgnoreNotFound(c.Delete(ctx, bootstrapTokenSecret))
+	for _, obj := range resourcesToDelete {
+		if err := c.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }

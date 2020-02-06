@@ -42,6 +42,7 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
 			{Name: "Valid", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["Valid"]},
 			{Name: "Installed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["installed"]},
+			{Name: "Healthy", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["healthy"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -82,6 +83,11 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 			cells = append(cells, "<unknown>")
 		}
 		if cond := helper.GetCondition(obj.Status.Conditions, core.ControllerInstallationInstalled); cond != nil {
+			cells = append(cells, cond.Status)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
+		if cond := helper.GetCondition(obj.Status.Conditions, core.ControllerInstallationHealthy); cond != nil {
 			cells = append(cells, cond.Status)
 		} else {
 			cells = append(cells, "<unknown>")

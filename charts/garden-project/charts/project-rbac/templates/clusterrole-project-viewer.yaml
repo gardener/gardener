@@ -20,7 +20,6 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   resources:
   - projects

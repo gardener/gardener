@@ -18,38 +18,35 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"k8s.io/apiserver/pkg/authentication/user"
-
 	. "github.com/gardener/gardener/plugin/pkg/plant"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 var _ = Describe("Admission", func() {
 	Describe("#Admit", func() {
 		var (
-			plant                     core.Plant
-			project                   garden.Project
-			attrs                     admission.Attributes
-			admissionHandler          *AdmitPlant
-			gardenInformerFactory     gardeninformers.SharedInformerFactory
-			gardencoreInformerFactory gardencoreinformers.SharedInformerFactory
+			plant               core.Plant
+			project             core.Project
+			attrs               admission.Attributes
+			admissionHandler    *Handler
+			coreInformerFactory coreinformers.SharedInformerFactory
 
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
-			projectBase   = garden.Project{
+			projectBase   = core.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      projectName,
 					Namespace: namespaceName,
 				},
-				Spec: garden.ProjectSpec{
+				Spec: core.ProjectSpec{
 					Namespace: &namespaceName,
 				},
 			}
@@ -59,11 +56,8 @@ var _ = Describe("Admission", func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
-			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
-			gardencoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-
-			admissionHandler.SetInternalCoreInformerFactory(gardencoreInformerFactory)
-			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 			project = projectBase
 
@@ -78,25 +72,26 @@ var _ = Describe("Admission", func() {
 				},
 			}
 		})
+
 		It("should add the created-by annotation", func() {
 			var (
 				defaultUserName = "test-user"
 				defaultUserInfo = &user.DefaultInfo{Name: defaultUserName}
 			)
 
-			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, garden.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
 		})
+
 		It("should reject Plant resources referencing same kubeconfig secret", func() {
-			project.ObjectMeta = metav1.ObjectMeta{
-				Namespace: namespaceName,
-			}
 			plant.Namespace = namespaceName
 			existingPlant := core.Plant{
 				ObjectMeta: metav1.ObjectMeta{
@@ -109,10 +104,11 @@ var _ = Describe("Admission", func() {
 					},
 				},
 			}
-			err := gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+
+			err := coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)
+			err = coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)
 			Expect(err).NotTo(HaveOccurred())
 
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -121,23 +117,23 @@ var _ = Describe("Admission", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("another plant resource already exists"))
 		})
+
 		It("should do nothing because the resource is not a Plant", func() {
 			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", plant.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 		It("should not deny the object because it is updated", func() {
-			project.ObjectMeta = metav1.ObjectMeta{
-				Namespace: namespaceName,
-			}
 			plant.Namespace = namespaceName
 			plant.Spec.SecretRef.Name = "secretref"
-			err := gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+
+			err := coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			Expect(err).NotTo(HaveOccurred())
 			attrs = admission.NewAttributesRecord(&plant, &plant, core.Kind("Plant").WithVersion("version"), "", plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
+			err = coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
 			Expect(err).NotTo(HaveOccurred())
 
 			err = admissionHandler.Validate(context.TODO(), attrs, nil)

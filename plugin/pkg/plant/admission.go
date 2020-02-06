@@ -16,14 +16,14 @@ package plant
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -48,54 +48,71 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 	return New()
 }
 
-// AdmitPlant contains gardenlisters and and admission handler.
-type AdmitPlant struct {
+// Handler contains gardenlisters and and admission handler.
+type Handler struct {
 	*admission.Handler
-	projectLister gardenlisters.ProjectLister
+	projectLister gardencorelisters.ProjectLister
 	plantLister   gardencorelisters.PlantLister
 	readyFunc     admission.ReadyFunc
 }
 
-var readyFuncs = []admission.ReadyFunc{}
+var (
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&Handler{})
 
-// New creates a new AdmitPlant admission plugin.
-func New() (*AdmitPlant, error) {
-	return &AdmitPlant{
+	readyFuncs = []admission.ReadyFunc{}
+)
+
+// New creates a new Handler admission plugin.
+func New() (*Handler, error) {
+	return &Handler{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
-func (a *AdmitPlant) AssignReadyFunc(f admission.ReadyFunc) {
+func (a *Handler) AssignReadyFunc(f admission.ReadyFunc) {
 	a.readyFunc = f
 	a.SetReadyFunc(f)
 }
 
 // SetInternalCoreInformerFactory gets the garden core informer factory and adds it.
-func (a *AdmitPlant) SetInternalCoreInformerFactory(i gardencoreinformers.SharedInformerFactory) {
+func (a *Handler) SetInternalCoreInformerFactory(i gardencoreinformers.SharedInformerFactory) {
 	plantsInformer := i.Core().InternalVersion().Plants()
 	a.plantLister = plantsInformer.Lister()
 
-	readyFuncs = append(readyFuncs, plantsInformer.Informer().HasSynced)
-}
-
-// SetInternalGardenInformerFactory gets the garden informer factory and adds it.
-func (a *AdmitPlant) SetInternalGardenInformerFactory(i gardeninformers.SharedInformerFactory) {
-	projectInformer := i.Garden().InternalVersion().Projects()
+	projectInformer := i.Core().InternalVersion().Projects()
 	a.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, plantsInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (a *AdmitPlant) ValidateInitialization() error {
+func (a *Handler) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &AdmitPlant{}
+func (a *Handler) waitUntilReady(attrs admission.Attributes) error {
+	// Wait until the caches have been synced
+	if a.readyFunc == nil {
+		a.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !a.WaitForReady() {
+		return admission.NewForbidden(attrs, errors.New("not yet ready to handle request"))
+	}
+	return nil
+}
+
+var _ admission.MutationInterface = &Handler{}
 
 // Admit ensures that the plant is correctly annotated
-func (a *AdmitPlant) Admit(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
+func (a *Handler) Admit(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}
@@ -117,17 +134,18 @@ func (a *AdmitPlant) Admit(ctx context.Context, attrs admission.Attributes, o ad
 
 	if attrs.GetOperation() == admission.Create {
 		metav1.SetMetaDataAnnotation(&plant.ObjectMeta, common.GardenCreatedBy, attrs.GetUserInfo().GetName())
+		metav1.SetMetaDataAnnotation(&plant.ObjectMeta, common.GardenCreatedByDeprecated, attrs.GetUserInfo().GetName())
 	}
 
 	return nil
 }
 
-var _ admission.ValidationInterface = &AdmitPlant{}
+var _ admission.ValidationInterface = &Handler{}
 
 // Validate makes admissions decisions based on the resources specified in a Plant object.
 // It does reject the request if there another plant managing the cluster, if the plant name is invalid
 // or the project that contains the plant resource is deleted
-func (a *AdmitPlant) Validate(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
+func (a *Handler) Validate(ctx context.Context, attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}
@@ -150,7 +168,7 @@ func (a *AdmitPlant) Validate(ctx context.Context, attrs admission.Attributes, o
 	return a.validate(plant, attrs)
 }
 
-func (a *AdmitPlant) validate(plant *core.Plant, attrs admission.Attributes) error {
+func (a *Handler) validate(plant *core.Plant, attrs admission.Attributes) error {
 	plantList, err := a.plantLister.Plants(metav1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return err

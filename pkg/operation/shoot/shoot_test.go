@@ -16,6 +16,7 @@ package shoot_test
 
 import (
 	"context"
+	"k8s.io/utils/pointer"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,8 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/test"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -253,7 +252,7 @@ var _ = Describe("shoot", func() {
 				Expect(projectName).To(projectNameMatcher)
 				Expect(shootName).To(matcher)
 			},
-				Entry("returns empty strings for provided zero lenght string", "", BeEmpty(), BeEmpty()),
+				Entry("returns empty strings for provided zero length string", "", BeEmpty(), BeEmpty()),
 				Entry("returns empty strings, invalid technicalID", "invalidstring", BeEmpty(), BeEmpty()),
 				Entry("valid technicalID", "shoot--project-name--shoot-name", Equal("project-name"), Equal("shoot-name")),
 				Entry("valid technicalID for deprecated project and shoot naming", "shoot-projectname-shootname", Equal("projectname"), Equal("shootname")),
@@ -294,7 +293,7 @@ var _ = Describe("shoot", func() {
 						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
-							GloballyEnabled: test.MakeBoolPointer(true),
+							GloballyEnabled: pointer.BoolPtr(true),
 						},
 					},
 				},
@@ -304,6 +303,7 @@ var _ = Describe("shoot", func() {
 				ProviderConfig: &providerConfig,
 			}
 		)
+
 		DescribeTable("#MergeExtensions",
 			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, conditionMatcher types.GomegaMatcher) {
 				ext, err := MergeExtensions(registrations, extensions, namespace)
@@ -327,9 +327,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchFields(IgnoreExtras, Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(fooExtensionType),
+										"Type":           Equal(fooExtensionType),
+										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 									}),
-									"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 								}),
 							}),
 							"Timeout": Equal(fooReconciliationTimeout.Duration),
@@ -358,9 +358,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(barExtensionType),
+										"Type":           Equal(barExtensionType),
+										"ProviderConfig": BeNil(),
 									}),
-									"ProviderConfig": BeNil(),
 								}),
 							}),
 							"Timeout": Equal(ExtensionDefaultTimeout),
@@ -394,9 +394,9 @@ var _ = Describe("shoot", func() {
 							"Extension": MatchFields(IgnoreExtras, Fields{
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
-										"Type": Equal(barExtensionType),
+										"Type":           Equal(barExtensionType),
+										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 									}),
-									"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
 								}),
 							}),
 							"Timeout": Equal(ExtensionDefaultTimeout),

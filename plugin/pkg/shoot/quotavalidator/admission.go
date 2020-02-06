@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	utiltime "github.com/gardener/gardener/pkg/utils/time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -44,16 +44,16 @@ const (
 
 var (
 	quotaMetricNames = [6]corev1.ResourceName{
-		garden.QuotaMetricCPU,
-		garden.QuotaMetricGPU,
-		garden.QuotaMetricMemory,
-		garden.QuotaMetricStorageStandard,
-		garden.QuotaMetricStoragePremium,
-		garden.QuotaMetricLoadbalancer}
+		core.QuotaMetricCPU,
+		core.QuotaMetricGPU,
+		core.QuotaMetricMemory,
+		core.QuotaMetricStorageStandard,
+		core.QuotaMetricStoragePremium,
+		core.QuotaMetricLoadbalancer}
 )
 
 type quotaWorker struct {
-	garden.Worker
+	core.Worker
 	// VolumeType is the type of the root volumes.
 	VolumeType string
 	// VolumeSize is the size of the root volume.
@@ -63,30 +63,32 @@ type quotaWorker struct {
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
-		return New()
+		return New(utiltime.DefaultOps())
 	})
 }
 
 // QuotaValidator contains listers and and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister         listers.ShootLister
-	cloudProfileLister  listers.CloudProfileLister
-	secretBindingLister listers.SecretBindingLister
-	quotaLister         listers.QuotaLister
+	shootLister         corelisters.ShootLister
+	cloudProfileLister  corelisters.CloudProfileLister
+	secretBindingLister corelisters.SecretBindingLister
+	quotaLister         corelisters.QuotaLister
 	readyFunc           admission.ReadyFunc
+	time                utiltime.Ops
 }
 
 var (
-	_ = admissioninitializer.WantsInternalGardenInformerFactory(&QuotaValidator{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&QuotaValidator{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
 
 // New creates a new QuotaValidator admission plugin.
-func New() (*QuotaValidator, error) {
+func New(time utiltime.Ops) (*QuotaValidator, error) {
 	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
+		time:    time,
 	}, nil
 }
 
@@ -96,18 +98,18 @@ func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	q.SetReadyFunc(f)
 }
 
-// SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (q *QuotaValidator) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
-	shootInformer := f.Garden().InternalVersion().Shoots()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (q *QuotaValidator) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().InternalVersion().Shoots()
 	q.shootLister = shootInformer.Lister()
 
-	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
+	cloudProfileInformer := f.Core().InternalVersion().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
-	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
+	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
 
-	quotaInformer := f.Garden().InternalVersion().Quotas()
+	quotaInformer := f.Core().InternalVersion().Quotas()
 	q.quotaLister = quotaInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
@@ -150,14 +152,14 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != garden.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
+	if a.GetKind().GroupKind() != core.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
 	if a.GetSubresource() != "" {
 		return nil
 	}
 
-	shoot, ok := a.GetObject().(*garden.Shoot)
+	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
@@ -168,7 +170,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	var (
-		oldShoot         *garden.Shoot
+		oldShoot         *core.Shoot
 		maxShootLifetime *int
 		checkLifetime    = false
 		checkQuota       = false
@@ -179,7 +181,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	if a.GetOperation() == admission.Update {
-		oldShoot, ok = a.GetOldObject().(*garden.Shoot)
+		oldShoot, ok = a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
@@ -226,10 +228,9 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	// Admit Shoot lifetime changes
-	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
+	if lifetime, exists := common.GetShootExpirationTimestampAnnotation(shoot.Annotations); checkLifetime && exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime     time.Time
-			oldExpirationTime         time.Time
 			maxPossibleExpirationTime time.Time
 		)
 
@@ -238,27 +239,16 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 			return apierrors.NewInternalError(err)
 		}
 
-		oldLifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]
-		if !exists {
-			// The old version of the Shoot has no clusterLifetime annotation yet.
-			// Therefore we have to calculate the lifetime based on the maxShootLifetime.
-			oldLifetime = oldShoot.CreationTimestamp.Time.Add(time.Duration(*maxShootLifetime*24) * time.Hour).Format(time.RFC3339)
-		}
-		oldExpirationTime, err = time.Parse(time.RFC3339, oldLifetime)
-		if err != nil {
-			return apierrors.NewInternalError(err)
-		}
-
-		maxPossibleExpirationTime = oldExpirationTime.Add(time.Duration(*maxShootLifetime*24) * time.Hour)
+		maxPossibleExpirationTime = q.time.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
 		if plannedExpirationTime.After(maxPossibleExpirationTime) {
-			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time to long. Can only be extended by %d day(s)", *maxShootLifetime))
+			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time is too long. Can only be extended by %d day(s)", *maxShootLifetime))
 		}
 	}
 
 	return nil
 }
 
-func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]corev1.ResourceName, error) {
+func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[]corev1.ResourceName, error) {
 	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -283,7 +273,7 @@ func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota)
 	return nil, nil
 }
 
-func (q *QuotaValidator) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
 	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -307,10 +297,10 @@ func (q *QuotaValidator) determineAllocatedResources(quota garden.Quota, shoot g
 	return allocatedResources, nil
 }
 
-func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.Shoot) ([]garden.Shoot, error) {
+func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot) ([]core.Shoot, error) {
 	var (
-		shootsReferQuota []garden.Shoot
-		secretBindings   []garden.SecretBinding
+		shootsReferQuota []core.Shoot
+		secretBindings   []core.SecretBinding
 	)
 
 	scope, err := helper.QuotaScope(quota.Spec.Scope)
@@ -351,7 +341,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 	return shootsReferQuota, nil
 }
 
-func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.ResourceList, shoot garden.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.ResourceList, shoot core.Shoot) (corev1.ResourceList, error) {
 	shootResources, err := q.getShootResources(shoot)
 	if err != nil {
 		return nil, err
@@ -364,7 +354,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 	return requiredResources, nil
 }
 
-func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
 	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
 		return nil, apierrors.NewBadRequest("could not find referenced cloud profile")
@@ -380,8 +370,8 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 
 	for _, worker := range workers {
 		var (
-			machineType *garden.MachineType
-			volumeType  *garden.VolumeType
+			machineType *core.MachineType
+			volumeType  *core.VolumeType
 		)
 
 		// Get the proper machineType
@@ -397,7 +387,7 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 
 		if worker.Volume != nil {
 			if machineType.Storage != nil {
-				volumeType = &garden.VolumeType{
+				volumeType = &core.VolumeType{
 					Class: machineType.Storage.Class,
 				}
 			} else {
@@ -415,9 +405,9 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 		}
 
 		// For now we always use the max. amount of resources for quota calculation
-		resources[garden.QuotaMetricCPU] = sumQuantity(resources[garden.QuotaMetricCPU], multiplyQuantity(machineType.CPU, worker.Maximum))
-		resources[garden.QuotaMetricGPU] = sumQuantity(resources[garden.QuotaMetricGPU], multiplyQuantity(machineType.GPU, worker.Maximum))
-		resources[garden.QuotaMetricMemory] = sumQuantity(resources[garden.QuotaMetricMemory], multiplyQuantity(machineType.Memory, worker.Maximum))
+		resources[core.QuotaMetricCPU] = sumQuantity(resources[core.QuotaMetricCPU], multiplyQuantity(machineType.CPU, worker.Maximum))
+		resources[core.QuotaMetricGPU] = sumQuantity(resources[core.QuotaMetricGPU], multiplyQuantity(machineType.GPU, worker.Maximum))
+		resources[core.QuotaMetricMemory] = sumQuantity(resources[core.QuotaMetricMemory], multiplyQuantity(machineType.Memory, worker.Maximum))
 
 		size, _ := resource.ParseQuantity("0Gi")
 		if worker.Volume != nil {
@@ -428,10 +418,10 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 		}
 
 		switch volumeType.Class {
-		case garden.VolumeClassStandard:
-			resources[garden.QuotaMetricStorageStandard] = sumQuantity(resources[garden.QuotaMetricStorageStandard], multiplyQuantity(size, worker.Maximum))
-		case garden.VolumeClassPremium:
-			resources[garden.QuotaMetricStoragePremium] = sumQuantity(resources[garden.QuotaMetricStoragePremium], multiplyQuantity(size, worker.Maximum))
+		case core.VolumeClassStandard:
+			resources[core.QuotaMetricStorageStandard] = sumQuantity(resources[core.QuotaMetricStorageStandard], multiplyQuantity(size, worker.Maximum))
+		case core.VolumeClassPremium:
+			resources[core.QuotaMetricStoragePremium] = sumQuantity(resources[core.QuotaMetricStoragePremium], multiplyQuantity(size, worker.Maximum))
 		default:
 			return nil, fmt.Errorf("Unknown volumeType class %s", volumeType.Class)
 		}
@@ -440,13 +430,13 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceL
 	if shoot.Spec.Addons != nil && shoot.Spec.Addons.NginxIngress != nil && shoot.Spec.Addons.NginxIngress.Addon.Enabled {
 		countLB++
 	}
-	resources[garden.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)
+	resources[core.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)
 
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) []garden.Worker {
-	workers := make([]garden.Worker, 0, len(shoot.Spec.Provider.Workers))
+func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile) []core.Worker {
+	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		workerCopy := worker.DeepCopy()
@@ -454,7 +444,7 @@ func getShootWorkerResources(shoot *garden.Shoot, cloudProfile *garden.CloudProf
 		if worker.Volume == nil {
 			for _, machineType := range cloudProfile.Spec.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil {
-					workerCopy.Volume = &garden.Volume{
+					workerCopy.Volume = &core.Volume{
 						Type: &machineType.Storage.Type,
 						Size: machineType.Storage.Size.String(),
 					}
@@ -468,18 +458,16 @@ func getShootWorkerResources(shoot *garden.Shoot, cloudProfile *garden.CloudProf
 	return workers
 }
 
-func lifetimeVerificationNeeded(new, old garden.Shoot) bool {
-	oldLifetime, exits := old.Annotations[common.ShootExpirationTimestamp]
-	if !exits {
+func lifetimeVerificationNeeded(new, old core.Shoot) bool {
+	oldLifetime, ok := common.GetShootExpirationTimestampAnnotation(old.Annotations)
+	if !ok {
 		oldLifetime = old.CreationTimestamp.String()
 	}
-	if oldLifetime != new.Annotations[common.ShootExpirationTimestamp] {
-		return true
-	}
-	return false
+	newLifetime, _ := common.GetShootExpirationTimestampAnnotation(new.Annotations)
+	return oldLifetime != newLifetime
 }
 
-func quotaVerificationNeeded(new, old garden.Shoot) bool {
+func quotaVerificationNeeded(new, old core.Shoot) bool {
 	// Check for diff on addon nginx-ingress (addon requires to deploy a load balancer)
 	var (
 		oldNginxIngressEnabled bool
@@ -530,9 +518,9 @@ func sumQuantity(values ...resource.Quantity) resource.Quantity {
 	return res
 }
 
-func multiplyQuantity(quantity resource.Quantity, multiplier int) resource.Quantity {
+func multiplyQuantity(quantity resource.Quantity, multiplier int32) resource.Quantity {
 	res := resource.Quantity{}
-	for i := 0; i < multiplier; i++ {
+	for i := 0; i < int(multiplier); i++ {
 		res.Add(quantity)
 	}
 	return res

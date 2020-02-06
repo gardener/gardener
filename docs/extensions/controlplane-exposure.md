@@ -47,5 +47,5 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 ## References and additional resources
 
 * [`ControlPlane` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
-* [Exemplary implementation for the AWS provider](https://github.com/gardener/gardener-extensions/tree/master/controllers/provider-aws/pkg/controller/controlplane)
+* [Exemplary implementation for the AWS provider](https://github.com/gardener/gardener-extension-provider-aws/pkg/controller/controlplane)
 * [AWS Load Balancer Readvertiser](https://github.com/gardener/aws-lb-readvertiser)

@@ -22,12 +22,11 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -61,17 +60,17 @@ type ReferenceManager struct {
 	authorizer          authorizer.Authorizer
 	secretLister        kubecorev1listers.SecretLister
 	configMapLister     kubecorev1listers.ConfigMapLister
-	cloudProfileLister  gardenlisters.CloudProfileLister
-	seedLister          gardenlisters.SeedLister
-	shootLister         gardenlisters.ShootLister
-	secretBindingLister gardenlisters.SecretBindingLister
-	projectLister       gardenlisters.ProjectLister
-	quotaLister         gardenlisters.QuotaLister
+	cloudProfileLister  corelisters.CloudProfileLister
+	seedLister          corelisters.SeedLister
+	shootLister         corelisters.ShootLister
+	secretBindingLister corelisters.SecretBindingLister
+	projectLister       corelisters.ProjectLister
+	quotaLister         corelisters.QuotaLister
 	readyFunc           admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
@@ -101,24 +100,24 @@ func (r *ReferenceManager) SetAuthorizer(authorizer authorizer.Authorizer) {
 	r.authorizer = authorizer
 }
 
-// SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	seedInformer := f.Garden().InternalVersion().Seeds()
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	seedInformer := f.Core().InternalVersion().Seeds()
 	r.seedLister = seedInformer.Lister()
 
-	shootInformer := f.Garden().InternalVersion().Shoots()
+	shootInformer := f.Core().InternalVersion().Shoots()
 	r.shootLister = shootInformer.Lister()
 
-	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
+	cloudProfileInformer := f.Core().InternalVersion().CloudProfiles()
 	r.cloudProfileLister = cloudProfileInformer.Lister()
 
-	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
+	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
 	r.secretBindingLister = secretBindingInformer.Lister()
 
-	quotaInformer := f.Garden().InternalVersion().Quotas()
+	quotaInformer := f.Core().InternalVersion().Quotas()
 	r.quotaLister = quotaInformer.Lister()
 
-	projectInformer := f.Garden().InternalVersion().Projects()
+	projectInformer := f.Core().InternalVersion().Projects()
 	r.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
@@ -195,8 +194,8 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 	)
 
 	switch a.GetKind().GroupKind() {
-	case garden.Kind("SecretBinding"), core.Kind("SecretBinding"):
-		binding, ok := a.GetObject().(*garden.SecretBinding)
+	case core.Kind("SecretBinding"):
+		binding, ok := a.GetObject().(*core.SecretBinding)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
 		}
@@ -205,8 +204,8 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		}
 		err = r.ensureSecretBindingReferences(a, binding)
 
-	case garden.Kind("Seed"), core.Kind("Seed"):
-		seed, ok := a.GetObject().(*garden.Seed)
+	case core.Kind("Seed"):
+		seed, ok := a.GetObject().(*core.Seed)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
@@ -216,13 +215,13 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		err = r.ensureSeedReferences(seed)
 
 		if operation == admission.Update {
-			oldSeed, ok := a.GetOldObject().(*garden.Seed)
+			oldSeed, ok := a.GetOldObject().(*core.Seed)
 			if !ok {
 				return apierrors.NewBadRequest("could not convert old resource into Seed object")
 			}
 
-			if (helper.TaintsHave(oldSeed.Spec.Taints, garden.SeedTaintDisableDNS) && !helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintDisableDNS)) ||
-				(!helper.TaintsHave(oldSeed.Spec.Taints, garden.SeedTaintDisableDNS) && helper.TaintsHave(seed.Spec.Taints, garden.SeedTaintDisableDNS)) {
+			if (helper.TaintsHave(oldSeed.Spec.Taints, core.SeedTaintDisableDNS) && !helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS)) ||
+				(!helper.TaintsHave(oldSeed.Spec.Taints, core.SeedTaintDisableDNS) && helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS)) {
 
 				shootList, err2 := r.shootLister.List(labels.Everything())
 				if err2 != nil {
@@ -234,13 +233,13 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 						continue
 					}
 
-					err = fmt.Errorf("may not add/remove %q taint when shoots are still referencing to a seed", garden.SeedTaintDisableDNS)
+					err = fmt.Errorf("may not add/remove %q taint when shoots are still referencing to a seed", core.SeedTaintDisableDNS)
 				}
 			}
 		}
 
-	case garden.Kind("Shoot"), core.Kind("Shoot"):
-		shoot, ok := a.GetObject().(*garden.Shoot)
+	case core.Kind("Shoot"):
+		shoot, ok := a.GetObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
@@ -254,12 +253,13 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				annotations = map[string]string{}
 			}
 			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
+			annotations[common.GardenCreatedByDeprecated] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
 		}
 		err = r.ensureShootReferences(shoot)
 
-	case garden.Kind("Project"), core.Kind("Project"):
-		project, ok := a.GetObject().(*garden.Project)
+	case core.Kind("Project"):
+		project, ok := a.GetObject().(*core.Project)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Project object")
 		}
@@ -277,28 +277,18 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				project.Spec.Owner = project.Spec.CreatedBy
 			}
 		}
-		if a.GetOperation() == admission.Update {
-			if createdBy, ok := project.Annotations[common.GardenCreatedBy]; ok {
-				project.Spec.CreatedBy = &rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     createdBy,
-				}
-				delete(project.Annotations, common.GardenCreatedBy)
-			}
-		}
 
 		if project.Spec.Owner != nil {
 			ownerPartOfMember := false
-			for _, member := range project.Spec.ProjectMembers {
+			for _, member := range project.Spec.Members {
 				if member.Subject == *project.Spec.Owner {
 					ownerPartOfMember = true
 				}
 			}
 			if !ownerPartOfMember {
-				project.Spec.ProjectMembers = append(project.Spec.ProjectMembers, garden.ProjectMember{
+				project.Spec.Members = append(project.Spec.Members, core.ProjectMember{
 					Subject: *project.Spec.Owner,
-					Role:    garden.ProjectMemberAdmin,
+					Role:    core.ProjectMemberAdmin,
 				})
 			}
 		}
@@ -310,7 +300,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 	return nil
 }
 
-func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.Attributes, binding *garden.SecretBinding) error {
+func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.Attributes, binding *core.SecretBinding) error {
 	readAttributes := authorizer.AttributesRecord{
 		User:            attributes.GetUserInfo(),
 		Verb:            "get",
@@ -375,22 +365,14 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 	return nil
 }
 
-func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
-	// The new core.gardener.cloud/{v1beta1,v1beta1}.Seed resource does no longer reference a cloud profile.
-	// We only have to check it a value was given.
-	if len(seed.Spec.Cloud.Profile) > 0 {
-		if _, err := r.cloudProfileLister.Get(seed.Spec.Cloud.Profile); err != nil {
-			return err
-		}
-	}
-
+func (r *ReferenceManager) ensureSeedReferences(seed *core.Seed) error {
 	if seed.Spec.SecretRef == nil {
 		return nil
 	}
 	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
-func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
+func (r *ReferenceManager) ensureShootReferences(shoot *core.Shoot) error {
 	if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
 		return err
 	}
@@ -417,7 +399,7 @@ func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
 	return nil
 }
 
-func hasAuditPolicy(apiServerConfig *garden.KubeAPIServerConfig) bool {
+func hasAuditPolicy(apiServerConfig *core.KubeAPIServerConfig) bool {
 	return apiServerConfig != nil &&
 		apiServerConfig.AuditConfig != nil &&
 		apiServerConfig.AuditConfig.AuditPolicy != nil &&

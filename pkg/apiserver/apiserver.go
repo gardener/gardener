@@ -16,7 +16,6 @@ package apiserver
 
 import (
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
-	gardenrest "github.com/gardener/gardener/pkg/registry/garden/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -66,11 +65,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		s = &GardenerServer{GenericAPIServer: genericServer}
 
 		coreAPIGroupInfo     = (corerest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
-		gardenAPIGroupInfo   = (gardenrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
-	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &gardenAPIGroupInfo, &settingsAPIGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

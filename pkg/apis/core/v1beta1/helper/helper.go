@@ -165,12 +165,16 @@ func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1
 // ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
 func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1beta1.LastOperation) gardencorev1beta1.LastOperationType {
 	switch {
+	case meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate:
+		return gardencorev1beta1.LastOperationTypeMigrate
 	case meta.DeletionTimestamp != nil:
 		return gardencorev1beta1.LastOperationTypeDelete
 	case lastOperation == nil:
 		return gardencorev1beta1.LastOperationTypeCreate
 	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
 		return gardencorev1beta1.LastOperationTypeCreate
+	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+		return gardencorev1beta1.LastOperationTypeMigrate
 	}
 	return gardencorev1beta1.LastOperationTypeReconcile
 }
@@ -186,16 +190,18 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 }
 
 type ShootedSeed struct {
-	DisableDNS        *bool
-	Protected         *bool
-	Visible           *bool
-	MinimumVolumeSize *string
-	APIServer         *ShootedSeedAPIServer
-	BlockCIDRs        []string
-	ShootDefaults     *gardencorev1beta1.ShootNetworks
-	Backup            *gardencorev1beta1.SeedBackup
-	NoGardenlet       bool
-	WithSecretRef     bool
+	DisableDNS                     *bool
+	DisableCapacityReservation     *bool
+	Protected                      *bool
+	Visible                        *bool
+	MinimumVolumeSize              *string
+	APIServer                      *ShootedSeedAPIServer
+	BlockCIDRs                     []string
+	ShootDefaults                  *gardencorev1beta1.ShootNetworks
+	Backup                         *gardencorev1beta1.SeedBackup
+	NoGardenlet                    bool
+	UseServiceAccountBootstrapping bool
+	WithSecretRef                  bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -272,8 +278,14 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	if _, ok := flags["disable-dns"]; ok {
 		shootedSeed.DisableDNS = &trueVar
 	}
+	if _, ok := flags["disable-capacity-reservation"]; ok {
+		shootedSeed.DisableCapacityReservation = &trueVar
+	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true
+	}
+	if _, ok := flags["use-serviceaccount-bootstrapping"]; ok {
+		shootedSeed.UseServiceAccountBootstrapping = true
 	}
 	if _, ok := flags["with-secret-ref"]; ok {
 		shootedSeed.WithSecretRef = true

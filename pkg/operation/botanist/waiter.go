@@ -281,7 +281,7 @@ func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {
 					return
 				}
 
-				if delta := metav1.Now().Sub(leaderElectionRecord.RenewTime.Time); delta <= pollInterval-time.Second {
+				if delta := metav1.Now().UTC().Sub(leaderElectionRecord.RenewTime.Time.UTC()); delta <= pollInterval-time.Second {
 					out <- &checkOutput{controllerName: controller.name, ready: true}
 					return
 				}

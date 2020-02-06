@@ -300,7 +300,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
+func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
 	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
@@ -585,14 +585,14 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		kibanaTLSOverride = wildcardCert.GetName()
 	}
 
-	err = chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, nil, map[string]interface{}{
+	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
 			"images": chart.ImageMapToValues(images),
 		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{
-			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
+			"reserve-excess-capacity": DesiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
 			"storage": seed.GetValidVolumeSize("10Gi"),
@@ -672,35 +672,19 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"basicAuthSecret": monitoringBasicAuth,
 		},
 	}, applierOptions)
-
-	if err != nil {
-		return err
-	}
-
-	// Delete the shoot specific dependency-watchdog deployments in the
-	// individual shoot control-planes in favour of the central deployment
-	// in the seed-bootstrap.
-	// TODO: This code is to be removed in the next release.
-	return deleteControlPlaneDependencyWatchdogs(k8sSeedClient.Client())
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
-// corresponds to resources of (request/limits) 500m of CPU and 1200Mi of Memory.
-// ReplicasRequiredToSupportSingleShoot is 4 which is 2000m of CPU and 4800Mi of RAM.
-// The logic for computation of desired excess capacity corresponds to either deploying 2 new shoot control planes
-// or 3% of existing shoot control planes of current number of shoots deployed in seed (3 if current shoots are 100),
-// whichever of the two is larger
-func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
+// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
+// This roughly corresponds to a single, moderately large control-plane.
+// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
+// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
+func DesiredExcessCapacity() int {
 	var (
-		replicasToSupportSingleShoot          = 4
-		effectiveExcessCapacity               = 2
-		excessCapacityBasedOnAssociatedShoots = int(float64(numberOfAssociatedShoots) * 0.03)
+		replicasToSupportSingleShoot = 1
+		effectiveExcessCapacity      = 2
 	)
-
-	if excessCapacityBasedOnAssociatedShoots > effectiveExcessCapacity {
-		effectiveExcessCapacity = excessCapacityBasedOnAssociatedShoots
-	}
 
 	return effectiveExcessCapacity * replicasToSupportSingleShoot
 }
@@ -792,79 +776,6 @@ func seedWantsAlertmanager(keys []string, secrets map[string]*corev1.Secret) boo
 		}
 	}
 	return false
-}
-
-type _continue string
-
-func (c _continue) ApplyToList(opts *client.ListOptions) {
-	if opts.Raw == nil {
-		opts.Raw = &metav1.ListOptions{}
-	}
-	opts.Raw.Continue = string(c)
-}
-
-// deleteControlPlaneDependencyWatchdogs deletes the shoot specific dependency-watchdog
-// deployments in the invidual shoot control-planes in favour of the central deployment
-// in the seed-bootstrap.
-// TODO: This code is to be removed in the next release.
-func deleteControlPlaneDependencyWatchdogs(crClient client.Client) error {
-	var continueToken string
-
-	for {
-		list := &corev1.NamespaceList{}
-		if err := crClient.List(context.TODO(), list, _continue(continueToken)); err != nil {
-			return nil
-		}
-
-		for i := range list.Items {
-			ns := &list.Items[i]
-			if ns.DeletionTimestamp != nil {
-				continue // Already deleted
-			}
-
-			if err := deleteDependencyWatchdogFromNS(crClient, ns.Name); err != nil {
-				return err
-			}
-		}
-
-		if list.Continue == "" {
-			break
-		}
-		continueToken = list.Continue
-	}
-
-	return nil
-}
-
-func deleteDependencyWatchdogFromNS(crClient client.Client, ns string) error {
-	for _, obj := range []struct {
-		apiGroup string
-		version  string
-		kind     string
-		name     string
-	}{
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1beta1constants.VPANameDependencyWatchdog},
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscalerCheckpoint", v1beta1constants.VPANameDependencyWatchdog},
-		{"apps", "v1", "Deployment", v1beta1constants.DeploymentNameDependencyWatchdog},
-		{"", "v1", "ConfigMap", v1beta1constants.ConfigMapNameDependencyWatchdog},
-		{"rbac.authorization.k8s.io", "v1", "RoleBinding", v1beta1constants.RoleBindingNameDependencyWatchdog},
-		{"", "v1", "ServiceAccount", v1beta1constants.ServiceAccountNameDependencyWatchdog},
-		{"", "v1", "Secret", common.DeprecatedKubecfgInternalProbeSecretName},
-	} {
-		u := &unstructured.Unstructured{}
-		u.SetName(obj.name)
-		u.SetNamespace(ns)
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   obj.apiGroup,
-			Version: obj.version,
-			Kind:    obj.kind,
-		})
-		if err := crClient.Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
