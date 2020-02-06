@@ -27,6 +27,7 @@ rules:
 - apiGroups: ["apps"]
   resources:
   - statefulsets
+  - deployments
   verbs: ["list", "watch"]
 - apiGroups: ["batch"]
   resources:
