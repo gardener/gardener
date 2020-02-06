@@ -40,6 +40,10 @@ targetAverageUtilizationCpu: 80
 targetAverageUtilizationMemory: 80
 
 maintenanceWindow: {}
+# maintenanceWindow example:
+#maintenanceWindow:
+  #begin: 230000+0000
+  #end: 000000+0000
 
 etcdResources:
   requests:
@@ -51,3 +55,11 @@ etcdResources:
 
 hvpa:
   enabled: false
+
+limitsRequestsGapScaleParams:
+  cpu:
+    value: "3"
+    percentage: 80
+  memory:
+    value: "5G"
+    percentage: 80

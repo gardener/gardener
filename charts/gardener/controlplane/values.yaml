@@ -14,8 +14,8 @@ global:
         cpu: 100m
         memory: 100Mi
       limits:
-        cpu: "8"
-        memory: 25G
+        cpu: 300m
+        memory: 256Mi
     encryption:
       config: |
         apiVersion: apiserver.config.k8s.io/v1
@@ -66,21 +66,30 @@ global:
       minReplicas: 1
       targetAverageUtilizationCpu: 80
       targetAverageUtilizationMemory: 80
-      scaleUpStabilization:
-        duration: "3m"
-        minCpuChange:
-          value: 300m
+      vpaScaleUpStabilization:
+        stabilizationDuration: "3m"
+        minChange:
+          cpu:
+            value: 300m
+            percentage: 80
+          memory:
+            value: 200M
+            percentage: 80
+      vpaScaleDownStabilization:
+        stabilizationDuration: "15m"
+        minChange:
+          cpu:
+            value: 600m
+            percentage: 80
+          memory:
+            value: 600M
+            percentage: 80
+      limitsRequestsGapScaleParams:
+        cpu:
+          value: "3"
           percentage: 80
-        minMemChange:
-          value: 200M
-          percentage: 80
-      scaleDownStabilization:
-        duration: "15m"
-        minCpuChange:
-          value: 600m
-          percentage: 80
-        minMemChange:
-          value: 600M
+        memory:
+          value: "5G"
           percentage: 80
 
     audit:

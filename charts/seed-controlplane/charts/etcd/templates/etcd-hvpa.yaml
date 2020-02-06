@@ -54,13 +54,10 @@ spec:
 {{- if .Values.scaleDownStabilization }}
 {{ toYaml .Values.scaleDownStabilization | indent 6 }}
 {{- end }}
+{{- if .Values.limitsRequestsGapScaleParams }}
     limitsRequestsGapScaleParams:
-      cpu:
-        value: "3"
-        percentage: 80
-      memory:
-        value: "5G"
-        percentage: 80
+{{ toYaml .Values.limitsRequestsGapScaleParams | indent 6 }}
+{{- end }}
     template:
       metadata:
         labels:

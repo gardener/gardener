@@ -134,3 +134,11 @@ scaleDownStabilization:
     memory:
       value: 200M
       percentage: 80
+
+limitsRequestsGapScaleParams:
+  cpu:
+    value: "3"
+    percentage: 80
+  memory:
+    value: "5G"
+    percentage: 80
