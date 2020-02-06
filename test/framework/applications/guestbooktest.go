@@ -112,7 +112,8 @@ func (t *GuestBookTest) WaitUntilGuestbookAppIsAvailable(ctx context.Context, gu
 // DeployGuestBookApp deploys the redis helmchart and the guestbook app application
 func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	if t.framework.Namespace == "" {
-		framework.ExpectNoError(t.framework.CreateNewNamespace(ctx))
+		_, err := t.framework.CreateNewNamespace(ctx)
+		framework.ExpectNoError(err)
 	}
 	shoot := t.framework.Shoot
 	if !shoot.Spec.Addons.NginxIngress.Enabled {
