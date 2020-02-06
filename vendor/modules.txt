@@ -121,9 +121,10 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-# github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
+# github.com/gardener/gardener-resource-manager v0.10.0
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
 github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1
+github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper
 github.com/gardener/gardener-resource-manager/pkg/health
 github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25

@@ -14,7 +14,7 @@ require (
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gardener/controller-manager-library v0.1.1-0.20191212112146-917449ad760c // indirect
 	github.com/gardener/external-dns-management v0.7.3
-	github.com/gardener/gardener-resource-manager v0.9.1-0.20200124091350-6ea41bbae81f
+	github.com/gardener/gardener-resource-manager v0.10.0
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
