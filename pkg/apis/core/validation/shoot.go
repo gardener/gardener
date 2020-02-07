@@ -745,6 +745,9 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
+// PodPIDsLimitMinimum is a constant for the minimum value for the podPIDsLimit field.
+const PodPIDsLimitMinimum int64 = 100
+
 // ValidateKubeletConfig validates the KubeletConfig object.
 func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -752,15 +755,17 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path
 	if kubeletConfig.MaxPods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.MaxPods), fldPath.Child("maxPods"))...)
 	}
-
+	if value := kubeletConfig.PodPIDsLimit; value != nil {
+		if *value < PodPIDsLimitMinimum {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("podPIDsLimit"), *value, fmt.Sprintf("podPIDsLimit value must be at least %d", PodPIDsLimitMinimum)))
+		}
+	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
 	}
-
 	if kubeletConfig.EvictionMaxPodGracePeriod != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.EvictionMaxPodGracePeriod), fldPath.Child("evictionMaxPodGracePeriod"))...)
 	}
-
 	if kubeletConfig.EvictionHard != nil {
 		allErrs = append(allErrs, validateKubeletConfigEviction(kubeletConfig.EvictionHard, fldPath.Child("evictionHard"))...)
 	}

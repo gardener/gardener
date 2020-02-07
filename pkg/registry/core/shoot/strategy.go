@@ -65,6 +65,33 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	// We have introduced minimum values for the pod pids limits and have to ensure that
+	// the value is taken.
+	// TODO: This can be removed in a future release.
+	updateKubeletConfig(newShoot.Spec.Kubernetes.Kubelet)
+	for i, worker := range newShoot.Spec.Provider.Workers {
+		if worker.Kubernetes != nil {
+			updateKubeletConfig(newShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet)
+		}
+	}
+	updateKubeletConfig(oldShoot.Spec.Kubernetes.Kubelet)
+	for i, worker := range oldShoot.Spec.Provider.Workers {
+		if worker.Kubernetes != nil {
+			updateKubeletConfig(oldShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet)
+		}
+	}
+}
+
+func updateKubeletConfig(kubeletConfig *core.KubeletConfig) {
+	if kubeletConfig == nil {
+		return
+	}
+
+	if kubeletConfig.PodPIDsLimit != nil && *kubeletConfig.PodPIDsLimit < validation.PodPIDsLimitMinimum {
+		v := validation.PodPIDsLimitMinimum
+		kubeletConfig.PodPIDsLimit = &v
+	}
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
