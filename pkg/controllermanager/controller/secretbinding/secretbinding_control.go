@@ -30,11 +30,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) secretBindingAdd(obj interface{}) {
@@ -94,14 +94,15 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for SecretBindings. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardencorelisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, secretLister, shootLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister, secretLister kubecorev1listers.SecretLister, shootLister gardencorelisters.ShootLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, secretBindingLister, secretLister, shootLister}
 }
 
 type defaultControl struct {
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	recorder               record.EventRecorder
+	secretBindingLister    gardencorelisters.SecretBindingLister
 	secretLister           kubecorev1listers.SecretLister
 	shootLister            gardencorelisters.ShootLister
 }
@@ -135,29 +136,31 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 		if len(associatedShoots) == 0 {
 			secretBindingLogger.Info("No Shoots are referencing the SecretBinding. Deletion accepted.")
 
-			// Remove finalizer from referenced secret
-			secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)
-			if err == nil {
-				secretFinalizers := sets.NewString(secret.Finalizers...)
-				secretFinalizers.Delete(gardencorev1beta1.ExternalGardenerName)
-				secret.Finalizers = secretFinalizers.UnsortedList()
-				if err := c.k8sGardenClient.Client().Update(ctx, secret); client.IgnoreNotFound(err) != nil {
-					secretBindingLogger.Error(err.Error())
-					return err
-				}
-			} else if !apierrors.IsNotFound(err) {
+			mayReleaseSecret, err := c.mayReleaseSecret(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
+			if err != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}
 
+			if mayReleaseSecret {
+				// Remove finalizer from referenced secret
+				secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)
+				if err == nil {
+					if err2 := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
+						secretBindingLogger.Error(err2.Error())
+						return err2
+					}
+				} else if !apierrors.IsNotFound(err) {
+					return err
+				}
+			}
+
 			// Remove finalizer from SecretBinding
-			secretBindingFinalizers := sets.NewString(secretBinding.Finalizers...)
-			secretBindingFinalizers.Delete(gardencorev1beta1.GardenerName)
-			secretBinding.Finalizers = secretBindingFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); client.IgnoreNotFound(err) != nil {
+			if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}
+
 			return nil
 		}
 
@@ -187,4 +190,20 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 	}
 
 	return nil
+}
+
+// We may only release a secret if there is no other secretbinding that references it (maybe in a different namespace).
+func (c *defaultControl) mayReleaseSecret(namespace, name string) (bool, error) {
+	secretBindingList, err := c.secretBindingLister.List(labels.Everything())
+	if err != nil {
+		return false, err
+	}
+
+	for _, secretBinding := range secretBindingList {
+		if secretBinding.SecretRef.Namespace == namespace && secretBinding.SecretRef.Name == name {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
