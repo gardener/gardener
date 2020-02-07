@@ -1,0 +1,7 @@
+apiVersion: {{ include "priorityclassversion" . }}
+kind: PriorityClass
+metadata:
+  name: gardenlet
+value: 1000000000
+globalDefault: false
+description: "This class is used to ensure that the gardenlet has a high priority and is not preempted in favor of other pods."
