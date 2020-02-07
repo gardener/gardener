@@ -36,6 +36,7 @@ spec:
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
     spec:
+      priorityClassName: gardenlet
       {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}
       {{- else }}
