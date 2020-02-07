@@ -34,9 +34,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLogger logrus.FieldLogger) error {
@@ -145,19 +143,6 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
-	}
-
-	// Delete legacy resources
-	// TODO: This can be removed in a future version of Gardener (post v1.0 release).
-	for _, obj := range []runtime.Object{
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-member", Namespace: namespace.Name}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "garden.sapcloud.io:system:project-viewer", Namespace: namespace.Name}},
-	} {
-		if err := c.k8sGardenClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while cleaning up legacy RBAC rules for namespace %q: %+v", namespace.Name, err)
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-			return err
-		}
 	}
 
 	// Update the project status to mark it as 'ready'.

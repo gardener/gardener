@@ -120,8 +120,6 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 	)
 
 	// Ignore all kinds other than Shoot or Project.
-	// TODO: in future the Kinds should be configurable
-	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Shoot"):
 		listFunc = func() ([]metav1.Object, error) {
