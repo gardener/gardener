@@ -256,6 +256,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, computeShootOSConfig),
 		})
+		// TODO: This task can be removed in a future version after even the managed resources for hibernated shoots have been labelled.
+		labelWellKnownManagedResources = g.Add(flow.Task{
+			Name:         "Labelling managed resources",
+			Fn:           flow.TaskFn(botanist.LabelWellKnownManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, computeShootOSConfig),
+		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -269,12 +275,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
 			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(dnsEnabled && managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployManagedResources),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, labelWellKnownManagedResources),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, labelWellKnownManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
@@ -289,7 +295,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployManagedResources, deploySeedMonitoring),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployManagedResources, labelWellKnownManagedResources, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
