@@ -68,7 +68,7 @@ func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInfo
 	secretBindingController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
 		k8sGardenCoreInformers: gardenInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretLister, shootLister),
+		control:                NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
 		recorder:               recorder,
 		secretBindingLister:    secretBindingLister,
 		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
