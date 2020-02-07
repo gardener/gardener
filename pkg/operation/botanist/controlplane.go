@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -1134,4 +1135,34 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// CheckVPNConnection checks whether the VPN connection between the control plane and the shoot networks
+// is established.
+func (b *Botanist) CheckVPNConnection(ctx context.Context, logger *logrus.Entry) (bool, error) {
+	podList := &corev1.PodList{}
+	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": "vpn-shoot"}); err != nil {
+		return retry.SevereError(err)
+	}
+
+	var vpnPod *corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			vpnPod = &pod
+			break
+		}
+	}
+
+	if vpnPod == nil {
+		logger.Info("Waiting until a running vpn-shoot pod exists in the Shoot cluster...")
+		return retry.MinorError(fmt.Errorf("no running vpn-shoot pod found yet in the shoot cluster"))
+	}
+
+	if err := b.K8sShootClient.CheckForwardPodPort(vpnPod.Namespace, vpnPod.Name, 0, 22); err != nil {
+		logger.Info("Waiting until the VPN connection has been established...")
+		return retry.MinorError(fmt.Errorf("could not forward to vpn-shoot pod: %v", err))
+	}
+
+	logger.Info("VPN connection has been established.")
+	return retry.Ok()
 }

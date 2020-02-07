@@ -145,32 +145,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilVPNConnectionExists(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
-		podList := &corev1.PodList{}
-		err = b.K8sShootClient.Client().List(ctx, podList,
-			client.InNamespace(metav1.NamespaceSystem),
-			client.MatchingLabels{"app": "vpn-shoot"})
-		if err != nil {
-			return retry.SevereError(err)
-		}
-		var vpnPod *corev1.Pod
-		for _, pod := range podList.Items {
-			if pod.Status.Phase == corev1.PodRunning {
-				vpnPod = &pod
-				break
-			}
-		}
-		if vpnPod == nil {
-			b.Logger.Info("Waiting until a running vpn-shoot pod exists in the Shoot cluster...")
-			return retry.MinorError(fmt.Errorf("no vpn-shoot pod running in the Shoot cluster"))
-		}
-
-		if err := b.K8sShootClient.CheckForwardPodPort(vpnPod.ObjectMeta.Namespace, vpnPod.ObjectMeta.Name, 0, 22); err != nil {
-			b.Logger.Info("Waiting until the VPN connection has been established...")
-			return retry.MinorError(fmt.Errorf("could not forward to vpn-shoot pod: %v", err))
-		}
-
-		b.Logger.Info("VPN connection has been established.")
-		return retry.Ok()
+		return b.CheckVPNConnection(ctx, b.Logger)
 	})
 }
 

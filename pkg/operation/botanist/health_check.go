@@ -28,11 +28,13 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	prometheusmodel "github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -609,6 +611,7 @@ func (b *Botanist) checkControlPlane(
 
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (b *Botanist) checkSystemComponents(
+	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	shootDeploymentLister kutil.DeploymentLister,
@@ -627,6 +630,14 @@ func (b *Botanist) checkSystemComponents(
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
+	}
+	if established, err := b.CheckVPNConnection(ctx, logrus.NewEntry(logger.NewNopLogger())); err != nil || !established {
+		msg := "VPN connection has not been established"
+		if err != nil {
+			msg += fmt.Sprintf(" (%+v)", err)
+		}
+		c := checker.FailedCondition(condition, "VPNConnectionBroken", msg)
+		return &c, nil
 	}
 
 	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
@@ -871,7 +882,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	go func() {
 		defer wg.Done()
-		newSystemComponents, err := b.checkSystemComponents(checker, systemComponents, shootDeploymentLister, shootDaemonSetLister, extensionConditionsSystemComponentsHealthy)
+		newSystemComponents, err := b.checkSystemComponents(context.TODO(), checker, systemComponents, shootDeploymentLister, shootDaemonSetLister, extensionConditionsSystemComponentsHealthy)
 		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
 	}()
 	wg.Wait()
