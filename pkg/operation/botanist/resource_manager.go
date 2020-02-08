@@ -34,9 +34,9 @@ const (
 	ManagedResourceLabelValueGardener = "gardener"
 )
 
-// DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
-func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
-	// TODO: Remove in a future release: Label well-known MRs that were potentially created without origin label.
+// LabelWellKnownManagedResources labels well-known MRs that were potentially created without origin label.
+// TODO: This code can be removed in a future version.
+func (b *Botanist) LabelWellKnownManagedResources(ctx context.Context) error {
 	for _, name := range []string{"shoot-cloud-config-execution", "shoot-core", "shoot-core-namespaces", "addons"} {
 		obj := &resourcesv1alpha1.ManagedResource{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), obj); err != nil {
@@ -53,9 +53,22 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		}
 	}
 
-	return b.K8sSeedClient.Client().DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{},
+	return nil
+}
+
+// DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
+func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
+	// TODO: This labelling code can be removed in a future version.
+	if err := b.LabelWellKnownManagedResources(ctx); err != nil {
+		return err
+	}
+
+	return b.K8sSeedClient.Client().DeleteAllOf(
+		ctx,
+		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener})
+		client.MatchingLabels{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener},
+	)
 }
 
 // WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
