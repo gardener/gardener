@@ -102,8 +102,6 @@ func (r *Resources) Validate(ctx context.Context, a admission.Attributes, o admi
 	}
 
 	// Ignore all kinds other than Shoot or Project.
-	// TODO: in future the Kinds should be configurable
-	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	if a.GetKind().GroupKind() != core.Kind("ControllerRegistration") {
 		return nil
 	}
