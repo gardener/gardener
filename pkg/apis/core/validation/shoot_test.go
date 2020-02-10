@@ -1768,6 +1768,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})))),
 		)
 
+		Describe("pod pids limits", func() {
+			It("should ensure pod pids limits are non-negative", func() {
+				var podPIDsLimit int64 = -1
+				kubeletConfig := core.KubeletConfig{
+					PodPIDsLimit: &podPIDsLimit,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("podPIDsLimit"),
+				}))))
+			})
+
+			It("should ensure pod pids limits are at least 100", func() {
+				var podPIDsLimit int64 = 99
+				kubeletConfig := core.KubeletConfig{
+					PodPIDsLimit: &podPIDsLimit,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("podPIDsLimit"),
+				}))))
+			})
+
+			It("should allow pod pids limits of at least 100", func() {
+				var podPIDsLimit int64 = 100
+				kubeletConfig := core.KubeletConfig{
+					PodPIDsLimit: &podPIDsLimit,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(BeEmpty())
+			})
+		})
+
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		DescribeTable("validate the kubelet configuration - EvictionMinimumReclaim",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree resource.Quantity, matcher gomegatypes.GomegaMatcher) {
