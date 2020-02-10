@@ -57,6 +57,9 @@ data:
         {{- if .Values.global.controller.config.controllers.seed.monitorPeriod }}
         monitorPeriod: {{ .Values.global.controller.config.controllers.seed.monitorPeriod }}
         {{- end }}
+        {{- if .Values.global.controller.config.controllers.seed.shootMonitorPeriod }}
+        shootMonitorPeriod: {{ .Values.global.controller.config.controllers.seed.shootMonitorPeriod }}
+        {{- end }}
       {{- end }}
       shootMaintenance:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs }}

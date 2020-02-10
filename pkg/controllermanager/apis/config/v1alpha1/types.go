@@ -140,6 +140,11 @@ type SeedControllerConfiguration struct {
 	// condition in `Seed` resources as `Unknown` in case the gardenlet did not send heartbeats.
 	// +optional
 	MonitorPeriod *metav1.Duration `json:"monitorPeriod,omitempty"`
+	// ShootMonitorPeriod is the duration after the seed controller will mark Gardener's conditions
+	// in `Shoot` resources as `Unknown` in case the gardenlet of the responsible seed cluster did
+	// not send heartbeats.
+	// +optional
+	ShootMonitorPeriod *metav1.Duration `json:"shootMonitorPeriod,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }

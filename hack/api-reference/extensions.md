@@ -3102,5 +3102,9 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
+<<<<<<< HEAD
 on git commit <code>753d7857c</code>.
+=======
+on git commit <code>13d359fa9</code>.
+>>>>>>> Set shoot conditions to unknown if gardenlet stops sending heartbeats
 </em></p>
