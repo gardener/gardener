@@ -46,6 +46,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,Constraints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,LastErrors
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Worker,DataVolumes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Worker,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Worker,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Alerting,EmailReceivers
@@ -93,6 +94,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Constraints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,LastErrors
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Worker,DataVolumes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Worker,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Worker,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,ClusterOpenIDConnectPresetList,Items

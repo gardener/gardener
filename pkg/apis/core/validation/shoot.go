@@ -735,10 +735,53 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
+	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
+
 	if worker.Volume != nil {
-		volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 		if !volumeSizeRegex.MatchString(worker.Volume.Size) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.Size, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
+		}
+	}
+
+	if worker.DataVolumes != nil {
+		var volumeNames = make(map[string]int)
+		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), fmt.Sprintf("a worker volume must be defined if data volumes are defined")))
+		}
+		for idx, volume := range worker.DataVolumes {
+			idxPath := fldPath.Child("dataVolumes").Index(idx)
+			if volume.Name == nil {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), fmt.Sprintf("data volume name is required")))
+			} else {
+				volName := *volume.Name
+				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
+				maxVolumeNameLength := 15
+				if len(volName) > maxVolumeNameLength {
+					allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volName, maxVolumeNameLength))
+				}
+				if _, keyExist := volumeNames[volName]; keyExist {
+					volumeNames[volName]++
+					allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), volName))
+				} else {
+					volumeNames[volName] = 1
+				}
+				if !volumeSizeRegex.MatchString(volume.Size) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.Size, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
+				}
+			}
+		}
+
+	}
+
+	if worker.KubeletDataVolumeName != nil {
+		found := false
+		for _, volume := range worker.DataVolumes {
+			if *volume.Name == *worker.KubeletDataVolumeName {
+				found = true
+			}
+		}
+		if !found {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeletDataVolumeName"), worker.KubeletDataVolumeName, fmt.Sprintf("KubeletDataVolumeName refers to unrecognized data volume %s", *worker.KubeletDataVolumeName)))
 		}
 	}
 

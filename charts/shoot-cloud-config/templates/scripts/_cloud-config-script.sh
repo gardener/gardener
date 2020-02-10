@@ -24,6 +24,31 @@ function docker-preload() {
   fi
 }
 
+{{- if .worker.kubeletDataVolume }}
+function format-data-device() {
+  LABEL=KUBEDEV
+  if ! blkid --label $LABEL >/dev/null; then
+    DEVICES=$(lsblk -dbsnP -o NAME,PARTTYPE,FSTYPE,SIZE)
+    MATCHING_DEVICES=$(echo "$DEVICES" | grep 'PARTTYPE="".*FSTYPE="".*SIZE="{{.worker.kubeletDataVolume.size}}"')
+    echo "Matching kubelet data device by size : {{.worker.kubeletDataVolume.size}}"
+    TARGET_DEVICE_NAME=$(echo "$MATCHING_DEVICES" | head -n1 | cut -f2 -d\")
+    echo "detected kubelet data device $TARGET_DEVICE_NAME"
+    mkfs.xfs -L $LABEL /dev/$TARGET_DEVICE_NAME
+    echo "formatted and labeled data device $TARGET_DEVICE_NAME"
+    mkdir /tmp/varlibcp
+    mount LABEL=$LABEL /tmp/varlibcp
+    echo "mounted temp copy dir on data device $TARGET_DEVICE_NAME"
+    cp -a /var/lib/* /tmp/varlibcp/
+    umount /tmp/varlibcp
+    echo "copied /var/lib to data device $TARGET_DEVICE_NAME"
+    mount LABEL=$LABEL /var/lib
+    echo "mounted /var/lib on data device $TARGET_DEVICE_NAME"
+  fi
+}
+
+format-data-device
+{{- end}}
+
 {{ range $name, $image := (required ".images is required" .images) -}}
 docker-preload "{{ $name }}" "{{ $image }}"
 {{ end }}
@@ -75,7 +100,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
 {{- range $name := (required ".worker.units is required" .worker.units) }}
-{{- if ne $name "docker.service" }}
+{{- if and (ne $name "docker.service") (ne $name "var-lib.mount") }}
     systemctl enable {{ $name }} && systemctl restart --no-block {{ $name }}
 {{- end }}
 {{- end }}

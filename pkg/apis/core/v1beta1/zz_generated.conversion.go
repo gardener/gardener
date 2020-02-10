@@ -3807,8 +3807,10 @@ func Convert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, out *
 }
 
 func autoConvert_v1beta1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conversion.Scope) error {
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
+	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }
 
@@ -3818,8 +3820,10 @@ func Convert_v1beta1_Volume_To_core_Volume(in *Volume, out *core.Volume, s conve
 }
 
 func autoConvert_core_Volume_To_v1beta1_Volume(in *core.Volume, out *Volume, s conversion.Scope) error {
+	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Size = in.Size
+	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
 	return nil
 }
 
@@ -3868,6 +3872,8 @@ func autoConvert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s c
 	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*core.Volume)(unsafe.Pointer(in.Volume))
+	out.DataVolumes = *(*[]core.Volume)(unsafe.Pointer(&in.DataVolumes))
+	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -3893,6 +3899,8 @@ func autoConvert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s c
 	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	out.Volume = (*Volume)(unsafe.Pointer(in.Volume))
+	out.DataVolumes = *(*[]Volume)(unsafe.Pointer(&in.DataVolumes))
+	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
