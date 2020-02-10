@@ -169,11 +169,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider.Type, oldSpec.Provider.Type, fldPath.Child("provider", "type"))...)
-	for i, worker := range newSpec.Provider.Workers {
-		if ShouldEnforceImmutability(worker.Zones, oldSpec.Provider.Workers[i].Zones) {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(worker.Zones, oldSpec.Provider.Workers[i].Zones, fldPath.Child("provider", "workers").Index(i).Child("zones"))...)
-		}
-	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
 	if oldSpec.Networking.Pods != nil {

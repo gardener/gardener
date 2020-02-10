@@ -514,30 +514,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			Context("CIDR", func() {
-				It("should invalid k8s networks", func() {
-					invalidCIDR := "invalid-cidr"
+			It("should invalid k8s networks", func() {
+				invalidCIDR := "invalid-cidr"
 
-					shoot.Spec.Networking.Nodes = &invalidCIDR
-					shoot.Spec.Networking.Services = &invalidCIDR
-					shoot.Spec.Networking.Pods = &invalidCIDR
+				shoot.Spec.Networking.Nodes = &invalidCIDR
+				shoot.Spec.Networking.Services = &invalidCIDR
+				shoot.Spec.Networking.Pods = &invalidCIDR
 
-					errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networking.nodes"),
-						"Detail": ContainSubstring("invalid CIDR address"),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networking.pods"),
-						"Detail": ContainSubstring("invalid CIDR address"),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networking.services"),
-						"Detail": ContainSubstring("invalid CIDR address"),
-					}))
-				})
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networking.nodes"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networking.pods"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networking.services"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}))
 			})
 
 			It("should forbid non canonical CIDRs", func() {
@@ -565,189 +563,231 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("must be valid canonical CIDR"),
 				}))
 			})
-		})
 
-		It("should forbid an empty worker list", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.provider.workers"),
-			}))))
-		})
-
-		It("should enforce unique worker names", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{worker, worker}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("spec.provider.workers[1].name"),
-			}))))
-		})
-
-		It("should forbid invalid worker configuration", func() {
-			w := invalidWorker.DeepCopy()
-			shoot.Spec.Provider.Workers = []core.Worker{*w}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.provider.workers[0].name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.provider.workers[0].machine.type"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.provider.workers[0].minimum"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.provider.workers[0].maximum"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.provider.workers[0].maximum"),
-				})),
-			))
-		})
-
-		It("should enforce workers min > 0 if max > 0", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{workerAutoScalingInvalid, worker}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.provider.workers[0].minimum"),
-			}))))
-		})
-
-		It("should allow workers having min=max=0 if at least one pool is active", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{worker, workerAutoScalingMinMaxZero}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should forbid too long worker names", func() {
-			shoot.Spec.Provider.Workers[0] = invalidWorkerTooLongName
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeTooLong),
-				"Field": Equal("spec.provider.workers[0].name"),
-			}))))
-		})
-
-		It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{invalidWorkerName}
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.provider.workers[0].name"),
-			}))))
-		})
-
-		Context("NodeCIDRMask validation", func() {
-			var (
-				defaultMaxPod           int32 = 110
-				maxPod                  int32 = 260
-				defaultNodeCIDRMaskSize int32 = 24
-				testWorker              core.Worker
-			)
-
-			BeforeEach(func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
-				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &defaultMaxPod}
-				testWorker = *worker.DeepCopy()
-				testWorker.Name = "testworker"
-			})
-
-			It("should not return any errors", func() {
-				worker.Kubernetes = &core.WorkerKubernetes{
-					Kubelet: &core.KubeletConfig{
-						MaxPods: &defaultMaxPod,
-					},
-				}
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{}
 
 				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.provider.workers"),
+				}))))
+			})
+
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{worker, worker}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.provider.workers[1].name"),
+				}))))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				w := invalidWorker.DeepCopy()
+				shoot.Spec.Provider.Workers = []core.Worker{*w}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.provider.workers[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.provider.workers[0].machine.type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.provider.workers[0].minimum"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.provider.workers[0].maximum"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.provider.workers[0].maximum"),
+					})),
+				))
+			})
+
+			It("should enforce workers min > 0 if max > 0", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{workerAutoScalingInvalid, worker}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.provider.workers[0].minimum"),
+				}))))
+			})
+
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{worker, workerAutoScalingMinMaxZero}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Provider.Workers[0] = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal("spec.provider.workers[0].name"),
+				}))))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{invalidWorkerName}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.provider.workers[0].name"),
+				}))))
+			})
+
+			Context("NodeCIDRMask validation", func() {
+				var (
+					defaultMaxPod           int32 = 110
+					maxPod                  int32 = 260
+					defaultNodeCIDRMaskSize int32 = 24
+					testWorker              core.Worker
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = &defaultNodeCIDRMaskSize
+					shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &defaultMaxPod}
+					testWorker = *worker.DeepCopy()
+					testWorker.Name = "testworker"
+				})
+
+				It("should not return any errors", func() {
+					worker.Kubernetes = &core.WorkerKubernetes{
+						Kubelet: &core.KubeletConfig{
+							MaxPods: &defaultMaxPod,
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(HaveLen(0))
+				})
+
+				Context("Non-default max pod settings", func() {
+					Context("one worker pool", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubernetes = &core.WorkerKubernetes{
+								Kubelet: &core.KubeletConfig{
+									MaxPods: &maxPod,
+								},
+							}
+							shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker)
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+							}))
+						})
+					})
+
+					Context("multiple worker pools", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							testWorker.Kubernetes = &core.WorkerKubernetes{
+								Kubelet: &core.KubeletConfig{
+									MaxPods: &maxPod,
+								},
+							}
+
+							secondTestWorker := *testWorker.DeepCopy()
+							secondTestWorker.Name = "testworker2"
+							secondTestWorker.Kubernetes = &core.WorkerKubernetes{
+								Kubelet: &core.KubeletConfig{
+									MaxPods: &maxPod,
+								},
+							}
+
+							shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker, secondTestWorker)
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+							}))
+						})
+					})
+
+					Context("Global default max pod", func() {
+						It("should deny NodeCIDR with too few ips", func() {
+							shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &maxPod}
+
+							errorList := ValidateShoot(shoot)
+
+							Expect(errorList).To(ConsistOfFields(Fields{
+								"Type":   Equal(field.ErrorTypeInvalid),
+								"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+								"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
+							}))
+						})
+					})
+				})
+			})
+
+			It("should allow adding a worker pool", func() {
+				newShoot := prepareShootForUpdate(shoot)
+
+				worker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+				worker.Name = "second-worker"
+
+				newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, worker)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(HaveLen(0))
 			})
 
-			Context("Non-default max pod settings", func() {
-				Context("one worker pool", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						testWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker)
+			It("should allow removing a worker pool", func() {
+				newShoot := prepareShootForUpdate(shoot)
 
-						errorList := ValidateShoot(shoot)
+				worker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+				worker.Name = "second-worker"
 
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
 
-				Context("multiple worker pools", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						testWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
+				errorList := ValidateShootUpdate(newShoot, shoot)
 
-						secondTestWorker := *testWorker.DeepCopy()
-						secondTestWorker.Name = "testworker2"
-						secondTestWorker.Kubernetes = &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								MaxPods: &maxPod,
-							},
-						}
+				Expect(errorList).To(HaveLen(0))
+			})
 
-						shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, testWorker, secondTestWorker)
+			It("should allow swapping worker pools", func() {
+				newShoot := prepareShootForUpdate(shoot)
 
-						errorList := ValidateShoot(shoot)
+				worker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+				worker.Name = "second-worker"
 
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
+				newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, worker)
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
 
-				Context("Global default max pod", func() {
-					It("should deny NodeCIDR with too few ips", func() {
-						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{MaxPods: &maxPod}
+				newShoot.Spec.Provider.Workers = []core.Worker{newShoot.Spec.Provider.Workers[1], newShoot.Spec.Provider.Workers[0]}
 
-						errorList := ValidateShoot(shoot)
+				errorList := ValidateShootUpdate(newShoot, shoot)
 
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-							"Detail": ContainSubstring("kubelet or kube-controller configuration incorrect"),
-						}))
-					})
-				})
+				Expect(errorList).To(HaveLen(0))
 			})
 		})
 
