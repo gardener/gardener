@@ -65,6 +65,9 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	}
 
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+		namespace.Annotations = map[string]string{
+			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
+		}
 		namespace.Labels = map[string]string{
 			v1beta1constants.DeprecatedGardenRole:    v1beta1constants.GardenRoleShoot,
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,

@@ -133,6 +133,10 @@ const (
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
 
+	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
+	// which value will be the value of `shoot.status.uid`
+	// +deprecated: Use `Cluster` resource instead.
+	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
 	// DeprecatedGardenRoleBackup is the value of GardenRole key indicating type 'backup'.
 	// +deprecated
 	DeprecatedGardenRoleBackup = "backup"
