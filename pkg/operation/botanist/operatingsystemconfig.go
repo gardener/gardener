@@ -309,8 +309,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 	}
 
 	originalConfig["worker"] = map[string]interface{}{
-		"name":    worker.Name,
-		"kubelet": kubelet,
+		"name":              worker.Name,
+		"kubelet":           kubelet,
+		"kubeletDataVolume": worker.KubeletDataVolumeName,
 	}
 
 	var (
@@ -379,9 +380,9 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-
 	workers := make([]map[string]interface{}, 0, len(b.Shoot.Info.Spec.Provider.Workers))
 	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
+
 		oscData := b.Shoot.OperatingSystemConfigsMap[worker.Name]
 
 		w := map[string]interface{}{
@@ -393,6 +394,31 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 
 		if cmd := oscData.Original.Data.Command; cmd != nil {
 			w["command"] = *cmd
+		}
+
+		if worker.KubeletDataVolumeName != nil && worker.DataVolumes != nil {
+			kubeletDataVolName := worker.KubeletDataVolumeName
+			for _, dataVolume := range worker.DataVolumes {
+				volName := dataVolume.Name
+				if *volName == *kubeletDataVolName {
+					size, err := resource.ParseQuantity(dataVolume.Size)
+					if err != nil {
+						return nil, err
+					}
+					sizeInBytes, ok := size.AsInt64()
+					if !ok {
+						sizeInBytes, ok = size.AsDec().Unscaled()
+						if !ok {
+							return nil, fmt.Errorf("failed to parse volume size %s", dataVolume.Size)
+						}
+					}
+					w["kubeletDataVolume"] = map[string]interface{}{
+						"name": volName,
+						"type": dataVolume.Type,
+						"size": fmt.Sprintf("%d", sizeInBytes),
+					}
+				}
+			}
 		}
 
 		workers = append(workers, w)

@@ -1661,6 +1661,166 @@ var _ = Describe("Shoot Validation Tests", func() {
 			// uniqueness by key/effect
 			Entry("not unique", []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}, {Key: "foo", Value: "baz", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeDuplicate),
 		)
+
+		It("should reject if volume is undefined and data volumes are defined", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name"
+			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				DataVolumes:    dataVolumes,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("volume"),
+			}))))
+		})
+
+		It("should reject if data volume size does not match size regex", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name"
+			name2 := "vol2-name"
+			vol := core.Volume{Name: &name1, Size: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "12MiB"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume:         &vol,
+				DataVolumes:    dataVolumes,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("dataVolumes[1].size"),
+				"BadValue": Equal("12MiB"),
+			}))))
+		})
+
+		It("should reject if data volume name is invalid", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name-is-too-long-for-test"
+			name2 := "not%dns/1123"
+			vol := core.Volume{Name: &name1, Size: "75Gi"}
+			dataVolumes := []core.Volume{{Size: "75Gi"}, {Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume:         &vol,
+				DataVolumes:    dataVolumes,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("dataVolumes[0].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal("dataVolumes[1].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("dataVolumes[2].name"),
+				})),
+			))
+		})
+
+		It("should accept if kubeletDataVolumeName refers to defined data volume", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name"
+			vol := core.Volume{Name: &name1, Size: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:              &maxSurge,
+				MaxUnavailable:        &maxUnavailable,
+				Volume:                &vol,
+				DataVolumes:           dataVolumes,
+				KubeletDataVolumeName: &name1,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf())
+		})
+
+		It("should reject if kubeletDataVolumeName refers to undefined data volume", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name"
+			name2 := "vol2-name"
+			name3 := "vol3-name"
+			vol := core.Volume{Name: &name1, Size: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:              &maxSurge,
+				MaxUnavailable:        &maxUnavailable,
+				Volume:                &vol,
+				DataVolumes:           dataVolumes,
+				KubeletDataVolumeName: &name3,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("kubeletDataVolumeName"),
+				})),
+			))
+		})
+
+		It("should reject if data volume names are duplicated", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			name1 := "vol1-name"
+			name2 := "vol2-name"
+			vol := core.Volume{Name: &name1, Size: "75Gi"}
+			dataVolumes := []core.Volume{{Name: &name1, Size: "75Gi"}, {Name: &name1, Size: "75Gi"}, {Name: &name2, Size: "75Gi"}, {Name: &name1, Size: "75Gi"}}
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Volume:         &vol,
+				DataVolumes:    dataVolumes,
+			}
+			errList := ValidateWorker(worker, nil)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("dataVolumes[1].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("dataVolumes[3].name"),
+				})),
+			))
+		})
+
 	})
 
 	Describe("#ValidateWorkers", func() {

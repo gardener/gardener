@@ -57,8 +57,22 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		var volume *extensionsv1alpha1.Volume
 		if worker.Volume != nil {
 			volume = &extensionsv1alpha1.Volume{
-				Type: worker.Volume.Type,
-				Size: worker.Volume.Size,
+				Name:      worker.Volume.Name,
+				Type:      worker.Volume.Type,
+				Size:      worker.Volume.Size,
+				Encrypted: worker.Volume.Encrypted,
+			}
+		}
+
+		var dataVolumes []extensionsv1alpha1.Volume
+		if len(worker.DataVolumes) > 0 {
+			for _, dataVolume := range worker.DataVolumes {
+				dataVolumes = append(dataVolumes, extensionsv1alpha1.Volume{
+					Name:      dataVolume.Name,
+					Type:      dataVolume.Type,
+					Size:      dataVolume.Size,
+					Encrypted: dataVolume.Encrypted,
+				})
 			}
 		}
 
@@ -83,10 +97,12 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Name:    worker.Machine.Image.Name,
 				Version: worker.Machine.Image.Version,
 			},
-			ProviderConfig: pConfig,
-			UserData:       []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
-			Volume:         volume,
-			Zones:          worker.Zones,
+			ProviderConfig:        pConfig,
+			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
+			Volume:                volume,
+			DataVolumes:           dataVolumes,
+			KubeletDataVolumeName: worker.KubeletDataVolumeName,
+			Zones:                 worker.Zones,
 		})
 	}
 

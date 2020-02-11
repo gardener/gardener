@@ -5079,17 +5079,31 @@ func schema_pkg_apis_core_v1alpha1_Volume(ref common.ReferenceCallback) common.O
 				Description: "Volume contains information about the volume type and size.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the volume to make it referencable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the machine type of the worker group.",
+							Description: "Type is the type of the volume.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Size is the size of the root volume.",
+							Description: "Size is the size of the volume.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"encrypted": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Encrypted determines if the volume should be encrypted.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
@@ -5247,6 +5261,26 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Volume contains information about the volume type and size.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume"),
+						},
+					},
+					"dataVolumes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DataVolumes contains a list of additional worker volumes.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume"),
+									},
+								},
+							},
+						},
+					},
+					"kubeletDataVolumeName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"zones": {
@@ -9843,17 +9877,31 @@ func schema_pkg_apis_core_v1beta1_Volume(ref common.ReferenceCallback) common.Op
 				Description: "Volume contains information about the volume type and size.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the volume to make it referencable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the machine type of the worker group.",
+							Description: "Type is the type of the volume.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"size": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Size is the size of the root volume.",
+							Description: "Size is the size of the volume.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"encrypted": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Encrypted determines if the volume should be encrypted.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
@@ -10011,6 +10059,26 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 						SchemaProps: spec.SchemaProps{
 							Description: "Volume contains information about the volume type and size.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume"),
+						},
+					},
+					"dataVolumes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DataVolumes contains a list of additional worker volumes.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume"),
+									},
+								},
+							},
+						},
+					},
+					"kubeletDataVolumeName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"zones": {
