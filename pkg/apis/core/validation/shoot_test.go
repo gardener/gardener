@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Validation Tests", func() {
@@ -144,13 +145,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.11.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
-								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
-								ClientID:       makeStringPointer("client-id"),
-								GroupsClaim:    makeStringPointer("groups-claim"),
-								GroupsPrefix:   makeStringPointer("groups-prefix"),
-								IssuerURL:      makeStringPointer("https://some-endpoint.com"),
-								UsernameClaim:  makeStringPointer("user-claim"),
-								UsernamePrefix: makeStringPointer("user-prefix"),
+								CABundle:       pointer.StringPtr("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
+								ClientID:       pointer.StringPtr("client-id"),
+								GroupsClaim:    pointer.StringPtr("groups-claim"),
+								GroupsPrefix:   pointer.StringPtr("groups-prefix"),
+								IssuerURL:      pointer.StringPtr("https://some-endpoint.com"),
+								UsernameClaim:  pointer.StringPtr("user-claim"),
+								UsernamePrefix: pointer.StringPtr("user-prefix"),
 							},
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
@@ -172,14 +173,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 									},
 								},
 							},
-							EnableBasicAuthentication: makeBoolPointer(true),
+							EnableBasicAuthentication: pointer.BoolPtr(true),
 						},
 						KubeControllerManager: &core.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: makeInt32Pointer(22),
+							NodeCIDRMaskSize: pointer.Int32Ptr(22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								DownscaleDelay: makeDurationPointer(15 * time.Minute),
 								SyncPeriod:     makeDurationPointer(30 * time.Second),
-								Tolerance:      makeFloat64Pointer(0.1),
+								Tolerance:      pointer.Float64Ptr(0.1),
 								UpscaleDelay:   makeDurationPointer(1 * time.Minute),
 							},
 						},
@@ -308,7 +309,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		It("should forbid unsupported addon configuration", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer("does-not-exist")
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr("does-not-exist")
 
 			errorList := ValidateShoot(shoot)
 
@@ -345,8 +346,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = makeBoolPointer(false)
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr(core.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
 
 			errorList := ValidateShoot(shoot)
 
@@ -357,8 +358,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should allow using basic auth mode for kubernetes dashboard when it's enabled in kube-apiserver config", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = makeBoolPointer(true)
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr(core.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
 
 			errorList := ValidateShoot(shoot)
 
@@ -369,7 +370,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.CloudProfileName = ""
 			shoot.Spec.Region = ""
 			shoot.Spec.SecretBindingName = ""
-			shoot.Spec.SeedName = makeStringPointer("")
+			shoot.Spec.SeedName = pointer.StringPtr("")
 			shoot.Spec.Provider.Type = ""
 
 			errorList := ValidateShoot(shoot)
@@ -451,8 +452,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should forbid updating the seed, if it has been set previously", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = makeStringPointer("another-seed")
-			shoot.Spec.SeedName = makeStringPointer("first-seed")
+			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
+			shoot.Spec.SeedName = pointer.StringPtr("first-seed")
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -490,7 +491,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should allow updating the seed if it has not been set previously", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = makeStringPointer("another-seed")
+			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
 			shoot.Spec.SeedName = nil
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -793,7 +794,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("dns section", func() {
 			It("should forbid specifying a provider without a domain", func() {
-				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
+				shoot.Spec.DNS.Domain = pointer.StringPtr("foo/bar.baz")
 				shoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShoot(shoot)
@@ -808,7 +809,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: makeStringPointer(core.DNSUnmanaged),
+						Type: pointer.StringPtr(core.DNSUnmanaged),
 					},
 				}
 
@@ -819,7 +820,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid specifying invalid domain", func() {
 				shoot.Spec.DNS.Providers = nil
-				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
+				shoot.Spec.DNS.Domain = pointer.StringPtr("foo/bar.baz")
 
 				errorList := ValidateShoot(shoot)
 
@@ -832,8 +833,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       makeStringPointer(core.DNSUnmanaged),
-						SecretName: makeStringPointer(""),
+						Type:       pointer.StringPtr(core.DNSUnmanaged),
+						SecretName: pointer.StringPtr(""),
 					},
 				}
 
@@ -848,7 +849,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should require a provider if a secret name is given", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						SecretName: makeStringPointer(""),
+						SecretName: pointer.StringPtr(""),
 					},
 				}
 
@@ -865,7 +866,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot.Spec.DNS = nil
 				newShoot := prepareShootForUpdate(oldShoot)
 				newShoot.Spec.DNS = &core.DNS{
-					Domain: makeStringPointer("some-domain.com"),
+					Domain: pointer.StringPtr("some-domain.com"),
 				}
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -877,7 +878,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot := prepareShootForUpdate(shoot)
 				oldShoot.Spec.DNS = &core.DNS{}
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.DNS.Domain = makeStringPointer("some-domain.com")
+				newShoot.Spec.DNS.Domain = pointer.StringPtr("some-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
 
@@ -898,7 +899,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")
+				newShoot.Spec.DNS.Domain = pointer.StringPtr("another-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -911,10 +912,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should allow updating the dns providers if seed is assigned", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.SeedName = nil
-				oldShoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-dns-provider")
+				oldShoot.Spec.DNS.Providers[0].Type = pointer.StringPtr("some-dns-provider")
 
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.SeedName = makeStringPointer("seed")
+				newShoot.Spec.SeedName = pointer.StringPtr("seed")
 				newShoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -924,7 +925,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the dns provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.DNS.Providers[0].Type = makeStringPointer("some-other-provider")
+				shoot.Spec.DNS.Providers[0].Type = pointer.StringPtr("some-other-provider")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -936,7 +937,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow updating the dns secret name", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Providers[0].SecretName = makeStringPointer("my-dns-secret")
+				newShoot.Spec.DNS.Providers[0].SecretName = pointer.StringPtr("my-dns-secret")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -946,13 +947,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("OIDC validation", func() {
 			It("should forbid unsupported OIDC configuration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = makeStringPointer("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = makeStringPointer("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = pointer.StringPtr("")
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{}
 
@@ -1039,7 +1040,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("KubeControllerManager validation < 1.12", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.SyncPeriod = makeDurationPointer(100 * time.Millisecond)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.Tolerance = makeFloat64Pointer(0)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.Tolerance = pointer.Float64Ptr(0)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = makeDurationPointer(-1 * time.Second)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = makeDurationPointer(-1 * time.Second)
 
@@ -1133,10 +1134,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("KubeControllerManager configuration validation", func() {
 			It("should fail updating immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(22)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(22)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1148,10 +1149,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed not changing immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(24)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1159,7 +1160,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(32)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(32)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1173,7 +1174,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(0)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(0)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1187,7 +1188,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = makeInt32Pointer(22)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(22)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
@@ -1283,13 +1284,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Entry("valid", core.ClusterAutoscaler{}, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: makeFloat64Pointer(0.5),
+					ScaleDownUtilizationThreshold: pointer.Float64Ptr(0.5),
 				}, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: makeFloat64Pointer(-0.5),
+					ScaleDownUtilizationThreshold: pointer.Float64Ptr(-0.5),
 				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: makeFloat64Pointer(1.5),
+					ScaleDownUtilizationThreshold: pointer.Float64Ptr(1.5),
 				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 			)
 		})
@@ -2126,20 +2127,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 			func(schedules []core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
 				Expect(ValidateHibernationSchedules(schedules, nil)).To(matcher)
 			},
-			Entry("valid schedules", []core.HibernationSchedule{{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}}, BeEmpty()),
+			Entry("valid schedules", []core.HibernationSchedule{{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}}, BeEmpty()),
 			Entry("nil schedules", nil, BeEmpty()),
 			Entry("duplicate start and end value in same schedule",
-				[]core.HibernationSchedule{{Start: makeStringPointer("* * * * *"), End: makeStringPointer("* * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("duplicate start and end value in different schedules",
-				[]core.HibernationSchedule{{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}, {Start: makeStringPointer("1 * * * *"), End: makeStringPointer("3 * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}, {Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("3 * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("invalid schedule",
-				[]core.HibernationSchedule{{Start: makeStringPointer("foo"), End: makeStringPointer("* * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.StringPtr("foo"), End: pointer.StringPtr("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeInvalid),
 				})))),
@@ -2198,30 +2199,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid schedule", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}, BeEmpty()),
-			Entry("invalid start value", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer(""), End: makeStringPointer("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("valid schedule", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}, BeEmpty()),
+			Entry("invalid start value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr(""), End: pointer.StringPtr("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("start").String()),
 			})))),
-			Entry("invalid end value", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("invalid location", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *"), Location: makeStringPointer("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid location", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *"), Location: pointer.StringPtr("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("location").String()),
 			})))),
-			Entry("equal start and end value", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("equal start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("nil start", sets.NewString(), &core.HibernationSchedule{End: makeStringPointer("* * * * *")}, BeEmpty()),
-			Entry("nil end", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer("* * * * *")}, BeEmpty()),
+			Entry("nil start", sets.NewString(), &core.HibernationSchedule{End: pointer.StringPtr("* * * * *")}, BeEmpty()),
+			Entry("nil end", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *")}, BeEmpty()),
 			Entry("start and end nil", sets.NewString(), &core.HibernationSchedule{},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeRequired),
 				})))),
-			Entry("invalid start and end value", sets.NewString(), &core.HibernationSchedule{Start: makeStringPointer(""), End: makeStringPointer("")},
+			Entry("invalid start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr(""), End: pointer.StringPtr("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

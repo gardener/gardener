@@ -23,28 +23,3 @@ import (
 func makeDurationPointer(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
-
-func makeFloat64Pointer(f float64) *float64 {
-	ptr := f
-	return &ptr
-}
-
-func makeIntPointer(i int) *int {
-	ptr := i
-	return &ptr
-}
-
-func makeInt32Pointer(i int32) *int32 {
-	ptr := i
-	return &ptr
-}
-
-func makeBoolPointer(i bool) *bool {
-	ptr := i
-	return &ptr
-}
-
-func makeStringPointer(s string) *string {
-	ptr := s
-	return &ptr
-}
