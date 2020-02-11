@@ -252,7 +252,17 @@ data:
 
     [FILTER]
         Name record_modifier
+        Match *kube-scheduler*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
         Match *cloud-controller-manager*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *cluster-autoscaler*
         Record type user
 
     [FILTER]
