@@ -961,19 +961,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs"),
@@ -998,6 +998,58 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.requiredClaims"),
 				}))
 			})
+
+			DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(errorListSize))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+				}))
+			},
+				Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
+				Entry("should add error if clientID is set but issuerURL is empty string", 2, pointer.StringPtr("")),
+			)
+
+			It("should forbid issuerURL which is not HTTPS schema", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("http://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(HaveLen(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+				}))
+			})
+
+			It("should not fail if both clientID and issuerURL are set", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("https://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			DescribeTable("should forbid clientID to be empty string or nil, if issuerURL exists ", func(errorListSize int, clientID *string) {
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("https://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(HaveLen(errorListSize))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+				}))
+			},
+				Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
+				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.StringPtr("")),
+			)
 
 			It("should allow supported OIDC configuration (for K8S >= v1.11)", func() {
 				shoot.Spec.Kubernetes.Version = "1.11.1"

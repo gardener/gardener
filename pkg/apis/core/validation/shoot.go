@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -409,34 +410,54 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 				geqKubernetes111 = false
 			}
 
+			if fieldNilOrEmptyString(oidc.ClientID) {
+				if oidc.ClientID != nil {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID cannot be empty when key is provided"))
+				}
+				if !fieldNilOrEmptyString(oidc.IssuerURL) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID must be set when issuerURL is provided"))
+				}
+			}
+
+			if fieldNilOrEmptyString(oidc.IssuerURL) {
+				if oidc.IssuerURL != nil {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL cannot be empty when key is provided"))
+				}
+				if !fieldNilOrEmptyString(oidc.ClientID) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
+				}
+			} else {
+				issuer, err := url.Parse(*oidc.IssuerURL)
+				if err != nil || (issuer != nil && len(issuer.Host) == 0) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
+				}
+				if issuer != nil && issuer.Scheme != "https" {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
+				}
+			}
+
 			if oidc.CABundle != nil {
 				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
 					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
 				}
 			}
-			if oidc.ClientID != nil && len(*oidc.ClientID) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), *oidc.ClientID, "client id cannot be empty when key is provided"))
-			}
 			if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
 			}
 			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
-			}
-			if oidc.IssuerURL != nil && len(*oidc.IssuerURL) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), *oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
 			}
 			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signings algs cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signingAlgs cannot be empty when key is provided"))
 			}
 			if !geqKubernetes111 && oidc.RequiredClaims != nil {
-				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "required claims cannot be provided when version is not greater or equal 1.11"))
+				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "requiredClaims cannot be provided when version is not greater or equal 1.11"))
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
 			}
 			if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "usernamePrefix cannot be empty when key is provided"))
 			}
 		}
 
@@ -464,6 +485,10 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	}
 
 	return allErrs
+}
+
+func fieldNilOrEmptyString(field *string) bool {
+	return field == nil || len(*field) == 0
 }
 
 func validateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {
