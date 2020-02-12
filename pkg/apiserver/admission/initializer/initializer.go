@@ -16,6 +16,7 @@ package initializer
 
 import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 
@@ -29,6 +30,7 @@ import (
 func New(
 	coreInformers coreinformers.SharedInformerFactory,
 	coreClient coreclientset.Interface,
+	externalCoreInformers externalcoreinformers.SharedInformerFactory,
 	settingsInformers settingsinformer.SharedInformerFactory,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
@@ -37,6 +39,8 @@ func New(
 	return pluginInitializer{
 		coreInformers: coreInformers,
 		coreClient:    coreClient,
+
+		externalCoreInformers: externalCoreInformers,
 
 		settingsInformers: settingsInformers,
 
@@ -55,6 +59,10 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 	}
 	if wants, ok := plugin.(WantsInternalCoreClientset); ok {
 		wants.SetInternalCoreClientset(i.coreClient)
+	}
+
+	if wants, ok := plugin.(WantsExternalCoreInformerFactory); ok {
+		wants.SetExternalCoreInformerFactory(i.externalCoreInformers)
 	}
 
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {

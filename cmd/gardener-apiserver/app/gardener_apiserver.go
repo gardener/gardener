@@ -27,6 +27,8 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
@@ -41,6 +43,7 @@ import (
 	openidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -93,12 +96,13 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
-	Recommended             *genericoptions.RecommendedOptions
-	CoreInformerFactory     gardencoreinformers.SharedInformerFactory
-	KubeInformerFactory     kubeinformers.SharedInformerFactory
-	SettingsInformerFactory settingsinformer.SharedInformerFactory
-	StdOut                  io.Writer
-	StdErr                  io.Writer
+	Recommended                 *genericoptions.RecommendedOptions
+	CoreInformerFactory         gardencoreinformers.SharedInformerFactory
+	ExternalCoreInformerFactory gardenexternalcoreinformers.SharedInformerFactory
+	KubeInformerFactory         kubeinformers.SharedInformerFactory
+	SettingsInformerFactory     settingsinformer.SharedInformerFactory
+	StdOut                      io.Writer
+	StdErr                      io.Writer
 }
 
 // NewOptions returns a new Options object.
@@ -148,6 +152,7 @@ func (o *Options) complete() error {
 	plantvalidator.Register(o.Recommended.Admission.Plugins)
 	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
+	shootstatedeletionvalidator.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
@@ -159,6 +164,7 @@ func (o *Options) complete() error {
 		deletionconfirmation.PluginName,
 		openidconnectpreset.PluginName,
 		clusteropenidconnectpreset.PluginName,
+		shootstatedeletionvalidator.PluginName,
 	}
 
 	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
@@ -194,17 +200,26 @@ func (o *Options) config() (*apiserver.Config, error) {
 		}
 		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
+		// versioned core client
+		versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		if err != nil {
+			return nil, err
+		}
+		o.ExternalCoreInformerFactory = gardenexternalcoreinformers.NewSharedInformerFactory(versionedCoreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+
 		// settings client
 		settingsClient, err := settingsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
 		if err != nil {
 			return nil, err
 		}
+
 		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				o.CoreInformerFactory,
 				coreClient,
+				o.ExternalCoreInformerFactory,
 				o.SettingsInformerFactory,
 				o.KubeInformerFactory,
 				kubeClient,
@@ -237,6 +252,7 @@ func (o Options) run(stopCh <-chan struct{}) error {
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		o.CoreInformerFactory.Start(context.StopCh)
+		o.ExternalCoreInformerFactory.Start(context.StopCh)
 		o.KubeInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)
 		return nil
