@@ -430,16 +430,7 @@ func validateProvider(c *validationContext) field.ErrorList {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
 		}
 
-		for j, zone := range worker.Zones {
-			jdxPath := idxPath.Child("zones").Index(j)
-			if ok, validZones := validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, zone); !ok {
-				if len(validZones) == 0 {
-					allErrs = append(allErrs, field.Invalid(jdxPath, c.shoot.Spec.Region, "this region is not allowed"))
-				} else {
-					allErrs = append(allErrs, field.NotSupported(jdxPath, zone, validZones))
-				}
-			}
-		}
+		allErrs = append(allErrs, validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, worker, oldWorker, idxPath)...)
 	}
 
 	return allErrs
@@ -663,11 +654,28 @@ top:
 	return false, validValues
 }
 
-func validateZones(constraints []core.Region, region, oldRegion, zone string) (bool, []string) {
-	var (
-		validValues = []string{}
-		regionFound = false
-	)
+func validateZones(constraints []core.Region, region, oldRegion string, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if region == oldRegion && reflect.DeepEqual(worker.Zones, oldWorker.Zones) {
+		return allErrs
+	}
+
+	for j, zone := range worker.Zones {
+		jdxPath := fldPath.Child("zones").Index(j)
+		if ok, validZones := validateZone(constraints, region, zone); !ok {
+			if len(validZones) == 0 {
+				allErrs = append(allErrs, field.Invalid(jdxPath, region, "this region is not allowed"))
+			} else {
+				allErrs = append(allErrs, field.NotSupported(jdxPath, zone, validZones))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateZone(constraints []core.Region, region, zone string) (bool, []string) {
+	validValues := []string{}
 
 	for _, r := range constraints {
 		if r.Name == region {
@@ -677,13 +685,8 @@ func validateZones(constraints []core.Region, region, oldRegion, zone string) (b
 					return true, nil
 				}
 			}
-			regionFound = true
 			break
 		}
-	}
-
-	if !regionFound && region == oldRegion {
-		return true, nil
 	}
 
 	return false, validValues
