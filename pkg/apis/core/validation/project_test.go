@@ -28,6 +28,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Project Validation Tests", func() {
@@ -112,8 +113,8 @@ var _ = Describe("Project Validation Tests", func() {
 		})
 
 		It("should forbid Project specification with empty or invalid keys for description/purpose", func() {
-			project.Spec.Description = makeStringPointer("")
-			project.Spec.Purpose = makeStringPointer("")
+			project.Spec.Description = pointer.StringPtr("")
+			project.Spec.Purpose = pointer.StringPtr("")
 
 			errorList := ValidateProject(project)
 
@@ -185,13 +186,13 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("namespace change w/  preset namespace", makeStringPointer("garden-dev"), makeStringPointer("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("namespace change w/  preset namespace", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.namespace"),
 			})))),
-			Entry("namespace change w/o preset namespace", nil, makeStringPointer("garden-core"), BeEmpty()),
+			Entry("namespace change w/o preset namespace", nil, pointer.StringPtr("garden-core"), BeEmpty()),
 			Entry("no change (both unset)", nil, nil, BeEmpty()),
-			Entry("no change (same value)", makeStringPointer("garden-dev"), makeStringPointer("garden-dev"), BeEmpty()),
+			Entry("no change (same value)", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-dev"), BeEmpty()),
 		)
 
 		It("should forbid Project updates trying to change the createdBy field", func() {
