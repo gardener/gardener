@@ -221,6 +221,10 @@ var _ = Describe("helper", func() {
 						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
 						Status: gardencorev1alpha1.ConditionTrue,
 					},
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationHealthy,
+						Status: gardencorev1alpha1.ConditionTrue,
+					},
 				},
 				true,
 			),
@@ -229,6 +233,41 @@ var _ = Describe("helper", func() {
 					{
 						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
 						Status: gardencorev1alpha1.ConditionFalse,
+					},
+				},
+				false,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.Condition{
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationHealthy,
+						Status: gardencorev1alpha1.ConditionFalse,
+					},
+				},
+				false,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.Condition{
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+						Status: gardencorev1alpha1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationHealthy,
+						Status: gardencorev1alpha1.ConditionFalse,
+					},
+				},
+				false,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.Condition{
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+						Status: gardencorev1alpha1.ConditionFalse,
+					},
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationHealthy,
+						Status: gardencorev1alpha1.ConditionTrue,
 					},
 				},
 				false,

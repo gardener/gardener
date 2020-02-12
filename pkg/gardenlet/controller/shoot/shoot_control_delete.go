@@ -73,7 +73,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			})
 		}),
 		errors.ToExecute("Check required extensions exist", func() error {
-			return botanist.RequiredExtensionsExist()
+			return botanist.RequiredExtensionsExist(context.TODO())
 		}),
 		// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 		// all resources have already been deleted. We can delete the Shoot resource as a consequence.

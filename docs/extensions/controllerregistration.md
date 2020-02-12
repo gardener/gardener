@@ -39,7 +39,8 @@ spec:
 
 This resource expresses that Gardener requires the `os-coreos` extension controller to run on the `aws-eu1` seed cluster.
 
-PS: Currently, for the sake of implementation simplicity, Gardener demands every extension controller for every seed cluster (although, an AWS controller might not make much sense to run on a GCP seed cluster). We plan to change this in the future, i.e., to make Gardener more intelligent so that it can automatically determine which extension is required on which seed cluster.
+The Gardener Controller Manager does automatically determine which extension is required on which seed cluster and will only create `ControllerInstallation` objects for those.
+Also, it will automatically delete `ControllerInstallation`s referencing extension controllers that are no longer required on a seed (e.g., because all shoots on it have been deleted).
 
 ## How do extension controllers get deployed to seeds?
 
