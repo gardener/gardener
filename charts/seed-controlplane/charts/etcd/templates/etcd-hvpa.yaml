@@ -12,18 +12,15 @@ metadata:
     role: {{ .Values.role }}
 spec:
   replicas: 1
-{{- if .Values.scaleUpStabilization }}
-  scaleUpStabilization:
-{{ toYaml .Values.scaleUpStabilization | indent 4 }}
-{{- end }}
-{{- if .Values.scaleDownStabilization }}
-  scaleDownStabilization:
-{{ toYaml .Values.scaleDownStabilization | indent 4 }}
+{{- if .Values.maintenanceWindow }}
+  maintenanceTimeWindow:
+{{ toYaml .Values.maintenanceWindow | indent 4 }}
 {{- end }}
   hpa:
     selector:
       matchLabels:
         role: etcd-hpa-{{ .Values.role }}
+    deploy: false
     template:
       metadata:
         labels:
@@ -34,18 +31,33 @@ spec:
         metrics:
         - resource:
             name: memory
-            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.targetAverageUtilizationMemory }}
           type: Resource
         - resource:
             name: cpu
-            targetAverageUtilization: {{ .Values.targetAverageUtilization }}
+            targetAverageUtilization: {{ .Values.targetAverageUtilizationCpu }}
           type: Resource
-    updatePolicy:
-      updateMode: "Auto"
   vpa:
     selector:
       matchLabels:
         role: etcd-vpa-{{ .Values.role }}
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.scaleUpStabilization }}
+{{ toYaml .Values.scaleUpStabilization | indent 6 }}
+{{- end }}
+    scaleDown:
+      updatePolicy:
+        updateMode: "MaintenanceWindow"
+{{- if .Values.scaleDownStabilization }}
+{{ toYaml .Values.scaleDownStabilization | indent 6 }}
+{{- end }}
+{{- if .Values.limitsRequestsGapScaleParams }}
+    limitsRequestsGapScaleParams:
+{{ toYaml .Values.limitsRequestsGapScaleParams | indent 6 }}
+{{- end }}
     template:
       metadata:
         labels:
@@ -62,8 +74,6 @@ spec:
                 cpu: 300m
             - containerName: backup-restore
               mode: "Off"
-    updatePolicy:
-      updateMode: "ScaleUp"
   weightBasedScalingIntervals:
     - vpaWeight: 100
       startReplicaCount: {{ .Values.replicas }}

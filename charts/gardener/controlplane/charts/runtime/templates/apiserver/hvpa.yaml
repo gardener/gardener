@@ -14,18 +14,21 @@ metadata:
     heritage: "{{ .Release.Service }}"
 spec:
   replicas: 1
-{{- if .Values.global.apiserver.hvpa.scaleUpStabilization }}
-  scaleUpStabilization:
-{{ toYaml .Values.global.apiserver.hvpa.scaleUpStabilization | indent 4 }}
-{{- end }}
-{{- if .Values.global.apiserver.hvpa.scaleDownStabilization }}
-  scaleDownStabilization:
-{{ toYaml .Values.global.apiserver.hvpa.scaleDownStabilization | indent 4 }}
+{{- if .Values.global.apiserver.hvpa.maintenanceWindow }}
+  maintenanceTimeWindow:
+{{ toYaml .Values.global.apiserver.hvpa.maintenanceWindow | indent 4 }}
 {{- end }}
   hpa:
     selector:
       matchLabels:
         role: gardener-apiserver-hpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+    scaleDown:
+      updatePolicy:
+        updateMode: "Auto"
     template:
       metadata:
         labels:
@@ -42,12 +45,27 @@ spec:
             name: cpu
             targetAverageUtilization: {{ .Values.global.apiserver.hvpa.targetAverageUtilizationCpu }}
           type: Resource
-    updatePolicy:
-      updateMode: "Auto"
   vpa:
     selector:
       matchLabels:
         role: gardener-apiserver-vpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.global.apiserver.hvpa.vpaScaleUpStabilization }}
+{{ toYaml .Values.global.apiserver.hvpa.vpaScaleUpStabilization | indent 6 }}
+{{- end }}
+    scaleDown:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.global.apiserver.hvpa.vpaScaleDownStabilization }}
+{{ toYaml .Values.global.apiserver.hvpa.vpaScaleDownStabilization | indent 6 }}
+{{- end }}
+{{- if .Values.global.apiserver.hvpa.limitsRequestsGapScaleParams }}
+    limitsRequestsGapScaleParams:
+{{ toYaml .Values.global.apiserver.hvpa.limitsRequestsGapScaleParams | indent 6 }}
+{{- end }}
     template:
       metadata:
         labels:
@@ -62,8 +80,6 @@ spec:
               minAllowed:
                 memory: 400M
                 cpu: 400m
-    updatePolicy:
-      updateMode: "Auto"
   weightBasedScalingIntervals:
 {{- if gt (int .Values.global.apiserver.hvpa.maxReplicas) (int .Values.global.apiserver.hvpa.minReplicas) }}
     - vpaWeight: 0

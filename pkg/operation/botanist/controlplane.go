@@ -548,7 +548,7 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int32) (string, string, string, string) {
 	var (
 		cpuRequest    string
 		memoryRequest string
@@ -587,12 +587,6 @@ func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string
 
 		cpuLimit = "4000m"
 		memoryLimit = "7800Mi"
-	}
-
-	if hvpaEnabled {
-		// Since we are deploying HVPA for apiserver, we can keep the limits high
-		cpuLimit = "8"
-		memoryLimit = "25G"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -765,7 +759,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    cpuLimit,
@@ -780,25 +774,14 @@ func (b *Botanist) DeployKubeAPIServer() error {
 
 	if foundDeployment && hvpaEnabled {
 		// Deployment is already created AND is controlled by HVPA
-		// Keep the "requests" as it is.
+		// Keep the "resources" as it is.
 		for k := range deployment.Spec.Template.Spec.Containers {
 			v := &deployment.Spec.Template.Spec.Containers[k]
 			if v.Name == "kube-apiserver" {
-				defaultValues["apiServerResources"].(map[string]interface{})["requests"] = map[string]interface{}{
-					"cpu":    v.Resources.Requests.Cpu(),
-					"memory": v.Resources.Requests.Memory(),
-				}
+				defaultValues["apiserverResources"] = v.Resources.DeepCopy()
 				break
 			}
 		}
-	}
-
-	// APIserver will be horizontally scaled until last but one replicas,
-	// after which there will be vertical scaling
-	if maxReplicas > minReplicas {
-		defaultValues["lastReplicaCountForHpa"] = maxReplicas - 1
-	} else {
-		defaultValues["lastReplicaCountForHpa"] = minReplicas
 	}
 
 	defaultValues["minReplicas"] = minReplicas
@@ -1067,7 +1050,8 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
-		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
+		"maintenanceWindow": b.Shoot.Info.Spec.Maintenance.TimeWindow,
+		"storageCapacity":   b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
 	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName)
