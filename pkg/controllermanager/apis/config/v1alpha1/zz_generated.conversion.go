@@ -532,6 +532,7 @@ func Convert_config_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindi
 func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfiguration(in *SeedControllerConfiguration, out *config.SeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
+	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -544,6 +545,7 @@ func Convert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfig
 func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(in *config.SeedControllerConfiguration, out *SeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
+	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }

@@ -797,6 +797,12 @@ type Worker struct {
 	// Volume contains information about the volume type and size.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`
+	// DataVolumes contains a list of additional worker volumes.
+	// +optional
+	DataVolumes []Volume `json:"dataVolumes,omitempty"`
+	// KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.
+	// +optional
+	KubeletDataVolumeName *string `json:"kubeletDataVolumeName,omitempty"`
 	// Zones is a list of availability zones that are used to evenly distribute this worker pool. Optional
 	// as not every provider may support availability zones.
 	// +optional
@@ -834,11 +840,17 @@ type ShootMachineImage struct {
 
 // Volume contains information about the volume type and size.
 type Volume struct {
-	// Type is the machine type of the worker group.
+	// Name of the volume to make it referencable.
+	// +optional
+	Name *string `json:"name,omitempty"`
+	// Type is the type of the volume.
 	// +optional
 	Type *string `json:"type,omitempty"`
-	// Size is the size of the root volume.
+	// Size is the size of the volume.
 	Size string `json:"size"`
+	// Encrypted determines if the volume should be encrypted.
+	// +optional
+	Encrypted *bool `json:"encrypted,omitempty"`
 }
 
 var (

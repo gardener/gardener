@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -169,11 +170,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider.Type, oldSpec.Provider.Type, fldPath.Child("provider", "type"))...)
-	for i, worker := range newSpec.Provider.Workers {
-		if ShouldEnforceImmutability(worker.Zones, oldSpec.Provider.Workers[i].Zones) {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(worker.Zones, oldSpec.Provider.Workers[i].Zones, fldPath.Child("provider", "workers").Index(i).Child("zones"))...)
-		}
-	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
 	if oldSpec.Networking.Pods != nil {
@@ -414,34 +410,54 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 				geqKubernetes111 = false
 			}
 
+			if fieldNilOrEmptyString(oidc.ClientID) {
+				if oidc.ClientID != nil {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID cannot be empty when key is provided"))
+				}
+				if !fieldNilOrEmptyString(oidc.IssuerURL) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "clientID must be set when issuerURL is provided"))
+				}
+			}
+
+			if fieldNilOrEmptyString(oidc.IssuerURL) {
+				if oidc.IssuerURL != nil {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL cannot be empty when key is provided"))
+				}
+				if !fieldNilOrEmptyString(oidc.ClientID) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
+				}
+			} else {
+				issuer, err := url.Parse(*oidc.IssuerURL)
+				if err != nil || (issuer != nil && len(issuer.Host) == 0) {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
+				}
+				if issuer != nil && issuer.Scheme != "https" {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
+				}
+			}
+
 			if oidc.CABundle != nil {
 				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
 					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
 				}
 			}
-			if oidc.ClientID != nil && len(*oidc.ClientID) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), *oidc.ClientID, "client id cannot be empty when key is provided"))
-			}
 			if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
 			}
 			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
-			}
-			if oidc.IssuerURL != nil && len(*oidc.IssuerURL) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), *oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
 			}
 			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signings algs cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signingAlgs cannot be empty when key is provided"))
 			}
 			if !geqKubernetes111 && oidc.RequiredClaims != nil {
-				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "required claims cannot be provided when version is not greater or equal 1.11"))
+				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "requiredClaims cannot be provided when version is not greater or equal 1.11"))
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
 			}
 			if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "usernamePrefix cannot be empty when key is provided"))
 			}
 		}
 
@@ -469,6 +485,10 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	}
 
 	return allErrs
+}
+
+func fieldNilOrEmptyString(field *string) bool {
+	return field == nil || len(*field) == 0
 }
 
 func validateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {
@@ -735,15 +755,61 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
+	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
+
 	if worker.Volume != nil {
-		volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 		if !volumeSizeRegex.MatchString(worker.Volume.Size) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.Size, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
 		}
 	}
 
+	if worker.DataVolumes != nil {
+		var volumeNames = make(map[string]int)
+		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), fmt.Sprintf("a worker volume must be defined if data volumes are defined")))
+		}
+		for idx, volume := range worker.DataVolumes {
+			idxPath := fldPath.Child("dataVolumes").Index(idx)
+			if volume.Name == nil {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), fmt.Sprintf("data volume name is required")))
+			} else {
+				volName := *volume.Name
+				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
+				maxVolumeNameLength := 15
+				if len(volName) > maxVolumeNameLength {
+					allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volName, maxVolumeNameLength))
+				}
+				if _, keyExist := volumeNames[volName]; keyExist {
+					volumeNames[volName]++
+					allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), volName))
+				} else {
+					volumeNames[volName] = 1
+				}
+				if !volumeSizeRegex.MatchString(volume.Size) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.Size, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
+				}
+			}
+		}
+
+	}
+
+	if worker.KubeletDataVolumeName != nil {
+		found := false
+		for _, volume := range worker.DataVolumes {
+			if *volume.Name == *worker.KubeletDataVolumeName {
+				found = true
+			}
+		}
+		if !found {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeletDataVolumeName"), worker.KubeletDataVolumeName, fmt.Sprintf("KubeletDataVolumeName refers to unrecognized data volume %s", *worker.KubeletDataVolumeName)))
+		}
+	}
+
 	return allErrs
 }
+
+// PodPIDsLimitMinimum is a constant for the minimum value for the podPIDsLimit field.
+const PodPIDsLimitMinimum int64 = 100
 
 // ValidateKubeletConfig validates the KubeletConfig object.
 func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path) field.ErrorList {
@@ -752,15 +818,17 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path
 	if kubeletConfig.MaxPods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.MaxPods), fldPath.Child("maxPods"))...)
 	}
-
+	if value := kubeletConfig.PodPIDsLimit; value != nil {
+		if *value < PodPIDsLimitMinimum {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("podPIDsLimit"), *value, fmt.Sprintf("podPIDsLimit value must be at least %d", PodPIDsLimitMinimum)))
+		}
+	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
 	}
-
 	if kubeletConfig.EvictionMaxPodGracePeriod != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*kubeletConfig.EvictionMaxPodGracePeriod), fldPath.Child("evictionMaxPodGracePeriod"))...)
 	}
-
 	if kubeletConfig.EvictionHard != nil {
 		allErrs = append(allErrs, validateKubeletConfigEviction(kubeletConfig.EvictionHard, fldPath.Child("evictionHard"))...)
 	}

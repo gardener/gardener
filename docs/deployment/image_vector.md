@@ -75,10 +75,10 @@ spec:
       - name: gardenlet
         env:
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts/images_overwrite.yaml
+          value: /charts-overwrite/images_overwrite.yaml
         volumeMounts:
         - name: gardenlet-images-overwrite
-          mountPath: /charts/images_overwrite.yaml
+          mountPath: /charts-overwrite
         ...
       volumes:
       - name: gardenlet-images-overwrite

@@ -46,27 +46,35 @@ type Controller struct {
 	seedQueue  workqueue.RateLimitingInterface
 	seedSynced cache.InformerSynced
 
+	shootLister gardencorelisters.ShootLister
+	shootSynced cache.InformerSynced
+
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
-// holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
+// holding information about the acting Gardener, a <gardenInformerFactory>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
 func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
-		seedInformer              = gardenCoreV1beta1Informer.Seeds()
-		seedLister                = seedInformer.Lister()
+
+		seedInformer = gardenCoreV1beta1Informer.Seeds()
+		seedLister   = seedInformer.Lister()
+
+		shootInformer = gardenCoreV1beta1Informer.Shoots()
+		shootLister   = shootInformer.Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreV1beta1Informer, config),
+		control:                NewDefaultControl(k8sGardenClient, shootLister, config),
 		recorder:               recorder,
 		seedLister:             seedLister,
+		shootLister:            shootLister,
 		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:               make(chan int),
 	}
@@ -75,6 +83,7 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 		AddFunc: seedController.seedAdd,
 	})
 	seedController.seedSynced = seedInformer.Informer().HasSynced
+	seedController.shootSynced = shootInformer.Informer().HasSynced
 
 	return seedController
 }
@@ -83,7 +92,7 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.shootSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

@@ -2684,6 +2684,18 @@ string
 <tbody>
 <tr>
 <td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Name of the volume to make it referencable.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>type</code></br>
 <em>
 string
@@ -2702,7 +2714,19 @@ string
 </em>
 </td>
 <td>
-<p>Size is the size of the volume.</p>
+<p>Size is the of the root volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encrypted</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Encrypted determines if the volume should be encrypted.</p>
 </td>
 </tr>
 </tbody>
@@ -2889,6 +2913,32 @@ Volume
 </tr>
 <tr>
 <td>
+<code>dataVolumes</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Volume">
+[]Volume
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DataVolumes contains a list of additional worker volumes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletDataVolumeName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>zones</code></br>
 <em>
 []string
@@ -3052,5 +3102,9 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>62e1b589a</code>.
+<<<<<<< HEAD
+on git commit <code>753d7857c</code>.
+=======
+on git commit <code>13d359fa9</code>.
+>>>>>>> Set shoot conditions to unknown if gardenlet stops sending heartbeats
 </em></p>

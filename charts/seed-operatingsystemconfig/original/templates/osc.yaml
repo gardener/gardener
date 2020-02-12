@@ -15,6 +15,7 @@ spec:
   {{- end }}
   reloadConfigFilePath: {{ required ".osc.reloadConfigFilePath is required" .Values.osc.reloadConfigFilePath }}
   units:
+{{ include "var-lib-mount" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
 {{ include "docker-logrotate" . | indent 2 }}
 {{ include "docker-logrotate-timer" . | indent 2 }}

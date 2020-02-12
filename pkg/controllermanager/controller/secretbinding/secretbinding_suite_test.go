@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2018 2020 SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation_test
+package secretbinding_test
 
 import (
-	"time"
+	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func makeDurationPointer(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
+func TestSecretBinding(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "ControllerManager SecretBinding Controller Suite")
 }

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("CloudProfile Validation Tests ", func() {
@@ -184,7 +185,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
-				unknownCloudProfile.Spec.CABundle = makeStringPointer("unsupported")
+				unknownCloudProfile.Spec.CABundle = pointer.StringPtr("unsupported")
 
 				errorList := ValidateCloudProfile(unknownCloudProfile)
 

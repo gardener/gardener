@@ -149,7 +149,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.7.0"
+  tag: "0.8.0"
 
 # Miscellaenous
 - name: busybox
@@ -220,4 +220,4 @@ images:
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
-  tag: "0.1.0"
+  tag: "v0.2.0"

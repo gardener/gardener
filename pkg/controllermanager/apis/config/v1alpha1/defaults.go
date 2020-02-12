@@ -115,6 +115,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		v := metav1.Duration{Duration: 40 * time.Second}
 		obj.Controllers.Seed.MonitorPeriod = &v
 	}
+	if obj.Controllers.Seed.ShootMonitorPeriod == nil {
+		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
+		obj.Controllers.Seed.ShootMonitorPeriod = &v
+	}
 
 	if obj.Discovery.TTL == nil {
 		obj.Discovery.TTL = &metav1.Duration{Duration: DefaultDiscoveryTTL}

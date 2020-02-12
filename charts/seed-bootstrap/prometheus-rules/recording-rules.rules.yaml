@@ -39,3 +39,7 @@ groups:
 
   - record: seed:container_network_transmit_bytes_total:sum_cp
     expr: sum(seed:container_network_transmit_bytes_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  # Recording rules for images running on seed
+  - record: seed:images:count
+    expr: count(container_cpu_cfs_periods_total{type="seed"}) by (image)

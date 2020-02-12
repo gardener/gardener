@@ -287,6 +287,11 @@ func (in *SeedControllerConfiguration) DeepCopyInto(out *SeedControllerConfigura
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.ShootMonitorPeriod != nil {
+		in, out := &in.ShootMonitorPeriod, &out.ShootMonitorPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	out.SyncPeriod = in.SyncPeriod
 	return
 }

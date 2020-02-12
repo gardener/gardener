@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +66,9 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 	}
 
 	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+		namespace.Annotations = map[string]string{
+			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
+		}
 		namespace.Labels = map[string]string{
 			v1beta1constants.DeprecatedGardenRole:    v1beta1constants.GardenRoleShoot,
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
@@ -544,7 +548,7 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int32) (string, string, string, string) {
 	var (
 		cpuRequest    string
 		memoryRequest string
@@ -583,12 +587,6 @@ func getResourcesForAPIServer(nodeCount int32, hvpaEnabled bool) (string, string
 
 		cpuLimit = "4000m"
 		memoryLimit = "7800Mi"
-	}
-
-	if hvpaEnabled {
-		// Since we are deploying HVPA for apiserver, we can keep the limits high
-		cpuLimit = "8"
-		memoryLimit = "25G"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -761,7 +759,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = 0
 		}
 
-		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount(), hvpaEnabled)
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    cpuLimit,
@@ -776,25 +774,14 @@ func (b *Botanist) DeployKubeAPIServer() error {
 
 	if foundDeployment && hvpaEnabled {
 		// Deployment is already created AND is controlled by HVPA
-		// Keep the "requests" as it is.
+		// Keep the "resources" as it is.
 		for k := range deployment.Spec.Template.Spec.Containers {
 			v := &deployment.Spec.Template.Spec.Containers[k]
 			if v.Name == "kube-apiserver" {
-				defaultValues["apiServerResources"].(map[string]interface{})["requests"] = map[string]interface{}{
-					"cpu":    v.Resources.Requests.Cpu(),
-					"memory": v.Resources.Requests.Memory(),
-				}
+				defaultValues["apiserverResources"] = v.Resources.DeepCopy()
 				break
 			}
 		}
-	}
-
-	// APIserver will be horizontally scaled until last but one replicas,
-	// after which there will be vertical scaling
-	if maxReplicas > minReplicas {
-		defaultValues["lastReplicaCountForHpa"] = maxReplicas - 1
-	} else {
-		defaultValues["lastReplicaCountForHpa"] = minReplicas
 	}
 
 	defaultValues["minReplicas"] = minReplicas
@@ -1063,7 +1050,8 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
-		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
+		"maintenanceWindow": b.Shoot.Info.Spec.Maintenance.TimeWindow,
+		"storageCapacity":   b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
 	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName)
@@ -1134,4 +1122,34 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// CheckVPNConnection checks whether the VPN connection between the control plane and the shoot networks
+// is established.
+func (b *Botanist) CheckVPNConnection(ctx context.Context, logger *logrus.Entry) (bool, error) {
+	podList := &corev1.PodList{}
+	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": "vpn-shoot"}); err != nil {
+		return retry.SevereError(err)
+	}
+
+	var vpnPod *corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			vpnPod = &pod
+			break
+		}
+	}
+
+	if vpnPod == nil {
+		logger.Info("Waiting until a running vpn-shoot pod exists in the Shoot cluster...")
+		return retry.MinorError(fmt.Errorf("no running vpn-shoot pod found yet in the shoot cluster"))
+	}
+
+	if err := b.K8sShootClient.CheckForwardPodPort(vpnPod.Namespace, vpnPod.Name, 0, 22); err != nil {
+		logger.Info("Waiting until the VPN connection has been established...")
+		return retry.MinorError(fmt.Errorf("could not forward to vpn-shoot pod: %v", err))
+	}
+
+	logger.Info("VPN connection has been established.")
+	return retry.Ok()
 }

@@ -51,3 +51,4 @@ worker:
     featureGates: {}
     # CustomResourceValidation: true
     # RotateKubeletServerCertificate: false
+  # kubeletDataVolume: vol1

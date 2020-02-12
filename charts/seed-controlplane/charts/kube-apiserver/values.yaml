@@ -82,12 +82,13 @@ apiServerResources:
     cpu: 400m
     memory: 400M
   limits:
-    cpu: "8"
-    memory: 25G
+    cpu: 800m
+    memory: 900M
 
 maxReplicas: 1
 minReplicas: 1
-targetAverageUtilization: 80
+targetAverageUtilizationCpu: 80
+targetAverageUtilizationMemory: 80
 
 auditConfig:
   auditPolicy: ""
@@ -115,21 +116,29 @@ hvpa:
   enabled: false
 
 scaleUpStabilization:
-  duration: "3m"
-  minCpuChange:
-    value: 300m
-    percentage: 80
-  minMemChange:
-    value: 200M
-    percentage: 80
+  stabilizationDuration: "3m"
+  minChange:
+    cpu:
+      value: 300m
+      percentage: 80
+    memory:
+      value: 200M
+      percentage: 80
 
 scaleDownStabilization:
-  duration: "15m"
-  minCpuChange:
-    value: 300m
-    percentage: 80
-  minMemChange:
-    value: 200M
-    percentage: 80
+  stabilizationDuration: "15m"
+  minChange:
+    cpu:
+      value: 300m
+      percentage: 80
+    memory:
+      value: 200M
+      percentage: 80
 
-lastReplicaCountForHpa: 1
+limitsRequestsGapScaleParams:
+  cpu:
+    value: "3"
+    percentage: 80
+  memory:
+    value: "5G"
+    percentage: 80
