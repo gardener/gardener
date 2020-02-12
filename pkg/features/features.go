@@ -27,7 +27,7 @@ const (
 	// MyFeature utilfeature.Feature = "MyFeature"
 
 	// Logging enables logging stack for clusters.
-	// owner @mvladev, @ialidzhikov
+	// owner @mvladev
 	// alpha: v0.13.0
 	Logging featuregate.Feature = "Logging"
 
