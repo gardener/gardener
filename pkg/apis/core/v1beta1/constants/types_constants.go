@@ -42,6 +42,12 @@ const (
 	// controllers in order to communicate with the shoot's API server. The client certificate has administrator
 	// privileges.
 	SecretNameGardener = "gardener"
+	// SecretNameGardenerInternal is a constant for the name of a Kubernetes secret object that contains the client
+	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
+	// controllers in order to communicate with the shoot's API server. The client certificate has administrator
+	// privileges. The difference to the "gardener" secret is that is contains the in-cluster endpoint as address to
+	// for the shoot API server instead the DNS name or load balancer address.
+	SecretNameGardenerInternal = "gardener-internal"
 
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.

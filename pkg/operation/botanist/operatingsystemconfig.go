@@ -122,7 +122,7 @@ func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]
 	return map[string]interface{}{
 		"type":    machineImageName,
 		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-		"server":  fmt.Sprintf("https://%s", b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress)),
+		"server":  fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 	}
 }
 
