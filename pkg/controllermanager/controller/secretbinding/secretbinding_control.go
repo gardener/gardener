@@ -136,7 +136,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 		if len(associatedShoots) == 0 {
 			secretBindingLogger.Info("No Shoots are referencing the SecretBinding. Deletion accepted.")
 
-			mayReleaseSecret, err := c.mayReleaseSecret(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
+			mayReleaseSecret, err := c.mayReleaseSecret(secretBinding.Namespace, secretBinding.Name, secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
 			if err != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
@@ -193,14 +193,17 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 }
 
 // We may only release a secret if there is no other secretbinding that references it (maybe in a different namespace).
-func (c *defaultControl) mayReleaseSecret(namespace, name string) (bool, error) {
+func (c *defaultControl) mayReleaseSecret(secretBindingNamespace, secretBindingName, secretNamespace, secretName string) (bool, error) {
 	secretBindingList, err := c.secretBindingLister.List(labels.Everything())
 	if err != nil {
 		return false, err
 	}
 
 	for _, secretBinding := range secretBindingList {
-		if secretBinding.SecretRef.Namespace == namespace && secretBinding.SecretRef.Name == name {
+		if secretBinding.Namespace == secretBindingNamespace && secretBinding.Name == secretBindingName {
+			continue
+		}
+		if secretBinding.SecretRef.Namespace == secretNamespace && secretBinding.SecretRef.Name == secretName {
 			return false, nil
 		}
 	}
