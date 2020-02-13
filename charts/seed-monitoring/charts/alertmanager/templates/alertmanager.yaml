@@ -163,4 +163,4 @@ spec:
     kind: StatefulSet
     name: alertmanager
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
