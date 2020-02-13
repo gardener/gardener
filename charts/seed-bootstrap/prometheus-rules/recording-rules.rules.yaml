@@ -1,45 +1,157 @@
 groups:
 - name: recording-rules.rules
   rules:
-  # Recording rules for pod usage
-  - record: seed:container_cpu_usage_seconds_total:sum_by_pod
-    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod, namespace)
+  # Recording rules for the sum of the usage per container
+  - record: seed:container_cpu_usage_seconds_total:sum_by_container
+    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (container)
 
-  - record: seed:container_memory_working_set_bytes:sum_by_pod
-    expr: sum(container_memory_working_set_bytes) by (pod, namespace)
+  - record: seed:container_memory_working_set_bytes:sum_by_container
+    expr: sum(container_memory_working_set_bytes) by (container)
 
-  - record: seed:container_network_receive_bytes_total:sum_by_pod
-    expr: sum(rate(container_network_receive_bytes_total[5m])) by (pod, namespace)
+  # Recording rules for the sum of the requests per container
+  - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
+    expr: sum(kube_pod_container_resource_requests_cpu_cores) by (container) 
 
-  - record: seed:container_network_transmit_bytes_total:sum_by_pod
-    expr: sum(rate(container_network_transmit_bytes_total[5m])) by (pod, namespace)
+  - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container
+    expr: sum(kube_pod_container_resource_requests_memory_bytes) by (container) 
+
+  # Recording rules for the sum of the limits per container
+  - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container
+    expr: sum(kube_pod_container_resource_limits_cpu_cores) by (container) 
+
+  - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
+    expr: sum(kube_pod_container_resource_limits_memory_bytes) by (container) 
+
+  # Recording rules for the sum of vpa recommendations per container
+  - record: seed:vpa_status_recommendation_target:sum_by_container
+    expr: sum(vpa_status_recommendation{recommendation="target"}) by (container, resource)
+  
+  # Recording rules for the sum of hvpa applied recommendations per container
+  - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
+    expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (container, resource)
+
+  # Recording rules for container count per container
+  - record: seed:kube_pod_container_info:count_by_container
+    expr: count(kube_pod_container_info) by (container)
 
   # Recording rules for the sum of the entire seed usage
   - record: seed:container_cpu_usage_seconds_total:sum
-    expr: sum(seed:container_cpu_usage_seconds_total:sum_by_pod)
+    expr: sum(rate(container_cpu_usage_seconds_total[5m]))
 
   - record: seed:container_memory_working_set_bytes:sum
-    expr: sum(seed:container_memory_working_set_bytes:sum_by_pod)
+    expr: sum(container_memory_working_set_bytes)
 
   - record: seed:container_network_receive_bytes_total:sum
-    expr: sum(seed:container_network_receive_bytes_total:sum_by_pod)
+    expr: sum(rate(container_network_receive_bytes_total[5m]))
 
   - record: seed:container_network_transmit_bytes_total:sum
-    expr: sum(seed:container_network_transmit_bytes_total:sum_by_pod)
+    expr: sum(rate(container_network_transmit_bytes_total[5m]))
 
-  # Recording rules for the sum of all control plane usage
-  - record: seed:container_cpu_usage_seconds_total:sum_cp
-    expr: sum(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+  # Recording rules for the sum of the requests in the entire seed
+  - record: seed:kube_pod_container_resource_requests_cpu_cores:sum
+    expr: sum(kube_pod_container_resource_requests_cpu_cores)
 
-  - record: seed:container_memory_working_set_bytes:sum_cp
-    expr: sum(seed:container_memory_working_set_bytes:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+  - record: seed:kube_pod_container_resource_requests_memory_bytes:sum
+    expr: sum(kube_pod_container_resource_requests_memory_bytes)
 
-  - record: seed:container_network_receive_bytes_total:sum_cp
-    expr: sum(seed:container_network_receive_bytes_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+  # Recording rules for the sum of the limits in the entire seed
+  - record: seed:kube_pod_container_resource_limits_cpu_cores:sum
+    expr: sum(kube_pod_container_resource_limits_cpu_cores)
 
-  - record: seed:container_network_transmit_bytes_total:sum_cp
-    expr: sum(seed:container_network_transmit_bytes_total:sum_by_pod{namespace=~"((shoot-|shoot--)(\\w.+))"})
+  - record: seed:kube_pod_container_resource_limits_memory_bytes:sum
+    expr: sum(kube_pod_container_resource_limits_memory_bytes)
+
+  # Recording rules for the sum of vpa recommendations for the entire seed
+  - record: seed:vpa_status_recommendation_target:sum
+    expr: sum(vpa_status_recommendation{recommendation="target"})
+  
+  # Recording rules for the sum of hvpa applied recommendations for the entire seed
+  - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
+    expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"})
+
+  # Recording rules for pod count for the entire seed
+  - record: seed:kube_pod_info:count
+    expr: count(kube_pod_info)
 
   # Recording rules for images running on seed
   - record: seed:images:count
-    expr: count(container_cpu_cfs_periods_total{type="seed"}) by (image)
+    expr: count(kube_pod_container_info) by (image)
+
+  # Recording rules for node metrics for the entire seed
+  - record: seed:kube_node_info:count
+    expr: count(kube_node_info)
+
+  - record: seed:kube_node_status_condition:sum_by_condition
+    expr: sum(kube_node_status_condition) by (condition, status)
+
+  - record: seed:node_cpu_seconds_total:sum
+    expr: sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))
+
+  - record: seed:node_memory_Active_bytes:sum
+    expr: sum(node_memory_Active_bytes)
+
+  - record: seed:kube_node_status_allocatable_cpu_cores:max
+    expr: max(kube_node_status_allocatable_cpu_cores)
+  
+  - record: seed:kube_node_status_allocatable_cpu_cores:sum
+    expr: sum(kube_node_status_allocatable_cpu_cores)
+
+  - record: seed:kube_node_status_allocatable_memory_bytes:max
+    expr: max(kube_node_status_allocatable_memory_bytes)
+
+  - record: seed:kube_node_status_allocatable_memory_bytes:sum
+    expr: sum(kube_node_status_allocatable_memory_bytes)
+  
+  - record: seed:kube_node_status_allocatable_pods:max
+    expr: max(kube_node_status_allocatable_pods)
+
+  - record: seed:kube_node_status_allocatable_pods:sum
+    expr: sum(kube_node_status_allocatable_pods)
+
+  # Recording rules for the active shoots in the entire seed
+  - record: seed:active_shoots_total:sum
+    expr: count(kube_pod_info{pod="etcd-main-0"})
+
+  # Recording rules for all the shoots in the entire seed
+  - record: seed:all_shoots_total:sum
+    expr: count(kube_statefulset_replicas{statefulset="etcd-main"})
+
+  # Recording rules for the sum of all control plane usage
+  - record: seed:container_cpu_usage_seconds_total:sum_cp
+    expr: sum(rate(container_cpu_usage_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+  - record: seed:container_memory_working_set_bytes:sum_cp
+    expr: sum(container_memory_working_set_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:container_network_receive_bytes_total:sum_cp
+    expr: sum(rate(container_network_receive_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+  - record: seed:container_network_transmit_bytes_total:sum_cp
+    expr: sum(rate(container_network_transmit_bytes_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+  # Recording rules for the sum of the requests for all the control planes
+  - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_cp
+    expr: sum(kube_pod_container_resource_requests_cpu_cores{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_cp
+    expr: sum(kube_pod_container_resource_requests_memory_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  # Recording rules for the sum of the limits for all the control planes
+  - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_cp
+    expr: sum(kube_pod_container_resource_limits_cpu_cores{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
+    expr: sum(kube_pod_container_resource_limits_memory_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  # Recording rules for the sum of vpa recommendations for all the control-planes
+  - record: seed:vpa_status_recommendation_target:sum
+    expr: sum(vpa_status_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"})
+  
+  # Recording rules for the sum of hvpa applied recommendations for all the control-planes
+  - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
+    expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"})
+
+  # Recording rules for pod count for all the control-planes
+  - record: seed:kube_pod_info:count_cp
+    expr: count(kube_pod_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
+

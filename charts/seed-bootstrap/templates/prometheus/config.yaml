@@ -112,3 +112,84 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubelet | indent 6 }}
 
+    - job_name: node-exporter
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ kube-system ]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: node-exporter;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      - source_labels: [ __meta_kubernetes_pod_node_name ]
+        target_label: node
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
+
+    - job_name: kube-state-metrics
+      honor_labels: false
+      # Service is used, because we only care about metric from one kube-state-metrics instance
+      # and not multiple in HA setup
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels: [ __meta_kubernetes_service_label_component ]
+        action: keep
+        regex: kube-state-metrics
+      - source_labels: [ __meta_kubernetes_service_port_name ]
+        action: keep
+      - source_labels: [ __meta_kubernetes_service_label_type ]
+        regex: (.+)
+        target_label: type
+        replacement: ${1}
+      - target_label: instance
+        replacement: kube-state-metrics
+      metric_relabel_configs:
+      - source_labels: [ pod ]
+        regex: ^.+\.tf-pod.+$
+        action: drop
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeStateMetrics | indent 6 }}
+
+    - job_name: 'vpa-exporter'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ garden ]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        - __meta_kubernetes_namespace
+        action: keep
+        regex: vpa-exporter;metrics;garden
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpa | indent 6 }}
+    
+{{- if .Values.hvpa.enabled }}
+    - job_name: 'hvpa-controller'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ garden ]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        - __meta_kubernetes_namespace
+        action: keep
+        regex: hvpa-controller;metrics;garden
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.hvpa | indent 6 }}
+{{- end }}
+
+

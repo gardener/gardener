@@ -35,6 +35,62 @@ allowedMetrics:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
 
+  nodeExporter:
+  - node_cpu_seconds_total
+  - node_filesystem_avail_bytes
+  - node_filesystem_free_bytes
+  - node_filesystem_size_bytes
+  - node_load1
+  - node_load5
+  - node_load15
+  - node_memory_Active_bytes
+  - node_nf_conntrack_entries
+  - node_nf_conntrack_entries_limit
+  - process_max_fds
+  - process_open_fds
+
+  kubeStateMetrics:
+  - kube_daemonset_metadata_generation
+  - kube_daemonset_status_current_number_scheduled
+  - kube_daemonset_status_desired_number_scheduled
+  - kube_daemonset_status_number_available
+  - kube_daemonset_status_number_unavailable
+  - kube_daemonset_updated_number_scheduled
+  - kube_deployment_metadata_generation
+  - kube_deployment_spec_replicas
+  - kube_deployment_status_observed_generation
+  - kube_deployment_status_replicas
+  - kube_deployment_status_replicas_available
+  - kube_deployment_status_replicas_unavailable
+  - kube_deployment_status_replicas_updated
+  - kube_node_info
+  - kube_node_labels
+  - kube_node_spec_unschedulable
+  - kube_node_status_allocatable_cpu_cores
+  - kube_node_status_allocatable_memory_bytes
+  - kube_node_status_allocatable_pods
+  - kube_node_status_capacity_cpu_cores
+  - kube_node_status_capacity_memory_bytes
+  - kube_node_status_capacity_pods
+  - kube_node_status_condition
+  - kube_pod_container_info
+  - kube_pod_container_resource_limits_cpu_cores
+  - kube_pod_container_resource_limits_memory_bytes
+  - kube_pod_container_resource_requests_cpu_cores
+  - kube_pod_container_resource_requests_memory_bytes
+  - kube_pod_container_status_restarts_total
+  - kube_pod_info
+  - kube_pod_labels
+  - kube_pod_status_phase
+  - kube_pod_status_ready
+  - kube_statefulset_metadata_generation
+  - kube_statefulset_replicas
+  - kube_statefulset_status_observed_generation
+  - kube_statefulset_status_replicas
+  - kube_statefulset_status_replicas_current
+  - kube_statefulset_status_replicas_ready
+  - kube_statefulset_status_replicas_updated
+
   fluentd: []
   fluentbit: []
 
@@ -56,6 +112,18 @@ allowedMetrics:
   - vpa_status_recommendation
   - vpa_spec_container_resource_policy_allowed
   - vpa_metadata_generation
+
+  hvpa:
+  - hvpa_aggregate_applied_scaling_total
+  - hvpa_aggregate_blocked_scalings_total
+  - hvpa_spec_replicas
+  - hvpa_status_replicas
+  - hvpa_status_applied_hpa_current_replicas
+  - hvpa_status_applied_hpa_desired_replicas
+  - hvpa_status_applied_vpa_recommendation
+  - hvpa_status_blocked_hpa_current_replicas
+  - hvpa_status_blocked_hpa_desired_replicas
+  - hvpa_status_blocked_vpa_recommendation
 
 
 ingress:
