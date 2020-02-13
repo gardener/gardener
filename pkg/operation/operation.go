@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -189,12 +190,32 @@ func (o *Operation) InitializeShootClients() error {
 		}
 	}
 
-	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardencorev1beta1.GardenerName,
+	secretName := v1beta1constants.SecretNameGardener
+	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
+	// and communicate internally. Otherwise, fall back to the "external" kubeconfig and communicate via the
+	// load balancer of the shoot API server.
+	addr, err := net.LookupHost(o.Shoot.ComputeInClusterAPIServerAddress(false))
+	if err != nil {
+		o.Logger.Warnf("service DNS name lookup of kube-apiserver failed (%+v), falling back to external kubeconfig", err)
+	} else if len(addr) > 0 {
+		secretName = v1beta1constants.SecretNameGardenerInternal
+	}
+
+	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, secretName,
 		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.ShootScheme,
 		}),
 	)
+	// TODO: This if-condition can be removed in a future version when all shoots were reconciled with Gardener v1.1 version.
+	if secretName == v1beta1constants.SecretNameGardenerInternal && err != nil && apierrors.IsNotFound(err) {
+		k8sShootClient, err = kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, v1beta1constants.SecretNameGardener,
+			kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
+			kubernetes.WithClientOptions(client.Options{
+				Scheme: kubernetes.ShootScheme,
+			}),
+		)
+	}
 	if err != nil {
 		return err
 	}

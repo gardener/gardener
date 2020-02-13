@@ -174,7 +174,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -209,7 +209,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -244,7 +244,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -264,7 +264,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -284,7 +284,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 			},
 		},
 
@@ -304,7 +304,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -324,7 +324,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			},
 		},
 
@@ -359,7 +359,25 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			},
+		},
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: v1beta1constants.SecretNameGardenerInternal,
+
+				CommonName:   gardencorev1beta1.GardenerName,
+				Organization: []string{user.SystemPrivilegedGroup},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(false),
 			},
 		},
 
@@ -379,7 +397,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
+				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 			},
 		},
 
@@ -544,7 +562,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeAPIServerURL(false, false, b.APIServerAddress),
+			APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
 		},
 	})
 
@@ -563,7 +581,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+			APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(false),
 		},
 	})
 
@@ -582,7 +600,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 		KubeConfigRequest: &secrets.KubeConfigRequest{
 			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeAPIServerURL(false, true, b.APIServerAddress),
+			APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 		},
 	})
 

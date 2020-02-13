@@ -16,15 +16,16 @@ package shoot_test
 
 import (
 	"context"
-	"k8s.io/utils/pointer"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -34,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -243,6 +245,67 @@ var _ = Describe("shoot", func() {
 					SecretData: shootSecretData,
 				}))
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Describe("#ComputeInClusterAPIServerAddress", func() {
+			seedNamespace := "foo"
+			s := &Shoot{SeedNamespace: seedNamespace}
+
+			It("should return <service-name>", func() {
+				Expect(s.ComputeInClusterAPIServerAddress(true)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer))
+			})
+
+			It("should return <service-name>.<namespace>.svc", func() {
+				Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer + "." + seedNamespace + ".svc"))
+			})
+		})
+
+		Describe("#ComputeOutOfClusterAPIServerAddress", func() {
+			It("should return the apiserver address as DNS is disabled", func() {
+				s := &Shoot{DisableDNS: true}
+				apiServerAddress := "abcd"
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress(apiServerAddress, false)).To(Equal(apiServerAddress))
+			})
+
+			It("should return the internal domain as shoot's external domain is unmanaged", func() {
+				unmanaged := "unmanaged"
+				internalDomain := "foo"
+				s := &Shoot{
+					InternalClusterDomain: internalDomain,
+					Info: &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							DNS: &gardencorev1beta1.DNS{
+								Providers: []gardencorev1beta1.DNSProvider{
+									{Type: &unmanaged},
+								},
+							},
+						},
+					},
+				}
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress("", false)).To(Equal("api." + internalDomain))
+			})
+
+			It("should return the internal domain as requested (shoot's external domain is not unmanaged)", func() {
+				internalDomain := "foo"
+				s := &Shoot{
+					InternalClusterDomain: internalDomain,
+					Info:                  &gardencorev1beta1.Shoot{},
+				}
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress("", true)).To(Equal("api." + internalDomain))
+			})
+
+			It("should return the external domain as requested (shoot's external domain is not unmanaged)", func() {
+				externalDomain := "foo"
+				s := &Shoot{
+					ExternalClusterDomain: &externalDomain,
+					Info:                  &gardencorev1beta1.Shoot{},
+				}
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress("", false)).To(Equal("api." + externalDomain))
 			})
 		})
 

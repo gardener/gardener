@@ -203,14 +203,19 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 	return wokenUp
 }
 
-// ComputeAPIServerURL takes a boolean value identifying whether the component connecting to the API server
-// runs in the Seed cluster <runsInSeed>, and a boolean value <useInternalClusterDomain> which determines whether the
-// internal or the external cluster domain should be used.
-func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool, apiServerAddress string) string {
-	if runsInSeed {
-		return v1beta1constants.DeploymentNameKubeAPIServer
+// ComputeInClusterAPIServerAddress returns the internal address for the shoot API server depending on whether
+// the caller runs in the shoot namespace or not.
+func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) string {
+	url := v1beta1constants.DeploymentNameKubeAPIServer
+	if !runsInShootNamespace {
+		url = fmt.Sprintf("%s.%s.svc", url, s.SeedNamespace)
 	}
+	return url
+}
 
+// ComputeOutOfClusterAPIServerAddress returns the external address for the shoot API server depending on whether
+// the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
+func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, useInternalClusterDomain bool) string {
 	if s.DisableDNS {
 		return apiServerAddress
 	}
