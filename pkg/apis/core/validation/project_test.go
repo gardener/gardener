@@ -112,16 +112,23 @@ var _ = Describe("Project Validation Tests", func() {
 			}))))
 		})
 
-		It("should forbid Project specification with empty or invalid keys for description/purpose", func() {
+		It("should forbid Project specification with empty or invalid key for description", func() {
 			project.Spec.Description = pointer.StringPtr("")
-			project.Spec.Purpose = pointer.StringPtr("")
 
 			errorList := ValidateProject(project)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.description"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
+			}))))
+		})
+
+		It("should forbid Project specification with empty or invalid key for purpose", func() {
+			project.Spec.Purpose = pointer.StringPtr("")
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.purpose"),
 			}))))

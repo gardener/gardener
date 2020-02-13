@@ -73,7 +73,7 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	if description := projectSpec.Description; description != nil && len(*description) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("description"), "must provide a description when key is present"))
 	}
-	if purpose := projectSpec.Description; purpose != nil && len(*purpose) == 0 {
+	if purpose := projectSpec.Purpose; purpose != nil && len(*purpose) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "must provide a purpose when key is present"))
 	}
 
