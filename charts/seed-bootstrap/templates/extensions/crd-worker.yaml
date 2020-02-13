@@ -124,7 +124,6 @@ spec:
                         description: Type is the type of the volume.
                         type: string
                     required:
-                    - type
                     - size
                     type: object
                   zones:
