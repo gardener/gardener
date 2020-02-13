@@ -742,3 +742,19 @@ func WrapWithLastError(err error, lastError *gardencorev1beta1.LastError) error 
 	}
 	return errors.Wrapf(err, "last error: %s", lastError.Description)
 }
+
+// IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.
+// This indicates to extensions that they should not mutate the object.
+// Gardener marks the kube-apiserver Service and Deployment as managed by it when it uses SNI to expose them.
+func IsAPIServerExposureManaged(obj metav1.Object) bool {
+	if obj == nil {
+		return false
+	}
+
+	if v, found := obj.GetLabels()[v1beta1constants.LabelAPIServerExposure]; found &&
+		v == v1beta1constants.LabelAPIServerExposureGardenerManaged {
+		return true
+	}
+
+	return false
+}

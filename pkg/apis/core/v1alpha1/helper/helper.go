@@ -752,3 +752,19 @@ func GetExtensionResourceState(extensionsResourcesStates []gardencorev1alpha1.Ex
 	}
 	return -1, nil
 }
+
+// IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.
+// This indicates to extensions that they should not mutate the object.
+// Gardener marks the kube-apiserver Service and Deployment as managed by it when it uses SNI to expose them.
+func IsAPIServerExposureManaged(obj metav1.Object) bool {
+	if obj == nil {
+		return false
+	}
+
+	if v, found := obj.GetLabels()[v1alpha1constants.LabelAPIServerExposure]; found &&
+		v == v1alpha1constants.LabelAPIServerExposureGardenerManaged {
+		return true
+	}
+
+	return false
+}

@@ -9,7 +9,10 @@ Now, Gardener commissions an external, provider-specific controller to take over
 As mentioned in the [controlplane](controlplane.md) document Gardener shall not deploy any other provider-specific component.
 Instead, it creates a `ControlPlane` CRD with purpose `exposure` that should be picked up by provider extensions.
 Its purpose is to trigger the deployment of such provider-specific components in the shoot namespace in the seed cluster that are needed to expose the kube-apiserver.
-The shoot cluster's kube-apiserver are exposed via a `Service` of type `LoadBalancer`. This load balancer is part of the seed provider's infrastructure. As the seed provider might differ from the shoot provider (you may run the control plane of an Azure shoot in a GCP seed) it's the seed provider extension controller that should act on the `ControlPlane` resources with purpose `exposure`.
+
+The shoot cluster's kube-apiserver are exposed via a `Service` of type `LoadBalancer` from the shoot provider (you may run the control plane of an Azure shoot in a GCP seed) it's the seed provider extension controller that should act on the `ControlPlane` resources with purpose `exposure`.
+
+If [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) is enabled, then the `Service` from above is of type `ClusterIP` and  Gardner will not create `ControlPlane` resources with purpose `exposure`.
 
 ## What needs to be implemented to support a new infrastructure provider?
 
