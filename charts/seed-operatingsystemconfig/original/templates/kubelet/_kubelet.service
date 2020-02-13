@@ -6,8 +6,12 @@
     [Unit]
     Description=kubelet daemon
     Documentation=https://kubernetes.io/docs/admin/kubelet
+    {{- if .Values.worker.enableContainerD }}
+    After=containerd.service
+    {{- else }}
     After=docker.service
     Wants=docker.socket rpc-statd.service
+    {{- end }}
     [Install]
     WantedBy=multi-user.target
     [Service]

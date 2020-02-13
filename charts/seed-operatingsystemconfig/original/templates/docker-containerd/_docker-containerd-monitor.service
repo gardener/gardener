@@ -1,5 +1,9 @@
-{{- define "docker-monitor" -}}
+{{- define "docker-containerd-monitor" -}}
+{{- if .Values.worker.enableContainerD }}
 - name: docker-monitor.service
+{{- else }}
+- name: containerd-monitor.service
+{{- end -}}
   command: start
   enable: true
   content: |
@@ -11,5 +15,8 @@
     [Service]
     Restart=always
     EnvironmentFile=/etc/environment
+{{- if .Values.worker.enableContainerD }}
     ExecStart=/opt/bin/health-monitor docker
+{{- else }}
+    ExecStart=/opt/bin/health-monitor containerd
 {{- end -}}

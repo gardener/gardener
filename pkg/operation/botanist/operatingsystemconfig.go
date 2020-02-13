@@ -312,6 +312,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		"name":              worker.Name,
 		"kubelet":           kubelet,
 		"kubeletDataVolume": worker.KubeletDataVolumeName,
+		"enableContainerD":  worker.EnableContainerD,
 	}
 
 	var (
