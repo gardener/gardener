@@ -123,6 +123,7 @@ gardenerResourceManager:
       memory: 512Mi
   replicas: 1
   resourceClass: seed
-  syncPeriod: 1m0s
+  syncPeriod: 1h0m0s
+  healthSyncPeriod: 1m0s
   concurrentSyncs: 20
   podAnnotations: {}

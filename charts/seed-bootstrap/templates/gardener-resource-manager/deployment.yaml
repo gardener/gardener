@@ -33,6 +33,7 @@ spec:
         - --max-concurrent-workers={{ .Values.gardenerResourceManager.concurrentSyncs }}
         - --resource-class={{ .Values.gardenerResourceManager.resourceClass }}
         - --sync-period={{ .Values.gardenerResourceManager.syncPeriod }}
+        - --health-sync-period={{ .Values.gardenerResourceManager.healthSyncPeriod }}
         {{- if .Values.gardenerResourceManager.resources }}
         resources:
 {{ toYaml .Values.gardenerResourceManager.resources | indent 10 }}
