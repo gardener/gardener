@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: kube-state-metrics
+    type: seed
+
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: gardener.cloud:monitoring:kube-state-metrics
+  labels:
+    component: kube-state-metrics
+    type: seed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: kube-state-metrics
+    type: seed
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    component: kube-state-metrics
+    type: seed
+---
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: kube-state-metrics-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: kube-state-metrics
+  updatePolicy:
+    updateMode: "Auto"
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: monitoring
+    component: kube-state-metrics
+    type: seed
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      component: kube-state-metrics
+      type: seed
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        garden.sapcloud.io/role: monitoring
+        component: kube-state-metrics
+        type: seed
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: {{ index .Values.global.images "kube-state-metrics" }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /kube-state-metrics
+        - --port=8080
+        - --telemetry-port=8081
+        - --collectors=deployments,pods,statefulsets,nodes
+        ports:
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi

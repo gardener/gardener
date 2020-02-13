@@ -1,0 +1,4 @@
+global:
+  images:
+    kube-state-metrics: image-repository:image-tag
+replicas: 1

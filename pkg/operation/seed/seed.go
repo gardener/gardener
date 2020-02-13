@@ -371,6 +371,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			common.VpaUpdaterImageName,
 			common.HvpaControllerImageName,
 			common.DependencyWatchdogImageName,
+			common.KubeStateMetricsImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
