@@ -25,7 +25,7 @@
       resourceFieldRef:
         resource: limits.cpu
   resources:
-{{- include "util-templates.resource-quantity" .Values.elasticsearch.sgadmin | indent 4 }}
+{{- include "utils-templates.resource-quantity" .Values.elasticsearch.sgadmin | indent 4 }}
   httpHeaders:
     - name: Authorization
       value: Basic {{ .Values.elasticsearch.readinessProbe.httpAuth }}

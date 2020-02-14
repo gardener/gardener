@@ -40,17 +40,19 @@ var _ = Describe("imagevector", func() {
 			k8s180               = "1.8.0"
 			k8s113               = "1.13"
 			k8s1142              = "1.14.2"
+			k8s1170              = "1.17.0"
 			k8s164RuntimeVersion = RuntimeVersion(k8s164)
 			k8s164TargetVersion  = TargetVersion(k8s164)
+			k8s1170TargetVersion = TargetVersion(k8s1170)
 			k8s180RuntimeVersion = RuntimeVersion(k8s180)
 			k8s180TargetVersion  = TargetVersion(k8s180)
 			k8s113TargetVersion  = TargetVersion(k8s113)
 			k8s1142TargetVersion = TargetVersion(k8s1142)
 
-			tag1, tag2, tag3, tag4     string
-			repo1, repo2, repo3, repo4 string
+			tag1, tag2, tag3, tag4, tag5 string
+			repo1, repo2, repo3, repo4   string
 
-			greaterEquals16Smaller18, greaterEquals18 string
+			greaterEquals16Smaller18, greaterEquals18, equals117 string
 
 			image1Name                                                             string
 			image1Src1, image1Src2, image1Src3, image1Src4, image1Src5, image1Src6 *ImageSource
@@ -61,8 +63,8 @@ var _ = Describe("imagevector", func() {
 			image3Name string
 			image3Src1 *ImageSource
 
-			image4Name                                     string
-			image4Src1, image4Src2, image4Src3, image4Src4 *ImageSource
+			image4Name                                                 string
+			image4Src1, image4Src2, image4Src3, image4Src4, image4Src5 *ImageSource
 		)
 
 		resetValues := func() {
@@ -77,6 +79,7 @@ var _ = Describe("imagevector", func() {
 			tag2 = "tag2"
 			tag3 = "tag3"
 			tag4 = "tag4"
+			tag5 = "tag5"
 
 			repo1 = "repo1"
 			repo2 = "repo2"
@@ -85,6 +88,7 @@ var _ = Describe("imagevector", func() {
 
 			greaterEquals16Smaller18 = ">= 1.6, < 1.8"
 			greaterEquals18 = ">= 1.8"
+			equals117 = "= 1.17.0"
 
 			image1Name = "image1"
 			image1Src1 = &ImageSource{
@@ -160,6 +164,12 @@ var _ = Describe("imagevector", func() {
 				Tag:            &tag4,
 				RuntimeVersion: &greaterEquals16Smaller18,
 				TargetVersion:  &k8s113,
+			}
+			image4Src5 = &ImageSource{
+				Name:          image4Name,
+				Repository:    repo4,
+				Tag:           &tag5,
+				TargetVersion: &equals117,
 			}
 
 			image1Src1Vector = ImageVector{image1Src1}
@@ -264,6 +274,7 @@ images:
 			Entry("two entries, runtime and target version, no match", ImageVector{image4Src1, image4Src4}, image4Name, []FindOptionFunc{k8s180RuntimeVersion, k8s113TargetVersion}, BeNil(), HaveOccurred()),
 			Entry("two entries, runtime and target version, no match", ImageVector{image4Src1, image4Src4}, image4Name, []FindOptionFunc{k8s164RuntimeVersion, k8s1142TargetVersion}, BeNil(), HaveOccurred()),
 			Entry("two entries, runtime and target version, match with both", ImageVector{image4Src1, image4Src4}, image4Name, []FindOptionFunc{k8s164RuntimeVersion, k8s113TargetVersion}, Equal(image4Src4.ToImage(nil)), Not(HaveOccurred())),
+			Entry("two entries, runtime and target version, match with both, prio equal match", ImageVector{image4Src1, image4Src2, image4Src3, image4Src5}, image4Name, []FindOptionFunc{k8s1170TargetVersion}, Equal(image4Src5.ToImage(nil)), Not(HaveOccurred())),
 			Entry("three entries, no runtime version, match with target version", ImageVector{image4Src1, image4Src2, image4Src3}, image4Name, []FindOptionFunc{k8s113TargetVersion}, Equal(image4Src2.ToImage(nil)), Not(HaveOccurred())),
 			Entry("three entries, no runtime version, match with target version", ImageVector{image4Src1, image4Src2, image4Src3}, image4Name, []FindOptionFunc{k8s1142TargetVersion}, Equal(image4Src3.ToImage(nil)), Not(HaveOccurred())),
 		)
@@ -292,7 +303,18 @@ images:
 
 	Describe("> Image", func() {
 		Describe("#String", func() {
-			It("should return the string representation of the image (w/o tag)", func() {
+			It("should return the string representation of the image (w/o normal tag)", func() {
+				repo := "my-repo"
+
+				image := Image{
+					Name:       "my-image",
+					Repository: repo,
+				}
+
+				Expect(image.String()).To(Equal(repo))
+			})
+
+			It("should return the string representation of the image (w/ normal tag)", func() {
 				var (
 					repo = "my-repo"
 					tag  = "1.2.3"
@@ -307,15 +329,19 @@ images:
 				Expect(image.String()).To(Equal(fmt.Sprintf("%s:%s", repo, tag)))
 			})
 
-			It("should return the string representation of the image (w/ tag)", func() {
-				repo := "my-repo"
+			It("should return the string representation of the image (w/ sha256 tag)", func() {
+				var (
+					repo = "my-repo"
+					tag  = "sha256:fooooooo0oooobar"
+				)
 
 				image := Image{
 					Name:       "my-image",
 					Repository: repo,
+					Tag:        &tag,
 				}
 
-				Expect(image.String()).To(Equal(repo))
+				Expect(image.String()).To(Equal(repo + "@" + tag))
 			})
 		})
 	})

@@ -61,7 +61,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-apiserver
-        image: {{ required ".Values.global.apiserver.image.repository is required" .Values.global.apiserver.image.repository }}:{{ required ".Values.global.apiserver.image.tag is required" .Values.global.apiserver.image.tag }}
+        image: {{ include "utils-templates.image" .Values.global.apiserver.image }}
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver

@@ -49,7 +49,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-scheduler
-        image: {{ required ".Values.global.scheduler.image.repository is required" .Values.global.scheduler.image.repository }}:{{ required ".Values.global.scheduler.image.tag is required" .Values.global.scheduler.image.tag }}
+        image: {{ include "utils-templates.image" .Values.global.scheduler.image }}
         imagePullPolicy: {{ .Values.global.scheduler.image.pullPolicy }}
         command:
         - /gardener-scheduler

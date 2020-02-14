@@ -589,12 +589,21 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		imageVectorOverwrite = string(data)
 	}
 
+	var (
+		repository = gardenletImage.String()
+		tag        = version.Get().GitVersion
+	)
+	if gardenletImage.Tag != nil {
+		repository = gardenletImage.Repository
+		tag = *gardenletImage.Tag
+	}
+
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"gardenlet": map[string]interface{}{
 				"image": map[string]interface{}{
-					"repository": gardenletImage.String(),
-					"tag":        version.Get().GitVersion,
+					"repository": repository,
+					"tag":        tag,
 				},
 				"revisionHistoryLimit": 0,
 				"vpa":                  true,
