@@ -3,7 +3,7 @@
 By default, Gardener deploys a central Prometheus, AlertManager, and Grafana instance into the `garden` namespace of all seed clusters.
 Additionally, as part of the shoot reconciliation flow, it deploys a shoot-specific Prometheus, Grafana (and, if configured, an AlertManager) into the shoot namespace next to the other control plane components.
 
-Configurable by the `Logging` feature gate in the `gardener-controller-manager` configuration it might also deploy a central fluentd/fluent-bit, ElasticSearch, and Kibana deployment into the `garden` namespace of all seed clusters.
+Configurable by the `Logging` feature gate in the `gardenlet` configuration it might also deploy a central fluentd/fluent-bit, ElasticSearch, and Kibana deployment into the `garden` namespace of all seed clusters.
 Additionally, as part of the shoot reconciliation flow, it might deploy a shoot-specific ElasticSearch and Kibana into the shoot namespace next to the other control plane components.
 
 ## Monitoring
