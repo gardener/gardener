@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -33,8 +35,12 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLogger logrus.FieldLogger) error {
@@ -118,29 +124,56 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	// We also create a RoleBinding in the namespace that binds all members to the gardener.cloud:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
 	var (
-		admins  []rbacv1.Subject
-		viewers []rbacv1.Subject
+		admins     []rbacv1.Subject
+		viewers    []rbacv1.Subject
+		extensions []map[string]interface{}
+
+		extensionRoleToSubjects = map[string][]rbacv1.Subject{}
+		extensionRoles          = sets.NewString()
 	)
 
 	for _, member := range project.Spec.Members {
-		if member.Role == gardencorev1beta1.ProjectMemberAdmin {
-			admins = append(admins, member.Subject)
+		for _, role := range member.Roles {
+			if role == gardencorev1beta1.ProjectMemberAdmin || role == gardencorev1beta1.ProjectMemberOwner {
+				admins = append(admins, member.Subject)
+			}
+			if role == gardencorev1beta1.ProjectMemberViewer {
+				viewers = append(viewers, member.Subject)
+			}
+
+			if strings.HasPrefix(role, gardencorev1beta1.ProjectMemberExtensionPrefix) {
+				extensionRoleName := strings.TrimPrefix(role, gardencorev1beta1.ProjectMemberExtensionPrefix)
+				extensionRoleToSubjects[extensionRoleName] = append(extensionRoleToSubjects[extensionRoleName], member.Subject)
+				extensionRoles.Insert(extensionRoleName)
+			}
 		}
-		if member.Role == gardencorev1beta1.ProjectMemberViewer {
-			viewers = append(viewers, member.Subject)
-		}
+	}
+
+	for _, name := range extensionRoles.List() {
+		extensions = append(extensions, map[string]interface{}{
+			"name":     name,
+			"subjects": extensionRoleToSubjects[name],
+		})
 	}
 
 	if err := chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
 		"project": map[string]interface{}{
-			"name":    project.Name,
-			"uid":     project.UID,
-			"owner":   project.Spec.Owner,
-			"members": admins,
-			"viewers": viewers,
+			"name":       project.Name,
+			"uid":        project.UID,
+			"owner":      project.Spec.Owner,
+			"members":    admins,
+			"viewers":    viewers,
+			"extensions": extensions,
 		},
 	}, nil); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		return err
+	}
+
+	// Delete all remaining/stale extension clusterroles and rolebindings
+	if err := deleteStaleExtensionRoles(ctx, c.k8sGardenClient.Client(), extensionRoles, project.Name, namespace.Name); err != nil {
+		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
@@ -215,4 +248,43 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 	}
 
 	return namespace, nil
+}
+
+func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExtensionRoles sets.String, projectName, namespace string) error {
+	for _, list := range []runtime.Object{
+		&rbacv1.RoleBindingList{},
+		&rbacv1.ClusterRoleList{},
+	} {
+		if err := c.List(
+			ctx,
+			list,
+			client.InNamespace(namespace),
+			client.MatchingLabels{
+				v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
+			},
+		); err != nil {
+			return err
+		}
+
+		if err := meta.EachListItem(list, func(obj runtime.Object) error {
+			accessor, err := meta.Accessor(obj)
+			if err != nil {
+				return err
+			}
+
+			if nonStaleExtensionRoles.Has(getExtensionRoleNameFromRBAC(accessor.GetName(), projectName)) {
+				return nil
+			}
+
+			return client.IgnoreNotFound(c.Delete(ctx, obj))
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getExtensionRoleNameFromRBAC(resourceName, projectName string) string {
+	return strings.TrimPrefix(resourceName, fmt.Sprintf("gardener.cloud:extension:project:%s:", projectName))
 }

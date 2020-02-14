@@ -75,6 +75,7 @@
     * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
+* [Extending project roles](extensions/project-roles.md)
 
 ## Testing
 

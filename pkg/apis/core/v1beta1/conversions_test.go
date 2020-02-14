@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1_test
+package v1beta1_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,68 +30,17 @@ var _ = Describe("Conversion", func() {
 	BeforeSuite(func() {
 		scheme = runtime.NewScheme()
 		Expect(scheme.AddConversionFuncs(
-			Convert_v1alpha1_Seed_To_core_Seed,
-			Convert_core_Seed_To_v1alpha1_Seed,
-
-			Convert_v1alpha1_Project_To_core_Project,
-			Convert_core_Project_To_v1alpha1_Project,
-			Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec,
-			Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec,
-			Convert_v1alpha1_ProjectMember_To_core_ProjectMember,
-			Convert_core_ProjectMember_To_v1alpha1_ProjectMember,
+			Convert_v1beta1_Project_To_core_Project,
+			Convert_core_Project_To_v1beta1_Project,
+			Convert_v1beta1_ProjectSpec_To_core_ProjectSpec,
+			Convert_core_ProjectSpec_To_v1beta1_ProjectSpec,
+			Convert_v1beta1_ProjectMember_To_core_ProjectMember,
+			Convert_core_ProjectMember_To_v1beta1_ProjectMember,
 		)).NotTo(HaveOccurred())
 	})
 
-	Context("seed conversions", func() {
-		var blockCIDR = "16.17.18.19/20"
-
-		Describe("#Convert_v1alpha1_Seed_To_core_Seed", func() {
-			var (
-				out = &core.Seed{}
-				in  = &Seed{
-					Spec: SeedSpec{
-						BlockCIDRs: []string{blockCIDR},
-					},
-				}
-			)
-
-			It("should correctly convert", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
-				Expect(out).To(Equal(&core.Seed{
-					Spec: core.SeedSpec{
-						Networks: core.SeedNetworks{
-							BlockCIDRs: []string{blockCIDR},
-						},
-					},
-				}))
-			})
-		})
-
-		Describe("#Convert_core_Seed_To_v1alpha1_Seed", func() {
-			var (
-				out = &Seed{}
-				in  = &core.Seed{
-					Spec: core.SeedSpec{
-						Networks: core.SeedNetworks{
-							BlockCIDRs: []string{blockCIDR},
-						},
-					},
-				}
-			)
-
-			It("should correctly convert", func() {
-				Expect(scheme.Convert(in, out, nil)).To(BeNil())
-				Expect(out).To(Equal(&Seed{
-					Spec: SeedSpec{
-						BlockCIDRs: []string{blockCIDR},
-					},
-				}))
-			})
-		})
-	})
-
 	Context("project conversions", func() {
-		Describe("#Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec", func() {
+		Describe("#Convert_v1beta1_ProjectSpec_To_core_ProjectSpec", func() {
 			var (
 				owner = rbacv1.Subject{
 					APIGroup: "group",
@@ -225,7 +174,7 @@ var _ = Describe("Conversion", func() {
 			})
 		})
 
-		Describe("#Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec", func() {
+		Describe("#Convert_core_ProjectSpec_To_v1beta1_ProjectSpec", func() {
 			var (
 				owner = rbacv1.Subject{
 					APIGroup: "group",
@@ -361,7 +310,7 @@ var _ = Describe("Conversion", func() {
 			})
 		})
 
-		Describe("#Convert_v1alpha1_ProjectMember_To_core_ProjectMember", func() {
+		Describe("#Convert_v1beta1_ProjectMember_To_core_ProjectMember", func() {
 			var (
 				role = "foo"
 
@@ -404,7 +353,7 @@ var _ = Describe("Conversion", func() {
 			})
 		})
 
-		Describe("#Convert_core_ProjectMember_To_v1alpha1_ProjectMember", func() {
+		Describe("#Convert_core_ProjectMember_To_v1beta1_ProjectMember", func() {
 			var (
 				role = "foo"
 

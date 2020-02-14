@@ -288,7 +288,10 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			if !ownerPartOfMember {
 				project.Spec.Members = append(project.Spec.Members, core.ProjectMember{
 					Subject: *project.Spec.Owner,
-					Role:    core.ProjectMemberAdmin,
+					Roles: []string{
+						core.ProjectMemberAdmin,
+						core.ProjectMemberOwner,
+					},
 				})
 			}
 		}

@@ -58,7 +58,7 @@ var _ = Describe("Project Validation Tests", func() {
 								Kind:     rbacv1.UserKind,
 								Name:     "alice.doe@example.com",
 							},
-							Role: core.ProjectMemberAdmin,
+							Roles: []string{core.ProjectMemberAdmin},
 						},
 						{
 							Subject: rbacv1.Subject{
@@ -66,7 +66,7 @@ var _ = Describe("Project Validation Tests", func() {
 								Kind:     rbacv1.UserKind,
 								Name:     "bob.doe@example.com",
 							},
-							Role: core.ProjectMemberViewer,
+							Roles: []string{core.ProjectMemberViewer},
 						},
 					},
 				},
@@ -134,7 +134,71 @@ var _ = Describe("Project Validation Tests", func() {
 			}))))
 		})
 
-		DescribeTable("owner validation",
+		It("should not allow duplicate in roles", func() {
+			project.Spec.Members[0].Roles = []string{"admin", "admin"}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("spec.members[0].roles[1]"),
+			}))))
+		})
+
+		It("should not allow to use unknown roles without extension prefix", func() {
+			project.Spec.Members[0].Roles = []string{"unknown-role"}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.members[0].roles[0]"),
+			}))))
+		})
+
+		It("should prevent extension roles from being too long", func() {
+			project.Spec.Members[0].Roles = []string{"extension:astringthatislongerthan15chars"}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeTooLong),
+				"Field": Equal("spec.members[0].roles[0]"),
+			}))))
+		})
+
+		It("should prevent extension roles from containing invalid characters", func() {
+			project.Spec.Members[0].Roles = []string{"extension:/?as"}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.members[0].roles[0]"),
+			}))))
+		})
+
+		It("should allow to use unknown roles with extension prefix", func() {
+			project.Spec.Members[0].Roles = []string{"extension:unknown-role"}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow using the owner role more than once", func() {
+			project.Spec.Members[0].Roles = append(project.Spec.Members[0].Roles, core.ProjectMemberOwner)
+			project.Spec.Members[1].Roles = append(project.Spec.Members[1].Roles, core.ProjectMemberOwner)
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.members[1].roles[1]"),
+			}))))
+		})
+
+		DescribeTable("subject validation",
 			func(apiGroup, kind, name, namespace string, expectType field.ErrorType, field string) {
 				subject := rbacv1.Subject{
 					APIGroup:  apiGroup,
@@ -148,7 +212,7 @@ var _ = Describe("Project Validation Tests", func() {
 				project.Spec.Members = []core.ProjectMember{
 					{
 						Subject: subject,
-						Role:    core.ProjectMemberAdmin,
+						Roles:   []string{core.ProjectMemberAdmin},
 					},
 				}
 
@@ -193,7 +257,7 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("namespace change w/  preset namespace", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("namespace change w/ preset namespace", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.namespace"),
 			})))),

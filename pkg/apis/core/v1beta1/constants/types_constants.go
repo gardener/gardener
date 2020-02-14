@@ -202,6 +202,8 @@ const (
 	LabelControllerManager = "controller-manager"
 	// LabelScheduler is a constant for a label for the kube-scheduler.
 	LabelScheduler = "scheduler"
+	// LabelExtensionProjectRole is a constant for a label value for extension project roles
+	LabelExtensionProjectRole = "extension-project-role"
 
 	// LabelAPIServerExposure is a constant for label key which gardener can add to various objects related
 	// to kube-apiserver exposure.
