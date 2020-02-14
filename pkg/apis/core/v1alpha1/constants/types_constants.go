@@ -89,8 +89,6 @@ const (
 	// the prometheus pod.
 	StatefulSetNamePrometheus = "prometheus"
 
-	// GardenPurpose is a constant for the key in a label describing the purpose of the respective object.
-	GardenPurpose = "garden.sapcloud.io/purpose"
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
 
@@ -107,7 +105,8 @@ const (
 	GardenerOperationRestore = "restore"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
-	// +deprecated
+	//
+	// Deprecated: Use `GardenRole` instead.
 	DeprecatedGardenRole = "garden.sapcloud.io/role"
 	// GardenRole is a constant for a label that describes a role.
 	GardenRole = "gardener.cloud/role"
@@ -134,9 +133,6 @@ const (
 	// which value will be the value of `shoot.status.uid`
 	// +deprecated: Use `Cluster` resource instead.
 	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
-	// DeprecatedGardenRoleBackup is the value of GardenRole key indicating type 'backup'.
-	// +deprecated
-	DeprecatedGardenRoleBackup = "backup"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -215,13 +211,20 @@ const (
 
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
-	AnnotationShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"
+	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
+	// AnnotationShootUseAsSeedDeprecated is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
+	// Garden cluster once successfully created.
+	//
+	// Deprecated: Use `AnnotationShootUseAsSeed` instead.
+	AnnotationShootUseAsSeedDeprecated = "shoot.garden.sapcloud.io/use-as-seed"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
-	AnnotationShootIgnoreAlerts = "shoot.garden.sapcloud.io/ignore-alerts"
-	// AnnotationShootOperatedBy is the key for an annotation of a Shoot cluster whose value must be a valid email address and
-	// is used to send alerts to.
-	AnnotationShootOperatedBy = "garden.sapcloud.io/operatedBy"
+	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
+	// AnnotationShootIgnoreAlertsDeprecated is the key for an annotation of a Shoot cluster whose value indicates
+	// if alerts for this cluster should be ignored
+	//
+	// Deprecated: Use `AnnotationShootIgnoreAlerts` instead.
+	AnnotationShootIgnoreAlertsDeprecated = "shoot.garden.sapcloud.io/ignore-alerts"
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"

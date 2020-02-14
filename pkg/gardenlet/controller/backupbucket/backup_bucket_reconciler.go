@@ -109,6 +109,14 @@ func (r *reconciler) reconcileBackupBucket(backupBucket *gardencorev1beta1.Backu
 		return reconcile.Result{}, err
 	}
 
+	// TODO: This code can be removed in a future version.
+	if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+		if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
+			backupBucketLogger.Errorf("Failed to remove deprecated external gardener finalizer on referenced secret: %+v", err.Error())
+			return reconcile.Result{}, err
+		}
+	}
+
 	seedClient, err := seedpkg.GetSeedClient(r.ctx, r.client, r.config.SeedClientConnection.ClientConnectionConfiguration, r.config.SeedSelector == nil, *backupBucket.Spec.SeedName)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -211,6 +219,14 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1beta1.BackupBu
 	if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to remove external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
+	}
+
+	// TODO: This code can be removed in a future version.
+	if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+		if err := controllerutils.RemoveFinalizer(r.ctx, r.client, secret, gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
+			backupBucketLogger.Errorf("Failed to remove deprecated external gardener finalizer on referenced secret: %+v", err)
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(r.ctx, r.client, backupBucket)

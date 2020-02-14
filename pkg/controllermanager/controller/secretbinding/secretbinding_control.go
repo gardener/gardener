@@ -31,7 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -123,7 +122,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 	// it has to be ensured that no Shoots are depending on the SecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the SecretBinding so that it can be garbage collected.
 	if secretBinding.DeletionTimestamp != nil {
-		if !sets.NewString(secretBinding.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		if !controllerutils.HasFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
 			return nil
 		}
 
@@ -149,6 +148,14 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 					if err2 := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
 						secretBindingLogger.Error(err2.Error())
 						return err2
+					}
+
+					// TODO: This code can be removed in a future version.
+					if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+						if err2 := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerNameDeprecated); err2 != nil {
+							secretBindingLogger.Errorf("Could not remove deprecated finalizer from Secret referenced in SecretBinding: %s", err2.Error())
+							return err2
+						}
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return err
@@ -187,6 +194,14 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err != nil {
 		secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
 		return err
+	}
+
+	// TODO: This code can be removed in a future version.
+	if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+		if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
+			secretBindingLogger.Errorf("Could not remove deprecated finalizer from Secret referenced in SecretBinding: %s", err.Error())
+			return err
+		}
 	}
 
 	return nil

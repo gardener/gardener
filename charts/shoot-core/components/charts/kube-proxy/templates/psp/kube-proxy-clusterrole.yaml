@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: garden.sapcloud.io:psp:kube-system:kube-proxy
+  name: gardener.cloud:psp:kube-system:kube-proxy
 rules:
 - apiGroups:
   - policy

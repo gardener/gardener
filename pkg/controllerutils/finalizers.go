@@ -23,6 +23,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -70,9 +71,14 @@ func RemoveFinalizer(ctx context.Context, c client.Client, obj kutil.Object, fin
 		if err != nil {
 			return false, err
 		}
-		if !sets.NewString(obj.GetFinalizers()...).Has(finalizer) {
+		if !HasFinalizer(obj, finalizer) {
 			return true, nil
 		}
 		return false, nil
 	}, pollerCtx.Done())
+}
+
+// HasFinalizer checks whether the given obj has the given finalizer.
+func HasFinalizer(obj metav1.Object, finalizer string) bool {
+	return sets.NewString(obj.GetFinalizers()...).Has(finalizer)
 }

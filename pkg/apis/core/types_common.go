@@ -102,9 +102,4 @@ const (
 	// GardenerName is the value in a Garden resource's `.metadata.finalizers[]` array on which the Gardener will react
 	// when performing a delete request on a resource.
 	GardenerName = "gardener"
-
-	// ExternalGardenerName is the value in a Kubernetes core resources `.metadata.finalizers[]` array on which the
-	// Gardener will react when performing a delete request on a resource.
-	// TODO: migrate this to gardener.cloud
-	ExternalGardenerName = "garden.sapcloud.io/gardener"
 )
