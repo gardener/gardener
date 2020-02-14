@@ -52,10 +52,13 @@ The kube-apiserver command line **shall not** contain any provider-specific flag
 
 These flags can be added by webhooks if needed.
 
-The kube-apiserver command line **may** contain a number of additional provider-independent flags. In general, webhooks should ignore these unless they are known to interfere with the desired kube-apiserver behavior for the specific provider. Among the flags to be considered are:
+The `kube-apiserver` command line **may** contain a number of additional provider-independent flags. In general, webhooks should ignore these unless they are known to interfere with the desired kube-apiserver behavior for the specific provider. Among the flags to be considered are:
 
 * `--endpoint-reconciler-type`
+* `--advertise-address`
 * `--feature-gates`
+
+Gardener **may** use [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver (`APIServerSNI` feature gate). In this case, Gardener **shall** label the `kube-apiserver`'s `Deployment` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label and expects that the `--endpoint-reconciler-type` and `--advertise-address` flags are not modified.
 
 The `--enable-admission-plugins` flag **may** contain admission plugins that are not compatible with CSI plugins such as `PersistentVolumeLabel`. Webhooks should therefore ensure that such admission plugins are either explicitly enabled (if CSI plugins are not used) or disabled (otherwise).
 
@@ -63,7 +66,9 @@ The `env` field of the `kube-apiserver` container **shall not** contain any prov
 
 The `volumes` field of the pod template of the `kube-apiserver` deployment, and respectively the `volumeMounts` field of the `kube-apiserver` container **shall not** contain any provider-specific `Secret` or `ConfigMap` resources. If such resources should be mounted as volumes, this should be done by webhooks.
 
-The `kube-apiserver` service **shall** be of type `LoadBalancer` but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `controlplaneexposure` webhooks).
+The `kube-apiserver` `Service` **may** be of type `LoadBalancer`, but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `controlplaneexposure` webhooks).
+
+The `kube-apiserver` `Service` **shall** be of type `ClusterIP`, if Gardener is using [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver (`APIServerSNI` feature gate). In this case, Gardener **shall** label this `Service` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label and expects that no mutations happen.
 
 ### kube-controller-manager
 

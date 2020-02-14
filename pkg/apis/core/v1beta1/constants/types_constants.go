@@ -210,6 +210,13 @@ const (
 	// LabelScheduler is a constant for a label for the kube-scheduler.
 	LabelScheduler = "scheduler"
 
+	// LabelAPIServerExposure is a constant for label key which gardener can add to various objects related
+	// to kube-apiserver exposure.
+	LabelAPIServerExposure = "core.gardener.cloud/apiserver-exposure"
+	// LabelAPIServerExposureGardenerManaged is a constant for label value which gardener sets on the label key
+	// "core.gardener.cloud/apiserver-exposure" to indicate that it's responsible for apiserver exposure (via SNI).
+	LabelAPIServerExposureGardenerManaged = "gardener-managed"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.
