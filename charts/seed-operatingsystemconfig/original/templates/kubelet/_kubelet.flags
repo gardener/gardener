@@ -15,7 +15,7 @@
 {{- if semverCompare "< 1.14" .Values.kubernetes.version }}
 --feature-gates=SupportPodPidsLimit=true
 {{- end }}
-{{- if .Values.worker.enableContainerD }}
+{{- if .Values.enableContainerD }}
 --feature-gates=CRIContainerLogRotation=true
 {{- end -}}
 --pod-infra-container-image={{ index .Values.images "pause-container" }}
@@ -31,7 +31,7 @@
 {{- end }}
 --volume-plugin-dir=/var/lib/kubelet/volumeplugins
 --v=2 $KUBELET_EXTRA_ARGS
-{{- if .Values.worker.enableContainerD }}
+{{- if .Values.enableContainerD }}
 --container-runtime=remote
 --container-runtime-endpoint=<os-containerd-path-placeholder>
 {{- end -}}

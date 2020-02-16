@@ -6,7 +6,7 @@
     [Unit]
     Description=kubelet daemon
     Documentation=https://kubernetes.io/docs/admin/kubelet
-    {{- if .Values.worker.enableContainerD }}
+    {{- if .Values.enableContainerD }}
     After=containerd.service
     {{- else }}
     After=docker.service

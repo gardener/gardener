@@ -312,8 +312,10 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		"name":              worker.Name,
 		"kubelet":           kubelet,
 		"kubeletDataVolume": worker.KubeletDataVolumeName,
-		"enableContainerD":  worker.EnableContainerD,
 	}
+
+	originalConfig["enableContainerD"] = worker.EnableContainerD
+	downloaderConfig["enableContainerD"] = worker.EnableContainerD
 
 	var (
 		downloaderName = fmt.Sprintf("%s-downloader", secretName)

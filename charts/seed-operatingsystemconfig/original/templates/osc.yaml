@@ -9,6 +9,9 @@ metadata:
 spec:
   type: {{ required ".osc.type is required" .Values.osc.type }}
   purpose: {{ required ".osc.purpose is required" .Values.osc.purpose }}
+  {{- if .Values.enableContainerD }}
+  enableContainerD: true
+  {{- end }}
   {{- if .Values.osc.providerConfig }}
   providerConfig:
 {{ .Values.osc.providerConfig | indent 4 }}
@@ -19,7 +22,11 @@ spec:
 {{ include "update-ca-certs" . | indent 2 }}
 {{ include "docker-logrotate" . | indent 2 }}
 {{ include "docker-logrotate-timer" . | indent 2 }}
-{{ include "docker-containerd-monitor" . | indent 2 }}
+{{- if .Values.enableContainerD }}
+{{ include "containerd-monitor" . | indent 2 }}
+{{- else }}
+  {{ include "docker-monitor" . | indent 2 }}
+{{- end }}
 {{ include "kubelet" . | indent 2 }}
 {{ include "kubelet-monitor" . | indent 2 }}
 {{ include "systemd-sysctl" . | indent 2 }}
