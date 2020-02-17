@@ -25,7 +25,7 @@ spec:
 {{- if .Values.enableContainerD }}
 {{ include "containerd-monitor" . | indent 2 }}
 {{- else }}
-  {{ include "docker-monitor" . | indent 2 }}
+{{ include "docker-monitor" . | indent 2 }}
 {{- end }}
 {{ include "kubelet" . | indent 2 }}
 {{ include "kubelet-monitor" . | indent 2 }}
