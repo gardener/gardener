@@ -228,6 +228,12 @@ var _ = Describe("health check", func() {
 			nodeProblemDetectorDaemonSet,
 		}
 
+		blackboxExporterDeployment = newDeployment(shootNamespace, common.BlackboxExporterDeploymentName, v1beta1constants.GardenRoleMonitoring, true)
+
+		requiredMonitoringSystemComponentDeployments = []*appsv1.Deployment{
+			blackboxExporterDeployment,
+		}
+
 		nodeExporterDaemonSet = newDaemonSet(shootNamespace, common.NodeExporterDaemonSetName, v1beta1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringSystemComponentDaemonSets = []*appsv1.DaemonSet{
@@ -501,29 +507,44 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringSystemComponents",
-		func(daemonSets []*appsv1.DaemonSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
 			var (
-				daemonSetLister = constDaemonSetLister(daemonSets)
-				checker         = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				deploymentLister = constDeploymentLister(deployments)
+				daemonSetLister  = constDaemonSetLister(daemonSets)
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckMonitoringSystemComponents(shootNamespace, isTestingShoot, condition, daemonSetLister)
+			exitCondition, err := checker.CheckMonitoringSystemComponents(shootNamespace, isTestingShoot, condition, deploymentLister, daemonSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
+			requiredMonitoringSystemComponentDeployments,
 			requiredMonitoringSystemComponentDaemonSets,
 			false,
 			BeNil()),
+		Entry("required deployment missing",
+			[]*appsv1.Deployment{},
+			requiredMonitoringSystemComponentDaemonSets,
+			false,
+			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required daemon set missing",
+			requiredMonitoringSystemComponentDeployments,
 			[]*appsv1.DaemonSet{},
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+		Entry("deployment unhealthy",
+			[]*appsv1.Deployment{newDeployment(blackboxExporterDeployment.Namespace, blackboxExporterDeployment.Name, roleOf(blackboxExporterDeployment), false)},
+			requiredMonitoringSystemComponentDaemonSets,
+			false,
+			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("daemon set unhealthy",
+			requiredMonitoringSystemComponentDeployments,
 			[]*appsv1.DaemonSet{newDaemonSet(nodeExporterDaemonSet.Namespace, nodeExporterDaemonSet.Name, roleOf(nodeExporterDaemonSet), false)},
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("shoot purpose is testing, omit all checks",
+			[]*appsv1.Deployment{},
 			[]*appsv1.DaemonSet{},
 			true,
 			BeNil()),
