@@ -24,7 +24,9 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -66,6 +68,11 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 	// if shoot has not been scheduled, requeue
 	if shoot.Spec.SeedName == nil {
 		return fmt.Errorf("shoot %s has not yet been scheduled on a Seed", key)
+	}
+
+	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
+	if seedName := confighelper.SeedNameFromSeedConfig(c.config.SeedConfig); (len(seedName) > 0 && *shoot.Spec.SeedName != seedName) || (len(seedName) == 0 && !controllerutils.SeedLabelsMatch(c.seedLister, *shoot.Spec.SeedName, c.config.SeedSelector)) {
+		return nil
 	}
 
 	if err := c.careControl.Care(shoot, key); err != nil {

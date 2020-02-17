@@ -58,11 +58,13 @@ func ShootFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, l
 		if len(seedName) > 0 {
 			return *shoot.Spec.SeedName == seedName
 		}
-		return seedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
+		return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
 	}
 }
 
-func seedLabelsMatch(seedLister gardencorelisters.SeedLister, seedName string, labelSelector *metav1.LabelSelector) bool {
+// SeedLabelsMatch fetches the given seed via a lister by its name and then checks whether the given label selector matches
+// the seed labels.
+func SeedLabelsMatch(seedLister gardencorelisters.SeedLister, seedName string, labelSelector *metav1.LabelSelector) bool {
 	seed, err := seedLister.Get(seedName)
 	if err != nil {
 		return false
@@ -81,7 +83,7 @@ func ControllerInstallationFilterFunc(seedName string, seedLister gardencorelist
 		if len(seedName) > 0 {
 			return controllerInstallation.Spec.SeedRef.Name == seedName
 		}
-		return seedLabelsMatch(seedLister, controllerInstallation.Spec.SeedRef.Name, labelSelector)
+		return SeedLabelsMatch(seedLister, controllerInstallation.Spec.SeedRef.Name, labelSelector)
 	}
 }
 
@@ -98,7 +100,7 @@ func BackupBucketFilterFunc(seedName string, seedLister gardencorelisters.SeedLi
 		if len(seedName) > 0 {
 			return *backupBucket.Spec.SeedName == seedName
 		}
-		return seedLabelsMatch(seedLister, *backupBucket.Spec.SeedName, labelSelector)
+		return SeedLabelsMatch(seedLister, *backupBucket.Spec.SeedName, labelSelector)
 	}
 }
 
@@ -115,6 +117,6 @@ func BackupEntryFilterFunc(seedName string, seedLister gardencorelisters.SeedLis
 		if len(seedName) > 0 {
 			return *backupEntry.Spec.SeedName == seedName
 		}
-		return seedLabelsMatch(seedLister, *backupEntry.Spec.SeedName, labelSelector)
+		return SeedLabelsMatch(seedLister, *backupEntry.Spec.SeedName, labelSelector)
 	}
 }
