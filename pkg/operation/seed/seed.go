@@ -44,7 +44,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
@@ -449,8 +448,6 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		}
 	}
 
-	var vpaPodAnnotations map[string]interface{}
-
 	existingSecrets := &corev1.SecretList{}
 	if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 		return err
@@ -470,20 +467,8 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		return err
 	}
 
-	vpaPodAnnotations = map[string]interface{}{
+	vpaPodAnnotations := map[string]interface{}{
 		"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
-	}
-
-	// Cleanup legacy external admission controller (no longer needed).
-	objects := []runtime.Object{
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller-tls", Namespace: v1beta1constants.GardenNamespace}},
-	}
-	for _, object := range objects {
-		if err = k8sSeedClient.Client().Delete(context.TODO(), object, kubernetes.DefaultDeleteOptions...); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
 	}
 
 	// AlertManager configuration
