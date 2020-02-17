@@ -28,6 +28,7 @@ import (
 	"k8s.io/helm/pkg/engine"
 	"k8s.io/helm/pkg/manifest"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/releaseutil"
 	"k8s.io/helm/pkg/timeconv"
 )
 
@@ -141,14 +142,21 @@ func (r *chartRenderer) renderResources(ch *chartapi.Chart, values chartutil.Val
 		return nil, err
 	}
 
-	// Remove NODES.txt and partials
+	// Remove NOTES.txt and partials
 	for k := range files {
 		if strings.HasSuffix(k, notesFileSuffix) || strings.HasPrefix(path.Base(k), "_") {
 			delete(files, k)
 		}
 	}
 
-	manifests := manifest.SplitManifests(files)
+	manifestsMap := map[string]string{}
+	for origKey, file := range files {
+		for key, m := range releaseutil.SplitManifests(file) {
+			manifestsMap[origKey+"_"+key] = m
+		}
+	}
+
+	manifests := manifest.SplitManifests(manifestsMap)
 	manifests = SortByKind(manifests)
 
 	return &RenderedChart{
