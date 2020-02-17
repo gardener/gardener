@@ -29,12 +29,18 @@ spec:
         {{- end }}
         checksum/secret-gardenlet-kubeconfig-garden: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden.yaml") . | sha256sum }}
         checksum/secret-gardenlet-kubeconfig-seed: {{ include (print $.Template.BasePath "/secret-kubeconfig-seed.yaml") . | sha256sum }}
+        {{- if .Values.global.gardenlet.podAnnotations }}
+{{ toYaml .Values.global.gardenlet.podAnnotations | indent 8 }}
+        {{- end }}
       labels:
         app: gardener
         role: gardenlet
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
+        {{- if .Values.global.gardenlet.podLabels }}
+{{ toYaml .Values.global.gardenlet.podLabels | indent 8 }}
+        {{- end }}
     spec:
       priorityClassName: gardenlet
       {{- if not .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}

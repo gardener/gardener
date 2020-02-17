@@ -26,12 +26,18 @@ spec:
         checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
         checksum/secret-alerting: {{ include "gardener.secret-alerting" . | sha256sum }}
         checksum/secret-openvpn-diffie-hellman: {{ include "gardener.secret-openvpn-diffie-hellman" . | sha256sum }}
+        {{- if .Values.global.controller.podAnnotations }}
+{{ toYaml .Values.global.controller.podAnnotations | indent 8 }}
+        {{- end }}
       labels:
         app: gardener
         role: controller-manager
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
+        {{- if .Values.global.controller.podLabels }}
+{{ toYaml .Values.global.controller.podLabels | indent 8 }}
+        {{- end }}
     spec:
       {{- if not .Values.global.controller.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}

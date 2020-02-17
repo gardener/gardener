@@ -16,6 +16,8 @@ global:
       limits:
         cpu: 300m
         memory: 256Mi
+  # podAnnotations: # YAML formated annotations used for pod template
+  # podLabels: # YAML formated labels used for pod template
     encryption:
       config: |
         apiVersion: apiserver.config.k8s.io/v1
@@ -183,6 +185,8 @@ global:
       limits:
         cpu: 750m
         memory: 512Mi
+  # podAnnotations: # YAML formated annotations used for pod template
+  # podLabels: # YAML formated labels used for pod template
     additionalVolumes: []
     additionalVolumeMounts: []
     env: []
@@ -259,6 +263,8 @@ global:
       limits:
         cpu: 300m
         memory: 256Mi
+  # podAnnotations: # YAML formated annotations used for pod template
+  # podLabels: # YAML formated labels used for pod template
     vpa: false
     config:
       clientConnection:
