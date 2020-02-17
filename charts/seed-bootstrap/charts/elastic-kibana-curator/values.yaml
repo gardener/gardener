@@ -86,8 +86,8 @@ elasticsearch:
           - SETFCAP
     resources:
       limits:
-        cpu: 20m
-        memory: 32Mi
+        cpu: 100m
+        memory: 128Mi
       requests:
         cpu: 2m
         memory: 16Mi
