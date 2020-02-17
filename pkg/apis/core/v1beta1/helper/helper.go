@@ -19,14 +19,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/logger"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	errors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -571,17 +571,6 @@ func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
 }
 
-// GetMachineImagesFor returns a list of all machine images for a given shoot.
-func GetMachineImagesFor(shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.ShootMachineImage {
-	var workerMachineImages []*gardencorev1beta1.ShootMachineImage
-	for _, worker := range shoot.Spec.Provider.Workers {
-		if worker.Machine.Image != nil {
-			workerMachineImages = append(workerMachineImages, worker.Machine.Image)
-		}
-	}
-	return workerMachineImages
-}
-
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
@@ -609,8 +598,8 @@ func ShootMachineImageVersionExists(constraint gardencorev1beta1.MachineImage, i
 	return false, 0
 }
 
-// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
-func DetermineLatestMachineImageVersion(image gardencorev1beta1.MachineImage) (*semver.Version, gardencorev1beta1.ExpirableVersion, error) {
+// DetermineLatestMachineImageVersion determines the latest MachineImage version from a MachineImage (either with or without preview versions)
+func DetermineLatestMachineImageVersion(image gardencorev1beta1.MachineImage, excludePreviewVersions bool) (*semver.Version, gardencorev1beta1.ExpirableVersion, error) {
 	var (
 		latestSemVerVersion       *semver.Version
 		latestMachineImageVersion gardencorev1beta1.ExpirableVersion
@@ -621,21 +610,36 @@ func DetermineLatestMachineImageVersion(image gardencorev1beta1.MachineImage) (*
 		if err != nil {
 			return nil, gardencorev1beta1.ExpirableVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
 		}
+		if excludePreviewVersions && imageVersion.Classification != nil && *imageVersion.Classification == gardencorev1beta1.ClassificationPreview {
+			continue
+		}
 		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
 			latestSemVerVersion = v
 			latestMachineImageVersion = imageVersion
 		}
 	}
+	if latestSemVerVersion == nil {
+		return nil, gardencorev1beta1.ExpirableVersion{}, fmt.Errorf("could not determine a latest version (exclude preview versions: %t) from machine image '%s'", excludePreviewVersions, image.Name)
+	}
 	return latestSemVerVersion, latestMachineImageVersion, nil
 }
 
-// GetShootMachineImageFromLatestMachineImageVersion determines the latest version in a machine image and returns that as a ShootMachineImage
-func GetShootMachineImageFromLatestMachineImageVersion(image gardencorev1beta1.MachineImage) (*semver.Version, gardencorev1beta1.ShootMachineImage, error) {
-	latestSemVerVersion, latestImage, err := DetermineLatestMachineImageVersion(image)
+// GetLatestNonPreviewShootMachineImage determines the latest non-preview version in a machine image and returns that as a ShootMachineImage
+func GetLatestNonPreviewShootMachineImage(image gardencorev1beta1.MachineImage) (*semver.Version, gardencorev1beta1.ShootMachineImage, error) {
+	latestSemVerVersion, latestImageVersion, err := DetermineLatestMachineImageVersion(image, true)
 	if err != nil {
 		return nil, gardencorev1beta1.ShootMachineImage{}, err
 	}
-	return latestSemVerVersion, gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: latestImage.Version}, nil
+	return latestSemVerVersion, gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: latestImageVersion.Version}, nil
+}
+
+// IsLatestMachineImageVersion determines whether the given version is the latest version in a machine image
+func IsLatestMachineImageVersion(image gardencorev1beta1.MachineImage, version gardencorev1beta1.ExpirableVersion) (bool, error) {
+	_, latestImageVersion, err := DetermineLatestMachineImageVersion(image, false)
+	if err != nil {
+		return false, err
+	}
+	return latestImageVersion.Version == version.Version, nil
 }
 
 // UpdateMachineImages updates the machine images in place.
@@ -643,7 +647,6 @@ func UpdateMachineImages(workers []gardencorev1beta1.Worker, machineImages []*ga
 	for _, machineImage := range machineImages {
 		for idx, worker := range workers {
 			if worker.Machine.Image != nil && machineImage.Name == worker.Machine.Image.Name {
-				logger.Logger.Infof("Updating worker images of worker '%s' from version %s to version %s", worker.Name, worker.Machine.Image.Version, machineImage.Version)
 				workers[idx].Machine.Image = machineImage
 			}
 		}
@@ -664,11 +667,11 @@ func KubernetesVersionExistsInCloudProfile(cloudProfile *gardencorev1beta1.Cloud
 	return false, gardencorev1beta1.ExpirableVersion{}, nil
 }
 
-// DetermineLatestKubernetesPatchVersion finds the latest Kubernetes patch version in the <cloudProfile> compared
+// DetermineLatestKubernetesPatchVersion finds the latest Kubernetes patch version for its minor version in the <cloudProfile> compared
 // to the given <currentVersion>. In case it does not find a newer patch version, it returns false. Otherwise,
 // true and the found version will be returned.
 func DetermineLatestKubernetesPatchVersion(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, string, error) {
-	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "~")
+	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile.Spec.Kubernetes.Versions, currentVersion, "~")
 	if err != nil || !ok {
 		return ok, "", err
 	}
@@ -676,11 +679,91 @@ func DetermineLatestKubernetesPatchVersion(cloudProfile *gardencorev1beta1.Cloud
 	return true, newerVersions[len(newerVersions)-1], nil
 }
 
+// GetKubernetesVersionForPatchUpdate finds the latest Kubernetes patch version for its minor version in the <cloudProfile> compared
+// to the given <currentVersion>. Preview versions do not qualify for the kubernetes auto update. In case it does not find a newer patch version, it returns false. Otherwise,
+// true and the found version will be returned.
+func GetKubernetesVersionForPatchUpdate(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
+	ok, _, versions, err := determineNextKubernetesVersions(versions, currentVersion, "~")
+	if err != nil || !ok {
+		return ok, "", err
+	}
+
+	var filteredVersions []string
+	for _, v := range versions {
+		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
+			continue
+		}
+
+		if v.ExpirationDate != nil && (time.Now().UTC().After(v.ExpirationDate.UTC()) || time.Now().UTC().Equal(v.ExpirationDate.UTC())) {
+			continue
+		}
+
+		filteredVersions = append(filteredVersions, v.Version)
+	}
+
+	if len(filteredVersions) == 0 {
+		return false, "", nil
+	}
+
+	sort.Strings(filteredVersions)
+	return true, filteredVersions[len(filteredVersions)-1], nil
+}
+
+// GetKubernetesVersionForMinorUpdate finds a Kubernetes version in the <cloudProfile> that qualifies for a Kubernetes minor level update given a <currentVersion>.
+// A qualifying version is a non-preview version having the minor version increased by exactly one version.
+// If a version can be found, returns true and the latest patch version of the next minor version.
+// In case it does not find a version, it returns false.
+func GetKubernetesVersionForMinorUpdate(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, string, error) {
+	// determine higher versions in the CloudProfile
+	ok, _, versions, err := determineNextKubernetesVersions(cloudProfile.Spec.Kubernetes.Versions, currentVersion, "^")
+	if err != nil || !ok {
+		return ok, "", err
+	}
+
+	// get semVer of current version
+	v, err := semver.NewVersion(currentVersion)
+	if err != nil {
+		return false, "", err
+	}
+	currentSemVerVersion := *v
+
+	// filter versions
+	var filteredVersions []string
+	for _, v := range versions {
+		// filter preview versions
+		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
+			continue
+		}
+
+		if v.ExpirationDate != nil && (time.Now().UTC().After(v.ExpirationDate.UTC()) || time.Now().UTC().Equal(v.ExpirationDate.UTC())) {
+			continue
+		}
+
+		vSemVer, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return false, "", err
+		}
+
+		// find a version having the minor version increased by one
+		if currentSemVerVersion.Minor() + 1 != vSemVer.Minor() {
+			continue
+		}
+		filteredVersions = append(filteredVersions, v.Version)
+	}
+
+	if len(filteredVersions) == 0 {
+		return false, "", nil
+	}
+
+	sort.Strings(filteredVersions)
+	return true, filteredVersions[len(filteredVersions)-1], nil
+}
+
 // DetermineNextKubernetesMinorVersion finds the next available Kubernetes minor version in the <cloudProfile> compared
 // to the given <currentVersion>. In case it does not find a newer minor version, it returns false. Otherwise,
 // true and the found version will be returned.
 func DetermineNextKubernetesMinorVersion(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, string, error) {
-	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "^")
+	ok, newerVersions, _, err := determineNextKubernetesVersions(cloudProfile.Spec.Kubernetes.Versions, currentVersion, "^")
 	if err != nil || !ok {
 		return ok, "", err
 	}
@@ -692,13 +775,13 @@ func DetermineNextKubernetesMinorVersion(cloudProfile *gardencorev1beta1.CloudPr
 // with the <operator> to the given <currentVersion>. The <operator> has to be a github.com/Masterminds/semver
 // range comparison symbol. In case it does not find a newer version, it returns false. Otherwise,
 // true and the found version will be returned.
-func determineNextKubernetesVersions(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion, operator string) (bool, []string, []gardencorev1beta1.ExpirableVersion, error) {
+func determineNextKubernetesVersions(versions []gardencorev1beta1.ExpirableVersion, currentVersion, operator string) (bool, []string, []gardencorev1beta1.ExpirableVersion, error) {
 	var (
 		newerVersions       = []gardencorev1beta1.ExpirableVersion{}
 		newerVersionsString = []string{}
 	)
 
-	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
+	for _, version := range versions {
 		ok, err := versionutils.CompareVersions(version.Version, operator, currentVersion)
 		if err != nil {
 			return false, []string{}, []gardencorev1beta1.ExpirableVersion{}, err
@@ -741,6 +824,25 @@ func WrapWithLastError(err error, lastError *gardencorev1beta1.LastError) error 
 		return err
 	}
 	return errors.Wrapf(err, "last error: %s", lastError.Description)
+}
+
+// HasMaintainedKubernetesMinorVersion checks if the given Kubernetes version has a maintained Kubernetes Minor version
+func HasMaintainedKubernetesMinorVersion(maintainedKubernetesVersions int, cloudProfile *gardencorev1beta1.CloudProfile, currentVersion semver.Version) (bool, error) {
+	greaterMinorVersions := make(map[string]struct{}, len(cloudProfile.Spec.Kubernetes.Versions))
+	for _, v := range cloudProfile.Spec.Kubernetes.Versions {
+		version, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return false, err
+		}
+		if _, found := greaterMinorVersions[fmt.Sprintf("%d.%d", version.Major(), version.Minor())]; found {
+			continue
+		}
+
+		if version.Major() == currentVersion.Major() && version.Minor() > currentVersion.Minor() {
+			greaterMinorVersions[fmt.Sprintf("%d.%d", version.Major(), version.Minor())] = struct{}{}
+		}
+	}
+	return maintainedKubernetesVersions > len(greaterMinorVersions), nil
 }
 
 // IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.

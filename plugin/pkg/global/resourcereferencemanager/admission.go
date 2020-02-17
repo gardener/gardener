@@ -21,6 +21,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -306,6 +308,43 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 						core.ProjectMemberOwner,
 					},
 				})
+			}
+		}
+	case core.Kind("CloudProfile"):
+		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into CloudProfile object")
+		}
+		if utils.SkipVerification(operation, cloudProfile.ObjectMeta) {
+			return nil
+		}
+		if a.GetOperation() == admission.Update {
+			oldCloudProfile, ok := a.GetOldObject().(*core.CloudProfile)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into CloudProfile object")
+			}
+
+			// getting versions that have been removed from the CloudProfile
+			removed := helper.GetRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions)
+			removedVersions := make(map[string]struct{}, len(removed))
+			for _, version := range removed {
+				removedVersions[version.Version] = struct{}{}
+			}
+
+			if len(removedVersions) > 0 {
+				shootList, e := r.shootLister.List(labels.Everything())
+				if e != nil {
+					return err
+				}
+				for _, shoot := range shootList {
+					if shoot.Spec.CloudProfileName != cloudProfile.Name {
+						continue
+					}
+
+					if _, ok := removedVersions[shoot.Spec.Kubernetes.Version]; ok {
+						err = multierror.Append(err, fmt.Errorf("unable to delete Kubernetes version '%s' from CloudProfile. Version is still in use by Shoot (Name: '%s', Namespace: '%s', CloudProfile: '%s')", shoot.Spec.Kubernetes.Version, shoot.Name, shoot.Namespace, shoot.Spec.CloudProfileName))
+					}
+				}
 			}
 		}
 	}

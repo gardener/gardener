@@ -17,6 +17,7 @@ package core
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // +genclient
@@ -88,6 +89,8 @@ type ExpirableVersion struct {
 	Version string
 	// ExpirationDate defines the time at which this version expires.
 	ExpirationDate *metav1.Time
+	// Classification defines the state of a version (preview, supported, deprecated)
+	Classification *VersionClassification
 }
 
 // MachineType contains certain properties of a machine type.
@@ -149,4 +152,25 @@ const (
 	VolumeClassStandard string = "standard"
 	// VolumeClassPremium is a constant for the premium volume class.
 	VolumeClassPremium string = "premium"
+)
+
+// VersionClassification is the logical state of a version according to https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type VersionClassification string
+
+var SupportedVersionClassifications = sets.NewString(string(ClassificationPreview), string(ClassificationSupported), string(ClassificationDeprecated))
+
+const (
+	// ClassificationPreview indicates that a version has recently been added and not promoted to "Supported" yet.
+	// ClassificationPreview versions will not be considered for automatic Kubernetes patch version updates.
+	ClassificationPreview VersionClassification = "preview"
+	// ClassificationSupported indicates that a patch version is the default version for the particular minor version.
+	// There is always exactly one supported Kubernetes patch version for every still maintained Kubernetes minor version.
+	// Supported versions are eligible for the automated Kubernetes patch version update for shoot clusters in Gardener.
+	ClassificationSupported VersionClassification = "supported"
+	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version
+	// and will eventually expire.
+	// The time after which a deprecated version expires can be configured in the `kubernetesVersionManagement` and `machineImageVersionManagement` section of the CloudProfile Controller config.
+	// Every version that is neither in preview nor supported is deprecated.
+	// All patch versions of not supported minor versions are deprecated.
+	ClassificationDeprecated VersionClassification = "deprecated"
 )

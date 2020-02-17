@@ -87,6 +87,50 @@ type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// KubernetesVersionManagement configures the version policy that applies to
+	// Kubernetes versions in the CloudProfile
+	// +optional
+	KubernetesVersionManagement *KubernetesVersionManagement `json:"kubernetesVersionManagement,omitempty"`
+	// MachineImageVersionManagement configures the version policy that applies to
+	// MachineImage versions in the CloudProfile
+	// +optional
+	MachineImageVersionManagement *MachineImageVersionManagement `json:"machineImageVersionManagement,omitempty"`
+}
+
+// KubernetesVersionManagement configures the version policy that applies to
+// Kubernetes versions in the CloudProfile
+// You can read more about it here: https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type KubernetesVersionManagement struct {
+	// Enabled defines whether the KubernetesVersionManagement is enabled
+	Enabled bool `json:"enabled"`
+	// MaintainedKubernetesVersions is the amount of minor Kubernetes versions that are considered to be "maintained"
+	// refers to versions existing in the CloudProfile
+	// defaults to 3 as this is common practice in the Kubernetes Community
+	// e.g Versions in CloudProfile: 1.17, 1.15, 1.14, 1.13 -> Maintained: 1.17 & 1.15 & 1.14, Unmaintained: 1.13
+	// +optional
+	MaintainedKubernetesVersions *int `json:"maintainedKubernetesVersions,omitempty"`
+	// ExpirationDurationMaintainedVersion is the time until a deprecated Kubernetes patch version
+	// of a supported minor version expires
+	// defaults to 4 months (with each 30 days)	// defaults to 4 months
+	// +optional
+	ExpirationDurationMaintainedVersion *metav1.Duration `json:"expirationDurationMaintainedVersion,omitempty"`
+	// ExpirationDurationUnmaintainedVersion is the time until a deprecated Kubernetes patch version
+	// of an unsupported minor version expires
+	// defaults to 1 month
+	// +optional
+	ExpirationDurationUnmaintainedVersion *metav1.Duration `json:"expirationDurationUnmaintainedVersion,omitempty"`
+}
+
+// MachineImageVersionManagement configures the version policy that applies to
+// MachineImage versions in the CloudProfile
+// You can read more about it here: https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type MachineImageVersionManagement struct {
+	// Enabled defines whether the MachineImageVersionManagement is enabled
+	Enabled bool `json:"enabled"`
+	// ExpirationDuration is the time until a deprecated machine image version expires
+	// defaults to 4 months
+	// +optional
+	ExpirationDuration *metav1.Duration `json:"expirationDuration,omitempty"`
 }
 
 // ControllerRegistrationControllerConfiguration defines the configuration of the

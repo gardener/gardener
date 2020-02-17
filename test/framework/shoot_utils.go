@@ -202,7 +202,7 @@ func SetProviderConfigsFromFilepath(shoot *gardencorev1beta1.Shoot, infrastructu
 		shoot.Spec.Provider.InfrastructureConfig = infrastructureProviderConfig
 	}
 
-	if len(*controlPlaneConfigPath) != 0 {
+	if controlPlaneConfigPath != nil && len(*controlPlaneConfigPath) != 0 {
 		controlPlaneProviderConfig, err := ParseFileAsProviderConfig(*controlPlaneConfigPath)
 		if err != nil {
 			return err
@@ -210,7 +210,7 @@ func SetProviderConfigsFromFilepath(shoot *gardencorev1beta1.Shoot, infrastructu
 		shoot.Spec.Provider.ControlPlaneConfig = controlPlaneProviderConfig
 	}
 
-	if len(*networkingConfigPath) != 0 {
+	if networkingConfigPath != nil && len(*networkingConfigPath) != 0 {
 		networkingProviderConfig, err := ParseFileAsProviderConfig(*networkingConfigPath)
 		if err != nil {
 			return err
@@ -218,7 +218,7 @@ func SetProviderConfigsFromFilepath(shoot *gardencorev1beta1.Shoot, infrastructu
 		shoot.Spec.Networking.ProviderConfig = networkingProviderConfig
 	}
 
-	if len(*workersConfigPath) != 0 {
+	if workersConfigPath != nil && len(*workersConfigPath) != 0 {
 		workers, err := ParseFileAsWorkers(*workersConfigPath)
 		if err != nil {
 			return err

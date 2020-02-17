@@ -70,9 +70,41 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 
 	if obj.Controllers.CloudProfile == nil {
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{
-			ConcurrentSyncs: 5,
+			ConcurrentSyncs:               5,
+			KubernetesVersionManagement:   &KubernetesVersionManagement{Enabled: false},
+			MachineImageVersionManagement: &MachineImageVersionManagement{Enabled: false},
+		}
+	} else {
+		obj.Controllers.CloudProfile.ConcurrentSyncs = 5
+
+		if obj.Controllers.CloudProfile.KubernetesVersionManagement == nil {
+			obj.Controllers.CloudProfile.KubernetesVersionManagement = &KubernetesVersionManagement{Enabled: false}
+		} else if obj.Controllers.CloudProfile.KubernetesVersionManagement.Enabled {
+			if obj.Controllers.CloudProfile.KubernetesVersionManagement.MaintainedKubernetesVersions == nil {
+				// defaults to 3
+				three := 3
+				obj.Controllers.CloudProfile.KubernetesVersionManagement.MaintainedKubernetesVersions = &three
+			}
+			if obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDurationMaintainedVersion == nil {
+				// defaults to 4 months (with each 30 days)
+				obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDurationMaintainedVersion = &metav1.Duration{Duration: 24 * 30 * 4 * time.Hour}
+			}
+			if obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDurationUnmaintainedVersion == nil {
+				// defaults to 1 months (with 30 days)
+				obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDurationUnmaintainedVersion = &metav1.Duration{Duration: 24 * 30 * 1 * time.Hour}
+			}
+		}
+
+		if obj.Controllers.CloudProfile.MachineImageVersionManagement == nil {
+			obj.Controllers.CloudProfile.MachineImageVersionManagement = &MachineImageVersionManagement{Enabled: false}
+		} else if obj.Controllers.CloudProfile.MachineImageVersionManagement.Enabled {
+			if obj.Controllers.CloudProfile.MachineImageVersionManagement.ExpirationDuration == nil {
+				// defaults to 4 months (with each 30 days)
+				obj.Controllers.CloudProfile.MachineImageVersionManagement.ExpirationDuration = &metav1.Duration{Duration: 24 * 30 * 4 * time.Hour}
+			}
 		}
 	}
+
 	if obj.Controllers.ControllerRegistration == nil {
 		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{
 			ConcurrentSyncs: 5,

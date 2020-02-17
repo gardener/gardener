@@ -93,3 +93,7 @@
 * [Alerting](monitoring/alerting.md)
 * [User Alerts](monitoring/user_alerts.md)
 * [Operator Alerts](monitoring/operator_alerts.md)
+
+## Operations
+
+* [Management of Kubernetes and machine image versions](operations/versioning_policy.md)

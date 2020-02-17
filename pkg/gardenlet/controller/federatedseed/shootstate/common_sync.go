@@ -69,7 +69,7 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 		obj := objectCreator()
 		err := s.seedClient.Client().Get(ctx, req.NamespacedName, obj)
 		if apierrors.IsNotFound(err) {
-			s.log.Debugf("Skipping ShootState sync because resoruce with kind %s is missing in namespace %s", kind, req.NamespacedName)
+			s.log.Debugf("Skipping ShootState sync because resource with kind %s is missing in namespace %s", kind, req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		if err != nil {

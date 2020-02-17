@@ -52,6 +52,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/utils/pointer"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -173,8 +175,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		if testMachineryRun != nil && *testMachineryRun {
 			schedulerOperationsTestLogger.Info("Running in test Machinery")
-			zero := int32(0)
-			replicas, err := ScaleGardenerControllerManager(setupContextTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), &zero)
+			replicas, err := ScaleGardenerControllerManager(setupContextTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), pointer.Int32Ptr(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
 			schedulerOperationsTestLogger.Info("Environment for test-machinery run is prepared")

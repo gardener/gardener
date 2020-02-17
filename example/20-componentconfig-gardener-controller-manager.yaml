@@ -7,14 +7,24 @@ gardenClientConnection:
   qps: 100
   burst: 130
 controllers:
+  # shootMonitorPeriod: 300s
   plant:
     syncPeriod: 10s
     concurrentSyncs: 5
   seed:
     concurrentSyncs: 5
     syncPeriod: 30s
-  # monitorPeriod: 40s
-  # shootMonitorPeriod: 300s
+    # monitorPeriod: 40s
+  cloudProfile:
+    concurrentSyncs: 5
+#    kubernetesVersionManagement:
+#      enabled: true # defaults to false
+#      maintainedKubernetesVersions: 3 # defaults to 3
+#      expirationDurationMaintainedVersion: 2880h # defaults to 120 days / 4 months
+#      expirationDurationUnmaintainedVersion: 720h # defaults to 30 days / 1 months
+#    machineImageVersionManagement:
+#      enabled: true # defaults to false
+#      expirationDuration: 2880h # defaults to 120 days / 4 months
   shootMaintenance:
     concurrentSyncs: 5
   shootHibernation:

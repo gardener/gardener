@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -106,10 +108,10 @@ func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1beta
 		now             = time.Now()
 		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
 		duration        = window.RandomDurationUntilNext(now)
-		nextMaintenance = time.Now().Add(duration)
+		nextMaintenance = time.Now().UTC().Add(duration)
 	)
 
-	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration, nextMaintenance.UTC())
+	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration.Round(time.Minute), nextMaintenance.UTC().Round(time.Minute))
 	c.shootMaintenanceQueue.AddAfter(key, duration)
 }
 
@@ -149,13 +151,13 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		return err
 	}
 
-	updatedMachineImages, err := MaintainMachineImages(shootObj, cloudProfile, gardencorev1beta1helper.GetMachineImagesFor(shoot))
+	updatedMachineImages, messageMachineImageUpdate, err := MaintainMachineImages(shootLogger, shootObj, cloudProfile)
 	if err != nil {
 		// continue execution to allow the kubernetes version update
 		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
-	updatedKubernetesVersion, err := MaintainKubernetesVersion(shootObj, cloudProfile)
+	updatedKubernetesVersion, messageKubernetesUpdate, err := MaintainKubernetesVersion(shootObj, cloudProfile, shootLogger)
 	if err != nil {
 		// continue execution to allow the machine image version update
 		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
@@ -184,7 +186,18 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
 		return err
 	}
-	msg := "Completed; updated the Shoot specification successfully."
+
+	msg := "Maintenance complete. No action required."
+	if updatedKubernetesVersion != nil || updatedMachineImages != nil {
+		msg = "Maintenance complete."
+		if updatedMachineImages != nil {
+			msg = fmt.Sprintf("%s %s %s.", msg, "Updated ", *messageMachineImageUpdate)
+		}
+		if updatedKubernetesVersion != nil {
+			msg = fmt.Sprintf("%s %s %s.", msg, "Updated ", *messageKubernetesUpdate)
+		}
+	}
+
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", msg)
 	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventMaintenanceDone, "%s", msg)
 
@@ -192,34 +205,65 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 }
 
 // MaintainKubernetesVersion determines if a shoots kubernetes version has to be maintained and in case returns the target version
-func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (*string, error) {
-	shouldBeUpdated, err := shouldKubernetesVersionBeUpdated(shoot, profile)
+func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile, logger *logrus.Entry) (*string, *string, error) {
+	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(shoot, profile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if shouldBeUpdated {
-		newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.DetermineLatestKubernetesPatchVersion(profile, shoot.Spec.Kubernetes.Version)
+		// preview versions are excluded from auto update
+		newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.GetKubernetesVersionForPatchUpdate(profile.Spec.Kubernetes.Versions, shoot.Spec.Kubernetes.Version)
 		if err != nil {
-			return nil, fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
+			return nil, nil, fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
 		}
 		if newerPatchVersionFound {
-			return &latestPatchVersion, nil
+			msg := fmt.Sprintf("Kubernetes version '%s' to version '%s'. This is an increase in the patch level. Reason: %s", shoot.Spec.Kubernetes.Version, latestPatchVersion, *reason)
+			logger.Debugf("[SHOOT MAINTENANCE] Updating %s", msg)
+			return &latestPatchVersion, &msg, nil
+		}
+		// no newer patch version found & is expired -> forcefully update to latest patch of next minor version
+		if isExpired {
+			// check if there is a consecutive minor version available (do not skip a minor version)
+			newMinorAvailable, latestPatchVersionNewMinor, err := gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(profile, shoot.Spec.Kubernetes.Version)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failure while determining newer Kubernetes minor version in the CloudProfile: %s", err.Error())
+			}
+			// cannot update as there is no consecutive minor version available (e.g shoot is on 1.13.X, but there is only 1.15.X, available and not 1.14.X)
+			if !newMinorAvailable {
+				return nil, nil, fmt.Errorf("cannot update expired Kubernetes version '%s'. No suitable version found in CloudProfile", shoot.Spec.Kubernetes.Version)
+			}
+
+			msg := fmt.Sprintf("Kubernetes version '%s' to version '%s'. This is an increase in the minor level. Reason: %s", shoot.Spec.Kubernetes.Version, latestPatchVersionNewMinor, *reason)
+			logger.Debugf("[SHOOT MAINTENANCE] Updating %s", msg)
+			return &latestPatchVersionNewMinor, &msg, nil
 		}
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
-func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (bool, error) {
-	versionExistsInCloudProfile, offeredVersion, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, shoot.Spec.Kubernetes.Version)
+func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (bool, *string, bool, error) {
+	versionExistsInCloudProfile, version, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, shoot.Spec.Kubernetes.Version)
 	if err != nil {
-		return false, err
+		return false, nil, false, err
 	}
 
-	if !versionExistsInCloudProfile && !shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
-		return false, nil
+	var reason string
+	if !versionExistsInCloudProfile {
+		reason = "Version does not exist in CloudProfile"
+		return true, &reason, true, nil
 	}
 
-	return shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion || ExpirationDateExpired(offeredVersion.ExpirationDate), nil
+	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
+		reason = "AutoUpdate of Kubernetes version configured"
+		return true, &reason, false, nil
+	}
+
+	if ExpirationDateExpired(version.ExpirationDate) {
+		reason = "Kubernetes version expired - force update required"
+		return true, &reason, true, nil
+	}
+
+	return false, nil, false, nil
 }
 
 func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
@@ -232,25 +276,34 @@ func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 // MaintainMachineImages determines if a shoots machine images have to be maintained and in case returns the target images
-func MaintainMachineImages(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, shootCurrentImages []*gardencorev1beta1.ShootMachineImage) ([]*gardencorev1beta1.ShootMachineImage, error) {
+func MaintainMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) ([]*gardencorev1beta1.ShootMachineImage, *string, error) {
 	var shootMachineImagesForUpdate []*gardencorev1beta1.ShootMachineImage
-	for _, shootImage := range shootCurrentImages {
-		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, shootImage)
-		if err != nil {
-			return nil, err
-		}
+	var reasonForUpdate *string
+	for _, worker := range shoot.Spec.Provider.Workers {
+		workerImage := worker.Machine.Image
+		if workerImage != nil {
 
-		shouldBeUpdated, shootMachineImage, err := shouldMachineImageBeUpdated(shoot, &machineImageFromCloudProfile, shootImage)
-		if err != nil {
-			return nil, err
-		}
+			machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
+			if err != nil {
+				return nil, nil, err
+			}
 
-		if shouldBeUpdated {
-			shootMachineImagesForUpdate = append(shootMachineImagesForUpdate, shootMachineImage)
+			shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(logger, shoot, &machineImageFromCloudProfile, workerImage)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if !shouldBeUpdated {
+				return nil, nil, nil
+			}
+
+			message := fmt.Sprintf("image of worker-pool '%s' from version '(%s/%s)' to version '(%s/%s)'. Reason: %s", worker.Name, workerImage.Name, workerImage.Version, updatedMachineImage.Name, updatedMachineImage.Version, *reason)
+			reasonForUpdate = &message
+			logger.Debugf("[SHOOT MAINTENANCE] Updating %s", message)
+			shootMachineImagesForUpdate = append(shootMachineImagesForUpdate, updatedMachineImage)
 		}
 	}
-
-	return shootMachineImagesForUpdate, nil
+	return shootMachineImagesForUpdate, reasonForUpdate, nil
 }
 
 func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
@@ -265,27 +318,35 @@ func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMa
 	return machineImageFromCloudProfile, nil
 }
 
-func shouldMachineImageBeUpdated(shoot *gardencorev1beta1.Shoot, machineImage *gardencorev1beta1.MachineImage, shootMachineImage *gardencorev1beta1.ShootMachineImage) (bool, *gardencorev1beta1.ShootMachineImage, error) {
+func shouldMachineImageBeUpdated(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, machineImage *gardencorev1beta1.MachineImage, shootMachineImage *gardencorev1beta1.ShootMachineImage) (bool, *string, *gardencorev1beta1.ShootMachineImage, error) {
 	versionExistsInCloudProfile, _ := gardencorev1beta1helper.ShootMachineImageVersionExists(*machineImage, *shootMachineImage)
-	if !versionExistsInCloudProfile || shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || ForceMachineImageUpdateRequired(shootMachineImage, *machineImage) {
-		shootMachineImage, err := updateToLatestMachineImageVersion(*machineImage)
+	var reason string
+
+	forceUpdateRequired := ForceMachineImageUpdateRequired(shootMachineImage, *machineImage)
+	if !versionExistsInCloudProfile || shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || forceUpdateRequired {
+		// check if already on latest version
+		_, latestShootMachineImage, err := gardencorev1beta1helper.GetLatestNonPreviewShootMachineImage(*machineImage)
 		if err != nil {
-			return false, nil, fmt.Errorf("failure while updating machineImage to the latest version: %s", err.Error())
+			return false, nil, nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
 		}
 
-		return true, shootMachineImage, nil
+		if latestShootMachineImage.Version == shootMachineImage.Version {
+			logger.Debugf("MachineImage update not required. Already up to date.")
+			return false, nil, nil, nil
+		}
+
+		if !versionExistsInCloudProfile {
+			reason = "Version does not exist in CloudProfile"
+		} else if shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion {
+			reason = "AutoUpdate of MachineImage configured"
+		} else if forceUpdateRequired {
+			reason = "MachineImage expired - force update required"
+		}
+
+		return true, &reason, &latestShootMachineImage, nil
 	}
 
-	return false, nil, nil
-}
-
-// updateToLatestMachineImageVersion returns the latest machine image and requiring an image update
-func updateToLatestMachineImageVersion(machineImage gardencorev1beta1.MachineImage) (*gardencorev1beta1.ShootMachineImage, error) {
-	_, latestMachineImage, err := gardencorev1beta1helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
-	}
-	return &latestMachineImage, nil
+	return false, nil, nil, nil
 }
 
 // ForceMachineImageUpdateRequired checks if the shoots current machine image has to be forcefully updated
@@ -294,6 +355,7 @@ func ForceMachineImageUpdateRequired(shootCurrentImage *gardencorev1beta1.ShootM
 		if shootCurrentImage.Version != image.Version {
 			continue
 		}
+
 		return ExpirationDateExpired(image.ExpirationDate)
 	}
 	return false

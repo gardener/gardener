@@ -2024,6 +2024,13 @@ func schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref common.ReferenceCallback
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
@@ -7069,6 +7076,13 @@ func schema_pkg_apis_core_v1beta1_ExpirableVersion(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "ExpirationDate defines the time at which this version expires.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

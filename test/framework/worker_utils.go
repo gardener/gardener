@@ -53,7 +53,7 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.
 func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImage gardencorev1beta1.MachineImage, workerZone *string) error {
-	_, shootMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
+	_, shootMachineImage, err := helper.GetLatestNonPreviewShootMachineImage(machineImage)
 	if err != nil {
 		return err
 	}

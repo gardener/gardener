@@ -601,5 +601,77 @@ var _ = Describe("resourcereferencemanager", func() {
 				})))
 			})
 		})
+
+		Context("tests for CloudProfile objects", func() {
+			versions := []core.ExpirableVersion{
+				{Version: "1.17.2"},
+				{Version: "1.17.1"},
+				{Version: "1.17.0"},
+			}
+			shootOne := shootBase
+			shootOne.Name = "shoot-One"
+			shootOne.Spec.Provider.Type = "aws"
+			shootOne.Spec.Kubernetes.Version = "1.17.2"
+			shootTwo := shoot
+			shootTwo.Name = "shoot-Two"
+			shootTwo.Spec.Provider.Type = "aws"
+			shootTwo.Spec.Kubernetes.Version = "1.17.1"
+			var (
+				cloudProfile = core.CloudProfile{
+					Spec: core.CloudProfileSpec{
+						Kubernetes: core.KubernetesSettings{
+							Versions: versions,
+						},
+					},
+				}
+			)
+			It("should accept removal of kubernetes version that is not in use by any shoot", func() {
+				gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)
+				gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)
+
+				cloudProfileNew := core.CloudProfile{
+					Spec: core.CloudProfileSpec{
+						Kubernetes: core.KubernetesSettings{
+							Versions: []core.ExpirableVersion{
+								{Version: "1.17.2"},
+								{Version: "1.17.1"},
+							},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(project.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     defaultUserName,
+				}))
+			})
+
+			It("should reject removal of kubernetes versions that are still in use by shoots", func() {
+				gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)
+				gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)
+
+				cloudProfileNew := core.CloudProfile{
+					Spec: core.CloudProfileSpec{
+						Kubernetes: core.KubernetesSettings{
+							Versions: []core.ExpirableVersion{
+								{Version: "1.17.2"},
+							},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+		})
 	})
 })

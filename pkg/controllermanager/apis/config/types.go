@@ -77,6 +77,44 @@ type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// KubernetesVersionManagement configures the version policy that applies to
+	// Kubernetes versions in the CloudProfile
+	KubernetesVersionManagement *KubernetesVersionManagement
+	// MachineImageVersionManagement configures the version policy that applies to
+	// MachineImage versions in the CloudProfile
+	MachineImageVersionManagement *MachineImageVersionManagement
+}
+
+// KubernetesVersionManagement configures the version policy that applies to
+// Kubernetes versions in the CloudProfile
+// You can read more about it here: https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type KubernetesVersionManagement struct {
+	// Enabled defines whether the KubernetesVersionManagement is enabled
+	Enabled bool
+	// MaintainedKubernetesVersions is the amount of minor Kubernetes versions that are considered to be "maintained"
+	// refers to versions existing in the CloudProfile
+	// defaults to 3 as this is common practice in the Kubernetes Community
+	// e.g Versions in CloudProfile: 1.17, 1.15, 1.14, 1.13 -> Maintained: 1.17 & 1.15 & 1.14, Unmaintained: 1.13
+	MaintainedKubernetesVersions *int
+	// ExpirationDurationMaintainedVersion is the time until a deprecated Kubernetes patch version
+	// of a supported minor version expires
+	// defaults to 4 months (with each 30 days)
+	ExpirationDurationMaintainedVersion *metav1.Duration
+	// ExpirationDurationUnmaintainedVersion is the time until a deprecated Kubernetes patch version
+	// of an unsupported minor version expires
+	// defaults to 1 month (with 30 days)
+	ExpirationDurationUnmaintainedVersion *metav1.Duration
+}
+
+// MachineImageVersionManagement configures the version policy that applies to
+// MachineImage versions in the CloudProfile
+// You can read more about it here: https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type MachineImageVersionManagement struct {
+	// Enabled defines whether the MachineImageVersionManagement is enabled
+	Enabled bool
+	// ExpirationDuration is the time until a deprecated machine image version expires
+	// defaults to 4 months
+	ExpirationDuration *metav1.Duration
 }
 
 // ControllerRegistrationControllerConfiguration defines the configuration of the

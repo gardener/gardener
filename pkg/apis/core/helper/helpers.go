@@ -167,3 +167,78 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 	}
 	return nil
 }
+
+// GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.
+// returns a map associating the index in the old version slice with the version
+func GetRemovedVersions(old []core.ExpirableVersion, new []core.ExpirableVersion) map[int]core.ExpirableVersion {
+	newVersions := make(map[string]struct{}, len(old))
+	for _, x := range new {
+		newVersions[x.Version] = struct{}{}
+	}
+	diff := make(map[int]core.ExpirableVersion, len(old))
+	for index, x := range old {
+		if _, found := newVersions[x.Version]; !found {
+			diff[index] = x
+		}
+	}
+	return diff
+}
+
+// GetAddedVersions finds versions that have been added in the new compared to the new version slice.
+// returns a map associating the index in the new version slice with the version
+func GetAddedVersions(old []core.ExpirableVersion, new []core.ExpirableVersion) map[int]core.ExpirableVersion {
+	oldVersions := make(map[string]struct{}, len(old))
+	for _, x := range old {
+		oldVersions[x.Version] = struct{}{}
+	}
+	diff := make(map[int]core.ExpirableVersion, len(old))
+	for index, x := range new {
+		if _, found := oldVersions[x.Version]; !found {
+			diff[index] = x
+		}
+	}
+	return diff
+}
+
+// FilterVersionsWithClassification filters versions for a classification
+func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
+	var result []core.ExpirableVersion
+	for _, version := range versions {
+		if version.Classification == nil || *version.Classification != classification {
+			continue
+		}
+		result = append(result, version)
+	}
+	return result
+}
+
+// FilterVersionsWithSameMajorMinor filters the given versions slice for versions having the same major and minor version as the given version
+func FilterVersionsWithSameMajorMinor(version semver.Version, versions []core.ExpirableVersion) ([]core.ExpirableVersion, error) {
+	var result []core.ExpirableVersion
+	for _, v := range versions {
+		semVer, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return nil, err
+		}
+		if semVer.Minor() != version.Minor() || semVer.Major() != semVer.Major() {
+			continue
+		}
+		result = append(result, v)
+	}
+	return result, nil
+}
+
+// VersionIsLowerOrEqualThan determines if a version is lower than each of the versions in a given version slice
+func VersionIsLowerOrEqualThan(version semver.Version, versions []core.ExpirableVersion) (bool, error) {
+	for _, v := range versions {
+		semVer, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return false, err
+		}
+
+		if version.GreaterThan(semVer) {
+			return false, nil
+		}
+	}
+	return true, nil
+}

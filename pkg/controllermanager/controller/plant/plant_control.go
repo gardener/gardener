@@ -172,7 +172,7 @@ func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1be
 }
 
 func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, key string, logger logrus.FieldLogger) error {
-	logger.Infof("[PLANT RECONCILE] %s", plant.Name)
+	logger.Infof("[PLANT RECONCILE]")
 
 	// Add Finalizers to Plant
 	if finalizers := sets.NewString(plant.Finalizers...); !finalizers.Has(FinalizerName) {

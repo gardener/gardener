@@ -2171,6 +2171,7 @@ func Convert_core_Endpoint_To_v1alpha1_Endpoint(in *core.Endpoint, out *Endpoint
 func autoConvert_v1alpha1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVersion, out *core.ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	out.Classification = (*core.VersionClassification)(unsafe.Pointer(in.Classification))
 	return nil
 }
 
@@ -2182,6 +2183,7 @@ func Convert_v1alpha1_ExpirableVersion_To_core_ExpirableVersion(in *ExpirableVer
 func autoConvert_core_ExpirableVersion_To_v1alpha1_ExpirableVersion(in *core.ExpirableVersion, out *ExpirableVersion, s conversion.Scope) error {
 	out.Version = in.Version
 	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	out.Classification = (*VersionClassification)(unsafe.Pointer(in.Classification))
 	return nil
 }
 

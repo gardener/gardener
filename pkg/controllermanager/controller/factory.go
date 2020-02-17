@@ -102,7 +102,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)
+		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(ctx, f.cfg.Controllers.CloudProfile, f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		csrController                    = csrcontroller.NewCSRController(f.k8sGardenClient, f.k8sInformers, f.recorder)
 		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)

@@ -1007,6 +1007,11 @@ func (in *ExpirableVersion) DeepCopyInto(out *ExpirableVersion) {
 		in, out := &in.ExpirationDate, &out.ExpirationDate
 		*out = (*in).DeepCopy()
 	}
+	if in.Classification != nil {
+		in, out := &in.Classification, &out.Classification
+		*out = new(VersionClassification)
+		**out = **in
+	}
 	return
 }
 

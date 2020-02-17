@@ -29,10 +29,7 @@ import (
 )
 
 func hibernationLogger(key string) logrus.FieldLogger {
-	return gardenlogger.Logger.WithFields(logrus.Fields{
-		"controller": "shoot-hibernation",
-		"key":        key,
-	})
+	return gardenlogger.NewFieldLogger(gardenlogger.Logger, "shoot-hibernation", key)
 }
 
 func getShootHibernationSchedules(shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.HibernationSchedule {
@@ -192,8 +189,6 @@ func (c *Controller) deleteShootCron(logger logrus.FieldLogger, key string) {
 
 func (c *Controller) reconcileShootHibernationKey(key string) error {
 	logger := hibernationLogger(key)
-	logger.Info("Shoot Hibernation")
-
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -209,6 +204,8 @@ func (c *Controller) reconcileShootHibernationKey(key string) error {
 		logger.Debugf("Unable to retrieve object from store: %v", key, err)
 		return err
 	}
+
+	logger.Info("[SHOOT HIBERNATION]")
 
 	if shoot.DeletionTimestamp != nil {
 		c.deleteShootCron(logger, key)

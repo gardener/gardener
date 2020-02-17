@@ -19,14 +19,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -34,23 +38,20 @@ import (
 )
 
 // NewShootMaintenanceTest creates a new ShootMaintenanceTest
-func NewShootMaintenanceTest(ctx context.Context, shootGardenTest *ShootGardenerTest, shootMachineImageName *string) (*ShootMaintenanceTest, error) {
-	cloudProfileForShoot := &gardencorev1beta1.CloudProfile{}
-	shoot := shootGardenTest.Shoot
-	if err := shootGardenTest.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfileName}, cloudProfileForShoot); err != nil {
-		return nil, err
-	}
+func NewShootMaintenanceTest(ctx context.Context, gardenClient kubernetes.Interface, cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, shootMachineImageName *string, logger *logrus.Logger) (*ShootMaintenanceTest, error) {
 
 	// Get a ShootMachineImage with the latest version of the given machine image name from the CloudProfile
-	latestMachineImage, err := getLatestShootMachineImagePossible(shootMachineImageName, *cloudProfileForShoot)
+	latestMachineImage, err := getLatestShootMachineImagePossible(shootMachineImageName, *cloudProfile)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ShootMaintenanceTest{
-		ShootGardenerTest: shootGardenTest,
-		CloudProfile:      cloudProfileForShoot,
+		GardenClient:      gardenClient,
+		Shoot:             shoot,
+		CloudProfile:      cloudProfile,
 		ShootMachineImage: *latestMachineImage,
+		Logger:            logger,
 	}, nil
 }
 
@@ -70,30 +71,59 @@ func getLatestShootMachineImagePossible(shootMachineImageName *string, profile g
 	}
 
 	// Determine the latest version of the shoots image.
-	_, latestMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImageFromCloudProfile)
+	_, latestMachineImage, err := helper.GetLatestNonPreviewShootMachineImage(machineImageFromCloudProfile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
 	}
 	return &latestMachineImage, nil
 }
 
-// CreateShoot creates a Shoot Resource
-func (s *ShootMaintenanceTest) CreateShoot(ctx context.Context) (*gardencorev1beta1.Shoot, error) {
-	_, err := s.ShootGardenerTest.GetShoot(ctx)
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-	return s.ShootGardenerTest.CreateShootResource(ctx, s.ShootGardenerTest.Shoot)
-}
-
 // CleanupCloudProfile tries to update the CloudProfile with retries to make sure the machine image version & kubernetes version introduced during the integration test is being removed
 func (s *ShootMaintenanceTest) CleanupCloudProfile(ctx context.Context, testMachineImage gardencorev1beta1.ShootMachineImage, testKubernetesVersions []gardencorev1beta1.ExpirableVersion) error {
 	var (
-		attempt int
+		attempt                 int
+		expirationDateInThePast = metav1.Time{Time: time.Now().UTC().AddDate(0, 0, -1)}
 	)
+
+	// first need to update the versions to be expired & having an expiration date in the past
 	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
 		existingCloudProfile := &gardencorev1beta1.CloudProfile{}
-		if err = s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Name: s.ShootGardenerTest.Shoot.Spec.CloudProfileName}, existingCloudProfile); err != nil {
+		if err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Name: s.Shoot.Spec.CloudProfileName}, existingCloudProfile); err != nil {
+			return err
+		}
+
+		for machineIndex, image := range existingCloudProfile.Spec.MachineImages {
+			versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
+			if versionExists {
+				existingCloudProfile.Spec.MachineImages[machineIndex].Versions[index].ExpirationDate = &expirationDateInThePast
+			}
+		}
+
+		// clean kubernetes CloudProfile Version
+		for index, cloudprofileVersion := range existingCloudProfile.Spec.Kubernetes.Versions {
+			for _, testVersion := range testKubernetesVersions {
+				if cloudprofileVersion.Version == testVersion.Version {
+					existingCloudProfile.Spec.Kubernetes.Versions[index].ExpirationDate = &expirationDateInThePast
+					break
+				}
+			}
+		}
+
+		// update Cloud Profile
+		if _, err = s.GardenClient.GardenCore().CoreV1beta1().CloudProfiles().Update(existingCloudProfile); err != nil {
+			logger.Logger.Errorf("attempt %d failed to update CloudProfile %s due to %v", attempt, existingCloudProfile.Name, err)
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// then delete the test versions
+	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
+		existingCloudProfile := &gardencorev1beta1.CloudProfile{}
+		if err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Name: s.Shoot.Spec.CloudProfileName}, existingCloudProfile); err != nil {
 			return err
 		}
 
@@ -125,7 +155,7 @@ func (s *ShootMaintenanceTest) CleanupCloudProfile(ctx context.Context, testMach
 		existingCloudProfile.Spec.Kubernetes.Versions = removedKubernetesVersions
 
 		// update Cloud Profile to remove the test machine image
-		if _, err = s.ShootGardenerTest.GardenClient.GardenCore().CoreV1beta1().CloudProfiles().Update(existingCloudProfile); err != nil {
+		if _, err = s.GardenClient.GardenCore().CoreV1beta1().CloudProfiles().Update(existingCloudProfile); err != nil {
 			logger.Logger.Errorf("attempt %d failed to update CloudProfile %s due to %v", attempt, existingCloudProfile.Name, err)
 			return err
 		}
@@ -141,7 +171,7 @@ func (s *ShootMaintenanceTest) CleanupCloudProfile(ctx context.Context, testMach
 func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx context.Context, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
-		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
+		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			return false, err
 		}
@@ -152,7 +182,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 		for _, worker := range shoot.Spec.Provider.Workers {
 			nameVersions[worker.Machine.Image.Name] = worker.Machine.Image.Version
 			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
-				s.ShootGardenerTest.Logger.Infof("shoot maintained properly - received machine image update")
+				s.Logger.Infof("shoot maintained properly - received machine image update")
 				return true, nil
 			}
 		}
@@ -162,10 +192,10 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 		if nowIsAfterDeadline && imageUpdateRequired {
 			return false, fmt.Errorf("shoot did not get the expected machine image maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !imageUpdateRequired {
-			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an machineImage update")
+			s.Logger.Infof("shoot maintained properly - did not receive an machineImage update")
 			return true, nil
 		}
-		s.ShootGardenerTest.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, nameVersions, targetMachineImage.Name, targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
+		s.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.Shoot.Name, nameVersions, targetMachineImage.Name, targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }
@@ -174,13 +204,13 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 func (s *ShootMaintenanceTest) WaitForExpectedKubernetesVersionMaintenance(ctx context.Context, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
-		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
+		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			return false, err
 		}
 
 		if shoot.Spec.Kubernetes.Version == targetVersion && kubernetesVersionUpdateRequired {
-			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - received kubernetes version update")
+			s.Logger.Infof("shoot maintained properly - received kubernetes version update")
 			return true, nil
 		}
 
@@ -189,82 +219,87 @@ func (s *ShootMaintenanceTest) WaitForExpectedKubernetesVersionMaintenance(ctx c
 		if nowIsAfterDeadline && kubernetesVersionUpdateRequired {
 			return false, fmt.Errorf("shoot did not get the expected kubernetes version maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !kubernetesVersionUpdateRequired {
-			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an kubernetes version update")
+			s.Logger.Infof("shoot maintained properly - did not receive an kubernetes version update")
 			return true, nil
 		}
-		s.ShootGardenerTest.Logger.Infof("shoot %s has kubernetes version %s. Target version: %s. Kubernetes Version Update Required: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, shoot.Spec.Kubernetes.Version, targetVersion, kubernetesVersionUpdateRequired, deadline.Sub(now))
+		s.Logger.Infof("shoot %s has kubernetes version %s. Target version: %s. Kubernetes Version Update Required: %t. Deadline is in %v", s.Shoot.Name, shoot.Spec.Kubernetes.Version, targetVersion, kubernetesVersionUpdateRequired, deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }
 
 // TryUpdateShootForMachineImageMaintenance tries to update the maintenance section of the shoot spec regarding the machine image
-func (s *ShootMaintenanceTest) TryUpdateShootForMachineImageMaintenance(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot, updateMachineImage bool, workers []gardencorev1beta1.Worker) error {
+func (s *ShootMaintenanceTest) TryUpdateShootForMachineImageMaintenance(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot, startMaintenance bool, workers *[]gardencorev1beta1.Worker) error {
 	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.ShootGardenerTest.GardenClient.Client(), shoot, func() error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.GardenClient.Client(), shoot, func() error {
 		if shootToUpdate.Spec.Maintenance.AutoUpdate != nil {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.MachineImageVersion
 		}
+		if startMaintenance {
+			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
+		}
 		shoot.Annotations = utils.MergeStringMaps(shoot.Annotations, shootToUpdate.Annotations)
-		if updateMachineImage {
-			shoot.Spec.Provider.Workers = workers
+		if workers != nil {
+			shoot.Spec.Provider.Workers = *workers
 		}
 		return nil
 	})
 }
 
 // TryUpdateShootForKubernetesMaintenance tries to update the maintenance section of the shoot spec regarding the Kubernetes version
-func (s *ShootMaintenanceTest) TryUpdateShootForKubernetesMaintenance(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot) error {
+func (s *ShootMaintenanceTest) TryUpdateShootForKubernetesMaintenance(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot, startMaintenance bool, kubernetesVersion *string) error {
 	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.ShootGardenerTest.GardenClient.Client(), shoot, func() error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.GardenClient.Client(), shoot, func() error {
+		if kubernetesVersion != nil {
+			shoot.Spec.Kubernetes.Version = *kubernetesVersion
+		}
+		if startMaintenance {
+			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
+		}
 		shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.KubernetesVersion
 		shoot.Annotations = utils.MergeStringMaps(shoot.Annotations, shootToUpdate.Annotations)
 		return nil
 	})
 }
 
-// TryUpdateCloudProfileForMaintenance tries to update the images of the Cloud Profile
-func (s *ShootMaintenanceTest) TryUpdateCloudProfileForMaintenance(ctx context.Context, shoot *gardencorev1beta1.Shoot, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time) error {
+// TryUpdateCloudProfileForMachineImageMaintenance tries to update the images of the Cloud Profile
+func (s *ShootMaintenanceTest) TryUpdateCloudProfileForMachineImageMaintenance(ctx context.Context, shoot *gardencorev1beta1.Shoot, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
 	cloudProfile := &gardencorev1beta1.CloudProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: shoot.Spec.CloudProfileName,
 		},
 	}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.ShootGardenerTest.GardenClient.Client(), cloudProfile, func() error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.GardenClient.Client(), cloudProfile, func() error {
 		// update Cloud Profile with expirationDate for integration test machine image
-		cloudProfileImagesToUpdate := []gardencorev1beta1.MachineImage{}
-		for _, image := range cloudProfile.Spec.MachineImages {
+		for i, image := range cloudProfile.Spec.MachineImages {
 			versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
 			if versionExists {
-				image.Versions[index].ExpirationDate = expirationDate
+				cloudProfile.Spec.MachineImages[i].Versions[index].ExpirationDate = expirationDate
+				cloudProfile.Spec.MachineImages[i].Versions[index].Classification = classification
 			}
-			cloudProfileImagesToUpdate = append(cloudProfileImagesToUpdate, image)
 		}
-		cloudProfile.Spec.MachineImages = cloudProfileImagesToUpdate
 		return nil
 	})
 }
 
-// TryUpdateCloudProfileForKubernetesVersionMaintenance tries to update the images of the Cloud Profile
-func (s *ShootMaintenanceTest) TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx context.Context, shoot *gardencorev1beta1.Shoot, targetVersion string, expirationDateInNearFuture *metav1.Time) error {
+// TryUpdateCloudProfileForKubernetesVersionMaintenance tries to update a specific kubernetes version of the Cloud Profile
+func (s *ShootMaintenanceTest) TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx context.Context, shoot *gardencorev1beta1.Shoot, targetVersion string, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
 	cloudProfile := &gardencorev1beta1.CloudProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: shoot.Spec.CloudProfileName,
 		},
 	}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.ShootGardenerTest.GardenClient.Client(), cloudProfile, func() error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, s.GardenClient.Client(), cloudProfile, func() error {
 		// update kubernetes version in cloud profile with an expiration date
-		cloudProfileKubernetesVersionsToUpdate := []gardencorev1beta1.ExpirableVersion{}
-		for _, version := range cloudProfile.Spec.Kubernetes.Versions {
+		for i, version := range cloudProfile.Spec.Kubernetes.Versions {
 			if version.Version == targetVersion {
-				version.ExpirationDate = expirationDateInNearFuture
+				cloudProfile.Spec.Kubernetes.Versions[i].Classification = classification
+				cloudProfile.Spec.Kubernetes.Versions[i].ExpirationDate = expirationDate
 			}
-			cloudProfileKubernetesVersionsToUpdate = append(cloudProfileKubernetesVersionsToUpdate, version)
 		}
-		cloudProfile.Spec.Kubernetes.Versions = cloudProfileKubernetesVersionsToUpdate
 		return nil
 	})
 }
