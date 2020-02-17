@@ -17,7 +17,7 @@
 {{- end }}
 {{- if .Values.enableContainerD }}
 --feature-gates=CRIContainerLogRotation=true
-{{- end -}}
+{{- end }}
 --pod-infra-container-image={{ index .Values.images "pause-container" }}
 --kubeconfig=/var/lib/kubelet/kubeconfig-real
 --network-plugin=cni

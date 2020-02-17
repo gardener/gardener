@@ -768,6 +768,8 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
+	// EnableContainerD indicate of kubelet should be started with ContainerD and not docker
+	EnableContainerD bool  `json:"enableContainerD,omitempty"`
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	// +optional
 	Kubernetes *WorkerKubernetes `json:"kubernetes,omitempty"`

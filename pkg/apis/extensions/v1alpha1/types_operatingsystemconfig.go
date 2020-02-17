@@ -69,7 +69,8 @@ type OperatingSystemConfigList struct {
 type OperatingSystemConfigSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-
+	// EnableContainerD indicate of kubelet should be started with ContainerD and not docker
+	EnableContainerD bool  `json:"enableContainerD,omitempty"`
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
 	// cloud-config-downloader script already running on a bootstrapped VM.
