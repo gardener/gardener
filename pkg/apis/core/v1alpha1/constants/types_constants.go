@@ -46,9 +46,6 @@ const (
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
 	DeploymentNameClusterAutoscaler = "cluster-autoscaler"
-	// DeploymentNameDependencyWatchdog is a constant for the name of a Kubernetes deployment object that contains
-	// the dependency-watchdog pod.
-	DeploymentNameDependencyWatchdog = "dependency-watchdog"
 	// DeploymentNameKubeAPIServer is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-apiserver pod.
 	DeploymentNameKubeAPIServer = "kube-apiserver"

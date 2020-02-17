@@ -17,7 +17,6 @@ package v1alpha1
 import (
 	"math"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -130,15 +129,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if obj.Spec.Purpose == nil {
 		p := ShootPurposeEvaluation
-
-		// backwards compatibility - take purpose from annotation if given. If not, default.
-		// TODO: This code can be removed in a future version
-		if v, ok := obj.Annotations[v1alpha1constants.GardenerPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1alpha1constants.GardenNamespace)) {
-			p = ShootPurpose(v)
-		} else if v, ok := obj.Annotations[v1alpha1constants.GardenPurpose]; ok && (v == string(ShootPurposeEvaluation) || v == string(ShootPurposeTesting) || v == string(ShootPurposeDevelopment) || v == string(ShootPurposeProduction) || (v == string(ShootPurposeInfrastructure) && obj.Namespace == v1alpha1constants.GardenNamespace)) {
-			p = ShootPurpose(v)
-		}
-
 		obj.Spec.Purpose = &p
 	}
 }

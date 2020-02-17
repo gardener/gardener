@@ -44,10 +44,6 @@ var (
 	}
 )
 
-func statusToBool(status Status) bool {
-	return status == StatusHealthy
-}
-
 func statusValue(s Status) int {
 	value, ok := shootStatusValues[s]
 	if !ok {
