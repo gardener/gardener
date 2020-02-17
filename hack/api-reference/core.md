@@ -2920,6 +2920,18 @@ DNSIncludeExclude
 </tr>
 <tr>
 <td>
+<code>primary</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Primary indicates that this DNSProvider is used for shoot related domains.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>secretName</code></br>
 <em>
 string
@@ -7296,5 +7308,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>2bdda9f61</code>.
+on git commit <code>8f4d7313c</code>.
 </em></p>

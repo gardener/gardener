@@ -17,6 +17,10 @@ metadata:
   annotations:
     dns.gardener.cloud/realms: "{{ .Release.Namespace }},"
 {{- end }}
+{{- if .Values.providerLabels }}
+  labels:
+{{ toYaml .Values.providerLabels | indent 4 }}
+{{- end }}
 spec:
   type: {{ .Values.provider }}
   secretRef:

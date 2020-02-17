@@ -310,27 +310,12 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	}
 
 	var (
-		externalDomain = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
-		defaultDomain  = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
+		externalDomain  = &garden.Domain{Domain: *shoot.Spec.DNS.Domain}
+		defaultDomain   = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
+		primaryProvider = gardencorev1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
 	)
 
 	switch {
-	case len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].SecretName != nil:
-		secret := &corev1.Secret{}
-		if err := client.Get(ctx, kutil.Key(shoot.Namespace, *shoot.Spec.DNS.Providers[0].SecretName), secret); err != nil {
-			return nil, fmt.Errorf("could not get dns provider secret \"%s\": %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
-		}
-		externalDomain.SecretData = secret.Data
-		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type
-		if domains := shoot.Spec.DNS.Providers[0].Domains; domains != nil {
-			externalDomain.IncludeDomains = domains.Include
-			externalDomain.ExcludeDomains = domains.Exclude
-		}
-		if zones := shoot.Spec.DNS.Providers[0].Zones; zones != nil {
-			externalDomain.IncludeZones = zones.Include
-			externalDomain.ExcludeZones = zones.Exclude
-		}
-
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider
@@ -339,14 +324,24 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		externalDomain.IncludeZones = defaultDomain.IncludeZones
 		externalDomain.ExcludeZones = defaultDomain.ExcludeZones
 
-	case len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].SecretName == nil:
-		externalDomain.SecretData = shootSecret.Data
-		externalDomain.Provider = *shoot.Spec.DNS.Providers[0].Type
-		if domains := shoot.Spec.DNS.Providers[0].Domains; domains != nil {
+	case primaryProvider != nil:
+		if primaryProvider.SecretName != nil {
+			secret := &corev1.Secret{}
+			if err := client.Get(ctx, kutil.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
+				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
+			}
+			externalDomain.SecretData = secret.Data
+		} else {
+			externalDomain.SecretData = shootSecret.Data
+		}
+		if primaryProvider.Type != nil {
+			externalDomain.Provider = *primaryProvider.Type
+		}
+		if domains := primaryProvider.Domains; domains != nil {
 			externalDomain.IncludeDomains = domains.Include
 			externalDomain.ExcludeDomains = domains.Exclude
 		}
-		if zones := shoot.Spec.DNS.Providers[0].Zones; zones != nil {
+		if zones := primaryProvider.Zones; zones != nil {
 			externalDomain.IncludeZones = zones.Include
 			externalDomain.ExcludeZones = zones.Exclude
 		}

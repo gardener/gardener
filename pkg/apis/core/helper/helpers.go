@@ -134,7 +134,28 @@ func TaintsHave(taints []core.SeedTaint, key string) bool {
 
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
-	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
+	if shoot.Spec.DNS == nil {
+		return false
+	}
+
+	primary := FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+	if primary != nil {
+		return *primary.Primary && primary.Type != nil && *primary.Type == core.DNSUnmanaged
+	}
+
+	return len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
+}
+
+// FindPrimaryDNSProvider finds the primary provider among the given `providers`.
+// It returns the first provider if multiple candidates are found.
+func FindPrimaryDNSProvider(providers []core.DNSProvider) *core.DNSProvider {
+	for _, provider := range providers {
+		if provider.Primary != nil && *provider.Primary {
+			primaryProvider := provider
+			return &primaryProvider
+		}
+	}
+	return nil
 }
 
 // FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.

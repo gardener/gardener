@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -120,5 +121,41 @@ var _ = Describe("helper", func() {
 		Entry("no workers", nil, "", nil),
 		Entry("worker not found", []core.Worker{{Name: "foo"}}, "bar", nil),
 		Entry("worker found", []core.Worker{{Name: "foo"}}, "foo", &core.Worker{Name: "foo"}),
+	)
+
+	DescribeTable("#FindPrimaryDNSProvider",
+		func(providers []core.DNSProvider, matcher gomegatypes.GomegaMatcher) {
+			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
+		},
+
+		Entry("no providers", nil, BeNil()),
+		Entry("one non primary provider", []core.DNSProvider{{Type: pointer.StringPtr("provider")}}, BeNil()),
+		Entry("one primary provider", []core.DNSProvider{{Type: pointer.StringPtr("provider"),
+			Primary: pointer.BoolPtr(true)}}, Equal(&core.DNSProvider{Type: pointer.StringPtr("provider"), Primary: pointer.BoolPtr(true)})),
+		Entry("multiple w/ one primary provider", []core.DNSProvider{
+			{
+				Type: pointer.StringPtr("provider2"),
+			},
+			{
+				Type:    pointer.StringPtr("provider1"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type: pointer.StringPtr("provider3"),
+			},
+		}, Equal(&core.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
+		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
+			{
+				Type:    pointer.StringPtr("provider1"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type:    pointer.StringPtr("provider2"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type: pointer.StringPtr("provider3"),
+			},
+		}, Equal(&core.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
 	)
 })

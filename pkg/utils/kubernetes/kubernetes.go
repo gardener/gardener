@@ -163,6 +163,32 @@ func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.
 	})
 }
 
+// WaitUntilResourcesDeleted waits until the given resources are gone.
+// It respects the given interval and timeout.
+func WaitUntilResourcesDeleted(ctx context.Context, c client.Client, obj runtime.Object, interval time.Duration, opts ...client.ListOption) error {
+	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
+		if err := c.List(ctx, obj, opts...); err != nil {
+			return retry.SevereError(err)
+		}
+		if meta.LenList(obj) == 0 {
+			return retry.Ok()
+		}
+		var remainingItems []string
+		acc := meta.NewAccessor()
+		if err := meta.EachListItem(obj, func(remainingObj runtime.Object) error {
+			name, err := acc.Name(remainingObj)
+			if err != nil {
+				return err
+			}
+			remainingItems = append(remainingItems, name)
+			return nil
+		}); err != nil {
+			return retry.SevereError(err)
+		}
+		return retry.MinorError(fmt.Errorf("resource(s) %s still exists", remainingItems))
+	})
+}
+
 // WaitUntilResourceDeletedWithDefaults deletes the given resource and then waits until it has been deleted. It
 // uses a default interval and timeout
 func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, obj runtime.Object) error {

@@ -441,10 +441,15 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
+		deleteDNSProviders = g.Add(flow.Task{
+			Name:         "Deleting DNS providers",
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(dnsEnabled),
+			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord),
+		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

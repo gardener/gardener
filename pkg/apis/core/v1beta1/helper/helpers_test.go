@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -877,5 +878,43 @@ var _ = Describe("helper", func() {
 			}},
 			true,
 		),
+	)
+
+	DescribeTable("#FindPrimaryDNSProvider",
+		func(providers []gardencorev1beta1.DNSProvider, matcher types.GomegaMatcher) {
+			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
+		},
+
+		Entry("no providers", nil, BeNil()),
+		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
+			{Type: pointer.StringPtr("provider")},
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider")})),
+		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: pointer.StringPtr("provider"),
+			Primary: pointer.BoolPtr(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider"), Primary: pointer.BoolPtr(true)})),
+		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
+			{
+				Type: pointer.StringPtr("provider2"),
+			},
+			{
+				Type:    pointer.StringPtr("provider1"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type: pointer.StringPtr("provider3"),
+			},
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
+		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
+			{
+				Type:    pointer.StringPtr("provider1"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type:    pointer.StringPtr("provider2"),
+				Primary: pointer.BoolPtr(true),
+			},
+			{
+				Type: pointer.StringPtr("provider3"),
+			},
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
 	)
 })

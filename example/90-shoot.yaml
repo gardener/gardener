@@ -193,6 +193,7 @@ spec:
   # providers:
   # - type: aws-route53
   #   secretName: my-custom-domain-secret
+  #   primary: true # `true` indicates that this provider is also used to manage the shoot domain `.spec.dns.domain`
   #   domains:
   #     include:
   #     - my-custom-domain.com

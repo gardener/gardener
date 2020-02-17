@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -298,18 +299,21 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 		// allow to finalize DNS configuration during seed assignment. this is required because
 		// some decisions about the DNS setup can only be taken once the target seed is clarified.
 		if !seedGotAssigned {
-			providersNew := len(new.Providers)
-			providersOld := len(old.Providers)
+			var (
+				primaryOld = helper.FindPrimaryDNSProvider(old.Providers)
+				primaryNew = helper.FindPrimaryDNSProvider(new.Providers)
+			)
 
-			if providersNew != providersOld {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "adding or removing providers is not yet allowed"))
-				return allErrs
+			if primaryOld != nil && primaryNew == nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "removing a primary provider is not allowed"))
 			}
 
-			for i, provider := range new.Providers {
-				if provider.Type != old.Providers[i].Type {
-					allErrs = append(allErrs, apivalidation.ValidateImmutableField(provider.Type, old.Providers[i].Type, fldPath.Child("providers").Index(i).Child("type"))...)
-				}
+			if primaryOld != nil && primaryOld.Type != nil && primaryNew != nil && primaryNew.Type == nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "removing the primary provider type is not allowed"))
+			}
+
+			if primaryOld != nil && primaryOld.Type != nil && primaryNew != nil && primaryNew.Type != nil && *primaryOld.Type != *primaryNew.Type {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "changing primary provider type is not allowed"))
 			}
 		}
 	}
@@ -363,15 +367,44 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
 	}
 
+	primaryDNSProvider := helper.FindPrimaryDNSProvider(dns.Providers)
+	if primaryDNSProvider != nil && primaryDNSProvider.Type != nil {
+		if *primaryDNSProvider.Type != core.DNSUnmanaged && dns.Domain == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("domain"), fmt.Sprintf("domain must be set when primary provider type is not set to %q", core.DNSUnmanaged)))
+		}
+	}
+
+	var (
+		names        = sets.NewString()
+		primaryFound bool
+	)
 	for i, provider := range dns.Providers {
 		idxPath := fldPath.Child("providers").Index(i)
+
+		if provider.SecretName != nil && provider.Type != nil {
+			providerName := botanist.GenerateDNSProviderName(*provider.SecretName, *provider.Type)
+			if names.Has(providerName) {
+				allErrs = append(allErrs, field.Invalid(idxPath, providerName, "combination of .secretName and .type must be unique across dns providers"))
+				continue
+			}
+			for _, err := range validation.IsDNS1123Subdomain(providerName) {
+				allErrs = append(allErrs, field.Invalid(idxPath, providerName, fmt.Sprintf("combination of .secretName and .type is invalid: %q", err)))
+			}
+			names.Insert(providerName)
+		}
+
+		if provider.Primary != nil && *provider.Primary {
+			if primaryFound {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("primary"), "multiple primary DNS providers are not supported"))
+				continue
+			}
+			primaryFound = true
+		}
+
 		if providerType := provider.Type; providerType != nil {
 			if *providerType == core.DNSUnmanaged && provider.SecretName != nil {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("secretName"), provider.SecretName, fmt.Sprintf("secretName must not be set when type is %q", core.DNSUnmanaged)))
-			}
-
-			if *providerType != core.DNSUnmanaged && dns.Domain == nil {
-				allErrs = append(allErrs, field.Required(idxPath.Child("domain"), fmt.Sprintf("domain must be set when type is not set to %q", core.DNSUnmanaged)))
+				continue
 			}
 		}
 

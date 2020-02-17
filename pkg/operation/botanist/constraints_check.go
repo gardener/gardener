@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
@@ -73,7 +74,7 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 				}
 
 				c := gardencorev1beta1helper.UpdatedCondition(constraint, gardencorev1beta1.ConditionFalse, "ProblematicWebhooks",
-					fmt.Sprintf("Shoot cannot be hibernated because of ValidatingWebhookConfiguration \"%s\": webhook \"%s\" with failurePolicy \"%s\" will probably prevent the Shoot from being woken up again",
+					fmt.Sprintf("Shoot cannot be hibernated because of ValidatingWebhookConfiguration %q: webhook %q with failurePolicy %q will probably prevent the Shoot from being woken up again",
 						webhookConfig.Name, w.Name, failurePolicy))
 				return &c, nil
 			}
@@ -96,7 +97,7 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 				}
 
 				c := gardencorev1beta1helper.UpdatedCondition(constraint, gardencorev1beta1.ConditionFalse, "ProblematicWebhooks",
-					fmt.Sprintf("Shoot cannot be hibernated because of MutatingWebhookConfiguration \"%s\": webhook \"%s\" with failurePolicy \"%s\" will probably prevent the Shoot from being woken up again",
+					fmt.Sprintf("Shoot cannot be hibernated because of MutatingWebhookConfiguration %q: webhook %q with failurePolicy %q will probably prevent the Shoot from being woken up again",
 						webhookConfig.Name, w.Name, failurePolicy))
 				return &c, nil
 			}

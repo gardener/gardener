@@ -34,8 +34,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DNSPurposeIngress is a constant for a DNS record used for the ingress domain name.
-const DNSPurposeIngress = "ingress"
+// DNSIngressName is a constant for a DNS resources used for the ingress domain name.
+const DNSIngressName = "ingress"
 
 // EnsureIngressDNSRecord creates the respective wildcard DNS record for the nginx-ingress-controller.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
@@ -48,16 +48,16 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.waitUntilDNSProviderReady(ctx, DNSPurposeExternal); err != nil {
+	if err := b.waitUntilDNSProviderReady(ctx, DNSIngressName); err != nil {
 		return err
 	}
 
-	return b.deployDNSEntry(ctx, DNSPurposeIngress, b.Shoot.GetIngressFQDN("*"), loadBalancerIngress)
+	return b.deployDNSEntry(ctx, DNSIngressName, b.Shoot.GetIngressFQDN("*"), loadBalancerIngress)
 }
 
 // DestroyIngressDNSRecord destroys the nginx-ingress resources created by Terraform.
 func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
-	return b.deleteDNSEntry(ctx, DNSPurposeIngress)
+	return b.deleteDNSEntry(ctx, DNSIngressName)
 }
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of

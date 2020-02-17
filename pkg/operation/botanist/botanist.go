@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -111,19 +112,22 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 	}
 	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = machineImagesSet
 
-	if !helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
+	if !b.Shoot.DisableDNS {
+		requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
 		if b.Garden.InternalDomain.Provider != "unmanaged" {
-			if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
-				requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
-			}
 			requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Garden.InternalDomain.Provider)
 		}
 
 		if b.Shoot.ExternalDomain != nil && b.Shoot.ExternalDomain.Provider != "unmanaged" {
-			if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
-				requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
-			}
 			requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Shoot.ExternalDomain.Provider)
+		}
+
+		if b.Shoot.Info.Spec.DNS != nil {
+			for _, provider := range b.Shoot.Info.Spec.DNS.Providers {
+				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
+					requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(*provider.Type)
+				}
+			}
 		}
 	}
 

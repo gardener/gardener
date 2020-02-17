@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -49,6 +50,14 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	for _, lastError := range o.Shoot.Info.Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
+		}
+	}
+
+	// TODO: timuthy - Only required for migration and can be removed in a future version
+	if o.Shoot.ExternalClusterDomain != nil && garden.DomainIsDefaultDomain(*o.Shoot.ExternalClusterDomain, o.Garden.DefaultDomains) != nil {
+		o.Logger.Info("Migration step - setting primary DNS provider")
+		if err := kutil.SubmitEmptyPatch(context.TODO(), o.K8sGardenClient.Client(), o.Shoot.Info); err != nil {
+			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 		}
 	}
 
@@ -132,10 +141,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS && !o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
-		_ = g.Add(flow.Task{
+		deployExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying additional DNS providers",
+			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).DoIf(dnsEnabled && !o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",

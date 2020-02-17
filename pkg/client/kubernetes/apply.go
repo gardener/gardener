@@ -208,7 +208,7 @@ func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, optio
 		}
 
 		if err := c.applyObject(ctx, obj, options); err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("could not apply object of kind \"%s\" \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not apply object of kind %q \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
 			continue
 		}
 	}
@@ -238,7 +238,7 @@ func (c *Applier) DeleteManifest(ctx context.Context, r UnstructuredReader) erro
 		}
 
 		if err := c.deleteObject(ctx, obj); err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("could not delete object of kind \"%s\" \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
+			allErrs = multierror.Append(allErrs, fmt.Errorf("could not delete object of kind %q \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
 			continue
 		}
 	}

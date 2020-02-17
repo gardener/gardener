@@ -749,6 +749,54 @@ var _ = Describe("kubernetes", func() {
 				Expect(err).To(BeIdenticalTo(expectedErr))
 			})
 		})
+
+		Describe("#WaitUntilResourcesDeleted", func() {
+			var (
+				namespace = "bar"
+				name      = "foo"
+				configMap = corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      name,
+					},
+				}
+				configMapList *corev1.ConfigMapList
+			)
+
+			BeforeEach(func() {
+				configMapList = &corev1.ConfigMapList{}
+			})
+
+			It("should wait until the resources are deleted w/ empty list", func() {
+				ctx := context.TODO()
+
+				c.EXPECT().List(ctx, configMapList).Return(nil)
+
+				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(Succeed())
+			})
+
+			It("should timeout w/ remaining elements", func() {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
+					cancel()
+					configMapList.Items = append(configMapList.Items, configMap)
+					return nil
+				})
+
+				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(HaveOccurred())
+			})
+
+			It("return an unexpected error", func() {
+				ctx := context.TODO()
+
+				expectedErr := fmt.Errorf("unexpected")
+				c.EXPECT().List(ctx, configMapList).Return(expectedErr)
+
+				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(BeIdenticalTo(expectedErr))
+			})
+		})
 	})
 
 	DescribeTable("#TruncateLabelValue",

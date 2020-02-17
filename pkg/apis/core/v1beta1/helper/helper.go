@@ -758,3 +758,19 @@ func IsAPIServerExposureManaged(obj metav1.Object) bool {
 
 	return false
 }
+
+// FindPrimaryDNSProvider finds the primary provider among the given `providers`.
+// It returns the first provider in case no primary provider is available or the first one if multiple candidates are found.
+func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardencorev1beta1.DNSProvider {
+	for _, provider := range providers {
+		if provider.Primary != nil && *provider.Primary {
+			primaryProvider := provider
+			return &primaryProvider
+		}
+	}
+	// TODO: timuthy - Only required for migration and can be removed in a future version.
+	if len(providers) > 0 {
+		return &providers[0]
+	}
+	return nil
+}
