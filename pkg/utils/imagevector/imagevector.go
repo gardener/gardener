@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -25,8 +26,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// OverrideEnv is the name of the image vector override environment variable.
-const OverrideEnv = "IMAGEVECTOR_OVERWRITE"
+const (
+	// OverrideEnv is the name of the image vector override environment variable.
+	OverrideEnv = "IMAGEVECTOR_OVERWRITE"
+	// SHA256TagPrefix is the prefix in an image tag for sha256 tags.
+	SHA256TagPrefix = "sha256:"
+)
 
 // Read reads an ImageVector from the given io.Reader.
 func Read(r io.Reader) (ImageVector, error) {
@@ -159,7 +164,17 @@ func WithEnvOverride(vector ImageVector) (ImageVector, error) {
 
 // String implements Stringer.
 func (o *FindOptions) String() string {
-	return fmt.Sprintf("runtime version %v target version %v", o.RuntimeVersion, o.TargetVersion)
+	var runtimeVersion string
+	if o.RuntimeVersion != nil {
+		runtimeVersion = "runtime version " + *o.RuntimeVersion + " "
+	}
+
+	var targetVersion string
+	if o.TargetVersion != nil {
+		targetVersion = "target version " + *o.TargetVersion
+	}
+
+	return runtimeVersion + targetVersion
 }
 
 // ApplyOptions applies the given FindOptionFuncs to these FindOptions. Returns a pointer to the mutated value.
@@ -184,6 +199,8 @@ func TargetVersion(version string) FindOptionFunc {
 	}
 }
 
+var r = regexp.MustCompile(`^(v?[0-9]+|=)`)
+
 func checkConstraint(constraint, version *string) (score int, ok bool, err error) {
 	if constraint == nil || version == nil {
 		return 0, true, nil
@@ -194,7 +211,14 @@ func checkConstraint(constraint, version *string) (score int, ok bool, err error
 		return 0, false, err
 	}
 
-	return 1, true, nil
+	score = 1
+
+	// prioritize equal constraints
+	if r.MatchString(*constraint) {
+		score = 2
+	}
+
+	return score, true, nil
 }
 
 func match(source *ImageSource, name string, opts *FindOptions) (score int, ok bool, err error) {
@@ -242,6 +266,7 @@ func (v ImageVector) FindImage(name string, opts ...FindOptionFunc) (*Image, err
 
 			if ok && (bestCandidate == nil || score > bestScore) {
 				bestCandidate = source
+				bestScore = score
 			}
 		}
 	}
@@ -293,5 +318,11 @@ func (i *Image) String() string {
 	if i.Tag == nil {
 		return i.Repository
 	}
-	return fmt.Sprintf("%s:%s", i.Repository, *i.Tag)
+
+	delimiter := ":"
+	if strings.HasPrefix(*i.Tag, SHA256TagPrefix) {
+		delimiter = "@"
+	}
+
+	return i.Repository + delimiter + *i.Tag
 }

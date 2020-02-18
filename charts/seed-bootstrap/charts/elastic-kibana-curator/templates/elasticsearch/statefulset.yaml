@@ -64,7 +64,7 @@ spec:
             resourceFieldRef:
               resource: limits.cpu
         resources:
-{{- include "util-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
+{{- include "utils-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
         ports:
         - containerPort: {{ .Values.global.elasticsearchPorts.db }}
           name: http
