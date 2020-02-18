@@ -64,3 +64,17 @@ spec:
       inline:
         encoding: b64
         data: {{ include "seed-operatingsystemconfig.downloader.download-script" . | b64enc }}
+  {{- if .Values.enableContainerD }}
+  - path: /etc/systemd/system/containerd.service.d/10-exec-start-pre-init-config.conf
+    permissions: 0644
+    content:
+      inline:
+        encoding: b64
+        data: {{ include "containerd-config" . | b64enc }}
+  - path: /opt/bin/init-containerd
+    permissions: 0744
+    content:
+      inline:
+        encoding: b64
+        data: {{ include "init-containerd-config-script" . | b64enc }}
+  {{- end }}

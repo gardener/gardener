@@ -33,6 +33,6 @@
 --v=2 $KUBELET_EXTRA_ARGS
 {{- if .Values.enableContainerD }}
 --container-runtime=remote
---container-runtime-endpoint=<os-containerd-path-placeholder>
+--container-runtime-endpoint=/run/containerd/containerd.sock
 {{- end -}}
 {{- end -}}
