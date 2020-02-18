@@ -21,12 +21,18 @@ spec:
       annotations:
         checksum/configmap-gardener-scheduler-config: {{ include (print $.Template.BasePath "/scheduler/configmap-componentconfig.yaml") . | sha256sum }}
         checksum/secret-gardener-scheduler-kubeconfig: {{ include (print $.Template.BasePath "/scheduler/secret-kubeconfig.yaml") . | sha256sum }}
+        {{- if .Values.global.scheduler.podAnnotations }}
+{{ toYaml .Values.global.scheduler.podAnnotations | indent 8 }}
+        {{- end }}
       labels:
         app: gardener
         role: scheduler
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
+        {{- if .Values.global.scheduler.podLabels }}
+{{ toYaml .Values.global.scheduler.podLabels | indent 8 }}
+        {{- end }}
     spec:
       {{- if not .Values.global.scheduler.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}
