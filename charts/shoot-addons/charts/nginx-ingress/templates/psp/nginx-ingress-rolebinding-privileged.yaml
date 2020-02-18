@@ -1,12 +1,12 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  name: garden.sapcloud.io:psp:{{ template "nginx-ingress.fullname" . }}
+  name: gardener.cloud:psp:{{ template "nginx-ingress.fullname" . }}
   namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: garden.sapcloud.io:psp:privileged
+  name: gardener.cloud:psp:privileged
 subjects:
 - kind: ServiceAccount
   name: {{ template "nginx-ingress.fullname" . }}

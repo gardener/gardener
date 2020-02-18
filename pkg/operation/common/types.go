@@ -374,16 +374,6 @@ const (
 	// Deprecated: Use `ShootIgnore` instead.
 	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
-	// AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
-	//
-	// Deprecated: Use `corev1beta1.Seed` instead.
-	AnnotatePersistentVolumeMinimumSize = "persistentvolume.garden.sapcloud.io/minimumSize"
-
-	// AnnotatePersistentVolumeProvider is used to tell volume provider in the k8s cluster
-	//
-	// Deprecated: Use `corev1beta1.Seed` instead.
-	AnnotatePersistentVolumeProvider = "persistentvolume.garden.sapcloud.io/provider"
-
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
 

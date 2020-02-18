@@ -17,7 +17,6 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
 
 	. "github.com/onsi/ginkgo"
@@ -44,9 +43,6 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed = &core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed-1",
-					Annotations: map[string]string{
-						common.AnnotatePersistentVolumeMinimumSize: "10Gi",
-					},
 				},
 				Spec: core.SeedSpec{
 					Provider: core.SeedProvider{
@@ -100,14 +96,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
 			}))
-		})
-
-		It("should forbid invalid annotations", func() {
-			seed.ObjectMeta.Annotations = map[string]string{
-				common.AnnotatePersistentVolumeMinimumSize: "10Gix",
-			}
-			errorList := ValidateSeed(seed)
-			Expect(errorList).To(HaveLen(1))
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {

@@ -217,6 +217,14 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 					seedLogger.Error(err.Error())
 					return err
 				}
+
+				// TODO: This code can be removed in a future version.
+				if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+					if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
+						seedLogger.Error(err.Error())
+						return err
+					}
+				}
 			}
 
 			// Remove finalizer from Seed
@@ -275,6 +283,14 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 			seedLogger.Error(err.Error())
 			return err
+		}
+
+		// TODO: This code can be removed in a future version.
+		if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
+			if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
+				seedLogger.Error(err.Error())
+				return err
+			}
 		}
 	}
 

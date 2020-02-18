@@ -95,10 +95,6 @@ func updateKubeletConfig(kubeletConfig *core.KubeletConfig) {
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
-	var (
-		oldPurpose, newPurpose string
-	)
-
 	// The Shoot specification changes.
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
 		return true
@@ -137,12 +133,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			delete(newShoot.Annotations, common.ShootOperationDeprecated)
 			return true
 		}
-	}
-
-	oldPurpose = oldShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
-	newPurpose = newShoot.ObjectMeta.Annotations[v1beta1constants.GardenPurpose]
-	if oldPurpose != newPurpose {
-		return true
 	}
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.

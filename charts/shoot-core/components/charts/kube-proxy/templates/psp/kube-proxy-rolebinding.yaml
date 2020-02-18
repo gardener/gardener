@@ -1,12 +1,12 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  name: garden.sapcloud.io:psp:kube-proxy
+  name: gardener.cloud:psp:kube-proxy
   namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: garden.sapcloud.io:psp:kube-system:kube-proxy
+  name: gardener.cloud:psp:kube-system:kube-proxy
 subjects:
 - kind: ServiceAccount
   name: kube-proxy

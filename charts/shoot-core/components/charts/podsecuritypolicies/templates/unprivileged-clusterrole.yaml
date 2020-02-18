@@ -1,7 +1,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: garden.sapcloud.io:psp:unprivileged
+  name: gardener.cloud:psp:unprivileged
 rules:
 - apiGroups:
   - policy
