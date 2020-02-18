@@ -49,7 +49,7 @@ import (
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
-		labels.SelectorFromSet(map[string]string{v1beta1constants.DeprecatedGardenRole: gardenRoles[0]})
+		return labels.SelectorFromSet(map[string]string{v1beta1constants.DeprecatedGardenRole: gardenRoles[0]})
 	}
 
 	selector := labels.NewSelector()
@@ -420,13 +420,12 @@ func (b *HealthChecker) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckMonitoringSystemComponents checks whether the monitoring in the given listers are complete and healthy.
-// TODO: Enable below commented code and add a unit test after the next release.
+// CheckMonitoringSystemComponents checks whether the monitoring components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringSystemComponents(
 	namespace string,
 	isTestingShoot bool,
 	condition gardencorev1beta1.Condition,
-	// deploymentLister kutil.DeploymentLister,
+	deploymentLister kutil.DeploymentLister,
 	daemonSetLister kutil.DaemonSetLister,
 ) (*gardencorev1beta1.Condition, error) {
 
@@ -434,17 +433,16 @@ func (b *HealthChecker) CheckMonitoringSystemComponents(
 		return nil, nil
 	}
 
-	// deploymentList, err := deploymentLister.Deployments(namespace).List(monitoringSelector)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// if exitCondition := b.checkRequiredDeployments(condition, common.RequiredMonitoringShootDeployments, deploymentList); exitCondition != nil {
-	// 	return exitCondition, nil
-	// }
-	// if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
-	// 	return exitCondition, nil
-	// }
+	deploymentList, err := deploymentLister.Deployments(namespace).List(monitoringSelector)
+	if err != nil {
+		return nil, err
+	}
+	if exitCondition := b.checkRequiredDeployments(condition, common.RequiredMonitoringShootDeployments, deploymentList); exitCondition != nil {
+		return exitCondition, nil
+	}
+	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
+		return exitCondition, nil
+	}
 
 	daemonSetList, err := daemonSetLister.DaemonSets(namespace).List(monitoringSelector)
 	if err != nil {
@@ -622,7 +620,7 @@ func (b *Botanist) checkSystemComponents(
 	if exitCondition, err := checker.CheckSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
-	if exitCondition, err := checker.CheckMonitoringSystemComponents(metav1.NamespaceSystem, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, shootDaemonSetLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckMonitoringSystemComponents(metav1.NamespaceSystem, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckOptionalAddonsSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
@@ -803,10 +801,6 @@ var (
 		v1beta1constants.GardenRoleMonitoring,
 		v1beta1constants.GardenRoleLogging,
 	)
-	systemComponentsOptionalAddonsSelector = mustGardenRoleLabelSelector(
-		v1beta1constants.GardenRoleSystemComponent,
-		v1beta1constants.GardenRoleOptionalAddon,
-	)
 	systemComponentsOptionalAddonsMonitoringSelector = mustGardenRoleLabelSelector(
 		v1beta1constants.GardenRoleSystemComponent,
 		v1beta1constants.GardenRoleOptionalAddon,
@@ -816,7 +810,7 @@ var (
 	seedDeploymentListOptions  = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 	seedStatefulSetListOptions = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 
-	shootDeploymentListOptions = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsSelector.String()}
+	shootDeploymentListOptions = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsMonitoringSelector.String()}
 	shootDaemonSetListOptions  = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsMonitoringSelector.String()}
 	shootNodeListOptions       = metav1.ListOptions{}
 )
