@@ -22,9 +22,10 @@
           done
         }
         function containerd_monitoring {
+          source /etc/metadata/containerruntime
           echo "ContainerD monitor has started !"
           while [ 1 ]; do
-            if ! timeout 60 ctr c list > /dev/null; then
+            if ! timeout 60 ctr -a $CONTAINERD_SOCKET_PATH c list > /dev/null; then
               echo "ContainerD daemon failed!"
               pkill containerd
               sleep 30
