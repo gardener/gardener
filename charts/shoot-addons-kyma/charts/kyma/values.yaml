@@ -1,12 +1,19 @@
 ---
 jobs:
-  image: eu.gcr.io/kyma-project/test-infra/alpine-kubectl:v20190325-ff66a3a
+  image: eu.gcr.io/kyma-project/test-infra/alpine-kubectl:v20200121-4f3202bd
   delay: 30
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
 kyma:
-  version: "1.8.0"
+  version: "1.10.0"
   subdomain: "kyma"
 requires:
   k8s:
-    version: "1.15"
+    version: "1.16"
   gardener:
     extensions: "shoot-cert-service,shoot-dns-service"

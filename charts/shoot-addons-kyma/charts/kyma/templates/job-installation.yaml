@@ -2,10 +2,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kyma-initializer-installation
+  name: kyma-initializer-installation-{{ .Values.kyma.version }}
   namespace: kyma-installer
   labels:
     app: kyma-initializer
+    version: {{ .Values.kyma.version }}
 spec:
   backoffLimit: 3
   template:
@@ -22,6 +23,8 @@ spec:
       initContainers:
       - name: requirements
         image: {{ .Values.jobs.image | quote }}
+        resources:
+          {{- toYaml .Values.jobs.resources | nindent 10 }}
         env:
           - name: K8S_VERSION
             value: {{ .Values.requires.k8s.version | quote }}
@@ -34,6 +37,8 @@ spec:
 {{ .Files.Get "files/requirements.sh" | printf "%s" | indent 12 }}
       - name: wait-for-tiller
         image: {{ .Values.jobs.image | quote }}
+        resources:
+          {{- toYaml .Values.jobs.resources | nindent 10 }}
         env:
           - name: DELAY
             value: {{ .Values.jobs.delay | quote}}
@@ -42,19 +47,11 @@ spec:
           - -c
           - |
 {{ .Files.Get "files/wait-for-tiller.sh" | printf "%s" | indent 12 }}
-      - name: wait-for-certificate
-        image: {{ .Values.jobs.image | quote }}
-        env:
-          - name: DELAY
-            value: {{ .Values.jobs.delay | quote }}
-        command:
-          - bash
-          - -c
-          - |
-{{ .Files.Get "files/wait-for-certificate.sh" | printf "%s" | indent 12 }}
       containers:
       - name: installation
         image: {{ .Values.jobs.image | quote }}
+        resources:
+          {{- toYaml .Values.jobs.resources | nindent 10 }}
         env:
           - name: KYMA_VERSION
             value: {{ .Values.kyma.version | quote }}
