@@ -15,6 +15,7 @@ data:
           kubeconfigSecretName: dependency-watchdog-external-probe
         internal:
           kubeconfigSecretName: dependency-watchdog-internal-probe
+        periodSeconds: 30
       dependantScales:
       - scaleRef:
           apiVersion: {{ include "deploymentversion" . }}

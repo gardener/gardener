@@ -86,7 +86,7 @@ spec:
         - --horizontal-pod-autoscaler-tolerance={{ .Values.horizontalPodAutoscaler.tolerance }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
-        - --node-monitor-grace-period=80s
+        - --node-monitor-grace-period=120s
         - --pod-eviction-timeout=2m0s
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
