@@ -21,6 +21,7 @@ import (
 	errorsmock "github.com/gardener/gardener/pkg/mock/gardener/utils/errors"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 
 	. "github.com/onsi/ginkgo"
@@ -229,6 +230,35 @@ var _ = Describe("Errors", func() {
 			)
 
 			Expect(err).To(Succeed())
+		})
+	})
+})
+
+var _ = Describe("Multierrors", func() {
+	var (
+		allErrs    *multierror.Error
+		err1, err2 error
+	)
+
+	BeforeEach(func() {
+		err1 = fmt.Errorf("error 1")
+		err2 = fmt.Errorf("error 2")
+	})
+
+	Describe("#NewErrorFormatFuncWithPrefix", func() {
+		BeforeEach(func() {
+			allErrs = &multierror.Error{
+				ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("prefix"),
+			}
+		})
+
+		It("should format a multierror correctly if it contains 1 error", func() {
+			allErrs.Errors = []error{err1}
+			Expect(allErrs.Error()).To(Equal("prefix: 1 error occurred: error 1"))
+		})
+		It("should format a multierror correctly if it contains multiple errors", func() {
+			allErrs.Errors = []error{err1, err2}
+			Expect(allErrs.Error()).To(Equal("prefix: 2 errors occurred: [error 1, error 2]"))
 		})
 	})
 })
