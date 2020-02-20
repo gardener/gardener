@@ -34,15 +34,23 @@ const NetworkDefaultTimeout = 3 * time.Minute
 // DeployNetwork creates the `Network` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.
 func (b *Botanist) DeployNetwork(ctx context.Context) error {
-	network := &extensionsv1alpha1.Network{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      b.Shoot.Info.Name,
-			Namespace: b.Shoot.SeedNamespace,
-		},
+	var (
+		restorePhase = b.isRestorePhase()
+		operation    = v1beta1constants.GardenerOperationReconcile
+		network      = &extensionsv1alpha1.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.Shoot.Info.Name,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+	)
+
+	if restorePhase {
+		operation = v1beta1constants.GardenerOperationWaitForState
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), network, func() error {
-		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
 		network.Spec = extensionsv1alpha1.NetworkSpec{
@@ -59,7 +67,15 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if restorePhase {
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), network, &network.ObjectMeta, &network.Status.DefaultStatus, extensionsv1alpha1.NetworkResource, network.Name, network.GetExtensionSpec().GetExtensionPurpose())
+	}
+
+	return nil
 }
 
 // DestroyNetwork deletes the `Network` extension resource in the shoot namespace in the seed cluster,

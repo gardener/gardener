@@ -33,6 +33,15 @@ import (
 // DeployExtensionResources creates the `Extension` extension resource in the shoot namespace in the seed
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.
 func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
+	var (
+		restorePhase      = b.isRestorePhase()
+		gardenerOperation = v1beta1constants.GardenerOperationReconcile
+	)
+
+	if restorePhase {
+		gardenerOperation = v1beta1constants.GardenerOperationWaitForState
+	}
+
 	fns := make([]flow.TaskFn, 0, len(b.Shoot.Extensions))
 	for _, extension := range b.Shoot.Extensions {
 		var (
@@ -48,13 +57,17 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 
 		fns = append(fns, func(ctx context.Context) error {
 			_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
-				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, gardenerOperation)
 				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
-
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig
 				return nil
 			})
+
+			if restorePhase {
+				return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), &toApply, &toApply.ObjectMeta, &toApply.Status.DefaultStatus, extensionsv1alpha1.ExtensionResource, toApply.Name, toApply.GetExtensionSpec().GetExtensionPurpose())
+			}
+
 			return err
 		})
 	}

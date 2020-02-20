@@ -63,6 +63,8 @@ const (
 	LastOperationTypeDelete LastOperationType = "Delete"
 	// LastOperationTypeMigrate indicates a 'migrate' operation.
 	LastOperationTypeMigrate LastOperationType = "Migrate"
+	// LastOperationTypeRestore indicates a 'restore' operation.
+	LastOperationTypeRestore LastOperationType = "Restore"
 )
 
 // LastOperationState is a string alias.
@@ -137,4 +139,10 @@ const (
 	EventDeleteError = "DeleteError"
 	// EventOperationPending
 	EventOperationPending = "OperationPending"
+	// EventPrepareMigration indicates that a Prepare Migration operation started.
+	EventPrepareMigration = "PrepareMigration"
+	// EventMigrationPrepared indicates that Migration preparation was successful.
+	EventMigrationPrepared = "MigrationPrepared"
+	// EventMigrationPreparationFailed indicates that Migration preparation failed.
+	EventMigrationPreparationFailed = "MigrationPreparationFailed"
 )

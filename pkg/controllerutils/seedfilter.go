@@ -56,9 +56,15 @@ func ShootFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, l
 			return false
 		}
 		if len(seedName) > 0 {
-			return *shoot.Spec.SeedName == seedName
+			if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
+				return *shoot.Spec.SeedName == seedName
+			}
+			return *shoot.Status.SeedName == seedName
 		}
-		return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
+		if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
+			return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
+		}
+		return SeedLabelsMatch(seedLister, *shoot.Status.SeedName, labelSelector)
 	}
 }
 

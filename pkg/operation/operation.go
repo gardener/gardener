@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -169,7 +170,7 @@ func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
 	return b
 }
 
-// WithShoot sets the shootFunc attribute at the Builder which will build a new Shoot object.
+// WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
 func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
 		return shootpkg.
@@ -514,6 +515,43 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
 	return err
+}
+
+// DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
+func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
+	if err := o.InitializeSeedClients(); err != nil {
+		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
+		return err
+	}
+
+	if err := o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	return nil
+}
+
+// SwitchBackupEntryToTargetSeed changes the BackupEntry in the Garden cluster to the Target Seed and removes it from the Source Seed
+func (o *Operation) SwitchBackupEntryToTargetSeed(ctx context.Context) error {
+	if err := o.InitializeSeedClients(); err != nil {
+		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
+		return err
+	}
+
+	var (
+		name              = common.GenerateBackupEntryName(o.Shoot.Info.Status.TechnicalID, o.Shoot.Info.Status.UID)
+		gardenBackupEntry = &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: o.Shoot.Info.Namespace,
+			},
+		}
+	)
+
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, o.K8sGardenClient.Client(), gardenBackupEntry, func() error {
+		gardenBackupEntry.Spec.SeedName = o.Shoot.Info.Spec.SeedName
+		return nil
+	})
 }
 
 // ComputeGrafanaHosts computes the host for both grafanas.

@@ -240,7 +240,23 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	if shoot.DeletionTimestamp != nil {
 		return c.deleteShoot(log, shoot, project, cloudProfile, seed)
 	}
+
+	if shouldPrepareShootForMigration(shoot) {
+		if !c.isSeedAvailable(seed, log) {
+			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s", shoot.GetName())
+		}
+
+		sourceSeed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Status.SeedName)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return c.prepareShootForMigration(log, shoot, project, cloudProfile, sourceSeed)
+	}
 	return c.reconcileShoot(log, shoot, project, cloudProfile, seed)
+}
+
+func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
 }
 
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
@@ -365,6 +381,19 @@ func (c *Controller) finalizeShootDeletion(ctx context.Context, logger *logrus.E
 	}
 
 	return reconcile.Result{}, c.removeFinalizerFrom(shoot)
+}
+
+func (c *Controller) isSeedAvailable(seed *gardencorev1beta1.Seed, logger *logrus.Entry) bool {
+	if seed.DeletionTimestamp != nil {
+		return false
+	}
+
+	if err := health.CheckSeed(seed, c.identity); err != nil {
+		logger.Debugf("seed is not yet ready: %v", err)
+		return false
+	}
+
+	return true
 }
 
 func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
