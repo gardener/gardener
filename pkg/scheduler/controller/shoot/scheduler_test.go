@@ -398,6 +398,19 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
+		It("should fail because it cannot find a seed cluster due to no shoot networks specified and no defaults", func() {
+			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
+
+			seed.Spec.Networks.ShootDefaults = nil
+			shoot.Spec.Networking = gardencorev1beta1.Networking{}
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+
 		It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {
 			gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)
