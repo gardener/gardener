@@ -128,11 +128,9 @@ func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]
 
 func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	var (
-		serviceNetwork = b.Shoot.GetServiceNetwork()
-
 		originalConfig = map[string]interface{}{
 			"kubernetes": map[string]interface{}{
-				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
+				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
 				"domain":     gardencorev1beta1.DefaultDomain,
 				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},

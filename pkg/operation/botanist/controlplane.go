@@ -672,8 +672,8 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		maxReplicas int32 = 4
 
 		shootNetworks = map[string]interface{}{
-			"services": b.Shoot.GetServiceNetwork(),
-			"pods":     b.Shoot.GetPodNetwork(),
+			"services": b.Shoot.Networks.Services.String(),
+			"pods":     b.Shoot.Networks.Pods.String(),
 		}
 
 		defaultValues = map[string]interface{}{
@@ -956,8 +956,8 @@ func (b *Botanist) DeployKubeControllerManager() error {
 	defaultValues := map[string]interface{}{
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"podNetwork":        b.Shoot.GetPodNetwork(),
-		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
+		"podNetwork":        b.Shoot.Networks.Pods.String(),
+		"serviceNetwork":    b.Shoot.Networks.Services.String(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                             b.CheckSums[v1beta1constants.SecretNameCACluster],
 			"checksum/secret-kube-controller-manager":        b.CheckSums[v1beta1constants.DeploymentNameKubeControllerManager],

@@ -183,11 +183,11 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
 		global           = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"podNetwork":        b.Shoot.GetPodNetwork(),
+			"podNetwork":        b.Shoot.Networks.Pods.String(),
 		}
 		coreDNSConfig = map[string]interface{}{
 			"service": map[string]interface{}{
-				"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
+				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
 				// TODO: resolve conformance test issue before changing:
 				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
 				"domain": map[string]interface{}{
@@ -215,8 +215,8 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 		}
 		vpnShootConfig = map[string]interface{}{
-			"podNetwork":     b.Shoot.GetPodNetwork(),
-			"serviceNetwork": b.Shoot.GetServiceNetwork(),
+			"podNetwork":     b.Shoot.Networks.Pods.String(),
+			"serviceNetwork": b.Shoot.Networks.Services.String(),
 			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
@@ -229,8 +229,8 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"provider":          b.Shoot.Info.Spec.Provider.Type,
 			"region":            b.Shoot.Info.Spec.Region,
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"podNetwork":        b.Shoot.GetPodNetwork(),
-			"serviceNetwork":    b.Shoot.GetServiceNetwork(),
+			"podNetwork":        b.Shoot.Networks.Pods.String(),
+			"serviceNetwork":    b.Shoot.Networks.Services.String(),
 			"maintenanceBegin":  b.Shoot.Info.Spec.Maintenance.TimeWindow.Begin,
 			"maintenanceEnd":    b.Shoot.Info.Spec.Maintenance.TimeWindow.End,
 		}

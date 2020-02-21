@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"regexp"
 	"sort"
@@ -63,13 +64,41 @@ func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string 
 	return result
 }
 
-// ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
-// For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
-func ComputeClusterIP(cidr string, lastByte byte) string {
-	ip, _, _ := net.ParseCIDR(cidr)
-	ip = ip.To4()
-	ip[3] = lastByte
-	return ip.String()
+// ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
+// For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
+// IPv6 and IPv4 is supported.
+func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
+	if subnet == nil {
+		return nil, fmt.Errorf("subnet is nil")
+	}
+
+	isIPv6 := false
+
+	bytes := subnet.IP.To4()
+	if bytes == nil {
+		isIPv6 = true
+		bytes = subnet.IP.To16()
+	}
+
+	ip := net.IP(big.NewInt(0).Add(big.NewInt(0).SetBytes(bytes), big.NewInt(offset)).Bytes())
+
+	if !subnet.Contains(ip) {
+		return nil, fmt.Errorf("cannot compute IP with offset %d - subnet %q too small", offset, subnet)
+	}
+
+	// there is no broadcast address on IPv6
+	if isIPv6 {
+		return ip, nil
+	}
+
+	for i := range ip {
+		// IP address is not the same, so it's not the broadcast ip.
+		if ip[i] != ip[i]|^subnet.Mask[i] {
+			return ip.To4(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
 }
 
 // GenerateAddonConfig returns the provided <values> in case <enabled> is true. Otherwise, nil is

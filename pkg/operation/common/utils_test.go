@@ -16,6 +16,7 @@ package common_test
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -36,16 +37,66 @@ import (
 
 var _ = Describe("common", func() {
 	Describe("utils", func() {
-		Describe("#ComputeClusterIP", func() {
-			It("should return a cluster IP as string", func() {
-				var (
-					ip   = "100.64.0.0"
-					cidr = ip + "/13"
-				)
+		Describe("#ComputeOffsetIP", func() {
+			Context("IPv4", func() {
+				It("should return a cluster IPv4 IP", func() {
+					_, subnet, _ := net.ParseCIDR("100.64.0.0/13")
+					result, err := ComputeOffsetIP(subnet, 10)
 
-				result := ComputeClusterIP(cidr, 10)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(result).To(Equal("100.64.0.10"))
+					Expect(result).To(HaveLen(net.IPv4len))
+					Expect(result).To(Equal(net.ParseIP("100.64.0.10").To4()))
+				})
+
+				It("should return error if subnet nil is passed", func() {
+					result, err := ComputeOffsetIP(nil, 10)
+
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeNil())
+				})
+
+				It("should return error if subnet is not big enough is passed", func() {
+					_, subnet, _ := net.ParseCIDR("100.64.0.0/32")
+					result, err := ComputeOffsetIP(subnet, 10)
+
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeNil())
+				})
+
+				It("should return error if ip address is broadcast ip", func() {
+					_, subnet, _ := net.ParseCIDR("10.0.0.0/24")
+					result, err := ComputeOffsetIP(subnet, 255)
+
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeNil())
+				})
+			})
+
+			Context("IPv6", func() {
+				It("should return a cluster IPv6 IP", func() {
+					_, subnet, _ := net.ParseCIDR("fc00::/8")
+					result, err := ComputeOffsetIP(subnet, 10)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(HaveLen(net.IPv6len))
+					Expect(result).To(Equal(net.ParseIP("fc00::a")))
+				})
+
+				It("should return error if subnet nil is passed", func() {
+					result, err := ComputeOffsetIP(nil, 10)
+
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeNil())
+				})
+
+				It("should return error if subnet is not big enough is passed", func() {
+					_, subnet, _ := net.ParseCIDR("fc00::/128")
+					result, err := ComputeOffsetIP(subnet, 10)
+
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeNil())
+				})
 			})
 		})
 
