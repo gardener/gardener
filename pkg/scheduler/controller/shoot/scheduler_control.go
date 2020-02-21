@@ -358,11 +358,13 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		errorMessages []string
 	)
 
-	if shootPodsNetwork == nil {
-		shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
-	}
-	if shootServicesNetwork == nil {
-		shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+	if seed.Spec.Networks.ShootDefaults != nil {
+		if shootPodsNetwork == nil {
+			shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
+		}
+		if shootServicesNetwork == nil {
+			shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+		}
 	}
 
 	for _, e := range cidrvalidation.ValidateNetworkDisjointedness(
