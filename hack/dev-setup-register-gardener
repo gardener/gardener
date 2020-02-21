@@ -19,14 +19,25 @@ source $(dirname "${0}")/common
 IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
+APISERVER_SERVICE_NAME="gardener-apiserver"
+APISERVER_ENDPOINT_NAME="gardener-apiserver"
+APISERVER_SERVICE_PORT=443
+APISERVICE_PORT_STRING=""
+
+APISERVER_EXTERNALNAME=gardener.localhost
+
 CORE_V1ALPHA1_APISERVICE_NAME="v1alpha1.core.gardener.cloud"
 CORE_V1BETA1_APISERVICE_NAME="v1beta1.core.gardener.cloud"
 SETTINGS_APISERVICE_NAME="v1alpha1.settings.gardener.cloud"
 
-APISERVER_SERVICE_NAME="gardener-apiserver"
-APISERVER_ENDPOINT_NAME="gardener-apiserver"
 CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
 CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
+
+if [[ $(k8s_env) == "$NODELESS" ]]; then
+  APISERVER_SERVICE_PORT=8443
+  APISERVICE_PORT_STRING="    port: $APISERVER_SERVICE_PORT"
+fi
+
 
 if kubectl get apiservice "$CORE_V1ALPHA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1ALPHA1_APISERVICE_NAME --wait=false
@@ -54,7 +65,19 @@ if kubectl get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
   kubectl delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
 fi
 
+if [[ $(k8s_env) == "$NODELESS" ]]; then
 cat <<EOF | kubectl apply -f -
+kind: Service
+apiVersion: v1
+metadata:
+  name: $APISERVER_SERVICE_NAME
+  namespace: garden
+spec:
+  type: ExternalName
+  externalName: $APISERVER_EXTERNALNAME
+EOF
+else
+  cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
 metadata:
@@ -65,6 +88,10 @@ spec:
   - protocol: TCP
     port: 443
     targetPort: $API_SERVER_SECURE_PORT
+EOF
+fi
+
+cat <<EOF | kubectl apply -f -
 ---
 kind: Service
 apiVersion: v1
@@ -122,6 +149,7 @@ spec:
   service:
     name: gardener-apiserver
     namespace: garden
+$APISERVICE_PORT_STRING
 ---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
@@ -136,6 +164,7 @@ spec:
   service:
     name: gardener-apiserver
     namespace: garden
+$APISERVICE_PORT_STRING
 ---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
@@ -150,6 +179,7 @@ spec:
   service:
     name: gardener-apiserver
     namespace: garden
+$APISERVICE_PORT_STRING
 EOF
 
 if [[ "$1" == "--with-webhooks" ]]; then

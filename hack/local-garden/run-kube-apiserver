@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+
+IP_ROUTE=$(ip route get 1)
+IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+
+DNS_NAME=gardener.localhost
+HOSTS_LINE=$DNS_NAME:$IP_ADDRESS
+
+LABEL=${1:-local-garden}
+
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+IMAGE=eu.gcr.io/gardener-project/3rd/k8s_gcr_io/kube-apiserver:v1.17.1
+MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys"
+ETCD_PORT=12379
+LISTEN_PORT="2443"
+
+echo "Starting gardener-dev kube-apiserver..!"
+docker run -d --name kube-apiserver -l $LABEL --add-host $HOSTS_LINE --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS  $IMAGE /usr/local/bin/kube-apiserver \
+  --etcd-servers="https://etcd:$ETCD_PORT" \
+  --storage-media-type='application/json' \
+  --authorization-mode="Node,RBAC" \
+  --etcd-cafile="/certs/ca.crt" \
+  --etcd-keyfile="/keys/kube-apiserver-etcd-client.key" \
+  --etcd-certfile="/certs/kube-apiserver-etcd-client.crt" \
+  --tls-cert-file="/certs/kube-apiserver.crt" \
+  --tls-private-key-file="/keys/kube-apiserver.key" \
+  --requestheader-client-ca-file="/certs/ca.crt" \
+  --client-ca-file="/certs/ca.crt" \
+  --proxy-client-key-file="/keys/front-proxy-client.key" \
+  --proxy-client-cert-file="/certs/front-proxy-client.crt" \
+  --service-account-key-file="/keys/sa.key" \
+  --secure-port=$LISTEN_PORT

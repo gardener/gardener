@@ -24,11 +24,10 @@ apiserver_flags="
   --authorization-kubeconfig $kubeconfig \
   --authorization-always-allow-paths=/healthz \
   --kubeconfig $kubeconfig \
-  --secure-port=$API_SERVER_SECURE_PORT \
+  --secure-port=8443 \
   --v 2"
 
 ld_flags="$(./hack/get-build-ld-flags)"
-
 case $(k8s_env) in
     $KIND)
         echo "Found kind ..."
@@ -63,6 +62,17 @@ case $(k8s_env) in
           --etcd-servers http://$(minikube ip):32379 \
           --tls-cert-file ~/.minikube/apiserver.crt \
           --tls-private-key-file ~/.minikube/apiserver.key \
+          $apiserver_flags
+        ;;
+      $NODELESS)
+        echo "Found Nodeless Kubernetes ..."
+        GO111MODULE=on go run \
+          -mod=vendor \
+          -ldflags "$ld_flags" \
+          cmd/gardener-apiserver/main.go \
+          --etcd-servers http://localhost:22379 \
+          --tls-cert-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-certificate-data}' --raw | base64 -d) \
+          --tls-private-key-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-key-data}' --raw | base64 -d) \
           $apiserver_flags
         ;;
 esac
