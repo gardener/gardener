@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -102,7 +103,15 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencore
 	if err != nil {
 		return nil, err
 	}
+
 	shootObj.WantsClusterAutoscaler = needsAutoscaler
+
+	nwkrs, err := ToNetworks(shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	shootObj.Networks = nwkrs
 
 	return shootObj, nil
 }
@@ -148,24 +157,6 @@ func (s *Shoot) GetNodeCount() int32 {
 		nodeCount += worker.Maximum
 	}
 	return nodeCount
-}
-
-// GetPodNetwork returns the pod network CIDR for the Shoot cluster. If no CIDR was specified then an
-// empty string is returned.
-func (s *Shoot) GetPodNetwork() string {
-	if val := s.Info.Spec.Networking.Pods; val != nil {
-		return *val
-	}
-	return ""
-}
-
-// GetServiceNetwork returns the service network CIDR for the Shoot cluster. If no CIDR was specified then an
-// empty string is returned.
-func (s *Shoot) GetServiceNetwork() string {
-	if val := s.Info.Spec.Networking.Services; val != nil {
-		return *val
-	}
-	return ""
 }
 
 // GetNodeNetwork returns the nodes network CIDR for the Shoot cluster. If the infrastructure extension
@@ -417,4 +408,43 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 	}
 
 	return requiredExtensions, nil
+}
+
+// ToNetworks return a network with computed cidrs and ClusterIPs
+// for a Shoot
+func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
+	if s.Spec.Networking.Services == nil {
+		return nil, fmt.Errorf("shoot's service cidr is empty")
+	}
+
+	if s.Spec.Networking.Pods == nil {
+		return nil, fmt.Errorf("shoot's pods cidr is empty")
+	}
+
+	_, svc, err := net.ParseCIDR(*s.Spec.Networking.Services)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse shoot's network cidr %v", err)
+	}
+
+	_, pods, err := net.ParseCIDR(*s.Spec.Networking.Pods)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse shoot's network cidr %v", err)
+	}
+
+	apiserver, err := common.ComputeOffsetIP(svc, 1)
+	if err != nil {
+		return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP: %v", err)
+	}
+
+	coreDNS, err := common.ComputeOffsetIP(svc, 10)
+	if err != nil {
+		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
+	}
+
+	return &Networks{
+		CoreDNS:   coreDNS,
+		Pods:      pods,
+		Services:  svc,
+		APIServer: apiserver,
+	}, nil
 }

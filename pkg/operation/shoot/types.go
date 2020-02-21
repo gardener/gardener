@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"net"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -43,11 +44,25 @@ type Shoot struct {
 	IgnoreAlerts           bool
 	HibernationEnabled     bool
 
+	Networks *Networks
+
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
 	Extensions                map[string]Extension
 	InfrastructureStatus      []byte
 	ControlPlaneStatus        []byte
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
+}
+
+// Networks contains pre-calculated subnets and IP address for various components.
+type Networks struct {
+	// Pods subnet
+	Pods *net.IPNet
+	// Services subnet
+	Services *net.IPNet
+	// APIServer is the ClusterIP of default/kubernetes Service
+	APIServer net.IP
+	// CoreDNS is the ClusterIP of kube-system/coredns Service
+	CoreDNS net.IP
 }
 
 // OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud config.

@@ -80,7 +80,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	var (
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
-			net.ParseIP(common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1)),
+			b.Shoot.Networks.APIServer,
 		}
 		apiServerCertDNSNames = append([]string{
 			"kube-apiserver",

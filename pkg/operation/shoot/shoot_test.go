@@ -16,6 +16,7 @@ package shoot_test
 
 import (
 	"context"
+	"net"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -59,6 +60,62 @@ var _ = Describe("shoot", func() {
 
 		AfterEach(func() {
 			ctrl.Finish()
+		})
+
+		Describe("#ToNetworks", func() {
+
+			var shoot *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shoot = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Networking: gardencorev1beta1.Networking{
+							Pods:     pointer.StringPtr("10.0.0.0/24"),
+							Services: pointer.StringPtr("20.0.0.0/24"),
+						},
+					},
+				}
+			})
+
+			It("returns correct network", func() {
+				result, err := ToNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(PointTo(Equal(Networks{
+					Pods: &net.IPNet{
+						IP:   []byte{10, 0, 0, 0},
+						Mask: []byte{255, 255, 255, 0},
+					},
+					Services: &net.IPNet{
+						IP:   []byte{20, 0, 0, 0},
+						Mask: []byte{255, 255, 255, 0},
+					},
+					APIServer: []byte{20, 0, 0, 1},
+					CoreDNS:   []byte{20, 0, 0, 10},
+				})))
+			})
+
+			DescribeTable("#ConstructInternalClusterDomain", func(mutateFunc func(s *gardencorev1beta1.Shoot)) {
+				mutateFunc(shoot)
+				result, err := ToNetworks(shoot)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
+			},
+
+				Entry("services is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Services = nil }),
+				Entry("pods is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = nil }),
+				Entry("services is invalid", func(s *gardencorev1beta1.Shoot) {
+					s.Spec.Networking.Services = pointer.StringPtr("foo")
+				}),
+				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = pointer.StringPtr("foo") }),
+				Entry("apiserver cannot be calculated", func(s *gardencorev1beta1.Shoot) {
+					s.Spec.Networking.Services = pointer.StringPtr("10.0.0.0/32")
+				}),
+				Entry("coreDNS cannot be calculated", func(s *gardencorev1beta1.Shoot) {
+					s.Spec.Networking.Services = pointer.StringPtr("10.0.0.0/29")
+				}),
+			)
 		})
 
 		Describe("#IPVSEnabled", func() {

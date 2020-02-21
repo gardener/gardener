@@ -95,8 +95,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	var (
 		networks = map[string]interface{}{
-			"pods":     b.Shoot.GetPodNetwork(),
-			"services": b.Shoot.GetServiceNetwork(),
+			"pods":     b.Shoot.Networks.Pods.String(),
+			"services": b.Shoot.Networks.Services.String(),
 		}
 
 		prometheusConfig = map[string]interface{}{
@@ -114,7 +114,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"checksum/secret-vpn-seed-tlsauth": b.CheckSums["vpn-seed-tlsauth"],
 			},
 			"replicas":           b.Shoot.GetReplicas(1),
-			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
+			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
 			"seed": map[string]interface{}{
 				"apiserver": b.K8sSeedClient.RESTConfig().Host,
 				"region":    b.Seed.Info.Spec.Provider.Region,
