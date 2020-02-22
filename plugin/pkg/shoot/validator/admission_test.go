@@ -1174,6 +1174,77 @@ var _ = Describe("validator", func() {
 				}))
 			})
 
+			It("should allow image without version and default it to the latest one", func() {
+				imageName := "some-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
+					Name: imageName,
+					Versions: []core.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+					Name: imageName,
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+					Name:    imageName,
+					Version: version2,
+				}))
+			})
+
+			It("should reject invalid image without version", func() {
+				imageName := "some-image"
+				missingImageName := "missing-image"
+				version1 := "1.1.1"
+				version2 := "2.2.2"
+
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
+					Name: imageName,
+					Versions: []core.ExpirableVersion{
+						{
+							Version: version2,
+						},
+						{
+							Version:        version1,
+							ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+						},
+					},
+				})
+
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+					Name: missingImageName,
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(newShoot, nil, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("image name \"missing-image\" is not supported"))
+			})
+
 			It("should not reject due to an usable machine type", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{
 					{

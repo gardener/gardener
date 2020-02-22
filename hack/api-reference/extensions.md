@@ -460,6 +460,20 @@ string
 </tr>
 <tr>
 <td>
+<code>workerPool</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeWorkerPool">
+ContainerRuntimeWorkerPool
+</a>
+</em>
+</td>
+<td>
+<p>WorkerPool identifies the worker pool of the Shoot.
+For each worker pool and type, Gardener deploys a ContainerRuntime CRD.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -1676,6 +1690,20 @@ string
 </tr>
 <tr>
 <td>
+<code>workerPool</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeWorkerPool">
+ContainerRuntimeWorkerPool
+</a>
+</em>
+</td>
+<td>
+<p>WorkerPool identifies the worker pool of the Shoot.
+For each worker pool and type, Gardener deploys a ContainerRuntime CRD.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -1723,6 +1751,48 @@ DefaultStatus
 (Members of <code>DefaultStatus</code> are embedded into this type.)
 </p>
 <p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ContainerRuntimeWorkerPool">ContainerRuntimeWorkerPool
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name specifies the name of the worker pool the container runtime should be available for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>selector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<p>Selector is the label selector used by the extension to match the nodes belonging to the worker pool.</p>
 </td>
 </tr>
 </tbody>

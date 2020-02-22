@@ -4980,7 +4980,7 @@ func schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref common.ReferenceCallbac
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version is the version of the shoot's image.",
+							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10019,7 +10019,7 @@ func schema_pkg_apis_core_v1beta1_ShootMachineImage(ref common.ReferenceCallback
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version is the version of the shoot's image.",
+							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

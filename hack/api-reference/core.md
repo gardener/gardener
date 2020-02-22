@@ -6618,7 +6618,8 @@ string
 </em>
 </td>
 <td>
-<p>Version is the version of the shoot&rsquo;s image.</p>
+<p>Version is the version of the shoot&rsquo;s image.
+If version is not provided, it will be defaulted to the latest version.</p>
 </td>
 </tr>
 </tbody>

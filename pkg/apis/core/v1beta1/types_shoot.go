@@ -841,6 +841,7 @@ type ShootMachineImage struct {
 	// +optional
 	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Version is the version of the shoot's image.
+	// If version is not provided, it will be defaulted to the latest version.
 	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
 }
 

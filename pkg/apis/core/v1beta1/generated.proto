@@ -1582,6 +1582,7 @@ message ShootMachineImage {
   optional ProviderConfig providerConfig = 2;
 
   // Version is the version of the shoot's image.
+  // If version is not provided, it will be defaulted to the latest version.
   optional string version = 3;
 }
 
