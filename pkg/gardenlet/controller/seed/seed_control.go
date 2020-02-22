@@ -267,7 +267,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	})
 
 	if err != nil {
-		err = fmt.Errorf("Could not add finalizer to Seed: %s", err.Error())
+		err = fmt.Errorf("could not add finalizer to Seed: %s", err.Error())
 		seedLogger.Error(err)
 		return err
 	}

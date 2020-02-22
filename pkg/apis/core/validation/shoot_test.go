@@ -2289,12 +2289,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 })
 
-func deleteElement(slice *[]string) {
-	sliceCopy := *slice
-	sliceCopy = sliceCopy[:len(sliceCopy)-1]
-	*slice = sliceCopy
-}
-
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {
 	s := shoot.DeepCopy()
 	s.ResourceVersion = "1"

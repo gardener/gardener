@@ -311,7 +311,7 @@ var _ = Describe("quotavalidator", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("Quota limits exceeded"))
+					Expect(err.Error()).To(ContainSubstring("quota limits exceeded"))
 				})
 			})
 		})

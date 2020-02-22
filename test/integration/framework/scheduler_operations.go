@@ -144,7 +144,7 @@ func ChooseRegionAndZoneWithNoSeed(regions []gardencorev1beta1.Region, seeds []g
 				break
 			}
 		}
-		if foundRegionInSeed == false {
+		if !foundRegionInSeed {
 			return &region, nil
 		}
 	}
@@ -173,7 +173,7 @@ func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Contex
 		}
 		s.ShootGardenerTest.Logger.Infof("waiting for shoot %s to be unschedulable", s.ShootGardenerTest.Shoot.Name)
 
-		uid := fmt.Sprintf("%s", s.ShootGardenerTest.Shoot.UID)
+		uid := string(s.ShootGardenerTest.Shoot.UID)
 		kind := "Shoot"
 		fieldSelector := s.ShootGardenerTest.GardenClient.Kubernetes().CoreV1().Events(s.ShootGardenerTest.Shoot.Namespace).GetFieldSelector(&s.ShootGardenerTest.Shoot.Name, &s.ShootGardenerTest.Shoot.Namespace, &kind, &uid)
 		eventList, err := s.ShootGardenerTest.GardenClient.Kubernetes().CoreV1().Events(s.ShootGardenerTest.Shoot.Namespace).List(metav1.ListOptions{FieldSelector: fieldSelector.String()})

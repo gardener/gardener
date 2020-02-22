@@ -52,14 +52,6 @@ var (
 		core.QuotaMetricLoadbalancer}
 )
 
-type quotaWorker struct {
-	core.Worker
-	// VolumeType is the type of the root volumes.
-	VolumeType string
-	// VolumeSize is the size of the root volume.
-	VolumeSize resource.Quantity
-}
-
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
@@ -152,7 +144,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	// Ignore all kinds other than Shoot
-	if a.GetKind().GroupKind() != core.Kind("Shoot") && a.GetKind().GroupKind() != core.Kind("Shoot") {
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
 	if a.GetSubresource() != "" {
@@ -222,7 +214,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 				for _, metric := range *exceededMetrics {
 					message = message + metric.String() + " "
 				}
-				return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message))
+				return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded. Unable to allocate further %s", message))
 			}
 		}
 	}
@@ -241,7 +233,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 
 		maxPossibleExpirationTime = q.time.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
 		if plannedExpirationTime.After(maxPossibleExpirationTime) {
-			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time is too long. Can only be extended by %d day(s)", *maxShootLifetime))
+			return admission.NewForbidden(a, fmt.Errorf("requested shoot expiration time is too long. Can only be extended by %d day(s)", *maxShootLifetime))
 		}
 	}
 
@@ -382,7 +374,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 			}
 		}
 		if machineType == nil {
-			return nil, fmt.Errorf("MachineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
+			return nil, fmt.Errorf("machineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
 		}
 
 		if worker.Volume != nil {
@@ -423,7 +415,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		case core.VolumeClassPremium:
 			resources[core.QuotaMetricStoragePremium] = sumQuantity(resources[core.QuotaMetricStoragePremium], multiplyQuantity(size, worker.Maximum))
 		default:
-			return nil, fmt.Errorf("Unknown volumeType class %s", volumeType.Class)
+			return nil, fmt.Errorf("unknown volumeType class %s", volumeType.Class)
 		}
 	}
 
@@ -482,7 +474,7 @@ func quotaVerificationNeeded(new, old core.Shoot) bool {
 		newNginxIngressEnabled = new.Spec.Addons.NginxIngress.Enabled
 	}
 
-	if oldNginxIngressEnabled == false && newNginxIngressEnabled == true {
+	if !oldNginxIngressEnabled && newNginxIngressEnabled {
 		return true
 	}
 

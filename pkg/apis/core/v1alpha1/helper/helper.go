@@ -143,7 +143,7 @@ func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1alpha1
 // IsResourceSupported returns true if a given combination of kind/type is part of a controller resources list.
 func IsResourceSupported(resources []gardencorev1alpha1.ControllerResource, resourceKind, resourceType string) bool {
 	for _, resource := range resources {
-		if resource.Kind == resourceKind && strings.ToLower(resource.Type) == strings.ToLower(resourceType) {
+		if resource.Kind == resourceKind && strings.EqualFold(resource.Type, resourceType) {
 			return true
 		}
 	}
@@ -428,7 +428,7 @@ func validateShootedSeed(shootedSeed *ShootedSeed, fldPath *field.Path) field.Er
 	allErrs := field.ErrorList{}
 
 	if shootedSeed.APIServer != nil {
-		allErrs = append(validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer")))
+		allErrs = validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer"))
 	}
 
 	return allErrs
@@ -586,7 +586,7 @@ func GetMachineImagesFor(shoot *gardencorev1alpha1.Shoot) []*gardencorev1alpha1.
 // cloud-specific machine image will be returned.
 func DetermineMachineImageForName(cloudProfile *gardencorev1alpha1.CloudProfile, name string) (bool, gardencorev1alpha1.MachineImage, error) {
 	for _, image := range cloudProfile.Spec.MachineImages {
-		if strings.ToLower(image.Name) == strings.ToLower(name) {
+		if strings.EqualFold(image.Name, name) {
 			return true, image, nil
 		}
 	}
@@ -718,7 +718,7 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1alpha1.CloudProfi
 // SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
 func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1alpha1.MachineImage, imageName string, imageVersions []gardencorev1alpha1.ExpirableVersion) ([]gardencorev1alpha1.MachineImage, error) {
 	for index, image := range machineImages {
-		if strings.ToLower(image.Name) == strings.ToLower(imageName) {
+		if strings.EqualFold(image.Name, imageName) {
 			machineImages[index].Versions = imageVersions
 			return machineImages, nil
 		}

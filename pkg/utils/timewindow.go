@@ -49,7 +49,7 @@ func NewMaintenanceTime(hour, minute, second int) *MaintenanceTime {
 func ParseMaintenanceTime(value string) (*MaintenanceTime, error) {
 	t, err := time.Parse(maintenanceTimeLayout, value)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse the value into the maintenanceTime format: %s", err.Error())
+		return nil, fmt.Errorf("could not parse the value into the maintenanceTime format: %s", err.Error())
 	}
 	return timeToMaintenanceTime(t), nil
 }
@@ -142,11 +142,11 @@ func NewMaintenanceTimeWindow(begin, end *MaintenanceTime) *MaintenanceTimeWindo
 func ParseMaintenanceTimeWindow(begin, end string) (*MaintenanceTimeWindow, error) {
 	maintenanceWindowBegin, err := ParseMaintenanceTime(begin)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse begin time: %s", err.Error())
+		return nil, fmt.Errorf("could not parse begin time: %s", err.Error())
 	}
 	maintenanceWindowEnd, err := ParseMaintenanceTime(end)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse end time: %s", err.Error())
+		return nil, fmt.Errorf("could not parse end time: %s", err.Error())
 	}
 	return NewMaintenanceTimeWindow(maintenanceWindowBegin, maintenanceWindowEnd), nil
 }

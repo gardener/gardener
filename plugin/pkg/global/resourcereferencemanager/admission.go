@@ -358,7 +358,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 			secretQuotaCount++
 		}
 		if projectQuotaCount > 1 || secretQuotaCount > 1 {
-			return errors.New("Only one quota per scope (project or secret) can be assigned")
+			return errors.New("only one quota per scope (project or secret) can be assigned")
 		}
 	}
 

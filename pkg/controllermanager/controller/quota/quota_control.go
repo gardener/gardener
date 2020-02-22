@@ -147,7 +147,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota, key string
 		quotaLogger.Info(message)
 		c.recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 
-		return errors.New("Quota still has references")
+		return errors.New("quota still has references")
 	}
 
 	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {

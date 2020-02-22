@@ -161,7 +161,7 @@ func (d *ValidateShootStateDeletion) validateDelete(ctx context.Context, attrs a
 		}
 		return fmt.Errorf("error retrieving Shoot %s in namespace %s: %v", attrs.GetName(), attrs.GetNamespace(), err)
 	}
-	return admission.NewForbidden(attrs, fmt.Errorf("Shoot %s in namespace %s still exists", attrs.GetName(), attrs.GetNamespace()))
+	return admission.NewForbidden(attrs, fmt.Errorf("shoot %s in namespace %s still exists", attrs.GetName(), attrs.GetNamespace()))
 }
 
 func (d *ValidateShootStateDeletion) createAttributesWithName(objName string, a admission.Attributes) admission.Attributes {

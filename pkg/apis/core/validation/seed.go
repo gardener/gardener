@@ -15,8 +15,6 @@
 package validation
 
 import (
-	"net"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
@@ -134,16 +132,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 			}
 			volumeProviderPurposes[provider.Purpose] = struct{}{}
 		}
-	}
-
-	return allErrs
-}
-
-func validateCIDR(cidr string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, cidr, err.Error()))
 	}
 
 	return allErrs

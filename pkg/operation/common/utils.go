@@ -217,16 +217,16 @@ func ReadLeaderElectionRecord(k8sClient kubernetes.Interface, lock, namespace, n
 		}
 		annotations = configmap.Annotations
 	default:
-		return nil, fmt.Errorf("Unknown lock type: %s", lock)
+		return nil, fmt.Errorf("unknown lock type: %s", lock)
 	}
 
 	leaderElection, ok := annotations[resourcelock.LeaderElectionRecordAnnotationKey]
 	if !ok {
-		return nil, fmt.Errorf("Could not find key %s in annotations", resourcelock.LeaderElectionRecordAnnotationKey)
+		return nil, fmt.Errorf("could not find key %s in annotations", resourcelock.LeaderElectionRecordAnnotationKey)
 	}
 
 	if err := json.Unmarshal([]byte(leaderElection), &leaderElectionRecord); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal leader election record: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal leader election record: %+v", err)
 	}
 
 	return &leaderElectionRecord, nil

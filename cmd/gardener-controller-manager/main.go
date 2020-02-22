@@ -26,14 +26,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
-func init() {
-	features.RegisterFeatureGates()
-}
-
 func main() {
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
+
+	features.RegisterFeatureGates()
 
 	// Setup signal handler if running inside a Kubernetes cluster
 	ctx, cancel := context.WithCancel(context.Background())

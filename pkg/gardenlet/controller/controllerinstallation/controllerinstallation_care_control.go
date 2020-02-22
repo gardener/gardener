@@ -136,13 +136,3 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
-
-func (c *defaultCareControl) updateControllerInstallationStatus(controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
-	newControllerInstallation, err := kutil.TryUpdateControllerInstallationStatus(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
-			return controllerInstallation, nil
-		})
-
-	return newControllerInstallation, err
-}
