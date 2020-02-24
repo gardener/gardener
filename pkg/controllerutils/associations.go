@@ -56,7 +56,7 @@ func DetermineShootsAssociatedTo(obj interface{}, shootLister gardencorelisters.
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:
-			return nil, fmt.Errorf("Unable to determine Shoot associations, due to unknown type %t", t)
+			return nil, fmt.Errorf("unable to determine Shoot associations, due to unknown type %t", t)
 		}
 	}
 	return associatedShoots, nil

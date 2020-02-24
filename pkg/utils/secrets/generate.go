@@ -91,7 +91,7 @@ func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Int
 
 	// Wait and check whether an error occurred during the parallel processing of the Secret creation.
 	if len(errorList) > 0 {
-		return deployedClusterSecrets, fmt.Errorf("Errors occurred during shoot secrets generation: %+v", errorList)
+		return deployedClusterSecrets, fmt.Errorf("errors occurred during shoot secrets generation: %+v", errorList)
 	}
 
 	return deployedClusterSecrets, nil

@@ -35,7 +35,7 @@ func ValidDeploymentContainerImageVersion(deploymentToCheck *appsv1.Deployment, 
 				return &container, nil
 			}
 		}
-		return nil, fmt.Errorf("Container %q does not belong to this deployment", container)
+		return nil, fmt.Errorf("container %q does not belong to this deployment", container)
 	}
 
 	containerToCheck, err := getContainer(containerName)

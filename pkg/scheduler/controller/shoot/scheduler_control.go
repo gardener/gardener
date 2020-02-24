@@ -212,7 +212,7 @@ func filterSeedsMatchingSeedSelector(cloudProfile *gardencorev1beta1.CloudProfil
 		matchingSeeds = append(matchingSeeds, seed)
 	}
 
-	if matchingSeeds == nil || len(matchingSeeds) == 0 {
+	if len(matchingSeeds) == 0 {
 		return nil, fmt.Errorf("none out of the %d seeds has the matching labels required by seed selector of CloudProfile '%s'. Selector: '%s'", len(seedList), cloudProfile.Name, cloudProfile.Spec.SeedSelector.String())
 	}
 	return matchingSeeds, nil

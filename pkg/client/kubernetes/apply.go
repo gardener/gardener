@@ -77,7 +77,7 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 	}
 
 	if len(key.Name) == 0 {
-		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}
 
 	current := &unstructured.Unstructured{}
@@ -106,7 +106,7 @@ func (c *Applier) deleteObject(ctx context.Context, desired *unstructured.Unstru
 		desired.SetNamespace(metav1.NamespaceDefault)
 	}
 	if len(desired.GetName()) == 0 {
-		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}
 
 	err := c.client.Delete(ctx, desired)

@@ -350,7 +350,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 
 	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
 	if len(errorList) > 0 {
-		return nil, nil, fmt.Errorf("Errors occurred during certificate authority generation: %+v", errorList)
+		return nil, nil, fmt.Errorf("errors occurred during certificate authority generation: %+v", errorList)
 	}
 
 	return generatedSecrets, certificateAuthorities, nil

@@ -27,11 +27,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 )
 
-var (
-	cet, _    = time.LoadLocation("CET")
-	cetOffset = 2
-)
-
 var _ = Describe("utils", func() {
 	Context("MaintenanceTime", func() {
 		DescribeTable("#NewMaintenanceTime",
@@ -54,14 +49,14 @@ var _ = Describe("utils", func() {
 
 		Describe("#ParseMaintenanceTime", func() {
 			It("should return the correctly parsed maintenance time", func() {
-				var (
-					hour   = 16
-					minute = 5
-					second = 54
-					value  = fmt.Sprintf("%.02d%.02d%.02d+%.02d00", hour, minute, second, cetOffset)
+				const (
+					cetOffset = 2
+					hour      = 16
+					minute    = 5
+					second    = 54
 				)
 
-				mt, err := ParseMaintenanceTime(value)
+				mt, err := ParseMaintenanceTime(fmt.Sprintf("%.02d%.02d%.02d+%.02d00", hour, minute, second, cetOffset))
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(mt).To(Equal(NewMaintenanceTime(hour-cetOffset, minute, second)))

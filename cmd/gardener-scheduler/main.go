@@ -18,24 +18,23 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-scheduler/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
-
-func init() {
-	features.RegisterFeatureGates()
-}
 
 func main() {
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
 
+	features.RegisterFeatureGates()
+
 	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
 	command := app.NewCommandStartGardenerScheduler(ctx)
+
 	if err := command.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

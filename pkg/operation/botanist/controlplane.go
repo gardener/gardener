@@ -603,9 +603,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		values = map[string]interface{}{}
 	)
 
-	for _, addr := range b.Seed.Info.Spec.Networks.BlockCIDRs {
-		excludeNets = append(excludeNets, addr)
-	}
+	excludeNets = append(excludeNets, b.Seed.Info.Spec.Networks.BlockCIDRs...)
 
 	var shootCIDRNetworks []string
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
@@ -844,7 +842,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
 			auditPolicy, err := b.getAuditPolicy(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
 			if err != nil {
-				return fmt.Errorf("Retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
+				return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
 			}
 			defaultValues["auditConfig"] = map[string]interface{}{
 				"auditPolicy": auditPolicy,
@@ -914,29 +912,29 @@ func (b *Botanist) getAuditPolicy(name, namespace string) (string, error) {
 	}
 	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]
 	if !ok {
-		return "", fmt.Errorf("Missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
+		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
 	}
 	if len(auditPolicy) == 0 {
-		return "", fmt.Errorf("Empty audit policy. Provide non-empty audit policy")
+		return "", fmt.Errorf("empty audit policy. Provide non-empty audit policy")
 	}
 	auditPolicyObj, schemaVersion, err := decoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("Failed to decode the provided audit policy err=%v", err)
+		return "", fmt.Errorf("failed to decode the provided audit policy err=%v", err)
 	}
 
 	if isValidVersion, err := IsValidAuditPolicyVersion(b.ShootVersion(), schemaVersion); err != nil {
 		return "", err
 	} else if !isValidVersion {
-		return "", fmt.Errorf("Your shoot cluster version %q is not compatible with audit policy version %q", b.ShootVersion(), schemaVersion.GroupVersion().String())
+		return "", fmt.Errorf("your shoot cluster version %q is not compatible with audit policy version %q", b.ShootVersion(), schemaVersion.GroupVersion().String())
 	}
 
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
-		return "", fmt.Errorf("Failure to cast to audit Policy type: %v", schemaVersion)
+		return "", fmt.Errorf("failure to cast to audit Policy type: %v", schemaVersion)
 	}
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {
-		return "", fmt.Errorf("Provided invalid audit policy err=%v", errList)
+		return "", fmt.Errorf("provided invalid audit policy err=%v", errList)
 	}
 	return auditPolicy, nil
 }

@@ -34,11 +34,11 @@ import (
 // NewPlantTest creates a new plantGardenerTest object, given an already created plant (created after parsing a plant YAML) and a path to a kubeconfig of an external cluster
 func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1beta1.Plant, logger *logrus.Logger) (*PlantTest, error) {
 	if len(kubeconfig) == 0 {
-		return nil, fmt.Errorf("Please specify the kubeconfig path correctly")
+		return nil, fmt.Errorf("please specify the kubeconfig path correctly")
 	}
 
 	if len(kubeconfigPathExternalCluster) == 0 {
-		return nil, fmt.Errorf("Please specify the kubeconfig path for the external cluster correctly")
+		return nil, fmt.Errorf("please specify the kubeconfig path for the external cluster correctly")
 	}
 
 	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, kubernetes.WithClientOptions(

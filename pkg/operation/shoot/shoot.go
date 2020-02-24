@@ -64,7 +64,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencore
 
 	extensions, err := calculateExtensions(k8sGardenClient.Client(), shoot, seedNamespace)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot calculate required extensions for shoot %s: %v", shoot.Name, err)
+		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %v", shoot.Name, err)
 	}
 
 	shootObj := &Shoot{

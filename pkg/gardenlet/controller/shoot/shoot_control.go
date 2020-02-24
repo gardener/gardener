@@ -298,7 +298,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 	})
 
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("Could not add finalizer to Shoot: %s", err.Error())
+		return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
 	}
 	// make sure that the latest version of the shoot object is used as the basis for next operations
 	shoot = updatedShoot

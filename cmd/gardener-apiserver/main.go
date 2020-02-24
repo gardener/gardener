@@ -26,11 +26,9 @@ import (
 	"k8s.io/component-base/logs"
 )
 
-func init() {
-	features.RegisterFeatureGates()
-}
-
 func main() {
+	features.RegisterFeatureGates()
+
 	logs.InitLogs()
 	defer logs.FlushLogs()
 

@@ -706,7 +706,7 @@ func checkSeedAssociations(ctx context.Context, k8sGardenClient kubernetes.Inter
 		}
 
 		if len(results) > 0 {
-			return fmt.Errorf("Still associated %s with seed %q: %+v", name, seedName, results)
+			return fmt.Errorf("still associated %s with seed %q: %+v", name, seedName, results)
 		}
 	}
 

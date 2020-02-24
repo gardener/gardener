@@ -96,7 +96,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 					}
 					return nil
 				}
-				return fmt.Errorf("Seed object for shooted seed is not yet deleted - can't delete shoot")
+				return fmt.Errorf("seed object for shooted seed is not yet deleted - can't delete shoot")
 			}
 			return nil
 		}),
@@ -113,7 +113,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 					}
 					return retryutils.NotOk()
 				}); err != nil {
-					return fmt.Errorf("Failed while waiting for seed %s to be deleted, err=%s", o.Shoot.Info.Name, err.Error())
+					return fmt.Errorf("failed while waiting for seed %s to be deleted, err=%s", o.Shoot.Info.Name, err.Error())
 				}
 			}
 			return nil

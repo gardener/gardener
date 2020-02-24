@@ -143,7 +143,7 @@ var _ = Describe("kubernetes", func() {
 					Return(nil),
 			)
 
-			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).NotTo(HaveOccurred())
+			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).NotTo(HaveOccurred())
 			Expect(called).To(BeTrue())
 		})
 
@@ -163,7 +163,7 @@ var _ = Describe("kubernetes", func() {
 					Return(nil),
 			)
 
-			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).NotTo(HaveOccurred())
+			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).NotTo(HaveOccurred())
 			Expect(called).To(BeTrue())
 		})
 
@@ -180,7 +180,7 @@ var _ = Describe("kubernetes", func() {
 					Return(expectedErr),
 			)
 
-			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).To(Equal(expectedErr))
+			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).To(Equal(expectedErr))
 		})
 	})
 

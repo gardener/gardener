@@ -204,7 +204,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleAlerting {
 			authType := string(secret.Data["auth_type"])
 			if authType != "smtp" && authType != "none" && authType != "basic" && authType != "certificate" {
-				return nil, fmt.Errorf("Invalid or missing field 'auth_type' in secret %s", secret.Name)
+				return nil, fmt.Errorf("invalid or missing field 'auth_type' in secret %s", secret.Name)
 			}
 			alertingSecret := secret
 			secretsMap[common.GardenRoleAlerting] = alertingSecret

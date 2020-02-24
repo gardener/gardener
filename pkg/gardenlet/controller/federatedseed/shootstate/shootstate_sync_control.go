@@ -80,7 +80,7 @@ func (s *SyncController) Run(ctx context.Context, shootStateSyncWorkersCount int
 	defer cancel()
 
 	if !cache.WaitForCacheSync(timeoutCtx.Done(), s.syncControllerArtifacts.hasSyncedFuncs...) {
-		return fmt.Errorf("Timeout waiting for extension informers to sync")
+		return fmt.Errorf("timeout waiting for extension informers to sync")
 	}
 
 	// Count number of running workers.

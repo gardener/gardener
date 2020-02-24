@@ -375,11 +375,6 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 	return err
 }
 
-func (c *Controller) updateShootStatusResetRetry(o *operation.Operation, operationType gardencorev1beta1.LastOperationType) error {
-	now := metav1.NewTime(time.Now().UTC())
-	return c.updateShootStatusReconcile(o, operationType, gardencorev1beta1.LastOperationStateError, &now)
-}
-
 func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, operationType gardencorev1beta1.LastOperationType) error {
 	var retryCycleStartTime *metav1.Time
 

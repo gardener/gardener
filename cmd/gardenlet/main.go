@@ -26,11 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-func init() {
-	features.RegisterFeatureGates()
-}
-
 func main() {
+	features.RegisterFeatureGates()
+
 	if err := exec.Command("which", "openvpn").Run(); err != nil {
 		panic("openvpn is not installed or not executable. cannot start gardenlet.")
 	}

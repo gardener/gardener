@@ -167,7 +167,7 @@ func (c *defaultControllerInstallationControl) isDependentOnResource(resources m
 			if machineImage == nil {
 				continue
 			}
-			if resourceKind == extensionsv1alpha1.OperatingSystemConfigResource && strings.ToLower(resourceType) == strings.ToLower(string(machineImage.Name)) {
+			if resourceKind == extensionsv1alpha1.OperatingSystemConfigResource && strings.EqualFold(resourceType, string(machineImage.Name)) {
 				return true
 			}
 		}

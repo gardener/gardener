@@ -160,7 +160,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 		now := time.Now()
 		nowIsAfterDeadline := now.After(deadline)
 		if nowIsAfterDeadline && imageUpdateRequired {
-			return false, fmt.Errorf("Shoot did not get the expected machine image maintenance. Deadline exceeded. ")
+			return false, fmt.Errorf("shoot did not get the expected machine image maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !imageUpdateRequired {
 			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an machineImage update")
 			return true, nil
@@ -187,7 +187,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedKubernetesVersionMaintenance(ctx c
 		now := time.Now()
 		nowIsAfterDeadline := now.After(deadline)
 		if nowIsAfterDeadline && kubernetesVersionUpdateRequired {
-			return false, fmt.Errorf("Shoot did not get the expected kubernetes version maintenance. Deadline exceeded. ")
+			return false, fmt.Errorf("shoot did not get the expected kubernetes version maintenance. Deadline exceeded. ")
 		} else if nowIsAfterDeadline && !kubernetesVersionUpdateRequired {
 			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an kubernetes version update")
 			return true, nil
