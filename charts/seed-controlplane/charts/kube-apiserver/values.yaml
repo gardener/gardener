@@ -87,8 +87,11 @@ apiServerResources:
 
 maxReplicas: 1
 minReplicas: 1
-targetAverageUtilizationCpu: 80
-targetAverageUtilizationMemory: 80
+
+hpa:
+  targetAverageUtilizationCpu: 80
+  memoryMetricForHpaEnabled: false
+  targetAverageUtilizationMemory: 80
 
 auditConfig:
   auditPolicy: ""
