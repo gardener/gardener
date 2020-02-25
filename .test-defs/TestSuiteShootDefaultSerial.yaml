@@ -19,6 +19,7 @@ spec:
       -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
       -shoot-name=$SHOOT_NAME
       -project-namespace=$PROJECT_NAMESPACE
+      -fenced=$FENCED
       -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
       -ginkgo.skip="\[DISRUPTIVE\]"
 
