@@ -88,6 +88,7 @@ go test -timeout=0 -mod=vendor ./test/suites/shoot
       -kubecfg=/path/to/gardener/kubeconfig
       -shoot-name=<shoot-name>                             # Name of the shoot to test
       -project-namespace=<gardener project namespace>
+      -fenced=<true|false>                                 # Tested shoot is running in a fenced environment and cannot be reached by gardener
 ```
 or for the gardener suite with:
 ```

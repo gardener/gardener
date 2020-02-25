@@ -42,6 +42,7 @@ var shootCfg *ShootConfig
 type ShootConfig struct {
 	GardenerConfig *GardenerConfig
 	ShootName      string
+	Fenced         bool
 	SeedScheme     *runtime.Scheme
 
 	CreateTestNamespace         bool
@@ -261,6 +262,8 @@ func RegisterShootFrameworkFlags(flagset *flag.FlagSet) *ShootConfig {
 	newCfg := &ShootConfig{}
 
 	flag.StringVar(&newCfg.ShootName, "shoot-name", "", "name of the shoot")
+	flag.BoolVar(&newCfg.Fenced, "fenced", false,
+		"indicates if the shoot is running in a fenced environment which means that the shoot can only be reached from the gardenlet")
 
 	shootCfg = newCfg
 	return shootCfg

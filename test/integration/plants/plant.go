@@ -117,6 +117,9 @@ users:
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
+		if f.Config.Fenced {
+			ginkgo.Skip("Shoot skipped as it cannot be reached by gardener")
+		}
 		// read a valid kubeconfig form the given shoot
 		kubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, f.ShootKubeconfigSecretName(), framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
