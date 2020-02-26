@@ -7,8 +7,8 @@ data:
   prometheus.yaml: |
 
     global:
-      evaluation_interval: 30s
-      scrape_interval: 30s
+      evaluation_interval: 1m
+      scrape_interval: 1m
     rule_files:
     - /etc/prometheus/rules/*.yaml
 
@@ -174,7 +174,7 @@ data:
         regex: vpa-exporter;metrics;garden
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpa | indent 6 }}
-    
+
 {{- if .Values.hvpa.enabled }}
     - job_name: 'hvpa-controller'
       kubernetes_sd_configs:
