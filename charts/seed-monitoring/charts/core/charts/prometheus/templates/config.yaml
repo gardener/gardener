@@ -14,8 +14,8 @@ data:
     # take note that there is a limit of 500 samples per target
 
     global:
-      evaluation_interval: 30s
-      scrape_interval: 30s
+      evaluation_interval: 1m
+      scrape_interval: 1m
       external_labels:
         cluster: {{ .Release.Namespace }}
         project: {{ .Values.shoot.project }}

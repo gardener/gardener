@@ -7,8 +7,8 @@ data:
   prometheus.yaml: |
 
     global:
-      evaluation_interval: 30s
-      scrape_interval: 30s
+      evaluation_interval: 1m
+      scrape_interval: 1m
       external_labels:
         seed: {{ .Values.aggregatePrometheus.seed }}
 
