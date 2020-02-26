@@ -21,6 +21,8 @@ spec:
         checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
       labels:
         garden.sapcloud.io/role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-aggregate-prometheus: allowed
         component: grafana
     spec:
       containers:
