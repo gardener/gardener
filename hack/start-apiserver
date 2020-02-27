@@ -64,7 +64,7 @@ case $(k8s_env) in
           --tls-private-key-file ~/.minikube/apiserver.key \
           $apiserver_flags
         ;;
-      $NODELESS)
+    $NODELESS)
         echo "Found Nodeless Kubernetes ..."
         GO111MODULE=on go run \
           -mod=vendor \

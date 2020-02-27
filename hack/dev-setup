@@ -24,6 +24,9 @@ kubernetes_env="$(k8s_env)"
 
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
 case "${kubernetes_env}" in
+    $NODELESS)
+        echo "Found Nodeless Kubernetes ..."
+        ;;
     $KIND)
         echo "Found kind ..."
         LOCAL_K8S_HOST_IP=localhost
@@ -55,7 +58,8 @@ cp ${EXAMPLE_DIR}/20-componentconfig-gardenlet.yaml ${DEV_DIR}/
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
 
-cat <<EOF | kubectl apply -f -
+if [ "${kubernetes_env}" != $NODELESS ] ; then
+  cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -100,6 +104,7 @@ spec:
     run: etcd
   type: NodePort
 EOF
+fi
 
 mkdir -p ${DEV_DIR}/tls
 

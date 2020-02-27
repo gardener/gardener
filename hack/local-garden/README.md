@@ -1,6 +1,7 @@
 # Local-Garden
 
-This is a small guide on how to operate the local-garden directory is structured. 
+This is a small guide on how the local-garden directory is structured.  
+To learn how you can use the nodeless setup in this directory, please see [this document](../../docs/development/local_setup.md).
 
 ## Components 
 Local-Garden consists of the following main directories:
