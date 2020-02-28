@@ -55,6 +55,12 @@ etcdResources:
 
 hvpa:
   enabled: false
+  maxAllowed:
+    cpu: "4"
+    memory: 30G
+  minAllowed:
+    cpu: 200m
+    memory: 700M
 
 limitsRequestsGapScaleParams:
   cpu:
