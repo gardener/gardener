@@ -133,12 +133,12 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {
-		kubernetesGeq114Less116, err := versionutils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.16")
+		kubernetesGeq114Less117, err := versionutils.CheckVersionMeetsConstraint(spec.Kubernetes.Version, ">= 1.14, < 1.17")
 		if err != nil {
-			kubernetesGeq114Less116 = false
+			kubernetesGeq114Less117 = false
 		}
-		if !kubernetesGeq114Less116 {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("kubernetes", "version"), "experimental kyma addon needs Kubernetes >= 1.14 and < 1.16"))
+		if !kubernetesGeq114Less117 {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("kubernetes", "version"), "experimental kyma addon needs Kubernetes >= 1.14 and < 1.17"))
 		}
 	}
 
