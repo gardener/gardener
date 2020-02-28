@@ -37,7 +37,7 @@ spec:
         - --stderrthreshold=info
         - --pod-recommendation-min-cpu-millicores=5
         - --pod-recommendation-min-memory-mb=10
-        - --history-length=24h
+        - --recommendation-margin-fraction=0.05
         imagePullPolicy: IfNotPresent
         resources:
           limits:

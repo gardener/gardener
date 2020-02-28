@@ -1050,9 +1050,6 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
-		"hvpa": map[string]interface{}{
-			"enabled": hvpaEnabled,
-		},
 		"maintenanceWindow": b.Shoot.Info.Spec.Maintenance.TimeWindow,
 		"storageCapacity":   b.Seed.GetValidVolumeSize("10Gi"),
 	}
@@ -1067,6 +1064,23 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		if role == common.EtcdRoleMain {
 			// etcd-main emits extensive (histogram) metrics
 			etcd["metrics"] = "extensive"
+			etcd["hvpa"] = map[string]interface{}{
+				"enabled": hvpaEnabled,
+				"minAllowed": map[string]interface{}{
+					"cpu":    "200m",
+					"memory": "700M",
+				},
+			}
+		}
+
+		if role == common.EtcdRoleEvents {
+			etcd["hvpa"] = map[string]interface{}{
+				"enabled": hvpaEnabled,
+				"minAllowed": map[string]interface{}{
+					"cpu":    "50m",
+					"memory": "200M",
+				},
+			}
 		}
 
 		foundEtcd := true

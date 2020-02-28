@@ -67,11 +67,11 @@ spec:
           containerPolicies:
             - containerName: etcd
               maxAllowed:
-                memory: 30G
-                cpu: "4"
+                memory: {{ .Values.hvpa.maxAllowed.memory }}
+                cpu:  {{ .Values.hvpa.maxAllowed.cpu }}
               minAllowed:
-                memory: 1000M
-                cpu: 300m
+                memory: {{ .Values.hvpa.minAllowed.memory }}
+                cpu: {{ .Values.hvpa.minAllowed.cpu }}
             - containerName: backup-restore
               mode: "Off"
   weightBasedScalingIntervals:
