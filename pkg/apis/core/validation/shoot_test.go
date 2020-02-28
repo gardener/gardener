@@ -56,6 +56,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				Minimum:        1,
 				Maximum:        1,
@@ -76,6 +80,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "not_compliant",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				Minimum:        1,
 				Maximum:        1,
@@ -86,6 +94,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name-is-too-long",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				Minimum:        1,
 				Maximum:        1,
@@ -96,6 +108,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "cpu-worker",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				Minimum:        0,
 				Maximum:        2,
@@ -106,6 +122,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "cpu-worker",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				Minimum:        0,
 				Maximum:        0,
@@ -601,6 +621,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.provider.workers[0].machine.type"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.provider.workers[0].machine.image"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -1624,12 +1648,81 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 
 	Describe("#ValidateWorker", func() {
+		DescribeTable("validate worker machine",
+			func(machine core.Machine, matcher gomegatypes.GomegaMatcher) {
+				maxSurge := intstr.FromInt(1)
+				maxUnavailable := intstr.FromInt(0)
+				worker := core.Worker{
+					Name:           "worker-name",
+					Machine:        machine,
+					MaxSurge:       &maxSurge,
+					MaxUnavailable: &maxUnavailable,
+				}
+				errList := ValidateWorker(worker, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("empty machine type",
+				core.Machine{
+					Type: "",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
+				},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("machine.type"),
+				}))),
+			),
+			Entry("missing machine image",
+				core.Machine{
+					Type: "large",
+				},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("machine.image"),
+				}))),
+			),
+			Entry("empty machine image name",
+				core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "",
+						Version: "1.0.0",
+					},
+				},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("machine.image.name"),
+				}))),
+			),
+			Entry("empty machine image version",
+				core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "",
+					},
+				},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("machine.image.version"),
+				}))),
+			),
+		)
+
 		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
 			func(maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
 				worker := core.Worker{
 					Name: "worker-name",
 					Machine: core.Machine{
 						Type: "large",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -1663,6 +1756,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "worker-name",
 					Machine: core.Machine{
 						Type: "large",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -1694,6 +1791,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "worker-name",
 					Machine: core.Machine{
 						Type: "large",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -1724,6 +1825,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "worker-name",
 					Machine: core.Machine{
 						Type: "large",
+						Image: &core.ShootMachineImage{
+							Name:    "image-name",
+							Version: "1.0.0",
+						},
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
@@ -1764,6 +1869,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -1787,6 +1896,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -1812,6 +1925,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
@@ -1845,6 +1962,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -1868,6 +1989,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:              &maxSurge,
 				MaxUnavailable:        &maxUnavailable,
@@ -1895,6 +2020,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
 				},
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
