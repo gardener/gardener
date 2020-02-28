@@ -211,18 +211,18 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
-		return err
-	}
-	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
-		return err
-	}
-
 	if err := b.DeployKubeAPIServerService(); err != nil {
 		return err
 	}
 
 	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
+		return err
+	}
+
+	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
 		return err
 	}
 
