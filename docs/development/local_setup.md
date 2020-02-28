@@ -135,12 +135,45 @@ cd gardener
 1. You have understood the [principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/), what their purpose is and how they interact with each other.
 1. You have understood the [architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture), and what the various clusters are used for.
 
-The development of the Gardener could happen by targeting any cluster.
-You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider.
+#### Start a local kubernetes cluster
 
-The commands below will configure your `minikube` with the absolute minimum resources to launch Gardener API Server and Gardener Controller Manager on your local machine.
+For the development of Gardener you need some kind of Kubernetes cluster, which can be used as a "garden" cluster.
+I.e. you need a Kubernetes API server on which you can register a `APIService` Gardener's own Extension API Server.  
+For this you can use a standard tool from the community to setup a local cluster like minikube, kind or the Kubernetes Cluster feature in Docker for Desktop.
 
-#### Start minikube
+However, if you develop and run Gardener's components locally, you don't actually a fully fledged Kubernetes Cluster,
+i.e. you don't actually need to run Pods on it. If you want to use a more lightweight approach for development purposes,
+you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`. This is the easiest way to get your
+Gardener development setup up and running.
+
+**Using the nodeless cluster setup**
+
+Setting up a local nodeless Garden cluster is quite simple. The only prerequisite is a running docker daemon.
+Just use the provided Makefile rules to start your local Garden:
+```bash
+make local-garden-up
+[...]
+Starting gardener-dev kube-etcd cluster..!
+Starting gardener-dev kube-apiserver..!
+Starting gardener-dev kube-controller-manager..!
+Starting gardener-dev gardener-etcd cluster..!
+namespace/garden created
+clusterrole.rbac.authorization.k8s.io/gardener.cloud:admin created
+clusterrolebinding.rbac.authorization.k8s.io/front-proxy-client created
+[...]
+```
+
+This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)
+and an `etcd` Instance for the `gardener-apiserver` as Docker containers.
+
+To tear down the local Garden cluster and remove the Docker containers, simply run:
+```bash
+make local-garden-down
+```
+
+**Using minikube**
+
+Alternatively, spin up a cluster with minikube with this command:
 
 ```bash
 minikube start --embed-certs #  `--embed-certs` can be omitted if minikube has already been set to create self-contained kubeconfig files.
@@ -151,6 +184,9 @@ minikube start --embed-certs #  `--embed-certs` can be omitted if minikube has a
 ```
 
 #### Prepare the Gardener
+
+Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.
+Just point your `KUBECONFIG` environment variable to the local cluster you created in the previous step and run:
 
 ```bash
 make dev-setup

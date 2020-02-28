@@ -54,7 +54,7 @@ local-garden-up:
 	@./hack/local-garden/apply-rbac-garden-ns
 
 	# Now you can start using the cluster at with `export KUBECONFIG=hack/local-garden/kubeconfigs/default-admin.conf`
-	# Then you need to run ./hack/dev-setup-register-gardener to register gardener.
+	# Then you need to run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
 	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
 
 .PHONY: local-garden-down
