@@ -16,6 +16,7 @@ package backupbucket
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -24,8 +25,12 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -112,4 +117,52 @@ func (backupBucketStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old
 
 func (backupBucketStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateBackupBucketStatusUpdate(obj.(*core.BackupBucket), old.(*core.BackupBucket))
+}
+
+// ToSelectableFields returns a field set that represents the object
+// TODO: fields are not labels, and the validation rules for them do not apply.
+func ToSelectableFields(backupBucket *core.BackupBucket) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	backupBucketSpecificFieldsSet := make(fields.Set, 3)
+	backupBucketSpecificFieldsSet[core.BackupBucketSeedName] = getSeedName(backupBucket)
+	return generic.AddObjectMetaFieldsSet(backupBucketSpecificFieldsSet, &backupBucket.ObjectMeta, true)
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+	backupBucket, ok := obj.(*core.BackupBucket)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a backupBucket")
+	}
+	return labels.Set(backupBucket.ObjectMeta.Labels), ToSelectableFields(backupBucket), nil
+}
+
+// MatchBackupBucket returns a generic matcher for a given label and field selector.
+func MatchBackupBucket(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:       label,
+		Field:       field,
+		GetAttrs:    GetAttrs,
+		IndexFields: []string{core.BackupBucketSeedName},
+	}
+}
+
+// SeedNameTriggerFunc returns spec.seedName of given BackupBucket.
+func SeedNameTriggerFunc(obj runtime.Object) string {
+	backupBucket, ok := obj.(*core.BackupBucket)
+	if !ok {
+		return ""
+	}
+
+	return getSeedName(backupBucket)
+}
+
+func getSeedName(backupBucket *core.BackupBucket) string {
+	if backupBucket.Spec.SeedName == nil {
+		return ""
+	}
+	return *backupBucket.Spec.SeedName
 }

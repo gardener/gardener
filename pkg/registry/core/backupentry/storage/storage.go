@@ -19,11 +19,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/registry/core/backupentry"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 )
 
 // REST implements a RESTStorage for backupEntries against etcd
@@ -61,7 +63,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+	options := &generic.StoreOptions{
+		RESTOptions: optsGetter,
+		AttrFunc:    backupentry.GetAttrs,
+		TriggerFunc: map[string]storage.IndexerFunc{core.BackupEntrySeedName: backupentry.SeedNameTriggerFunc},
+	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}

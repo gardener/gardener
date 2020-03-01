@@ -17,11 +17,17 @@ package core
 // Field path constants that are specific to the internal API
 // representation.
 const (
-	// ShootSeedName is the field selector path for finding
-	// the Seed cluster of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
-	ShootSeedName = "spec.seedName"
+	// BackupBucketSeedName is the field selector path for finding
+	// the Seed cluster of a core.gardener.cloud/v1beta1 BackupBucket.
+	BackupBucketSeedName = "spec.seedName"
+	// BackupEntrySeedName is the field selector path for finding
+	// the Seed cluster of a core.gardener.cloud/v1beta1 BackupEntry.
+	BackupEntrySeedName = "spec.seedName"
 
 	// ShootCloudProfileName is the field selector path for finding
 	// the CloudProfile name of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
 	ShootCloudProfileName = "spec.cloudProfileName"
+	// ShootSeedName is the field selector path for finding
+	// the Seed cluster of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
+	ShootSeedName = "spec.seedName"
 )
