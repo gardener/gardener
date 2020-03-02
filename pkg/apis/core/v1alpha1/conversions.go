@@ -193,3 +193,105 @@ func Convert_v1alpha1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *core
 
 	return nil
 }
+
+func Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	if owner := out.Owner; owner != nil {
+	outer:
+		for i, member := range out.Members {
+			if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
+				// add owner role to the current project's owner if not present
+				for _, role := range member.Roles {
+					if role == core.ProjectMemberOwner {
+						continue outer
+					}
+				}
+
+				out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
+			} else {
+				// delete owner role from all other members
+				for j, role := range member.Roles {
+					if role == ProjectMemberOwner {
+						out.Members[i].Roles = append(out.Members[i].Roles[:j], out.Members[i].Roles[j+1:]...)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	if err := autoConvert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in, out, s); err != nil {
+		return err
+	}
+
+	if owner := out.Owner; owner != nil {
+	outer:
+		for i, member := range out.Members {
+			if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
+				// add owner role to the current project's owner if not present
+				for _, role := range member.Roles {
+					if role == ProjectMemberOwner {
+						continue outer
+					}
+				}
+
+				out.Members[i].Roles = append(out.Members[i].Roles, ProjectMemberOwner)
+			} else {
+				// delete owner role from all other members
+				for j, role := range member.Roles {
+					if role == ProjectMemberOwner {
+						out.Members[i].Roles = append(out.Members[i].Roles[:j], out.Members[i].Roles[j+1:]...)
+					}
+				}
+
+				if member.Role != nil && *member.Role == ProjectMemberOwner {
+					if len(out.Members[i].Roles) > 0 {
+						out.Members[i].Role = &out.Members[i].Roles[0]
+					} else {
+						out.Members[i].Role = nil
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func Convert_v1alpha1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
+	if err := autoConvert_v1alpha1_ProjectMember_To_core_ProjectMember(in, out, s); err != nil {
+		return err
+	}
+
+	if in.Role == nil {
+		return nil
+	}
+
+	for _, role := range in.Roles {
+		if role == *in.Role {
+			return nil
+		}
+	}
+
+	out.Roles = append([]string{*in.Role}, in.Roles...)
+
+	return nil
+}
+
+func Convert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember, out *ProjectMember, s conversion.Scope) error {
+	if err := autoConvert_core_ProjectMember_To_v1alpha1_ProjectMember(in, out, s); err != nil {
+		return err
+	}
+
+	if len(in.Roles) > 0 {
+		out.Role = &in.Roles[0]
+	}
+
+	return nil
+}

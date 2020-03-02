@@ -562,7 +562,10 @@ var _ = Describe("resourcereferencemanager", func() {
 						Kind:     rbacv1.UserKind,
 						Name:     defaultUserName,
 					},
-					Role: core.ProjectMemberAdmin,
+					Roles: []string{
+						core.ProjectMemberAdmin,
+						core.ProjectMemberOwner,
+					},
 				})))
 			})
 		})

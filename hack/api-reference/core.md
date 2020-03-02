@@ -848,7 +848,11 @@ Kubernetes rbac/v1.Subject
 <td>
 <em>(Optional)</em>
 <p>Owner is a subject representing a user name, an email address, or any other identifier of a user owning
-the project.</p>
+the project.
+IMPORTANT: Be aware that this field will be removed in the <code>v1</code> version of this API in favor of the <code>owner</code>
+role. The only way to change the owner will be by moving the <code>owner</code> role. In this API version the only way
+to change the owner is to use this field.
+TODO: Remove this field in favor of the <code>owner</code> role in <code>v1</code>.</p>
 </td>
 </tr>
 <tr>
@@ -5432,7 +5436,21 @@ string
 </em>
 </td>
 <td>
-<p>Role represents the role of this member.</p>
+<p>Role represents the role of this member.
+Deprecated: Use roles instead. For backwards compatibility reasons, if role is specified, it will be copied to
+the roles list during the conversion of the API server.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>roles</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Roles represents the list of roles of this member.</p>
 </td>
 </tr>
 </tbody>
@@ -5502,7 +5520,11 @@ Kubernetes rbac/v1.Subject
 <td>
 <em>(Optional)</em>
 <p>Owner is a subject representing a user name, an email address, or any other identifier of a user owning
-the project.</p>
+the project.
+IMPORTANT: Be aware that this field will be removed in the <code>v1</code> version of this API in favor of the <code>owner</code>
+role. The only way to change the owner will be by moving the <code>owner</code> role. In this API version the only way
+to change the owner is to use this field.
+TODO: Remove this field in favor of the <code>owner</code> role in <code>v1</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7274,5 +7296,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>37f4ded7c</code>.
+on git commit <code>2bdda9f61</code>.
 </em></p>

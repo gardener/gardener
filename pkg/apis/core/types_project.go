@@ -78,15 +78,20 @@ type ProjectMember struct {
 	// Subject is representing a user name, an email address, or any other identifier of a user, group, or service
 	// account that has a certain role.
 	rbacv1.Subject
-	// Role represents the role of this member.
-	Role string
+	// Roles is a list of roles of this member.
+	Roles []string
 }
 
 const (
 	// ProjectMemberAdmin is a const for a role that provides full admin access.
 	ProjectMemberAdmin = "admin"
+	// ProjectMemberOwner is a const for a role that provides full owner access.
+	ProjectMemberOwner = "owner"
 	// ProjectMemberViewer is a const for a role that provides limited permissions to only view some resources.
 	ProjectMemberViewer = "viewer"
+
+	// ProjectMemberExtensionPrefix is a prefix for custom roles that are not known by Gardener.
+	ProjectMemberExtensionPrefix = "extension:"
 )
 
 // ProjectPhase is a label for the condition of a project at the current time.
