@@ -1934,6 +1934,13 @@ func schema_pkg_apis_core_v1alpha1_DNSProvider(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
+					"primary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Primary indicates that this DNSProvider is used for shoot related domains.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
@@ -6966,6 +6973,13 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+						},
+					},
+					"primary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Primary indicates that this DNSProvider is used for shoot related domains.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"secretName": {

@@ -17,6 +17,7 @@ package dns_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,11 +27,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("dns", func() {
@@ -137,17 +140,6 @@ var _ = Describe("dns", func() {
 			Expect(*shootCopy).To(Equal(*shootBefore))
 		})
 
-		It("should do nothing because the old shoot already specify a seed", func() {
-			shootBefore := shoot.DeepCopy()
-
-			attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-			err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(shoot).To(Equal(*shootBefore))
-		})
-
 		It("should do nothing because the seed disables DNS", func() {
 			seedCopy := seed.DeepCopy()
 			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, core.SeedTaint{Key: core.SeedTaintDisableDNS})
@@ -189,6 +181,11 @@ var _ = Describe("dns", func() {
 		})
 
 		Context("provider is not 'unmanaged'", func() {
+			var (
+				providerType = "provider"
+				secretName   = "secret"
+			)
+
 			BeforeEach(func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = nil
@@ -213,10 +210,47 @@ var _ = Describe("dns", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.DNS.Providers).NotTo(BeNil())
-				Expect(shoot.Spec.DNS.Providers[0].Type).NotTo(BeNil())
-				Expect(*shoot.Spec.DNS.Providers[0].Type).To(Equal(providerType))
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+					"Type":    Equal(pointer.StringPtr(providerType)),
+					"Primary": Equal(pointer.BoolPtr(true)),
+				})))
+			})
+
+			It("should set the correct primary DNS provider", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+				}
+
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": Equal(pointer.BoolPtr(true)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Primary":    BeNil(),
+						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+				))
 			})
 
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
@@ -230,6 +264,54 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.DNS.Providers).To(BeNil())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
+			})
+
+			It("should not set a primary provider because a default domain was generated for the shoot (no domain)", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+				}
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+					"Type":       Equal(pointer.StringPtr(providerType)),
+					"Primary":    BeNil(),
+					"SecretName": Equal(pointer.StringPtr(secretName)),
+				})))
+			})
+
+			It("should forbid setting a primary provider because a default domain was generated for the shoot (no domain)", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+						Primary:    pointer.BoolPtr(true),
+					},
+				}
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusBadRequest)),
+						"Message": Equal("primary dns provider must not be set when default domain is used"),
+					}),
+				})))
 			})
 
 			It("should pass because the default domain was allowed for the shoot (with domain)", func() {

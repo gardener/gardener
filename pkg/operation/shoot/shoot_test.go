@@ -224,6 +224,7 @@ var _ = Describe("shoot", func() {
 									{
 										Type:       &provider,
 										SecretName: &dnsSecretName,
+										Primary:    pointer.BoolPtr(true),
 									},
 								},
 							},
@@ -286,7 +287,8 @@ var _ = Describe("shoot", func() {
 								Domain: &domain,
 								Providers: []gardencorev1beta1.DNSProvider{
 									{
-										Type: &provider,
+										Type:    &provider,
+										Primary: pointer.BoolPtr(true),
 									},
 								},
 							},

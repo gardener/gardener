@@ -45,6 +45,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			domain          = "my-cluster.example.com"
 			dnsProviderType = "some-provider"
+			secretName      = "some-secret"
 			purpose         = core.ShootPurposeEvaluation
 			addon           = core.Addon{
 				Enabled: true,
@@ -156,7 +157,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
 							{
-								Type: &dnsProviderType,
+								Type:    &dnsProviderType,
+								Primary: pointer.BoolPtr(true),
 							},
 						},
 						Domain: &domain,
@@ -818,13 +820,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("dns section", func() {
 			It("should forbid specifying a provider without a domain", func() {
-				shoot.Spec.DNS.Domain = pointer.StringPtr("foo/bar.baz")
-				shoot.Spec.DNS.Providers = nil
+				shoot.Spec.DNS.Domain = nil
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.dns.domain"),
 				}))))
 			})
@@ -833,7 +834,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: pointer.StringPtr(core.DNSUnmanaged),
+						Type:    pointer.StringPtr(core.DNSUnmanaged),
+						Primary: pointer.BoolPtr(true),
 					},
 				}
 
@@ -947,15 +949,98 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid updating the dns provider", func() {
+			It("should forbid updating the primary dns provider type", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				shoot.Spec.DNS.Providers[0].Type = pointer.StringPtr("some-other-provider")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.providers"),
+				}))))
+			})
+
+			It("should forbid to unset the primary DNS provider type", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.Providers[0].Type = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.providers"),
+				}))))
+			})
+
+			It("should forbid to remove the primary DNS provider", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.Providers[0].Primary = pointer.BoolPtr(false)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.providers"),
+				}))))
+			})
+
+			It("should forbid adding another primary provider", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{
+					Primary: pointer.BoolPtr(true),
+				})
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.providers[1].primary"),
+				}))))
+			})
+
+			It("should having the a provider with invalid secretName", func() {
+				var (
+					invalidSecretName = "foo/bar"
+				)
+
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						SecretName: &secretName,
+						Type:       &dnsProviderType,
+					},
+					{
+						SecretName: &invalidSecretName,
+						Type:       &dnsProviderType,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.providers[0].type"),
+					"Field": Equal("spec.dns.providers[1]"),
+				}))))
+			})
+
+			It("should having the same provider multiple times", func() {
+
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						SecretName: &secretName,
+						Type:       &dnsProviderType,
+					},
+					{
+						SecretName: &secretName,
+						Type:       &dnsProviderType,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.providers[1]"),
 				}))))
 			})
 
@@ -966,6 +1051,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid having more than one primary provider", func() {
+				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, core.DNSProvider{
+					Primary: pointer.BoolPtr(true),
+				})
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.dns.providers[1].primary"),
+				}))))
 			})
 		})
 

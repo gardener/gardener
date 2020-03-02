@@ -2118,6 +2118,7 @@ func Convert_core_DNSIncludeExclude_To_v1alpha1_DNSIncludeExclude(in *core.DNSIn
 
 func autoConvert_v1alpha1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core.DNSProvider, s conversion.Scope) error {
 	out.Domains = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Domains))
+	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*core.DNSIncludeExclude)(unsafe.Pointer(in.Zones))
@@ -2131,6 +2132,7 @@ func Convert_v1alpha1_DNSProvider_To_core_DNSProvider(in *DNSProvider, out *core
 
 func autoConvert_core_DNSProvider_To_v1alpha1_DNSProvider(in *core.DNSProvider, out *DNSProvider, s conversion.Scope) error {
 	out.Domains = (*DNSIncludeExclude)(unsafe.Pointer(in.Domains))
+	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.Zones = (*DNSIncludeExclude)(unsafe.Pointer(in.Zones))
