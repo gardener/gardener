@@ -14,7 +14,7 @@
 
 Gardener-managed Kubernetes clusters are sometimes used to run sensitive workloads, which sometimes are comprised of OCI images originating from untrusted sources. Additional use-cases want to leverage economy-of-scale to run workloads for multiple tenants on the same cluster.  In some cases, Gardener users want to use operating systems which do not easily support the Docker engine.
 
-This proposal aims to migrate Gardener Shoot clusters to use CRI by default instead of the legacy Docker API, and to provide extension type for adding CRI shims (like [GVisor](https://gvisor.dev/) and [Kata Containers](https://katacontainers.io/)) which can be used to add support in Gardener Shoot clusters for these runtimes.
+This proposal aims to allow Gardener Shoot clusters to use CRI instead of the legacy Docker API, and to provide extension type for adding CRI shims (like [GVisor](https://gvisor.dev/) and [Kata Containers](https://katacontainers.io/)) which can be used to add support in Gardener Shoot clusters for these runtimes.
 
 ## Motivation
 
@@ -26,19 +26,16 @@ The motivation behind this proposal is to make all of this functionality accessi
 
 ### Goals
 
-* Gardener must default to configuring its managed clusters with the CRI interface instead of the legacy Dockershim. This change must be transparent to Gardener users and must simply work out-of-the-box for new and existing clusters.
+* Gardener must allow to configue its managed clusters with the CRI interface instead of the legacy Dockershim. 
 * Low-level runtimes like gVisor or Kata Containers are provided as gardener extensions which are (optionally) installed into a landscape by the Gardener operator. There must be no runtime-specific knowledge in the core Gardener code.
 * It shall be possible to configure multiple low-level runtimes in Shoot clusters, on the Worker Group level.
 
-### Non-Goals
-
-* Exposing the configuration of the underlying runtimes to the user is beyond the scope of this proposal. The initial version will support a default common-sense configuration for each of the underlying runtimes. If required, future enhancements will make it possible to fine-tune the underlying runtimes.
-
 ## Proposal
 
-Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was [refactored](https://www.docker.com/blog/docker-engine-1-11-runc/) and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to change the default Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-JeOS. 
+Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was [refactored](https://www.docker.com/blog/docker-engine-1-11-runc/) and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to allow the change of the Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-JeOS. 
 
-Once Gardener clusters are migrated to use CRI, we will implement two Gardener extensions, providing gVisor and Kata Containers as options for Gardener landscapes. The `WorkerGroup` specification will be extended to allow specifying a list of additional required Runtimes for nodes in that group. For example:
+We will implement two Gardener extensions, providing gVisor and Kata Containers as options for Gardener landscapes. 
+The `WorkerGroup` specification will be extended to allow specifying the CRI name and a list of additional required Runtimes for nodes in that group. For example:
 ```yaml
 workers:
 - name: worker-b8jg5
@@ -48,9 +45,11 @@ workers:
   autoScalerMin: 1
   autoScalerMax: 2
   maxSurge: 1
-  containerRuntimes:
-  - type: gvisor
-  - type: kata-containers
+  cri:
+    name: containerd
+    containerRuntimes:
+    - type: gvisor
+    - type: kata-containers
   machineImage:
     name: coreos
     version: 2135.6.0
@@ -66,39 +65,30 @@ Each extension will need to address the following concern:
 
 ## Design Details
 
-1. Change the nodes container runtime to work with CRI and containerd by default.
+1. Change the nodes container runtime to work with CRI and ContainerD (Only if specified in the Shoot spec):
     1. In order to configure each worker machine in the cluster to work with CRI, the following configurations should be done:
         1. Add kubelet execution flags:
             1. --container-runtime=remote
-            2. --container-runtime-endpoint=unix:///.../containerd.socket
-        2. Make sure that containerd configuration file exist in path /etc/containerd/config.toml and it is configured to enable the CRI plugin (In the containerd config.toml "cri" plugin must not be disabled).
+            2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
+        2. Make sure that default containerd configuration file exist in path /etc/containerd/config.toml.
         
-    2. Containerd socket path and containerd configurations are different for each OS. To make sure the configurations above are set in each worker machine, each OS extension would be responsible to configure them during the reconciliation of the 
-       OperatingSystemConfig when it creates the cloud init.
+    2. ContainerD and Docker configurations are different for each OS. To make sure the default configurations above works well in each worker machine, each OS extension would be responsible to configure them during the reconciliation of the 
+       OperatingSystemConfig:
         1. os-ubuntu - 
-            1. Add the following flags to the kubelet execution command:
-                1. --container-runtime=remote
-                2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
-            2. Create a containerd configuration file: /etc/containerd/config.toml based on the current default configuration (containerd config default).
+            1. Create ContainerD unit Drop-In to execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
+            2. Create the container runtime metadata file with a OS path for binaries installations: /usr/bin.
         2. os-coreos - 
-            1. Add the following flags to the kubelet execution command:
-               1. --container-runtime=remote
-               2. --container-runtime-endpoint=unix:///var/run/docker/libcontainerd/docker-containerd.socket
-            2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration.
-            3. Override the default containerd.service unit. Create a new unit in: /etc/systemd/system/containerd.service unit that will start the containerd service with a configuration file path: /etc/containerd/config.toml.
+            1. Create ContainerD unit Drop-In to execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
+            2. Create Docker Drop-In unit to execute Docker with the correct socket path of ContainerD.
+            3. Create the container runtime metadata file with a OS path for binaries installations: /var/bin.
         3. os-suse-jeos - 
-           1. Add the following flags to the kubelet execution command:
-              1. --container-runtime=remote
-              2. --container-runtime-endpoint=unix:///var/run/docker/containerd/docker-containerd.sock 
-           2. Create a containerd configuration file: /etc/containerd/config.toml based on the default configuration.
+           1. Create ContainerD service unit and execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
+           2. Download and install ctr-cli which is not shipped with the current SuSe image.
+           3. Create the container runtime metadata file with a OS path for binaries installations /usr/sbin.
         
-    3. Docker-monitor daemon and conatinerd service. For CRI it is possible to send parameters to Kubelet to do the log rotation:
-       CRIContainerLogRotation=true. It will be done by the OS controller by default.
-       Containerd monitor will check that containerd process is running every 30 seconds.
-    4. Docker pull images in OSC should be changed to the Docker ctr equivalent command. 
+    3. To rotate the ContainerD (CRI) logs we will activate the kubelet feature flag: CRIContainerLogRotation=true.
+    4. Docker monitor service will be replaced with equivalent ContainerD monitor service.  
 
-2. Existing running clusters created with Docker shim will not be modified until next scheduale rolling update or hibernation.
-   New clusters will be created with ContainerD by default.
 3. Validate workers additional runtime configurations:
    1. Disallow additional runtimes with shoots < 1.14
    2. kata-container validation: Machine type support nested virtualization.
