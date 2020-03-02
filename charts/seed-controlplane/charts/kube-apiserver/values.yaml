@@ -103,8 +103,8 @@ enableBasicAuthentication: true
 ## against the API are bound to at least one of these audiences. If the .serviceAccountConfig.issuer
 ## is configured and this flag is not, this field defaults to a single element list
 ## containing the issuer URL .
-#apiAudiences:
-#- "vault"
+apiAudiences:
+- kubernetes
 
 ## Configuration of how to issue service accounts
 #serviceAccountConfig:

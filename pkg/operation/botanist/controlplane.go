@@ -800,8 +800,10 @@ func (b *Botanist) DeployKubeAPIServer() error {
 	defaultValues["maxReplicas"] = maxReplicas
 
 	var (
-		apiServerConfig  = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
-		admissionPlugins = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
+		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
+		admissionPlugins             = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
+		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+		serviceAccountConfigVals     = map[string]interface{}{}
 	)
 
 	if apiServerConfig != nil {
@@ -813,10 +815,8 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 
 		if serviceAccountConfig := apiServerConfig.ServiceAccountConfig; serviceAccountConfig != nil {
-			config := make(map[string]interface{})
-
 			if issuer := serviceAccountConfig.Issuer; issuer != nil {
-				config["issuer"] = *issuer
+				serviceAccountTokenIssuerURL = *issuer
 			}
 
 			if signingKeySecret := serviceAccountConfig.SigningKeySecret; signingKeySecret != nil {
@@ -825,10 +825,8 @@ func (b *Botanist) DeployKubeAPIServer() error {
 					return err
 				}
 
-				config["signingKey"] = signingKey
+				serviceAccountConfigVals["signingKey"] = signingKey
 			}
-
-			defaultValues["serviceAccountConfig"] = config
 		}
 
 		if apiServerConfig.APIAudiences != nil {
@@ -863,6 +861,10 @@ func (b *Botanist) DeployKubeAPIServer() error {
 			}
 		}
 	}
+
+	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
+	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
+
 	defaultValues["admissionPlugins"] = admissionPlugins
 
 	values, err := b.InjectSeedShootImages(defaultValues,

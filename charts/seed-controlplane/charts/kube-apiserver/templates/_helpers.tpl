@@ -5,6 +5,12 @@
 {{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
 - --feature-gates=PodPriority=true
 {{- end }}
+{{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
+- --feature-gates=TokenRequest=true
+{{- end }}
+{{- if semverCompare "1.11" .Values.kubernetesVersion }}
+- --feature-gates=TokenRequestProjection=true
+{{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.runtimeConfig" }}
@@ -98,6 +104,9 @@ rules:
 {{- end }}
 {{- if .Values.serviceAccountConfig.signingKey }}
 - --service-account-signing-key-file=/srv/kubernetes/service-account-signing-key/signing-key
+- --service-account-key-file=/srv/kubernetes/service-account-signing-key/signing-key
+{{- else }}
+- --service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa
 {{- end }}
 {{- end -}}
 {{- end -}}
