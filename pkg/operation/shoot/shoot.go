@@ -150,11 +150,11 @@ func (s *Shoot) GetWorkerNames() []string {
 	return workerNames
 }
 
-// GetNodeCount returns the sum of all 'maximum' fields of all worker groups of the Shoot.
-func (s *Shoot) GetNodeCount() int32 {
+// GetMinNodeCount returns the sum of all 'minimum' fields of all worker groups of the Shoot.
+func (s *Shoot) GetMinNodeCount() int32 {
 	var nodeCount int32
 	for _, worker := range s.Info.Spec.Provider.Workers {
-		nodeCount += worker.Maximum
+		nodeCount += worker.Minimum
 	}
 	return nodeCount
 }
