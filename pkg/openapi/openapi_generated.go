@@ -2346,7 +2346,7 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 					},
 					"apiAudiences": {
 						SchemaProps: spec.SchemaProps{
-							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single element list containing the issuer URL.",
+							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. Defaults to [\"kubernetes\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4769,14 +4769,14 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"signingKeySecretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SigningKeySecret is a reference to a secret that contains the current private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. (Requires the 'TokenRequest' feature gate.)",
+							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
@@ -7308,7 +7308,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"apiAudiences": {
 						SchemaProps: spec.SchemaProps{
-							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. If `serviceAccountConfig.issuer` is configured and this is not, this defaults to a single element list containing the issuer URL.",
+							Description: "APIAudiences are the identifiers of the API. The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences. Defaults to [\"kubernetes\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9731,14 +9731,14 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"signingKeySecretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SigningKeySecret is a reference to a secret that contains the current private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. (Requires the 'TokenRequest' feature gate.)",
+							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},

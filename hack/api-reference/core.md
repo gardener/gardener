@@ -3454,8 +3454,7 @@ configuration.</p>
 <em>(Optional)</em>
 <p>APIAudiences are the identifiers of the API. The service account token authenticator will
 validate that tokens used against the API are bound to at least one of these audiences.
-If <code>serviceAccountConfig.issuer</code> is configured and this is not, this defaults to a single
-element list containing the issuer URL.</p>
+Defaults to [&ldquo;kubernetes&rdquo;].</p>
 </td>
 </tr>
 <tr>
@@ -6432,7 +6431,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>Issuer is the identifier of the service account token issuer. The issuer will assert this
-identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is a string or URI.</p>
+identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is a string or URI.
+Defaults to URI of the API server.</p>
 </td>
 </tr>
 <tr>
@@ -6446,9 +6446,9 @@ Kubernetes core/v1.LocalObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SigningKeySecret is a reference to a secret that contains the current private key of the
+<p>SigningKeySecret is a reference to a secret that contains an optional private key of the
 service account token issuer. The issuer will sign issued ID tokens with this private key.
-(Requires the &lsquo;TokenRequest&rsquo; feature gate.)</p>
+Only useful if service account tokens are also issued by another external system.</p>
 </td>
 </tr>
 </tbody>
@@ -7309,5 +7309,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>6c2b77555</code>.
+on git commit <code>8e6cde607</code>.
 </em></p>
