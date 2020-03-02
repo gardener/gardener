@@ -159,6 +159,15 @@ func (s *Shoot) GetMinNodeCount() int32 {
 	return nodeCount
 }
 
+// GetMaxNodeCount returns the sum of all 'maximum' fields of all worker groups of the Shoot.
+func (s *Shoot) GetMaxNodeCount() int32 {
+	var nodeCount int32
+	for _, worker := range s.Info.Spec.Provider.Workers {
+		nodeCount += worker.Maximum
+	}
+	return nodeCount
+}
+
 // GetNodeNetwork returns the nodes network CIDR for the Shoot cluster. If the infrastructure extension
 // controller has generated a nodes network then this CIDR will take priority. Otherwise, the nodes network
 // CIDR specified in the shoot will be returned (if possible). If no CIDR was specified then nil is returned.
