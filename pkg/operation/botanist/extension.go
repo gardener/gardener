@@ -34,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DeployExtensionResources creates the `Extension` extension resource in the shoot namespace in the seed
@@ -53,13 +54,14 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 		)
 
 		fns = append(fns, func(ctx context.Context) error {
-			return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
+			_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
 				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig
 				return nil
 			})
+			return err
 		})
 	}
 

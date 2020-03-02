@@ -49,6 +49,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -339,7 +340,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 				},
 			}
 
-			if err := kutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
+			if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), secretObj, func() error {
 				secretObj.Type = corev1.SecretTypeOpaque
 				secretObj.Data = secret.Data
 				return nil

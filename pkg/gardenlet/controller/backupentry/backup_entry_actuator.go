@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -181,7 +182,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
-	if err := kutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
@@ -207,7 +208,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		backupBucketProviderStatus = &bb.Status.ProviderStatus.RawExtension
 	}
 
-	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
@@ -225,6 +226,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 // waitUntilBackupEntryExtensionReconciled waits until BackupEntry Extension resource reconciled from seed.

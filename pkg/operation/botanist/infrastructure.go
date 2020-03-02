@@ -25,7 +25,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -65,7 +64,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		}
 	}
 
-	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
 		if requestInfrastructureReconciliation {
 			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		}
@@ -84,6 +83,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 // DestroyInfrastructure deletes the `Infrastructure` extension resource in the shoot namespace in the seed cluster,

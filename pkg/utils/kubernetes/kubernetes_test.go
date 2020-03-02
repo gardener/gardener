@@ -16,30 +16,27 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/golang/mock/gomock"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestKubernetes(t *testing.T) {
@@ -118,69 +115,6 @@ var _ = Describe("kubernetes", func() {
 			result, err := HasDeletionTimestamp(namespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
-		})
-	})
-
-	Describe("#CreateOrUpdate", func() {
-		const (
-			namespace = "foo"
-			name      = "bar"
-		)
-
-		It("should create the non-existent object", func() {
-			var (
-				configMap = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
-				called    = false
-				mutateFn  = func() error { called = true; return nil }
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), Key(namespace, name), configMap).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "ConfigMaps"}, name)),
-				c.EXPECT().
-					Create(gomock.Any(), configMap).
-					Return(nil),
-			)
-
-			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).NotTo(HaveOccurred())
-			Expect(called).To(BeTrue())
-		})
-
-		It("should update the existing object", func() {
-			var (
-				configMap = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
-				called    = false
-				mutateFn  = func() error { called = true; return nil }
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), Key(namespace, name), configMap).
-					Return(nil),
-				c.EXPECT().
-					Update(gomock.Any(), configMap).
-					Return(nil),
-			)
-
-			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).NotTo(HaveOccurred())
-			Expect(called).To(BeTrue())
-		})
-
-		It("should error without calling the mutateFn when encountering an unknown error", func() {
-			var (
-				configMap   = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
-				mutateFn    = func() error { Fail("Mutation function should not be called"); return nil }
-				expectedErr = errors.New("unexpected error")
-			)
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(gomock.Any(), Key(namespace, name), configMap).
-					Return(expectedErr),
-			)
-
-			Expect(CreateOrUpdate(context.TODO(), c, configMap, mutateFn)).To(Equal(expectedErr))
 		})
 	})
 

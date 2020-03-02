@@ -50,6 +50,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const installationTypeHelm = "helm"
@@ -209,7 +210,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
-	if err := kutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil

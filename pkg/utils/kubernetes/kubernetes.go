@@ -75,30 +75,6 @@ func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
 	return metadata.GetDeletionTimestamp() != nil, nil
 }
 
-// CreateOrUpdate creates or updates the object. Optionally, it executes a transformation function before the
-// request is made.
-func CreateOrUpdate(ctx context.Context, c client.Client, obj runtime.Object, transform func() error) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Get(ctx, key, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			if transform != nil && transform() != nil {
-				return err
-			}
-			return c.Create(ctx, obj)
-		}
-		return err
-	}
-
-	if transform != nil && transform() != nil {
-		return err
-	}
-	return c.Update(ctx, obj)
-}
-
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
