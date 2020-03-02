@@ -48,7 +48,7 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.waitUntilDNSProviderReady(ctx, DNSIngressName); err != nil {
+	if err := b.waitUntilDNSProviderReady(ctx, DNSExternalName); err != nil {
 		return err
 	}
 
