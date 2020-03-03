@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -324,14 +325,30 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				return apierrors.NewBadRequest("could not convert old resource into CloudProfile object")
 			}
 
-			// getting versions that have been removed from the CloudProfile
-			removed := helper.GetRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions)
-			removedVersions := make(map[string]struct{}, len(removed))
-			for _, version := range removed {
-				removedVersions[version.Version] = struct{}{}
+			// getting Kubernetes versions that have been removed from the CloudProfile
+			removedKubernetesVersions := getRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions)
+
+			// getting Machine image versions that have been removed from the CloudProfile
+			removedMachineImageVersions := map[string]sets.String{}
+			for _, oldImage := range oldCloudProfile.Spec.MachineImages {
+				imageFound := false
+				for _, newImage := range cloudProfile.Spec.MachineImages {
+					if oldImage.Name == newImage.Name {
+						imageFound = true
+						removedMachineImageVersions[oldImage.Name] = getRemovedVersions(oldImage.Versions, newImage.Versions)
+					}
+				}
+				if !imageFound {
+					for _, version := range oldImage.Versions {
+						if removedMachineImageVersions[oldImage.Name] == nil {
+							removedMachineImageVersions[oldImage.Name] = sets.NewString()
+						}
+						removedMachineImageVersions[oldImage.Name] = removedMachineImageVersions[oldImage.Name].Insert(version.Version)
+					}
+				}
 			}
 
-			if len(removedVersions) > 0 {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
 				shootList, e := r.shootLister.List(labels.Everything())
 				if e != nil {
 					return err
@@ -341,8 +358,17 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 						continue
 					}
 
-					if _, ok := removedVersions[shoot.Spec.Kubernetes.Version]; ok {
-						err = multierror.Append(err, fmt.Errorf("unable to delete Kubernetes version '%s' from CloudProfile. Version is still in use by Shoot (Name: '%s', Namespace: '%s', CloudProfile: '%s')", shoot.Spec.Kubernetes.Version, shoot.Name, shoot.Namespace, shoot.Spec.CloudProfileName))
+					if removedKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
+						err = multierror.Append(err, fmt.Errorf("unable to delete Kubernetes version '%s' from CloudProfile. Version is still in use by a Shoot (Name: '%s', Namespace: '%s', CloudProfile: '%s')", shoot.Spec.Kubernetes.Version, shoot.Name, shoot.Namespace, shoot.Spec.CloudProfileName))
+					}
+					for _, worker := range shoot.Spec.Provider.Workers {
+						// happens if Shoot already runs a version that does not exist in the CloudProfile - in this case: ignore
+						if _, ok := removedMachineImageVersions[worker.Machine.Image.Name]; !ok {
+							continue
+						}
+						if removedMachineImageVersions[worker.Machine.Image.Name].Has(worker.Machine.Image.Version) {
+							err = multierror.Append(err, fmt.Errorf("unable to delete Machine image version (%s-%s) from CloudProfile. Version is still in use by a Shoot (Shoot Name: '%s', Namespace: '%s', Worker: '%s', CloudProfile: '%s')", worker.Machine.Image.Name, worker.Machine.Image.Version, shoot.Name, shoot.Namespace, worker.Name, shoot.Spec.CloudProfileName))
+						}
 					}
 				}
 			}
@@ -494,4 +520,13 @@ func (r *ReferenceManager) lookupSecret(namespace, name string) error {
 	}
 
 	return nil
+}
+
+func getRemovedVersions(oldVersions []core.ExpirableVersion, newVersions []core.ExpirableVersion) sets.String {
+	removed := helper.GetRemovedVersions(oldVersions, newVersions)
+	removedVersions := sets.NewString()
+	for _, version := range removed {
+		removedVersions[version.Version] = struct{}{}
+	}
+	return removedVersions
 }
