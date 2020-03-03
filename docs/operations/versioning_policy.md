@@ -25,19 +25,21 @@ This classification serves as a "point-of-reference" for end-users and also has 
 
 This information is programmatically available in the `CloudProfiles` of the Garden cluster. 
 
-- **preview:** A 'Preview' version is a new version that is not yet trusted to be the default version. There is a probability of unresolved issues and is therefore not yet recommended for production usage.
-A Shoot does not update (neither auto Update or force update) to  a _preview_ version during the maintenance time.
+- **preview:** A 'Preview' version is a new version that has not yet undergone thorough testing, possibly a new release and needs time to be validated. There is a probability of unresolved issues and is therefore not yet recommended for production usage.
+A Shoot does not update (neither auto Update or force update) to  a _preview_ version during the maintenance time. 
+Also _preview_ versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
 Typically, after a fresh release of a new Kubernetes (e.g. v1.17.0) or Machine image version (e.g. coreos-2023.5) the operator tags it as _preview_ until he has gained sufficient experience and regards this version to be reliable. 
-After the operator gained sufficient trust, the version can manually be promote to be'supported'.  
+After the operator gained sufficient trust, the version can be manually promoted to 'supported'.  
 
-- **supported:** A 'Supported' version is regarded as being the default version for Shoot clusters. New Shoot clusters should use and existing versions should update to this version.
-Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in _preview_) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being _supported_ (e.g. v1.16.1, v1.15.4, v1.14.9 and v1.13.12). 
-For machine images there is usually one supported version per image (e.g coreos).
+- **supported:** A 'Supported' version is the recommended version for new and existing Shoot clusters. New Shoot clusters should use and existing clusters should update to this version.
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in _preview_) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being _supported_ (e.g. v1.16.1, v1.15.4, v1.14.9 and v1.13.12).
 
 - **deprecated:** A 'Deprecated' version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version. 
 New Shoots should not use this version any more. 
-Existing Shoots will be update to a newer version if configured with AutoUpdate for Kubernetes or Machine image versions.
-Deprecated versions will eventually expire (i.e., removed).
+Existing Shoots will be updated to a newer version if auto update is enabled (`.spec.maintenance.autoUpdate.kubernetesVersion` for Kubernetes version auto update or `.spec.maintenance.autoUpdate.machineImageVersion` for machine machine image version auto update).
+Using auto update however does not guarantee that a Shoot runs a non deprecated version, as the latest version can be deprecated as well (for Kubernetes versions: the latest patch version of a particular minor version).
+Deprecated versions should have an expiration date set for eventual expiration 
+(also see [Duties of the Gardener operator](#duties-of-the-gardener-operator) on how to handle expiration days on `unmaintained` Kubernetes versions). 
 
 - **expired:** An 'Expired' versions has an expiration date in the past. 
  New clusters with that version cannot be created and existing clusters are forcefully migrated in their maintenance time to a higher version.
@@ -60,28 +62,37 @@ For **Kubernetes versions**, the forceful update picks the latest 'non-preview' 
  **Depending on the circumstances described above, it can happen that the cluster receives multiple consecutive minor Kubernetes version updates!**.
  As a Kubernetes version update cannot skip a minor version, the CloudProfile has to be maintained properly.
 
-## Duties of the Gardener Operator
+##Duties of the Gardener Operator
 
 Even though we strive for high automation, we think that it leads to safer operations 
 having a human operator in charge of the following operations: 
 
 - Promotion of a `preview` version to `supported`
 - Deletion of versions (cannot be in use by any shoot any more and need to have an expiration date in the past)
-- Setting a `expiration date` on the latest patch version of an 'unsupported' Kubernetes minor version
+- Setting an `expiration date` on the latest patch version of an 'unmaintained' Kubernetes minor version
     - After the deprecation date passed, it will force a kubernetes minor version update during the next maintenance time window of the Shoot.
 
 ## Version Requirements
 
-The Gardener API server enforces the following:
+The Gardener API server enforces the following requirements:
 
-**Deletion of Kubernetes Versions** 
-- Kubernetes versions that are still in use by a Shoot cannot be deleted
-- Only Kubernetes versions that have an expiration date in the past, can be deleted 
+### Kubernetes Versions 
+**Deletion of a Kubernetes Version** 
+- A Kubernetes version that is in use by a Shoot cannot be deleted 
 
-**Adding Kubernetes Versions** 
-- Versions must not have an expiration date in the past
-- Preview versions must be the latest (semVer) patch version of that minor version
-- Supported versions have to be lower (semVer) than all preview versions
+**Adding a Kubernetes Version** 
+- A version must not have an expiration date in the past
+- A 'preview' version must be the latest (semVer) patch version of that particular minor version
+- A 'supported' version has to be lower (semVer) than all preview versions
+
+### Machine image Versions 
+**Deletion of a Machine image version** 
+- A machine image version that is in use by a worker pool of a Shoot cannot be deleted
+
+**Adding a Machine image Version** 
+- A version must not have an expiration date in the past
+- A 'preview' version must be the latest (semVer) patch version of that particular minor version
+- A 'supported' version has to be lower (semVer) than all preview versions
 
 # Automatic Version Management 
 

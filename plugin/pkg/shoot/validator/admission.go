@@ -537,9 +537,16 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 		}
 
 		if getLatestPatchVersion {
+			// ignore preview versions for defaulting
+			if versionConstraint.Classification != nil && *versionConstraint.Classification == core.ClassificationPreview {
+				// do not include preview version in the valid values when using defaulting
+				validValues = validValues[:len(validValues)-1]
+				continue
+			}
 			// CloudProfile cannot contain invalid semVer shootVersion
 			cpVersion, _ := semver.NewVersion(versionConstraint.Version)
 
+			// defaulting on patch level: version has to have the the same major and minor kubernetes version
 			if cpVersion.Major() != shootVersionMajor || cpVersion.Minor() != shootVersionMinor {
 				continue
 			}

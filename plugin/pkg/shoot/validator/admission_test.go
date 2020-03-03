@@ -1006,6 +1006,41 @@ var _ = Describe("validator", func() {
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
 			})
 
+			It("should default a major.minor kubernetes version only to non-preview versions", func() {
+				shoot.Spec.Kubernetes.Version = "1.6"
+				preview := core.ClassificationPreview
+				previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
+				highestNonPreviewPatchVersion := core.ExpirableVersion{Version: "1.6.5"}
+				cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, previewVersion, highestNonPreviewPatchVersion, core.ExpirableVersion{Version: "1.7.1"}, core.ExpirableVersion{Version: "1.7.2"})
+
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestNonPreviewPatchVersion.Version))
+			})
+
+			It("should reject defaulting a major.minor kubernetes version if there is only preview versions available for defaulting", func() {
+				shoot.Spec.Kubernetes.Version = "1.6"
+				preview := core.ClassificationPreview
+				previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
+				highestNonPreviewPatchVersion := core.ExpirableVersion{Version: "1.6.5", Classification: &preview}
+				cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{previewVersion, highestNonPreviewPatchVersion, {Version: "1.7.1"}, {Version: "1.7.2"}}
+
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("should reject: default only exactly matching minor kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.8"
 				highestPatchVersion := core.ExpirableVersion{Version: "1.81.5"}
