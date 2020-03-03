@@ -17,6 +17,7 @@ package v1alpha1_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -108,6 +109,13 @@ var _ = Describe("Conversion", func() {
 					Kind:     "kind",
 					Name:     "member2",
 				}
+				member3 = rbacv1.Subject{
+					APIGroup: "group",
+					Kind:     "kind",
+					Name:     "member3",
+				}
+
+				extensionRole = "extension:role"
 
 				out *core.Project
 				in  *Project
@@ -199,6 +207,10 @@ var _ = Describe("Conversion", func() {
 							Subject: member2,
 							Roles:   []string{ProjectMemberOwner},
 						},
+						{
+							Subject: member3,
+							Roles:   []string{ProjectMemberOwner, extensionRole, ProjectMemberOwner},
+						},
 					},
 				}
 
@@ -209,7 +221,7 @@ var _ = Describe("Conversion", func() {
 						Members: []core.ProjectMember{
 							{
 								Subject: member1,
-								Roles:   []string{},
+								Roles:   nil,
 							},
 							{
 								Subject: owner,
@@ -217,7 +229,11 @@ var _ = Describe("Conversion", func() {
 							},
 							{
 								Subject: member2,
-								Roles:   []string{},
+								Roles:   nil,
+							},
+							{
+								Subject: member3,
+								Roles:   []string{extensionRole},
 							},
 						},
 					},
@@ -242,7 +258,13 @@ var _ = Describe("Conversion", func() {
 					Kind:     "kind",
 					Name:     "member2",
 				}
-				ownerRole = ProjectMemberOwner
+				member3 = rbacv1.Subject{
+					APIGroup: "group",
+					Kind:     "kind",
+					Name:     "member3",
+				}
+				ownerRole     = ProjectMemberOwner
+				extensionRole = "extension:role"
 
 				out *Project
 				in  *core.Project
@@ -335,6 +357,10 @@ var _ = Describe("Conversion", func() {
 							Subject: member2,
 							Roles:   []string{core.ProjectMemberOwner},
 						},
+						{
+							Subject: member3,
+							Roles:   []string{core.ProjectMemberOwner, extensionRole, core.ProjectMemberOwner},
+						},
 					},
 				}
 
@@ -345,7 +371,7 @@ var _ = Describe("Conversion", func() {
 						Members: []ProjectMember{
 							{
 								Subject: member1,
-								Roles:   []string{},
+								Roles:   nil,
 							},
 							{
 								Subject: owner,
@@ -353,7 +379,12 @@ var _ = Describe("Conversion", func() {
 							},
 							{
 								Subject: member2,
-								Roles:   []string{},
+								Roles:   nil,
+							},
+							{
+								Subject: member3,
+								Role:    pointer.StringPtr(extensionRole),
+								Roles:   []string{extensionRole},
 							},
 						},
 					},
