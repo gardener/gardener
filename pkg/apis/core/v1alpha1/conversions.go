@@ -213,11 +213,13 @@ func Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core
 				out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
 			} else {
 				// delete owner role from all other members
-				for j, role := range member.Roles {
-					if role == ProjectMemberOwner {
-						out.Members[i].Roles = append(out.Members[i].Roles[:j], out.Members[i].Roles[j+1:]...)
+				var roles []string
+				for _, role := range member.Roles {
+					if role != ProjectMemberOwner {
+						roles = append(roles, role)
 					}
 				}
+				out.Members[i].Roles = roles
 			}
 		}
 	}
@@ -244,11 +246,13 @@ func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out 
 				out.Members[i].Roles = append(out.Members[i].Roles, ProjectMemberOwner)
 			} else {
 				// delete owner role from all other members
-				for j, role := range member.Roles {
-					if role == ProjectMemberOwner {
-						out.Members[i].Roles = append(out.Members[i].Roles[:j], out.Members[i].Roles[j+1:]...)
+				var roles []string
+				for _, role := range member.Roles {
+					if role != ProjectMemberOwner {
+						roles = append(roles, role)
 					}
 				}
+				out.Members[i].Roles = roles
 
 				if member.Role != nil && *member.Role == ProjectMemberOwner {
 					if len(out.Members[i].Roles) > 0 {

@@ -117,3 +117,8 @@ func TestEmail(email string) bool {
 	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
 	return match
 }
+
+// IsTrue returns true if the passed bool pointer is not nil and true.
+func IsTrue(value *bool) bool {
+	return value != nil && *value
+}
