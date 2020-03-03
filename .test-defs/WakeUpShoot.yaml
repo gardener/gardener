@@ -1,0 +1,18 @@
+kind: TestDefinition
+metadata:
+  name: wake-up-shoot
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the wake-up of a shoot.
+  activeDeadlineSeconds: 3600
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/system/shoot_hibernation_wakeup
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    --shoot-name=$SHOOT_NAME
+    --project-namespace=$PROJECT_NAMESPACE
+    --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
+
+  image: golang:1.13.4

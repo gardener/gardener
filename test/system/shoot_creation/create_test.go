@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/test/framework"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -61,6 +62,8 @@ var (
 	networkingPods           = flag.String("networking-pods", "", "the spec.networking.pods to use for this shoot. Optional.")
 	networkingServices       = flag.String("networking-services", "", "the spec.networking.services to use for this shoot. Optional.")
 	networkingNodes          = flag.String("networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
+	startHibernatedFlag      = flag.String("start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
+	startHibernated          = false
 
 	// ProviderConfigs flags
 	infrastructureProviderConfig = flag.String("infrastructure-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
@@ -92,6 +95,14 @@ func validateFlags() {
 
 	if framework.StringSet(*shootMachineImageVersion) && !framework.StringSet(*shootMachineImageName) {
 		Fail("shootMachineImageName has to be defined if shootMachineImageVersion is set")
+	}
+
+	if framework.StringSet(*startHibernatedFlag) {
+		parsedBool, err := strconv.ParseBool(*startHibernatedFlag)
+		if err != nil {
+			Fail("startHibernated is not a boolean value")
+		}
+		startHibernated = parsedBool
 	}
 
 	if !framework.StringSet(*infrastructureProviderConfig) {
@@ -216,6 +227,13 @@ func prepareShoot(ctx context.Context, f *framework.GardenerFramework) *gardenco
 
 	if networkingNodes != nil && len(*networkingNodes) > 0 {
 		shootObject.Spec.Networking.Nodes = networkingNodes
+	}
+
+	if startHibernated {
+		if shootObject.Spec.Hibernation == nil {
+			shootObject.Spec.Hibernation = &gardencorev1beta1.Hibernation{}
+		}
+		shootObject.Spec.Hibernation.Enabled = &startHibernated
 	}
 
 	// set ProviderConfigs

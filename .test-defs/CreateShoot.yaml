@@ -31,6 +31,7 @@ spec:
     -networking-pods=$NETWORKING_PODS
     -networking-services=$NETWORKING_SERVICES
     -networking-nodes=$NETWORKING_NODES
+    -start-hibernated=$START_HIBERNATED
 #    -machine-image-name=$MACHINE_IMAGE
 #    -machine-image-version=$MACHINE_IMAGE_VERSION
 #    -machine-type=$MACHINE_TYPE

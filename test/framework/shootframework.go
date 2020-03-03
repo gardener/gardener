@@ -190,6 +190,10 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 
 	f.Shoot = shoot
 
+	if f.Shoot.Spec.Hibernation != nil && f.Shoot.Spec.Hibernation.Enabled != nil && *f.Shoot.Spec.Hibernation.Enabled {
+		return nil
+	}
+
 	shootScheme := runtime.NewScheme()
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
