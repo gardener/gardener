@@ -25,6 +25,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ComputeBootstrapToken computes and creates a new bootstrap token, and returns it.
@@ -54,7 +55,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
 	}
 
-	err2 := CreateOrUpdate(ctx, c, secret, func() error {
+	_, err2 := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
 		secret.Type = bootstraptokenapi.SecretTypeBootstrapToken
 		secret.Data = data
 		return nil

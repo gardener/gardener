@@ -38,6 +38,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
@@ -857,12 +858,14 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
-		if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), crt, func() error {
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), crt, func() error {
 			crt.Data = wildcardCert.Data
 			return nil
 		}); err != nil {
 			return err
 		}
+
 		b.ControlPlaneWildcardCert = crt
 	}
 
@@ -882,7 +885,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		}
 	)
 
-	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
 		secret.Annotations = map[string]string{
 			"checksum/data": checksum,
 		}
@@ -1130,7 +1133,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 			},
 		}
 
-		if err := kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
+		if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
 			secretObj.OwnerReferences = []metav1.OwnerReference{
 				*metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 			}

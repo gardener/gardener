@@ -259,7 +259,7 @@ func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		},
 	}
 
-	return kutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), seedSecret, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), seedSecret, func() error {
 		seedSecret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 		}
@@ -268,6 +268,7 @@ func applySeedSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		seedSecret.Data[kubernetes.KubeConfig] = shootKubeconfigSecret.Data[kubernetes.KubeConfig]
 		return nil
 	})
+	return err
 }
 
 func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, secretRef *corev1.SecretReference) (*gardencorev1beta1.SeedSpec, error) {

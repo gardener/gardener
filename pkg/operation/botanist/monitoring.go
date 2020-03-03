@@ -26,7 +26,6 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
@@ -334,7 +334,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 					},
 				}
 
-				if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), amSecret, func() error {
+				if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), amSecret, func() error {
 					amSecret.Data = data
 					amSecret.Type = corev1.SecretTypeOpaque
 					return nil

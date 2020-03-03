@@ -51,6 +51,7 @@ import (
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -65,7 +66,7 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 		},
 	}
 
-	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = map[string]string{
 			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
 		}
@@ -322,7 +323,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 		}
 	}
 
-	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -340,6 +341,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 const controlPlaneExposureSuffix = "-exposure"
@@ -359,7 +361,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	purpose := new(extensionsv1alpha1.Purpose)
 	*purpose = extensionsv1alpha1.Exposure
 
-	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -374,6 +376,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 // DestroyControlPlane deletes the `ControlPlane` extension resource in the shoot namespace in the seed cluster,
@@ -517,7 +520,7 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 	blockOwnerDeletion := false
 	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
 
-	return kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardencorev1beta1.GardenerName)
@@ -528,6 +531,7 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 		backupEntry.Spec.SeedName = seedName
 		return nil
 	})
+	return err
 }
 
 const (

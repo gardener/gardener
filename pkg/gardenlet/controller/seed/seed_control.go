@@ -45,6 +45,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -384,7 +385,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 
 	ownerRef := metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 
-	return kutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
 		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1beta1.BackupBucketSpec{
 			Provider: gardencorev1beta1.BackupBucketProvider{
@@ -400,6 +401,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 		}
 		return nil
 	})
+	return err
 }
 
 func deleteBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardencorev1beta1.Seed) error {

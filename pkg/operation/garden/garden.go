@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // New creates a new Garden object (based on a Shoot object).
@@ -271,12 +272,14 @@ func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfSh
 				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}
-		return kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), configMap, func() error {
+
+		_, err := controllerutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), configMap, func() error {
 			configMap.Data = map[string]string{
 				common.GardenRoleInternalDomain: currentDomain,
 			}
 			return nil
 		})
+		return err
 	}
 	if err != nil {
 		return err
@@ -331,7 +334,7 @@ func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamesp
 			Namespace: gardenNamespace,
 		},
 	}
-	if err := kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
 			v1beta1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
 		}

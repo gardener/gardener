@@ -50,6 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // New creates a new operation object with a Shoot resource object.
@@ -422,12 +423,13 @@ func (o *Operation) SyncClusterResourceToSeed(ctx context.Context) error {
 		Kind:       "Shoot",
 	}
 
-	return kutil.CreateOrUpdate(ctx, o.K8sSeedClient.Client(), cluster, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sSeedClient.Client(), cluster, func() error {
 		cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
 		cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
 		cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
 		return nil
 	})
+	return err
 }
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.

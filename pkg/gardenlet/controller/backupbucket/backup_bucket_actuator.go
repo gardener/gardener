@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -149,7 +150,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		},
 	}
 
-	if err := kutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
@@ -168,7 +169,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		providerConfig = &a.backupBucket.Spec.ProviderConfig.RawExtension
 	}
 
-	return kutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
@@ -184,6 +185,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		}
 		return nil
 	})
+	return err
 }
 
 // waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extension resource reconciled from seed.
@@ -227,7 +229,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		}
 		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 
-		if err := kutil.CreateOrUpdate(ctx, a.gardenClient, coreGeneratedSecret, func() error {
+		if _, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient, coreGeneratedSecret, func() error {
 			coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			coreGeneratedSecret.Data = generatedSecret.DeepCopy().Data
 
@@ -253,11 +255,12 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 	}
 
 	if generatedSecretRef != nil || providerStatus != nil {
-		return kutil.CreateOrUpdate(ctx, a.gardenClient, a.backupBucket, func() error {
+		_, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient, a.backupBucket, func() error {
 			a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
 			a.backupBucket.Status.ProviderStatus = providerStatus
 			return nil
 		})
+		return err
 	}
 
 	return nil

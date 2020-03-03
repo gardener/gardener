@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DNSIngressName is a constant for a DNS resources used for the ingress domain name.
@@ -303,7 +304,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			Namespace: metav1.NamespaceSystem,
 		},
 	}
-	if err := kutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), newVpnShootSecret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), newVpnShootSecret, func() error {
 		newVpnShootSecret.Type = corev1.SecretTypeOpaque
 		newVpnShootSecret.Data = vpnShootSecret.Data
 		return nil
