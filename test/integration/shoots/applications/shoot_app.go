@@ -56,6 +56,10 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
+	ginkgo.AfterSuite(func() {
+		framework.CommonAfterSuite()
+	})
+
 	f.Default().Release().CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
 		err := framework.DownloadKubeconfig(ctx, f.SeedClient, f.ShootSeedNamespace(), gardencorev1beta1.GardenerName, "")
 		framework.ExpectNoError(err)

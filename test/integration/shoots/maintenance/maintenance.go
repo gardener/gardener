@@ -67,11 +67,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
-	. "github.com/gardener/gardener/test/integration/framework"
-	. "github.com/gardener/gardener/test/integration/shoots"
+	integrationframework "github.com/gardener/gardener/test/integration/framework"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	ginkgo "github.com/onsi/ginkgo"
+	gomega "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -95,9 +94,9 @@ var (
 	setupContextTimeout           = time.Minute * 2
 	restoreCtxTimeout             = time.Minute * 2
 	gardenerSchedulerReplicaCount *int32
-	shootMaintenanceTest          *ShootMaintenanceTest
+	shootMaintenanceTest          *integrationframework.ShootMaintenanceTest
 
-	intialShootForCreation                     gardencorev1beta1.Shoot
+	initialShootForCreation                    gardencorev1beta1.Shoot
 	shootCleanupNeeded                         bool
 	cloudProfileCleanupNeeded                  bool
 	testMachineImageVersion                    = "0.0.1-beta"
@@ -120,51 +119,61 @@ var (
 )
 
 const (
-	WaitForCreateDeleteTimeout = 7200 * time.Second
-	InitializationTimeout      = 600 * time.Second
+	waitForCreateDeleteTimeout = 7200 * time.Second
+	initializationTimeout      = 600 * time.Second
 )
-
-func init() {
-	framework.RegisterGardenerFrameworkFlags(nil)
-}
 
 func validateFlags() {
 	if !framework.StringSet(*shootProviderType) {
-		Fail("you need to specify provider type of the shoot")
+		ginkgo.Fail("you need to specify provider type of the shoot")
 	}
 
 	if !framework.StringSet(*infrastructureProviderConfig) {
-		Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", *shootProviderType))
+		ginkgo.Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", *shootProviderType))
 	}
 
 	if !framework.FileExists(*infrastructureProviderConfig) {
-		Fail("path to the infrastructureProviderConfig of the Shoot is invalid")
+		ginkgo.Fail("path to the infrastructureProviderConfig of the Shoot is invalid")
 	}
 }
 
-var _ = Describe("Shoot Maintenance testing", func() {
+var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 	f := framework.NewGardenerFramework(&framework.GardenerConfig{
 		CommonConfig: &framework.CommonConfig{
 			ResourceDir: "../../framework/resources",
 		},
 	})
 
-	framework.CIt("Prepare Shoot and CloudProfile", func(ctx context.Context) {
+	framework.CAfterSuite(func(ctx context.Context) {
+		framework.CommonAfterSuite()
+		if cloudProfileCleanupNeeded {
+			err := shootMaintenanceTest.CleanupCloudProfile(ctx, testMachineImage, []gardencorev1beta1.ExpirableVersion{testKubernetesVersionLowMinor, testHighestPatchKubernetesVersionLowMinor, testKubernetesVersionHighMinor, testHighestPatchKubernetesVersionHighMinor})
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			f.Logger.Infof("Cleaned Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
+		}
+		if testMachineryRun != nil && *testMachineryRun {
+			_, err := integrationframework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			f.Logger.Infof("Environment is restored")
+		}
+	}, initializationTimeout)
+
+	f.Release().CIt("Prepare Shoot and CloudProfile", func(ctx context.Context) {
 		validateFlags()
 
 		shootObject := prepareShoot(f)
-		intialShootForCreation = *shootObject.DeepCopy()
+		initialShootForCreation = *shootObject.DeepCopy()
 
 		cloudProfile, err := f.GetCloudProfile(ctx, shootObject.Spec.CloudProfileName)
-		Expect(err).ToNot(HaveOccurred())
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-		shootMaintenanceTest, err = NewShootMaintenanceTest(ctx, f.GardenClient, cloudProfile, shootObject, shootMachineImageName, f.Logger)
-		Expect(err).To(BeNil())
+		shootMaintenanceTest, err = integrationframework.NewShootMaintenanceTest(ctx, f.GardenClient, cloudProfile, shootObject, shootMachineImageName, f.Logger)
+		gomega.Expect(err).To(gomega.BeNil())
 		testMachineImage.Name = shootMaintenanceTest.ShootMachineImage.Name
 
 		framework.SetupShootWorker(shootMaintenanceTest.Shoot, shootMaintenanceTest.CloudProfile, workerZone)
-		Expect(err).To(BeNil())
-		Expect(len(shootMaintenanceTest.Shoot.Spec.Provider.Workers)).Should(BeNumerically("==", 1))
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(len(shootMaintenanceTest.Shoot.Spec.Provider.Workers)).Should(gomega.BeNumerically("==", 1))
 
 		// set machine type & if set, the machineImage name on the first worker image
 		if shootMachineType != nil && len(*shootMachineType) > 0 {
@@ -179,230 +188,217 @@ var _ = Describe("Shoot Maintenance testing", func() {
 			f.Logger.Info("Running in test Machinery")
 			// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
 			// scale down the gardener-scheduler to 0 replicas
-			replicas, err := ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
+			replicas, err := integrationframework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
 			gardenerSchedulerReplicaCount = replicas
-			Expect(err).To(BeNil())
+			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Info("Environment for test-machinery run is prepared")
 		}
 
 		// the test machine version is being added to
 		prepareCloudProfile(ctx, f)
 		cloudProfileCleanupNeeded = true
-	}, InitializationTimeout)
+	}, initializationTimeout)
 
-	CAfterSuite(func(ctx context.Context) {
-		if cloudProfileCleanupNeeded {
-			err := shootMaintenanceTest.CleanupCloudProfile(ctx, testMachineImage, []gardencorev1beta1.ExpirableVersion{testKubernetesVersionLowMinor, testHighestPatchKubernetesVersionLowMinor, testKubernetesVersionHighMinor, testHighestPatchKubernetesVersionHighMinor})
-			Expect(err).NotTo(HaveOccurred())
-			f.Logger.Infof("Cleaned Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
-		}
-		if testMachineryRun != nil && *testMachineryRun {
-			_, err := ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
-			Expect(err).NotTo(HaveOccurred())
-			f.Logger.Infof("Environment is restored")
-		}
-	}, InitializationTimeout)
-
-	CAfterEach(func(ctx context.Context) {
+	framework.CAfterEach(func(ctx context.Context) {
 		if shootCleanupNeeded {
 			// Finally we delete the shoot again
 			f.Logger.Infof("Delete shoot %s", shootMaintenanceTest.Shoot.Name)
 			err := f.DeleteShootAndWaitForDeletion(ctx, shootMaintenanceTest.Shoot)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			shootCleanupNeeded = false
 		}
-	}, WaitForCreateDeleteTimeout)
+	}, waitForCreateDeleteTimeout)
 
-	CBeforeEach(func(ctx context.Context) {
+	framework.CBeforeEach(func(ctx context.Context) {
 		if shootMaintenanceTest != nil && !shootCleanupNeeded {
 			// set dummy kubernetes version to shoot
-			intialShootForCreation.Spec.Kubernetes.Version = testKubernetesVersionLowMinor.Version
+			initialShootForCreation.Spec.Kubernetes.Version = testKubernetesVersionLowMinor.Version
 			// set integration test machineImage to shoot
-			intialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
+			initialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
 
-			shootMaintenanceTest.Shoot = intialShootForCreation.DeepCopy()
+			shootMaintenanceTest.Shoot = initialShootForCreation.DeepCopy()
 
 			err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-			Expect(apierrors.IsNotFound(err)).To(Equal(true))
+			gomega.Expect(apierrors.IsNotFound(err)).To(gomega.Equal(true))
 			shoot, err := f.CreateShootResource(ctx, shootMaintenanceTest.Shoot)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			shootMaintenanceTest.Shoot = shoot
 			shootCleanupNeeded = true
 		}
-	}, WaitForCreateDeleteTimeout)
+	}, waitForCreateDeleteTimeout)
 
-	// CIt("Machine Image Maintenance test", func(ctx context.Context) {
-	// 	By("AutoUpdate.MachineImageVersion == false && expirationDate does not apply -> shoot machineImage must not be updated in maintenance time")
-	// 	err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	// set test specific shoot settings
-	// 	shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
-	//
-	// 	// update integration test shoot
-	// 	err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, testMachineImage, false, time.Now().Add(time.Second*10))
-	// 	Expect(err).To(BeNil())
-	//
-	// 	By("AutoUpdate.MachineImageVersion == true && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
-	// 	// set test specific shoot settings
-	// 	shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = trueVar
-	//
-	// 	// update integration test shoot - set maintain now annotation & autoupdate == true
-	// 	err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Second*20))
-	// 	Expect(err).To(BeNil())
-	//
-	// 	By("AutoUpdate.MachineImageVersion == default && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
-	// 	// set test specific shoot settings
-	// 	shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate = nil
-	//
-	// 	// reset machine image from latest version to dummy version
-	// 	intialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
-	//
-	// 	// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)
-	// 	err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, &intialShootForCreation.Spec.Provider.Workers)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Second*20))
-	// 	Expect(err).To(BeNil())
-	//
-	// 	By("AutoUpdate.MachineImageVersion == false && expirationDate applies -> shoot machineImage must be updated in maintenance time")
-	// 	defer func() {
-	// 		// make sure to remove expiration date from cloud profile after test
-	// 		err = shootMaintenanceTest.TryUpdateCloudProfileForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, testMachineImage, nil, &deprecatedClassification)
-	// 		Expect(err).To(BeNil())
-	// 		f.Logger.Infof("Cleaned expiration date on machine image from Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
-	// 	}()
-	//
-	// 	// set test specific shoot settings
-	// 	shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate = &gardencorev1beta1.MaintenanceAutoUpdate{MachineImageVersion: false}
-	//
-	// 	// reset machine image from latest version to dummy version
-	// 	intialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
-	//
-	// 	// update integration test shoot - downgrade image again & set maintain now annotation & autoupdate == nil (default)
-	// 	err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, false, &intialShootForCreation.Spec.Provider.Workers)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	// modify cloud profile for test
-	// 	err = shootMaintenanceTest.TryUpdateCloudProfileForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, testMachineImage, &expirationDateInTheFuture, &deprecatedClassification)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	// sleep so that expiration date is in the past - forceUpdate is required
-	// 	time.Sleep(30 * time.Second)
-	//
-	// 	// update integration test shoot - set maintain now  annotation
-	// 	err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Minute*1))
-	// 	Expect(err).To(BeNil())
-	//
-	// }, WaitForCreateDeleteTimeout)
-	//
-	// CIt("Kubernetes Version update opt-out of - should not be updated", func(ctx context.Context) {
-	// 	By("AutoUpdate.KubernetesVersion == false && expirationDate does not apply -> shoot Kubernetes version must not be updated in maintenance time")
-	// 	err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	// set test specific shoot settings
-	// 	shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-	//
-	// 	// update integration test shoot
-	// 	err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-	// 	Expect(err).To(BeNil())
-	//
-	// 	err = shootMaintenanceTest.WaitForExpectedKubernetesVersionMaintenance(ctx, testKubernetesVersionLowMinor.Version, false, time.Now().Add(time.Second*10))
-	// 	Expect(err).To(BeNil())
-	//
-	// }, WaitForCreateDeleteTimeout)
-
-	CIt("Kubernetes Version update opt-in - should be updated", func(ctx context.Context) {
-		By("Kubernetes Version update opt-in - should be updated: AutoUpdate.KubernetesVersion == true && expirationDate does not apply")
+	f.Release().CIt("Machine Image Maintenance test", func(ctx context.Context) {
+		ginkgo.By("AutoUpdate.MachineImageVersion == false && expirationDate does not apply -> shoot machineImage must not be updated in maintenance time")
 		err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
+
+		// set test specific shoot settings
+		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
+
+		// update integration test shoot
+		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, testMachineImage, false, time.Now().Add(time.Second*10))
+		gomega.Expect(err).To(gomega.BeNil())
+
+		ginkgo.By("AutoUpdate.MachineImageVersion == true && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
+		// set test specific shoot settings
+		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = trueVar
+
+		// update integration test shoot - set maintain now annotation & autoupdate == true
+		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Second*20))
+		gomega.Expect(err).To(gomega.BeNil())
+
+		ginkgo.By("AutoUpdate.MachineImageVersion == default && expirationDate does not apply -> shoot machineImage must be updated in maintenance time")
+		// set test specific shoot settings
+		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate = nil
+
+		// reset machine image from latest version to dummy version
+		initialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
+
+		// update integration test shoot - downgrade image again & set maintain now  annotation & autoupdate == nil (default)
+		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, &initialShootForCreation.Spec.Provider.Workers)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Second*20))
+		gomega.Expect(err).To(gomega.BeNil())
+
+		ginkgo.By("AutoUpdate.MachineImageVersion == false && expirationDate applies -> shoot machineImage must be updated in maintenance time")
+		defer func() {
+			// make sure to remove expiration date from cloud profile after test
+			err = shootMaintenanceTest.TryUpdateCloudProfileForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, testMachineImage, nil, &deprecatedClassification)
+			gomega.Expect(err).To(gomega.BeNil())
+			f.Logger.Infof("Cleaned expiration date on machine image from Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
+		}()
+
+		// set test specific shoot settings
+		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate = &gardencorev1beta1.MaintenanceAutoUpdate{MachineImageVersion: false}
+
+		// reset machine image from latest version to dummy version
+		initialShootForCreation.Spec.Provider.Workers[0].Machine.Image = &testMachineImage
+
+		// update integration test shoot - downgrade image again & set maintain now annotation & autoupdate == nil (default)
+		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, false, &initialShootForCreation.Spec.Provider.Workers)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		// modify cloud profile for test
+		err = shootMaintenanceTest.TryUpdateCloudProfileForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, testMachineImage, &expirationDateInTheFuture, &deprecatedClassification)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		// sleep so that expiration date is in the past - forceUpdate is required
+		time.Sleep(30 * time.Second)
+
+		// update integration test shoot - set maintain now  annotation
+		err = shootMaintenanceTest.TryUpdateShootForMachineImageMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		err = shootMaintenanceTest.WaitForExpectedMachineImageMaintenance(ctx, shootMaintenanceTest.ShootMachineImage, true, time.Now().Add(time.Minute*1))
+		gomega.Expect(err).To(gomega.BeNil())
+
+	}, waitForCreateDeleteTimeout)
+
+	f.Release().CIt("Kubernetes Version update opt-out of - should not be updated", func(ctx context.Context) {
+		ginkgo.By("AutoUpdate.KubernetesVersion == false && expirationDate does not apply -> shoot Kubernetes version must not be updated in maintenance time")
+		err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		// set test specific shoot settings
+		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+
+		// update integration test shoot
+		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		err = shootMaintenanceTest.WaitForExpectedKubernetesVersionMaintenance(ctx, testKubernetesVersionLowMinor.Version, false, time.Now().Add(time.Second*10))
+		gomega.Expect(err).To(gomega.BeNil())
+
+	}, waitForCreateDeleteTimeout)
+
+	f.Release().CIt("Kubernetes Version update opt-in - should be updated", func(ctx context.Context) {
+		ginkgo.By("Kubernetes Version update opt-in - should be updated: AutoUpdate.KubernetesVersion == true && expirationDate does not apply")
+		err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// set test specific shoot settings
 		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = trueVar
 
 		// update integration test shoot
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		err = shootMaintenanceTest.WaitForExpectedKubernetesVersionMaintenance(ctx, testHighestPatchKubernetesVersionLowMinor.Version, true, time.Now().Add(time.Second*20))
-		Expect(err).To(BeNil())
-	}, WaitForCreateDeleteTimeout)
+		gomega.Expect(err).To(gomega.BeNil())
+	}, waitForCreateDeleteTimeout)
 
-	CIt("Kubernetes Version force update - Patch version", func(ctx context.Context) {
-		By("Kubernetes Version force update - Patch version: AutoUpdate.KubernetesVersion == false && expirationDate applies")
+	f.Release().CIt("Kubernetes Version force update - Patch version", func(ctx context.Context) {
+		ginkgo.By("Kubernetes Version force update - Patch version: AutoUpdate.KubernetesVersion == false && expirationDate applies")
 		err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 		defer func() {
 			// make sure to remove expiration date from cloud profile after test
 			err = shootMaintenanceTest.TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, shootMaintenanceTest.Shoot, testKubernetesVersionLowMinor.Version, nil, &deprecatedClassification)
-			Expect(err).To(BeNil())
+			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
 		}()
 
 		// modify cloud profile for test
 		err = shootMaintenanceTest.TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, shootMaintenanceTest.Shoot, testKubernetesVersionLowMinor.Version, &expirationDateInTheFuture, &deprecatedClassification)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// set test specific shoot settings
 		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 
 		// update integration test shoot - autoupdate == false
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, false, nil)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// sleep so that expiration date is in the past - forceUpdate is required
 		time.Sleep(30 * time.Second)
 
 		// update integration test shoot - set maintain now  annotation
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		err = shootMaintenanceTest.WaitForExpectedKubernetesVersionMaintenance(ctx, testHighestPatchKubernetesVersionLowMinor.Version, true, time.Now().Add(time.Second*20))
-		Expect(err).To(BeNil())
-	}, WaitForCreateDeleteTimeout)
+		gomega.Expect(err).To(gomega.BeNil())
+	}, waitForCreateDeleteTimeout)
 
-	CIt("Kubernetes Version force update - Minor version", func(ctx context.Context) {
-		By("Kubernetes Version force update - latest patch of next Minor version: AutoUpdate.KubernetesVersion == false && expirationDate does apply && is highest patch version")
+	f.Release().CIt("Kubernetes Version force update - Minor version", func(ctx context.Context) {
+		ginkgo.By("Kubernetes Version force update - latest patch of next Minor version: AutoUpdate.KubernetesVersion == false && expirationDate does apply && is highest patch version")
 		err := f.GetShoot(ctx, shootMaintenanceTest.Shoot)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		defer func() {
 			// make sure to remove expiration date from cloud profile after test
 			err = shootMaintenanceTest.TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, shootMaintenanceTest.Shoot, testHighestPatchKubernetesVersionLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
-			Expect(err).To(BeNil())
+			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", shootMaintenanceTest.CloudProfile.Name)
 		}()
 
 		// set the shoots Kubernetes version to be the highest patch version of its minor version & autoupdate == false
 		shootMaintenanceTest.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, false, &testHighestPatchKubernetesVersionLowMinor.Version)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// let Shoot's Kubernetes version expire
 		err = shootMaintenanceTest.TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, shootMaintenanceTest.Shoot, testHighestPatchKubernetesVersionLowMinor.Version, &expirationDateInTheFuture, &deprecatedClassification)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// sleep so that expiration date is in the past - forceUpdate is required
 		time.Sleep(30 * time.Second)
 
 		// update integration test shoot - set maintain now  annotation
 		err = shootMaintenanceTest.TryUpdateShootForKubernetesMaintenance(ctx, shootMaintenanceTest.Shoot, true, nil)
-		Expect(err).To(BeNil())
+		gomega.Expect(err).To(gomega.BeNil())
 
 		// expect shoot to have updated to latest patch version of next minor version
 		err = shootMaintenanceTest.WaitForExpectedKubernetesVersionMaintenance(ctx, testHighestPatchKubernetesVersionHighMinor.Version, true, time.Now().Add(time.Second*20))
-		Expect(err).To(BeNil())
-	}, WaitForCreateDeleteTimeout)
+		gomega.Expect(err).To(gomega.BeNil())
+	}, waitForCreateDeleteTimeout)
 })
 
 func prepareCloudProfile(ctx context.Context, f *framework.GardenerFramework) {
@@ -410,37 +406,37 @@ func prepareCloudProfile(ctx context.Context, f *framework.GardenerFramework) {
 	profile := shootMaintenanceTest.CloudProfile
 
 	found, image, err := helper.DetermineMachineImageForName(profile, shootMaintenanceTest.ShootMachineImage.Name)
-	Expect(err).To(BeNil())
-	Expect(found).To(Equal(true))
+	gomega.Expect(err).To(gomega.BeNil())
+	gomega.Expect(found).To(gomega.Equal(true))
 
 	imageVersions := append(image.Versions, gardencorev1beta1.ExpirableVersion{Version: testMachineImageVersion, Classification: &deprecatedClassification})
 	updatedCloudProfileImages, err := helper.SetMachineImageVersionsToMachineImage(profile.Spec.MachineImages, shootMaintenanceTest.ShootMachineImage.Name, imageVersions)
-	Expect(err).To(BeNil())
+	gomega.Expect(err).To(gomega.BeNil())
 	// need one image in Cloud Profile to be updated with one additional version
 	profile.Spec.MachineImages = updatedCloudProfileImages
 
 	// add  test kubernetes versions (one low patch version, one high patch version)
 	profile.Spec.Kubernetes.Versions = append(profile.Spec.Kubernetes.Versions, testKubernetesVersionLowMinor, testHighestPatchKubernetesVersionLowMinor, testKubernetesVersionHighMinor, testHighestPatchKubernetesVersionHighMinor)
 	err = f.GardenClient.Client().Update(ctx, profile)
-	Expect(err).To(BeNil())
+	gomega.Expect(err).To(gomega.BeNil())
 }
 
 func prepareShoot(f *framework.GardenerFramework) *gardencorev1beta1.Shoot {
 	// if running in test machinery, test will be executed from root of the project
-	if !FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
+	if !framework.FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
 		// locally, we need find the example shoot
-		shootYamlPath = GetProjectRootPath() + shootYamlPath
-		Expect(FileExists(shootYamlPath)).To(Equal(true))
+		shootYamlPath = integrationframework.GetProjectRootPath() + shootYamlPath
+		gomega.Expect(framework.FileExists(shootYamlPath)).To(gomega.Equal(true))
 	}
 	// parse shoot yaml into shoot object and generate random test names for shoots
 	_, shootObject, err := framework.CreateShootTestArtifacts(shootYamlPath, testShootsPrefix, &f.ProjectNamespace, shootRegion, cloudProfile, secretBinding, shootProviderType, shootK8sVersion, nil, true, true)
-	Expect(err).To(BeNil())
+	gomega.Expect(err).To(gomega.BeNil())
 
 	shootObject.Spec.Extensions = nil
 
 	// set ProviderConfigs
 	err = framework.SetProviderConfigsFromFilepath(shootObject, infrastructureProviderConfig, nil, nil, nil)
-	Expect(err).To(BeNil())
+	gomega.Expect(err).To(gomega.BeNil())
 	// set other provider configs to nil as we do not need them for shoot creation
 	shootObject.Spec.Provider.ControlPlaneConfig = nil
 	return shootObject

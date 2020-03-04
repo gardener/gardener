@@ -46,6 +46,10 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
+	ginkgo.AfterSuite(func() {
+		framework.CommonAfterSuite()
+	})
+
 	framework.CBeforeEach(func(ctx context.Context) {
 		checkRequiredResources(ctx, f.SeedClient)
 	}, initializationTimeout)

@@ -61,6 +61,10 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		CreateTestNamespace: true,
 	})
 
+	ginkgo.AfterSuite(func() {
+		framework.CommonAfterSuite()
+	})
+
 	var (
 		name = "net-test"
 	)

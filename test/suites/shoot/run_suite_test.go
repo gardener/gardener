@@ -31,6 +31,7 @@ import (
 	_ "github.com/gardener/gardener/test/integration/shoots/applications"
 	_ "github.com/gardener/gardener/test/integration/shoots/care"
 	_ "github.com/gardener/gardener/test/integration/shoots/logging"
+	_ "github.com/gardener/gardener/test/integration/shoots/maintenance"
 	_ "github.com/gardener/gardener/test/integration/shoots/operations"
 )
 
@@ -50,10 +51,6 @@ func TestMain(m *testing.M) {
 	}
 
 	RegisterFailHandler(Fail)
-
-	AfterSuite(func() {
-		framework.CommonAfterSuite()
-	})
 
 	os.Exit(m.Run())
 }

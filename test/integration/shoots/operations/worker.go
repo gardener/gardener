@@ -34,9 +34,11 @@ package operations
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/test/framework"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/test/framework"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -51,6 +53,10 @@ const (
 var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 
 	f := framework.NewShootFramework(nil)
+
+	ginkgo.AfterSuite(func() {
+		framework.CommonAfterSuite()
+	})
 
 	f.Beta().Serial().CIt("should add one machine to the worker pool and remove it again", func(ctx context.Context) {
 		shoot := f.Shoot
