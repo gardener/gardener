@@ -124,8 +124,8 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Project(obj)
 
 			for _, m := range obj.Spec.Members {
-				Expect(m.Roles).NotTo(BeNil())
-				Expect(m.Roles).To(ContainElement(ProjectMemberViewer))
+				Expect(m.Role).NotTo(HaveLen(0))
+				Expect(m.Role).To(Equal(ProjectMemberViewer))
 			}
 		})
 	})

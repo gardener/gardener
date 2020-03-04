@@ -133,7 +133,9 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	)
 
 	for _, member := range project.Spec.Members {
-		for _, role := range member.Roles {
+		allRoles := append([]string{member.Role}, member.Roles...)
+
+		for _, role := range allRoles {
 			if role == gardencorev1beta1.ProjectMemberAdmin || role == gardencorev1beta1.ProjectMemberOwner {
 				admins = append(admins, member.Subject)
 			}
