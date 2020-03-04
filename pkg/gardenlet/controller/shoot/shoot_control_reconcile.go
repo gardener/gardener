@@ -144,7 +144,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying additional DNS providers",

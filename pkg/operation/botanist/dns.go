@@ -72,7 +72,7 @@ func (b *Botanist) DeployExternalDomainDNSRecord(ctx context.Context) error {
 	if err := b.deployDNSProvider(ctx, DNSExternalName, DNSProviderRolePrimary, b.Shoot.ExternalDomain.Provider, b.Shoot.ExternalDomain.SecretData, sets.NewString(append(b.Shoot.ExternalDomain.IncludeDomains, *b.Shoot.ExternalClusterDomain)...).List(), b.Shoot.ExternalDomain.ExcludeDomains, b.Shoot.ExternalDomain.IncludeZones, b.Shoot.ExternalDomain.ExcludeZones); err != nil {
 		return err
 	}
-	return b.deployDNSEntry(ctx, DNSExternalName, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), common.GetAPIServerDomain(b.Shoot.InternalClusterDomain))
+	return b.deployDNSEntry(ctx, DNSExternalName, common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain), b.APIServerAddress)
 }
 
 // DestroyExternalDomainDNSRecord destroys the DNS record for the external cluster domain.
