@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -193,7 +194,7 @@ func (b *Botanist) deployDNSProvider(ctx context.Context, name, role, provider s
 		},
 	}
 
-	if err := b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(dnsChartPath, "provider"), b.Shoot.SeedNamespace, name, nil, values); err != nil {
+	if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(dnsChartPath, "provider"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 		return err
 	}
 
@@ -248,7 +249,7 @@ func (b *Botanist) deployDNSEntry(ctx context.Context, name, dnsName, target str
 		"targets": []string{target},
 	}
 
-	if err := b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(dnsChartPath, "entry"), b.Shoot.SeedNamespace, name, nil, values); err != nil {
+	if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(dnsChartPath, "entry"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 		return err
 	}
 

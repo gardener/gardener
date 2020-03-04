@@ -11,22 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//go:generate mockgen -package chartrenderer -destination=mocks.go github.com/gardener/gardener/pkg/chartrenderer Interface
 
 package chartrenderer
-
-import (
-	"k8s.io/helm/pkg/manifest"
-)
-
-// Interface is an interface for rendering Helm Charts from path, name, namespace and values.
-type Interface interface {
-	Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error)
-	RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error)
-}
-
-// RenderedChart holds a map of rendered templates file with template file name as key and
-// rendered template as value.
-type RenderedChart struct {
-	ChartName string
-	Manifests []manifest.Manifest
-}

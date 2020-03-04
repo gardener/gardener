@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -89,7 +90,7 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 			defer wg.Done()
 
 			downloaderConfig := b.generateDownloaderConfig(worker.Machine.Image.Name)
-			oscs, err := b.deployOperatingSystemConfigsForWorker(b.Shoot.CloudProfile.Spec.MachineTypes, worker.Machine.Image, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
+			oscs, err := b.deployOperatingSystemConfigsForWorker(ctx, b.Shoot.CloudProfile.Spec.MachineTypes, worker.Machine.Image, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
 			results <- &oscOutput{worker.Name, oscs, err}
 		}(worker)
 	}
@@ -148,7 +149,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	return b.InjectShootShootImages(originalConfig, common.PauseContainerImageName, common.HyperkubeImageName)
 }
 
-func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
+func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
 	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
 
 	downloaderConfig["secretName"] = secretName
@@ -316,11 +317,11 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 		downloaderName = fmt.Sprintf("%s-downloader", secretName)
 		originalName   = fmt.Sprintf("%s-original", secretName)
 	)
-	downloaderData, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "downloader"), downloaderName, downloaderConfig)
+	downloaderData, err := b.applyAndWaitForShootOperatingSystemConfig(ctx, filepath.Join(operatingSystemConfigChartPath, "downloader"), downloaderName, downloaderConfig)
 	if err != nil {
 		return nil, err
 	}
-	originalData, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "original"), originalName, originalConfig)
+	originalData, err := b.applyAndWaitForShootOperatingSystemConfig(ctx, filepath.Join(operatingSystemConfigChartPath, "original"), originalName, originalConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -337,8 +338,8 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(machineTypes []gardenco
 	}, nil
 }
 
-func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.OperatingSystemConfigData, error) {
-	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
+func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context, chartPath, name string, values map[string]interface{}) (*shoot.OperatingSystemConfigData, error) {
+	if err := b.ChartApplierSeed.Apply(ctx, chartPath, b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 		return nil, err
 	}
 

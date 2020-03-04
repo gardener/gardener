@@ -181,7 +181,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, nil, values)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
@@ -212,7 +212,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.DeployKubeAPIServerService(); err != nil {
+	if err := b.DeployKubeAPIServerService(ctx); err != nil {
 		return err
 	}
 
@@ -487,7 +487,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, values, nil)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 // DeployBackupEntryInGarden deploys the BackupEntry resource in garden.
@@ -640,7 +640,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 	globalNetworkPoliciesValues["privateNetworks"] = privateNetworks
 	values["global-network-policies"] = globalNetworkPoliciesValues
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", values, nil)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", kubernetes.Values(values))
 }
 
 // DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
@@ -651,17 +651,13 @@ func (b *Botanist) DeployNetworkPolicies(ctx context.Context) error {
 }
 
 // DeployKubeAPIServerService deploys kube-apiserver service.
-func (b *Botanist) DeployKubeAPIServerService() error {
-	var (
-		name          = "kube-apiserver-service"
-		defaultValues = map[string]interface{}{}
-	)
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, defaultValues, nil)
+func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
+	const name = "kube-apiserver-service"
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name)
 }
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
-func (b *Botanist) DeployKubeAPIServer() error {
+func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	memoryMetricForHpaEnabled := false
 
@@ -916,7 +912,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, values, nil)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))
 }
 
 func (b *Botanist) getAuditPolicy(name, namespace string) (string, error) {
@@ -964,7 +960,7 @@ func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupV
 }
 
 // DeployKubeControllerManager deploys kube-controller-manager deployment.
-func (b *Botanist) DeployKubeControllerManager() error {
+func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	defaultValues := map[string]interface{}{
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -1006,11 +1002,11 @@ func (b *Botanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, values, nil)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, kubernetes.Values(values))
 }
 
 // DeployKubeScheduler deploys kube-scheduler deployment.
-func (b *Botanist) DeployKubeScheduler() error {
+func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	defaultValues := map[string]interface{}{
 		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -1039,7 +1035,7 @@ func (b *Botanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, values, nil)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
 }
 
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
@@ -1142,7 +1138,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				}
 			}
 		}
-		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), kubernetes.Values(etcd)); err != nil {
 			return err
 		}
 	}

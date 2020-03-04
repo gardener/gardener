@@ -20,6 +20,7 @@ import (
 	"errors"
 	"sync"
 
+	. "github.com/gardener/gardener/test/framework"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -27,11 +28,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	memcache "k8s.io/client-go/discovery/cached/memory"
 	fakediscovery "k8s.io/client-go/discovery/fake"
@@ -84,6 +85,10 @@ func (c *fakeDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
 	return groupList, nil
 }
 
+func (c *fakeDiscovery) ServerVersion() (*version.Info, error) {
+	return &version.Info{}, nil
+}
+
 func newTestApplier(c client.Client, discovery discovery.DiscoveryInterface) *kubernetes.Applier {
 	tmp := kubernetes.NewControllerClient
 	defer func() {
@@ -110,7 +115,6 @@ func mkManifest(objs ...runtime.Object) []byte {
 }
 
 var _ = Describe("Apply", func() {
-
 	var (
 		c       client.Client
 		d       *fakeDiscovery
@@ -193,16 +197,16 @@ spec:
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				var actualCM corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "c"}, &actualCM)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(equality.Semantic.DeepDerivative(actualCM, cm)).To(BeTrue())
+				Expect(cm).To(DeepDerivativeEqual(actualCM))
 			})
 			It("should apply multiple objects", func() {
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
 				Expect(err).NotTo(HaveOccurred())
@@ -232,7 +236,7 @@ spec:
 				manifestReader := kubernetes.NewManifestReader(manifest)
 
 				c.Create(context.TODO(), &oldServiceAccount)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				resultingService := &corev1.ServiceAccount{}
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-serviceaccount", Namespace: "test-ns"}, resultingService)
@@ -241,7 +245,7 @@ spec:
 				Expect(resultingService.Secrets[0].Name).To(Equal("test-secret"))
 			})
 
-			Context("DefaultApplierOptions", func() {
+			Context("DefaultMergeFuncs", func() {
 				var (
 					old      *corev1.Service
 					new      *corev1.Service
@@ -287,7 +291,7 @@ spec:
 						manifest := mkManifest(new)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
-						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)
+						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
 						Expect(err).NotTo(HaveOccurred())
 
 						result := &corev1.Service{}
@@ -384,7 +388,7 @@ spec:
 						manifest := mkManifest(new)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
-						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)
+						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
 						Expect(err).NotTo(HaveOccurred())
 
 						result := &corev1.Service{}
@@ -484,7 +488,7 @@ spec:
 						manifest := mkManifest(new)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
-						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)
+						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
 						Expect(err).NotTo(HaveOccurred())
 
 						result := &corev1.Service{}
@@ -615,7 +619,7 @@ spec:
 						manifest := mkManifest(new)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
-						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)
+						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
 						Expect(err).NotTo(HaveOccurred())
 
 						result := &corev1.Service{}
@@ -687,7 +691,7 @@ spec:
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
 				namespaceSettingReader := kubernetes.NewNamespaceSettingReader(manifestReader, "b")
-				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultApplierOptions)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				var actualCMWithNamespace corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test"}, &actualCMWithNamespace)

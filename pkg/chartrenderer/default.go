@@ -82,7 +82,7 @@ func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabil
 
 // Render loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
-func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.Load(chartPath)
 	if err != nil {
 		return nil, fmt.Errorf("can't create load chart from path %s:, %s", chartPath, err)
@@ -92,7 +92,7 @@ func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values 
 
 // RenderArchive loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
-func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
 	if err != nil {
 		return nil, fmt.Errorf("can't create load chart from archive: %s", err)
@@ -100,7 +100,7 @@ func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace str
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
-func (r *chartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chartName := chart.GetMetadata().GetName()
 
 	parsedValues, err := json.Marshal(values)

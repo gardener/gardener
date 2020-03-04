@@ -43,5 +43,5 @@ func (f *CommonFramework) RenderAndDeployTemplate(ctx context.Context, k8sClient
 	}
 
 	manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-	return k8sClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultApplierOptions)
+	return k8sClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
 }

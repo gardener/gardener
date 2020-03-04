@@ -445,7 +445,7 @@ func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, char
 	chartApplier := kubernetes.NewChartApplier(renderer, applier)
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
-	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, values, nil)
+	return chartApplier.Apply(ctx, chartPathToRender, namespace, chartNameToDeploy, kubernetes.Values(values), kubernetes.ForceNamespace)
 }
 
 // AfterEach greps all necessary logs and state of the cluster if the test failed
