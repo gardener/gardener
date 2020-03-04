@@ -98,7 +98,8 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name: cloudProfileName,
 				},
 			}
-			seed = core.Seed{
+			project = core.Project{}
+			seed    = core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       seedName,
 					Finalizers: finalizers,
@@ -139,7 +140,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			project = core.Project{
+			projectBase = core.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
@@ -187,6 +188,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			MissingSecretWait = 0
 
+			project = projectBase
 			shoot = shootBase
 		})
 
@@ -527,6 +529,36 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(project.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     defaultUserName,
+				}))
+			})
+
+			It("should set the owner field (member with owner role found)", func() {
+				projectCopy := project.DeepCopy()
+				ownerMember := &rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     "owner",
+				}
+				projectCopy.Name = "foo"
+				projectCopy.Spec.Members = []core.ProjectMember{
+					{
+						Subject: *ownerMember,
+						Roles:   []string{core.ProjectMemberOwner},
+					},
+				}
+
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&projectCopy)
+
+				attrs := admission.NewAttributesRecord(projectCopy, nil, core.Kind("Project").WithVersion("version"), projectCopy.Namespace, projectCopy.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(projectCopy.Spec.Owner).To(Equal(ownerMember))
+				Expect(projectCopy.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     defaultUserName,

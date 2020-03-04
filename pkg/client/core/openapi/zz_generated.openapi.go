@@ -3616,7 +3616,7 @@ func schema_pkg_apis_core_v1alpha1_ProjectMember(ref common.ReferenceCallback) c
 					},
 					"role": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Role represents the role of this member. Deprecated: Use roles instead. For backwards compatibility reasons, if role is specified, it will be copied to the roles list during the conversion of the API server.",
+							Description: "Role represents the role of this member. IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles` list.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -3636,7 +3636,7 @@ func schema_pkg_apis_core_v1alpha1_ProjectMember(ref common.ReferenceCallback) c
 						},
 					},
 				},
-				Required: []string{"kind", "name"},
+				Required: []string{"kind", "name", "role"},
 			},
 		},
 	}
@@ -8578,7 +8578,7 @@ func schema_pkg_apis_core_v1beta1_ProjectMember(ref common.ReferenceCallback) co
 					},
 					"role": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Role represents the role of this member. Deprecated: Use roles instead. For backwards compatibility reasons, if role is specified, it will be copied to the roles list during the conversion of the API server.",
+							Description: "Role represents the role of this member. IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles` list.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8598,7 +8598,7 @@ func schema_pkg_apis_core_v1beta1_ProjectMember(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"kind", "name"},
+				Required: []string{"kind", "name", "role"},
 			},
 		},
 	}

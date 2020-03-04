@@ -22,10 +22,10 @@ spec:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
+    role: admin
     roles:
-    - "admin"
-    - "owner"
-    - "extension:foo"
+    - owner
+    - extension:foo
 ```
 
 The project controller will, for every extension role, create a `ClusterRole` with name `name: gardener.cloud:extension:project:<projectName>:<roleName>`, i.e., for above example: `name: gardener.cloud:extension:project:dev:foo`.

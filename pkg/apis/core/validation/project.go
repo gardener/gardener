@@ -75,7 +75,7 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 		for j, role := range member.Roles {
 			if role == core.ProjectMemberOwner {
 				if ownerFound {
-					allErrs = append(allErrs, field.Forbidden(idxPath.Child("roles").Index(j), role))
+					allErrs = append(allErrs, field.Forbidden(idxPath.Child("roles").Index(j), "cannot have more than one member having the owner role"))
 				} else {
 					ownerFound = true
 				}

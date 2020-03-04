@@ -49,9 +49,8 @@ func SetDefaults_Project(obj *Project) {
 	for i, member := range obj.Spec.Members {
 		defaultSubject(&obj.Spec.Members[i].Subject)
 
-		viewer := ProjectMemberViewer
-		if member.Role == nil && len(member.Roles) == 0 {
-			obj.Spec.Members[i].Roles = []string{viewer}
+		if len(member.Role) == 0 && len(member.Roles) == 0 {
+			obj.Spec.Members[i].Role = ProjectMemberViewer
 		}
 	}
 }

@@ -94,9 +94,10 @@ type ProjectMember struct {
 	// account that has a certain role.
 	rbacv1.Subject `json:",inline"`
 	// Role represents the role of this member.
-	// Deprecated: Use roles instead. For backwards compatibility reasons, if role is specified, it will be copied to
-	// the roles list during the conversion of the API server.
-	Role *string `json:"role,omitempty"`
+	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
+	// list.
+	// TODO: Remove this field in favor of the `owner` role in `v1`.
+	Role string `json:"role"`
 	// Roles represents the list of roles of this member.
 	// +optional
 	Roles []string `json:"roles,omitempty"`

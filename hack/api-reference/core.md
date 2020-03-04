@@ -5449,8 +5449,9 @@ string
 </td>
 <td>
 <p>Role represents the role of this member.
-Deprecated: Use roles instead. For backwards compatibility reasons, if role is specified, it will be copied to
-the roles list during the conversion of the API server.</p>
+IMPORTANT: Be aware that this field will be removed in the <code>v1</code> version of this API in favor of the <code>roles</code>
+list.
+TODO: Remove this field in favor of the <code>owner</code> role in <code>v1</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7308,5 +7309,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>8f4d7313c</code>.
+on git commit <code>6c2b77555</code>.
 </em></p>

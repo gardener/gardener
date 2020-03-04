@@ -14,13 +14,15 @@ spec:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
-    roles:
-    - admin
+    role: admin
+  # roles: # Additional roles go here
+  # - viewer
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: bob.doe@example.com
-    roles:
-    - viewer
+    role: viewer
+  # roles: # Additional roles go here
+  # - extension:myrole
 # description: "This is my first project"
 # purpose: "Experimenting with Gardener"
   # The `spec.namespace` field is optional and will be initialized if unset - the resulting

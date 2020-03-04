@@ -2177,11 +2177,6 @@ func (in *ProjectList) DeepCopyObject() runtime.Object {
 func (in *ProjectMember) DeepCopyInto(out *ProjectMember) {
 	*out = *in
 	out.Subject = in.Subject
-	if in.Role != nil {
-		in, out := &in.Role, &out.Role
-		*out = new(string)
-		**out = **in
-	}
 	if in.Roles != nil {
 		in, out := &in.Roles, &out.Roles
 		*out = make([]string, len(*in))

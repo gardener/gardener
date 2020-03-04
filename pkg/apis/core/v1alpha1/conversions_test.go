@@ -17,7 +17,6 @@ package v1alpha1_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -114,6 +113,11 @@ var _ = Describe("Conversion", func() {
 					Kind:     "kind",
 					Name:     "member3",
 				}
+				member4 = rbacv1.Subject{
+					APIGroup: "group",
+					Kind:     "kind",
+					Name:     "member4",
+				}
 
 				extensionRole = "extension:role"
 
@@ -194,6 +198,35 @@ var _ = Describe("Conversion", func() {
 				}))
 			})
 
+			It("should do nothing if the owner role is already present for the owner member", func() {
+				in.Spec = ProjectSpec{
+					Owner: &owner,
+					Members: []ProjectMember{
+						{Subject: member1},
+						{
+							Subject: owner,
+							Role:   ProjectMemberOwner,
+						},
+						{Subject: member2},
+					},
+				}
+
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&core.Project{
+					Spec: core.ProjectSpec{
+						Owner: &owner,
+						Members: []core.ProjectMember{
+							{Subject: member1},
+							{
+								Subject: owner,
+								Roles:   []string{ProjectMemberOwner},
+							},
+							{Subject: member2},
+						},
+					},
+				}))
+			})
+
 			It("should remove the owner role from all non-owner members", func() {
 				in.Spec = ProjectSpec{
 					Owner: &owner,
@@ -210,6 +243,10 @@ var _ = Describe("Conversion", func() {
 						{
 							Subject: member3,
 							Roles:   []string{ProjectMemberOwner, extensionRole, ProjectMemberOwner},
+						},
+						{
+							Subject: member4,
+							Role:   ProjectMemberOwner,
 						},
 					},
 				}
@@ -234,6 +271,9 @@ var _ = Describe("Conversion", func() {
 							{
 								Subject: member3,
 								Roles:   []string{extensionRole},
+							},
+							{
+								Subject: member4,
 							},
 						},
 					},
@@ -293,6 +333,33 @@ var _ = Describe("Conversion", func() {
 					Owner: &owner,
 					Members: []core.ProjectMember{
 						{Subject: member1},
+						{Subject: owner, Roles: []string{"foo"}},
+						{Subject: member2},
+					},
+				}
+
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&Project{
+					Spec: ProjectSpec{
+						Owner: &owner,
+						Members: []ProjectMember{
+							{Subject: member1},
+							{
+								Subject: owner,
+								Role:   "foo",
+								Roles:   []string{ProjectMemberOwner},
+							},
+							{Subject: member2},
+						},
+					},
+				}))
+			})
+
+			It("should add the owner role to the owner member (not present yet)", func() {
+				in.Spec = core.ProjectSpec{
+					Owner: &owner,
+					Members: []core.ProjectMember{
+						{Subject: member1},
 						{Subject: owner},
 						{Subject: member2},
 					},
@@ -306,7 +373,7 @@ var _ = Describe("Conversion", func() {
 							{Subject: member1},
 							{
 								Subject: owner,
-								Roles:   []string{ProjectMemberOwner},
+								Role:   ProjectMemberOwner,
 							},
 							{Subject: member2},
 						},
@@ -335,8 +402,7 @@ var _ = Describe("Conversion", func() {
 							{Subject: member1},
 							{
 								Subject: owner,
-								Role:    &ownerRole,
-								Roles:   []string{ProjectMemberOwner},
+								Role:    ownerRole,
 							},
 							{Subject: member2},
 						},
@@ -375,7 +441,7 @@ var _ = Describe("Conversion", func() {
 							},
 							{
 								Subject: owner,
-								Roles:   []string{ProjectMemberOwner},
+								Role:   ProjectMemberOwner,
 							},
 							{
 								Subject: member2,
@@ -383,8 +449,7 @@ var _ = Describe("Conversion", func() {
 							},
 							{
 								Subject: member3,
-								Role:    pointer.StringPtr(extensionRole),
-								Roles:   []string{extensionRole},
+								Role:    extensionRole,
 							},
 						},
 					},
@@ -412,7 +477,7 @@ var _ = Describe("Conversion", func() {
 
 			It("should do nothing because role was found", func() {
 				in = &ProjectMember{
-					Role:  &role,
+					Role:  role,
 					Roles: []string{role, "bar"},
 				}
 
@@ -422,9 +487,33 @@ var _ = Describe("Conversion", func() {
 				}))
 			})
 
-			It("should add the role at the head of roles list", func() {
+			It("should reorder the roles list to make sure the role is at the head", func() {
 				in = &ProjectMember{
-					Role:  &role,
+					Role:  role,
+					Roles: []string{"bar", role},
+				}
+
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&core.ProjectMember{
+					Roles: []string{role, "bar"},
+				}))
+			})
+
+			It("should reorder the roles list to make sure the role is at the head even if there are duplicates", func() {
+				in = &ProjectMember{
+					Role:  role,
+					Roles: []string{"bar", role, role, role, "hugo"},
+				}
+
+				Expect(scheme.Convert(in, out, nil)).To(BeNil())
+				Expect(out).To(Equal(&core.ProjectMember{
+					Roles: []string{role, "bar", "hugo"},
+				}))
+			})
+
+			It("should add the role to the head of roles list", func() {
+				in = &ProjectMember{
+					Role:  role,
 					Roles: []string{"bar"},
 				}
 
@@ -453,13 +542,13 @@ var _ = Describe("Conversion", func() {
 				Expect(out).To(Equal(&ProjectMember{}))
 			})
 
-			It("should add the first role to the role field", func() {
+			It("should add the first role to the role field and remove it from the list", func() {
 				in.Roles = []string{role, "bar"}
 
 				Expect(scheme.Convert(in, out, nil)).To(BeNil())
 				Expect(out).To(Equal(&ProjectMember{
-					Role:  &role,
-					Roles: []string{role, "bar"},
+					Role:  role,
+					Roles: []string{"bar"},
 				}))
 			})
 		})

@@ -273,19 +273,32 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				Kind:     rbacv1.UserKind,
 				Name:     a.GetUserInfo().GetName(),
 			}
+
 			if project.Spec.Owner == nil {
-				project.Spec.Owner = project.Spec.CreatedBy
+				owner := project.Spec.CreatedBy
+
+			outer:
+				for _, member := range project.Spec.Members {
+					for _, role := range member.Roles {
+						if role == core.ProjectMemberOwner {
+							owner = member.Subject.DeepCopy()
+							break outer
+						}
+					}
+				}
+
+				project.Spec.Owner = owner
 			}
 		}
 
 		if project.Spec.Owner != nil {
-			ownerPartOfMember := false
+			ownerIsMember := false
 			for _, member := range project.Spec.Members {
 				if member.Subject == *project.Spec.Owner {
-					ownerPartOfMember = true
+					ownerIsMember = true
 				}
 			}
-			if !ownerPartOfMember {
+			if !ownerIsMember {
 				project.Spec.Members = append(project.Spec.Members, core.ProjectMember{
 					Subject: *project.Spec.Owner,
 					Roles: []string{

@@ -213,13 +213,7 @@ func Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core
 				out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
 			} else {
 				// delete owner role from all other members
-				var roles []string
-				for _, role := range member.Roles {
-					if role != ProjectMemberOwner {
-						roles = append(roles, role)
-					}
-				}
-				out.Members[i].Roles = roles
+				out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
 			}
 		}
 	}
@@ -237,28 +231,36 @@ func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out 
 		for i, member := range out.Members {
 			if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
 				// add owner role to the current project's owner if not present
+				if member.Role == core.ProjectMemberOwner {
+					// remove it from owners list if present
+					out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
+					continue outer
+				}
 				for _, role := range member.Roles {
 					if role == ProjectMemberOwner {
 						continue outer
 					}
 				}
 
-				out.Members[i].Roles = append(out.Members[i].Roles, ProjectMemberOwner)
+				if out.Members[i].Role == "" {
+					out.Members[i].Role = core.ProjectMemberOwner
+				} else {
+					out.Members[i].Roles = append(out.Members[i].Roles, core.ProjectMemberOwner)
+				}
 			} else {
 				// delete owner role from all other members
-				var roles []string
-				for _, role := range member.Roles {
-					if role != ProjectMemberOwner {
-						roles = append(roles, role)
-					}
-				}
-				out.Members[i].Roles = roles
+				out.Members[i].Roles = removeRoleFromRoles(member.Roles, ProjectMemberOwner)
 
-				if member.Role != nil && *member.Role == ProjectMemberOwner {
-					if len(out.Members[i].Roles) > 0 {
-						out.Members[i].Role = &out.Members[i].Roles[0]
+				if member.Role == ProjectMemberOwner {
+					if len(out.Members[i].Roles) == 0 {
+						out.Members[i].Role = ""
 					} else {
-						out.Members[i].Role = nil
+						out.Members[i].Role = out.Members[i].Roles[0]
+						if len(out.Members[i].Roles) > 1 {
+							out.Members[i].Roles = out.Members[i].Roles[1:]
+						} else {
+							out.Members[i].Roles = nil
+						}
 					}
 				}
 			}
@@ -268,22 +270,23 @@ func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out 
 	return nil
 }
 
+
 func Convert_v1alpha1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
 	if err := autoConvert_v1alpha1_ProjectMember_To_core_ProjectMember(in, out, s); err != nil {
 		return err
 	}
 
-	if in.Role == nil {
+	if len(in.Role) == 0 {
 		return nil
 	}
 
-	for _, role := range in.Roles {
-		if role == *in.Role {
-			return nil
-		}
+	// delete in.Role from out.Roles to make sure it gets added to the head
+	if len(out.Roles) > 0 {
+		out.Roles = removeRoleFromRoles(out.Roles, in.Role)
 	}
 
-	out.Roles = append([]string{*in.Role}, in.Roles...)
+	// add in.Role to the head of out.Roles
+	out.Roles = append([]string{in.Role}, out.Roles...)
 
 	return nil
 }
@@ -294,8 +297,20 @@ func Convert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember
 	}
 
 	if len(in.Roles) > 0 {
-		out.Role = &in.Roles[0]
+		out.Role = in.Roles[0]
+		out.Roles = in.Roles[1:]
 	}
 
 	return nil
+}
+
+
+func removeRoleFromRoles(roles []string, role string) []string{
+	var newRoles []string
+	for _, r := range roles {
+		if r != role {
+			newRoles = append(newRoles, r)
+		}
+	}
+	return newRoles
 }
