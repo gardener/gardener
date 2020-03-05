@@ -22,7 +22,7 @@ PROJECT_ROOT="${CURRENT_DIR}"/..
 # core.gardener.cloud APIs
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
-  deepcopy,defaulter,client,lister,informer,openapi \
+  deepcopy,defaulter,client,lister,informer \
   github.com/gardener/gardener/pkg/client/core \
   github.com/gardener/gardener/pkg/apis \
   github.com/gardener/gardener/pkg/apis \
