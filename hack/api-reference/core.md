@@ -2315,7 +2315,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).</p>
+<p>ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).</p>
 </td>
 </tr>
 <tr>
@@ -2357,7 +2357,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).</p>
+<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).</p>
 </td>
 </tr>
 <tr>
@@ -7324,5 +7324,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>c29ab655e</code>.
+on git commit <code>dc68e4c51</code>.
 </em></p>
