@@ -21,6 +21,7 @@ import (
 	"net"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -416,6 +417,30 @@ func (o *Operation) SyncClusterResourceToSeed(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+// EnsureShootStateExists creates the ShootState resource for the corresponding shoot and sets its ownerReferences to the Shoot.
+func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
+	shootState := &gardencorev1alpha1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      o.Shoot.Info.Name,
+			Namespace: o.Shoot.Info.Namespace,
+		},
+	}
+	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	blockOwnerDeletion := false
+	ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
+
+	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	o.ShootState = shootState
+	return nil
 }
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.

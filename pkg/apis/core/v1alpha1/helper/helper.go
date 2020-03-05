@@ -742,17 +742,6 @@ func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error
 	return errors.Wrapf(err, "last error: %s", lastError.Description)
 }
 
-// GetExtensionResourceState returns the ExtensionResourceState for given kind from a list of ExtensionResourceState.
-// If resource with such kind, name and purpose can't be found, returns -1 and nil.
-func GetExtensionResourceState(extensionsResourcesStates []gardencorev1alpha1.ExtensionResourceState, kind string, name, purpose *string) (int, *gardencorev1alpha1.ExtensionResourceState) {
-	for i, obj := range extensionsResourcesStates {
-		if obj.Kind == kind && apiequality.Semantic.DeepEqual(obj.Name, name) && apiequality.Semantic.DeepEqual(obj.Purpose, purpose) {
-			return i, &extensionsResourcesStates[i]
-		}
-	}
-	return -1, nil
-}
-
 // IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.
 // This indicates to extensions that they should not mutate the object.
 // Gardener marks the kube-apiserver Service and Deployment as managed by it when it uses SNI to expose them.

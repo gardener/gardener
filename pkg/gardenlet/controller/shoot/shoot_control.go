@@ -331,7 +331,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
 		if !allowedToUpdate {
-			o.Logger.WithError(err).Infof("Not allowed to update shoot with error")
+			o.Logger.WithError(err).Infof("Not allowed to update Shoot with error")
 			return reconcile.Result{}, err
 		}
 

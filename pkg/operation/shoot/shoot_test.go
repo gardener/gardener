@@ -367,19 +367,6 @@ var _ = Describe("shoot", func() {
 				Expect(s.ComputeOutOfClusterAPIServerAddress("", false)).To(Equal("api." + externalDomain))
 			})
 		})
-
-		Describe("#UnfoldTechnicalID", func() {
-			DescribeTable("", func(technicalId string, projectNameMatcher types.GomegaMatcher, matcher types.GomegaMatcher) {
-				projectName, shootName := UnfoldTechnicalID(technicalId)
-				Expect(projectName).To(projectNameMatcher)
-				Expect(shootName).To(matcher)
-			},
-				Entry("returns empty strings for provided zero length string", "", BeEmpty(), BeEmpty()),
-				Entry("returns empty strings, invalid technicalID", "invalidstring", BeEmpty(), BeEmpty()),
-				Entry("valid technicalID", "shoot--project-name--shoot-name", Equal("project-name"), Equal("shoot-name")),
-				Entry("valid technicalID for deprecated project and shoot naming", "shoot-projectname-shootname", Equal("projectname"), Equal("shootname")),
-			)
-		})
 	})
 
 	Context("Extensions", func() {

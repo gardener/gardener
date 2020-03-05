@@ -21,9 +21,8 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	shootoperations "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/operation/common"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -38,10 +37,6 @@ import (
 
 func createEnqueueOnAddFunc(queue workqueue.RateLimitingInterface) func(extensionObject interface{}) {
 	return func(newObj interface{}) {
-		extensionObject := newObj.(extensionsv1alpha1.Object)
-		if extensionObject.GetExtensionStatus().GetState() == nil {
-			return
-		}
 		enqueue(queue, newObj)
 	}
 }
@@ -93,31 +88,24 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 		name := extensionObject.GetName()
 		purpose := extensionObject.GetExtensionSpec().GetExtensionPurpose()
 		state := extensionObject.GetExtensionStatus().GetState()
-		projectNamespace, shootName := fromNamespace(req.Namespace)
 
-		shoot, err := s.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(projectNamespace).Get(shootName, metav1.GetOptions{})
+		clusterName := fromRequest(req)
+		shoot, err := s.shootRetriever.FromCluster(ctx, clusterName, s.seedClient)
 		if err != nil {
-			s.log.Errorf("Couldn't retrieve Shoot %s from namespace %s. Extension %s state with name %s and purpose %v was NOT synced: %v", shootName, projectNamespace, kind, name, purpose, err)
 			return reconcile.Result{}, err
 		}
 
-		ownerReference := metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-
-		blockOwnerDeletion := false
-		ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
-		shootState := &gardencorev1alpha1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: projectNamespace}}
-
+		shootState := &gardencorev1alpha1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
 		if _, err := controllerutil.CreateOrUpdate(ctx, s.k8sGardenClient.Client(), shootState, func() error {
-			shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 			return updateShootStateExtensionState(state, shootState, kind, name, purpose)
 		}); err != nil {
-			message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %v was NOT successfully synced: %v", shootName, kind, name, purpose, err)
+			message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %s was NOT successfully synced: %v", shoot.Name, kind, name, purposeToString(purpose), err)
 			s.log.Error(message)
 			s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 			return reconcile.Result{}, err
 		}
 
-		message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %v was successfully synced", shootName, kind, name, purpose)
+		message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %s was successfully synced", shoot.Name, kind, name, purposeToString(purpose))
 		s.log.Info(message)
 		s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{}, nil
@@ -125,29 +113,35 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 }
 
 func updateShootStateExtensionState(extensionState *runtime.RawExtension, shootState *gardencorev1alpha1.ShootState, kind string, name string, purpose *string) error {
-	i, currentExtensionState := gardencorev1alpha1helper.GetExtensionResourceState(shootState.Spec.Extensions, kind, &name, purpose)
-	if extensionState == nil && i > -1 {
-		lastElementIndex := len(shootState.Spec.Extensions) - 1
-		shootState.Spec.Extensions[i] = shootState.Spec.Extensions[lastElementIndex]
-		shootState.Spec.Extensions = shootState.Spec.Extensions[0:lastElementIndex]
+	list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+	if extensionState == nil {
+		list.Delete(kind, &name, purpose)
+		shootState.Spec.Extensions = list
 		return nil
 	}
-
-	if currentExtensionState == nil {
-		shootState.Spec.Extensions = append(shootState.Spec.Extensions, gardencorev1alpha1.ExtensionResourceState{
-			Kind:    kind,
-			Name:    &name,
-			Purpose: purpose,
-			State:   gardencorev1alpha1.ProviderConfig{RawExtension: *extensionState},
-		})
-	} else {
-		currentExtensionState.State = gardencorev1alpha1.ProviderConfig{RawExtension: *extensionState}
-	}
+	list.Upsert(&gardencorev1alpha1.ExtensionResourceState{
+		Kind:    kind,
+		Name:    &name,
+		Purpose: purpose,
+		State:   *extensionState,
+	})
+	shootState.Spec.Extensions = list
 	return nil
 }
 
-func fromNamespace(namespace string) (projectNamespace, shootName string) {
-	projectName, shootName := shootoperations.UnfoldTechnicalID(namespace)
-	projectNamespace = "garden-" + projectName
+func purposeToString(purpose *string) string {
+	if purpose == nil {
+		return "<nil>"
+	}
+	return *purpose
+}
+
+func fromRequest(req reconcile.Request) (clusterName string) {
+	if req.Namespace == "" {
+		// Handling for cluster-scoped backupentry extension resources.
+		clusterName, _ = common.ExtractShootDetailsFromBackupEntryName(req.Name)
+	} else {
+		clusterName = req.Namespace
+	}
 	return
 }
