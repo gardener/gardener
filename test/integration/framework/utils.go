@@ -23,6 +23,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
@@ -342,8 +343,8 @@ func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namesp
 	})
 }
 
-// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
-func scaleGardenerComponentForIntegrationTests(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32, name string) (*int32, error) {
+// ScaleDeployment scales a deployment and waits until it is scaled
+func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
 	if desiredReplicas == nil {
 		return nil, nil
 	}
@@ -351,7 +352,7 @@ func scaleGardenerComponentForIntegrationTests(setupContextTimeout time.Duration
 	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
 	defer cancelCtxSetup()
 
-	replicas, err := GetDeploymentReplicas(ctxSetup, client, "garden", name)
+	replicas, err := GetDeploymentReplicas(ctxSetup, client, namespace, name)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -359,15 +360,15 @@ func scaleGardenerComponentForIntegrationTests(setupContextTimeout time.Duration
 		return nil, fmt.Errorf("failed to retrieve the replica count of the %s deployment: '%v'", name, err)
 	}
 	if replicas == nil || *replicas == *desiredReplicas {
-		return nil, nil
+		return replicas, nil
 	}
 	// scale the scheduler deployment
-	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key("garden", name), *desiredReplicas); err != nil {
+	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
 	}
 
 	// wait until scaled
-	if err := WaitUntilDeploymentScaled(ctxSetup, client, "garden", name, *desiredReplicas); err != nil {
+	if err := WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
 	}
 	return replicas, nil
@@ -375,10 +376,10 @@ func scaleGardenerComponentForIntegrationTests(setupContextTimeout time.Duration
 
 // ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
 func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return scaleGardenerComponentForIntegrationTests(setupContextTimeout, client, desiredReplicas, "gardener-scheduler")
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", gardencorev1beta1constants.GardenNamespace)
 }
 
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
 func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return scaleGardenerComponentForIntegrationTests(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager")
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
 }

@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/onsi/ginkgo"
@@ -291,4 +292,29 @@ func (f *ShootFramework) GetCloudProfile(ctx context.Context) (*gardencorev1beta
 		return nil, errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
 	}
 	return cloudProfile, nil
+}
+
+// WaitForShootCondition waits for the shoot to contain the specified condition
+func (f *ShootFramework) WaitForShootCondition(ctx context.Context, interval, timeout time.Duration, conditionType gardencorev1beta1.ConditionType, conditionStatus gardencorev1beta1.ConditionStatus) error {
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		shoot := &gardencorev1beta1.Shoot{}
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, shoot)
+		if err != nil {
+			f.Logger.Infof("Error while waiting for shoot to have expected condition: %s", err.Error())
+			return retry.MinorError(err)
+		}
+
+		cond := helper.GetCondition(shoot.Status.Conditions, conditionType)
+		if cond != nil && cond.Status == conditionStatus {
+			return retry.Ok()
+		}
+
+		if cond == nil {
+			f.Logger.Infof("Waiting for shoot %s to have expected condition (%s: %s). Currently the condition is not present", f.Shoot.Name, conditionType, conditionStatus)
+			return retry.MinorError(fmt.Errorf("shoot %q does not yet have expected condition", shoot.Name))
+		}
+
+		f.Logger.Infof("Waiting for shoot %s to have expected condition (%s: %s). Currently: (%s: %s)", f.Shoot.Name, conditionType, conditionStatus, conditionType, cond.Status)
+		return retry.MinorError(fmt.Errorf("shoot %q does not yet have expected condition", shoot.Name))
+	})
 }
