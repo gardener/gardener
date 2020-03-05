@@ -168,10 +168,12 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return fmt.Errorf("error retrieving default domains: %s", err)
 	}
 
-	// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
-	// not disable DNS.
-	if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
-		return err
+	if a.GetOperation() == admission.Create {
+		// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
+		// not disable DNS.
+		if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
+			return err
+		}
 	}
 
 	// If the seed does not disable DNS and the shoot does not use the unmanaged DNS provider then we need

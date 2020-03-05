@@ -344,6 +344,20 @@ var _ = Describe("dns", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
+			It("should not reject shoots using a non compliant default domain on updates", func() {
+				shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
+				shoot.Spec.DNS.Domain = &shootDomain
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
 			It("should reject because no domain was configured for the shoot and project is missing", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
