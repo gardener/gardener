@@ -344,6 +344,22 @@ var _ = Describe("dns", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
+			It("should reject because a default domain was already used for the shoot but is invalid (with domain) when seed is assigned", func() {
+				shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
+				shoot.Spec.DNS.Domain = &shootDomain
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("should not reject shoots using a non compliant default domain on updates", func() {
 				shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
 				shoot.Spec.DNS.Domain = &shootDomain
@@ -351,7 +367,7 @@ var _ = Describe("dns", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
