@@ -598,6 +598,10 @@ type KubeletConfig struct {
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	// +optional
 	PodPIDsLimit *int64 `json:"podPidsLimit,omitempty"`
+	// ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
+	// +optional
+	// Default: 1m
+	ImagePullProgressDeadline *metav1.Duration `json:"imagePullProgressDeadline,omitempty"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

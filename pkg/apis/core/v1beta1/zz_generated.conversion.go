@@ -2314,6 +2314,7 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.EvictionSoftGracePeriod = (*core.KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
 	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.ImagePullProgressDeadline = (*metav1.Duration)(unsafe.Pointer(in.ImagePullProgressDeadline))
 	return nil
 }
 
@@ -2336,6 +2337,7 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.EvictionSoftGracePeriod = (*KubeletConfigEvictionSoftGracePeriod)(unsafe.Pointer(in.EvictionSoftGracePeriod))
 	out.MaxPods = (*int32)(unsafe.Pointer(in.MaxPods))
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.ImagePullProgressDeadline = (*metav1.Duration)(unsafe.Pointer(in.ImagePullProgressDeadline))
 	return nil
 }
 

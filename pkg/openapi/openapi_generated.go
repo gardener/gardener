@@ -2599,6 +2599,12 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "int64",
 						},
 					},
+					"imagePullProgressDeadline": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
@@ -7559,6 +7565,12 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.",
 							Type:        []string{"integer"},
 							Format:      "int64",
+						},
+					},
+					"imagePullProgressDeadline": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},

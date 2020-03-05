@@ -21,6 +21,7 @@ worker:
     cpuCFSQuota: true
     cpuManagerPolicy: none
   # podPIDsLimit: 24
+    imagePullProgressDeadline: 1m
     maxPods: 110
     evictionPressureTransitionPeriod: 4m0s
     evictionMaxPodGracePeriod: 90
