@@ -240,7 +240,7 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 // WakeUpShoot wakes up the test shoot from hibernation
 func (f *GardenerFramework) WakeUpShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	// return if the shoot is already running
-	if shoot.Spec.Hibernation == nil || !*shoot.Spec.Hibernation.Enabled {
+	if shoot.Spec.Hibernation == nil || shoot.Spec.Hibernation.Enabled == nil || !*shoot.Spec.Hibernation.Enabled {
 		return nil
 	}
 

@@ -248,9 +248,11 @@ go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
   -infrastructure-provider-config-filepath=$INFRASTRUCTURE_PROVIDER_CONFIG_FILEPATH \
   -controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH \
   -workers-config-filepath=$$WORKERS_CONFIG_FILEPATH \
+  -worker-zone=$ZONE \
   -networking-pods=$NETWORKING_PODS \
   -networking-services=$NETWORKING_SERVICES \
-  -networking-nodes=$NETWORKING_NODES 
+  -networking-nodes=$NETWORKING_NODES \
+  -start-hibernated=$START_HIBERNATED
 ```
 
 #### Shoot Deletion test
