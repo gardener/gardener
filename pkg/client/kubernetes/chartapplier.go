@@ -18,23 +18,14 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/utils"
-
-	"k8s.io/client-go/rest"
 )
 
 // ChartApplier is an interface that describes needed methods that render and apply
 // Helm charts in Kubernetes clusters.
 type ChartApplier interface {
 	chartrenderer.Interface
-	ApplierInterface
-
-	ApplyChartWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error
-	ApplyChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
-	ApplyChartInNamespaceWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error
-	ApplyChartInNamespace(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
-
-	DeleteChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
+	Apply(ctx context.Context, chartPath, namespace, name string, opts ...ApplyOption) error
+	Delete(ctx context.Context, chartPath, namespace, name string, opts ...DeleteOption) error
 }
 
 // chartApplier is a structure that contains a chart renderer and a manifest applier.
@@ -43,77 +34,69 @@ type chartApplier struct {
 	ApplierInterface
 }
 
-// NewChartApplierForConfig returns a new chart applier based on the given REST config.
-func NewChartApplierForConfig(config *rest.Config) (ChartApplier, error) {
-	renderer, err := chartrenderer.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	applier, err := NewApplierForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewChartApplier(renderer, applier), nil
-}
-
 // NewChartApplier returns a new chart applier.
 func NewChartApplier(renderer chartrenderer.Interface, applier ApplierInterface) ChartApplier {
 	return &chartApplier{renderer, applier}
 }
 
-// ApplyChartWithOptions takes a path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
-// based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
-// Kubernetes client has been created for.
-// <options> determines how the apply logic is executed.
-func (c *chartApplier) ApplyChartWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error {
-	manifestReader, err := c.manifestReader(chartPath, namespace, name, defaultValues, additionalValues)
+// Apply takes a path to a chart <chartPath>, name of the release <name>,
+// release's namespace <namespace> and renders the template based value.
+// The resulting manifest will be applied to the cluster the Kubernetes client has been created for.
+// <options> can be used to enchance the existing functionality.
+func (c *chartApplier) Apply(ctx context.Context, chartPath, namespace, name string, opts ...ApplyOption) error {
+	applyOpts := &ApplyOptions{}
+
+	for _, o := range opts {
+		o.MutateApplyOptions(applyOpts)
+	}
+
+	if len(applyOpts.MergeFuncs) == 0 {
+		applyOpts.MergeFuncs = DefaultMergeFuncs
+	}
+
+	manifestReader, err := c.manifestReader(chartPath, namespace, name, applyOpts.Values)
 	if err != nil {
 		return err
 	}
-	return c.ApplyManifest(ctx, manifestReader, options)
-}
 
-// ApplyChartInNamespaceWithOptions is the same as ApplyChart except that it forces the namespace for chart objects when applying the chart, this is because sometimes native chart
-// objects do not come with a Release.Namespace option and leave the namespace field empty.
-func (c *chartApplier) ApplyChartInNamespaceWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error {
-	manifestReader, err := c.manifestReader(chartPath, namespace, name, defaultValues, additionalValues)
+	if applyOpts.ForceNamespace {
+		manifestReader = NewNamespaceSettingReader(manifestReader, namespace)
+	}
+
 	if err != nil {
 		return err
 	}
 
-	nameSpaceSettingsReader := NewNamespaceSettingReader(manifestReader, namespace)
-	return c.ApplyManifest(ctx, nameSpaceSettingsReader, DefaultApplierOptions)
+	return c.ApplyManifest(ctx, manifestReader, applyOpts.MergeFuncs)
 }
 
-// ApplyChart takes a path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
-// based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
-// Kubernetes client has been created for.
-func (c *chartApplier) ApplyChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
-	return c.ApplyChartWithOptions(ctx, chartPath, namespace, name, defaultValues, additionalValues, DefaultApplierOptions)
-}
-
-// ApplyChartInNamespace is the same as ApplyChart except that it forces the namespace for chart objects when applying the chart, this is because sometimes native chart
-// objects do not come with a Release.Namespace option and leave the namespace field empty.
-func (c *chartApplier) ApplyChartInNamespace(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
-	return c.ApplyChartInNamespaceWithOptions(ctx, chartPath, namespace, name, defaultValues, additionalValues, DefaultApplierOptions)
-}
-
-// DeleteChart takes a path to a chart <chartPath>, name of the release <name>,
+// Delete takes a path to a chart <chartPath>, name of the release <name>,
 // release's namespace <namespace> and renders the template.
 // The resulting manifest will be deleted from the cluster the Kubernetes client has been created for.
-func (c *chartApplier) DeleteChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
-	manifestReader, err := c.manifestReader(chartPath, namespace, name, defaultValues, additionalValues)
+func (c *chartApplier) Delete(ctx context.Context, chartPath, namespace, name string, opts ...DeleteOption) error {
+	deleteOpts := &DeleteOptions{}
+
+	for _, o := range opts {
+		o.MutateDeleteOptions(deleteOpts)
+	}
+
+	manifestReader, err := c.manifestReader(chartPath, namespace, name, deleteOpts.Values)
+	if err != nil {
+		return err
+	}
+
+	if deleteOpts.ForceNamespace {
+		manifestReader = NewNamespaceSettingReader(manifestReader, namespace)
+	}
+
 	if err != nil {
 		return err
 	}
 	return c.DeleteManifest(ctx, manifestReader)
 }
 
-func (c *chartApplier) manifestReader(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) (UnstructuredReader, error) {
-	release, err := c.Render(chartPath, name, namespace, utils.MergeMaps(defaultValues, additionalValues))
+func (c *chartApplier) manifestReader(chartPath, namespace, name string, values interface{}) (UnstructuredReader, error) {
+	release, err := c.Render(chartPath, name, namespace, values)
 	if err != nil {
 		return nil, err
 	}

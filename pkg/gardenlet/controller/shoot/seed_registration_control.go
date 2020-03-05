@@ -649,7 +649,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		return err
 	}
 
-	return chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", values, nil)
+	return chartApplier.Apply(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
 func deleteGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {

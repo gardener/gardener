@@ -66,7 +66,7 @@ func (f *CommonFramework) DeployChart(ctx context.Context, k8sClient kubernetes.
 	chartApplier := kubernetes.NewChartApplier(renderer, applier)
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
-	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, values, nil)
+	return chartApplier.Apply(ctx, chartPathToRender, namespace, chartNameToDeploy, kubernetes.Values(values), kubernetes.ForceNamespace)
 }
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories

@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
@@ -129,15 +128,10 @@ type Applier struct {
 // MergeFunc determines how oldOj is merged into new oldObj.
 type MergeFunc func(newObj, oldObj *unstructured.Unstructured)
 
-// ApplierOptions contains options used by the Applier.
-type ApplierOptions struct {
-	MergeFuncs map[schema.GroupKind]MergeFunc
-}
-
 // ApplierInterface is an interface which describes declarative operations to apply multiple
 // Kubernetes objects.
 type ApplierInterface interface {
-	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options ApplierOptions) error
+	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options MergeFuncs) error
 	DeleteManifest(ctx context.Context, unstructured UnstructuredReader) error
 }
 

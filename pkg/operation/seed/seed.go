@@ -521,7 +521,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	var (
-		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultApplierOptions)
+		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
 		retainStatusInformation = func(new, old *unstructured.Unstructured) {
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
@@ -538,9 +538,9 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	if monitoringCredentials != nil {
 		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[secretsutils.DataKeyUserName], monitoringCredentials.Data[secretsutils.DataKeyPassword])
 	}
-	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
-	applierOptions.MergeFuncs[hvpaGK] = retainStatusInformation
-	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
+	applierOptions[vpaGK] = retainStatusInformation
+	applierOptions[hvpaGK] = retainStatusInformation
+	applierOptions[issuerGK] = retainStatusInformation
 
 	networks := []string{
 		seed.Info.Spec.Networks.Pods,
@@ -572,7 +572,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		kibanaTLSOverride = wildcardCert.GetName()
 	}
 
-	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, nil, map[string]interface{}{
+	values := kubernetes.Values(map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
 			"images": chart.ImageMapToValues(images),
@@ -646,9 +646,6 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"enabled": hvpaEnabled,
 		},
 		"global-network-policies": map[string]interface{}{
-			// TODO (mvladev): Move the Provider specific metadata IP
-			// somewhere else, so it's accessible here.
-			// "metadataService": "169.254.169.254/32"
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,
 		},
@@ -658,7 +655,9 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
 		},
-	}, applierOptions)
+	})
+
+	return chartApplier.Apply(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions)
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

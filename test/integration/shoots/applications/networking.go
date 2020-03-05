@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		framework.ExpectNoError(err)
 
 		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = f.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultApplierOptions)
+		err = f.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
 		framework.ExpectNoError(err)
 
 		defer func() {

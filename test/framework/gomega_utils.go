@@ -14,9 +14,50 @@
 
 package framework
 
-import "github.com/onsi/gomega"
+import (
+	"fmt"
+
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
+	"github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/api/equality"
+)
 
 // ExpectNoError checks if an error has occurred
 func ExpectNoError(actual interface{}, extra ...interface{}) {
 	gomega.ExpectWithOffset(1, actual, extra...).ToNot(gomega.HaveOccurred())
+}
+
+// DeepDerivativeEqual is similar to DeepEqual except that unset fields in actual are
+// ignored (not compared). This allows us to focus on the fields that matter to
+// the semantic comparison.
+func DeepDerivativeEqual(expected interface{}) types.GomegaMatcher {
+	return &deepDerivativeMatcher{
+		expected: expected,
+	}
+}
+
+type deepDerivativeMatcher struct {
+	expected interface{}
+}
+
+func (m *deepDerivativeMatcher) Match(actual interface{}) (success bool, err error) {
+	if actual == nil && m.expected == nil {
+		return false, fmt.Errorf("refusing to compare <nil> to <nil>.\nBe explicit and use BeNil() instead.  This is to avoid mistakes where both sides of an assertion are erroneously uninitialized")
+	}
+	return equality.Semantic.DeepDerivative(actual, m.expected), nil
+}
+
+func (m *deepDerivativeMatcher) FailureMessage(actual interface{}) (message string) {
+	actualString, actualOK := actual.(string)
+	expectedString, expectedOK := m.expected.(string)
+	if actualOK && expectedOK {
+		return format.MessageWithDiff(actualString, "to equal", expectedString)
+	}
+
+	return format.Message(actual, "to deep derivative equal", m.expected)
+}
+
+func (m *deepDerivativeMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	return format.Message(actual, "not to deep derivative equal", m.expected)
 }

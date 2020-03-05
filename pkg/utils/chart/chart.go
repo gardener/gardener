@@ -61,7 +61,7 @@ func (c *Chart) Apply(
 	}
 
 	// Apply chart
-	err = chartApplier.ApplyChart(ctx, c.Path, namespace, c.Name, values, additionalValues)
+	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, gardenerkubernetes.Values(utils.MergeMaps(values, additionalValues)))
 	if err != nil {
 		return errors.Wrapf(err, "could not apply chart '%s' in namespace '%s'", c.Name, namespace)
 	}

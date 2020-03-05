@@ -286,20 +286,6 @@ func (o *Operation) InitializeMonitoringClient() error {
 	return nil
 }
 
-// ApplyChartGarden takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
-// and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
-// The resulting manifest will be applied to the Garden cluster.
-func (o *Operation) ApplyChartGarden(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
-	return o.ChartApplierGarden.ApplyChart(context.TODO(), chartPath, namespace, name, defaultValues, additionalValues)
-}
-
-// ApplyChartSeed takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
-// and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
-// The resulting manifest will be applied to the Seed cluster.
-func (o *Operation) ApplyChartSeed(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
-	return o.ChartApplierSeed.ApplyChart(context.TODO(), chartPath, namespace, name, defaultValues, additionalValues)
-}
-
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
 // are prefixed with <kind>.
 func (o *Operation) GetSecretKeysOfRole(kind string) []string {

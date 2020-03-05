@@ -158,7 +158,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		})
 	}
 
-	if err := chartApplier.ApplyChart(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
+	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":       project.Name,
 			"uid":        project.UID,
@@ -167,7 +167,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 			"viewers":    viewers,
 			"extensions": extensions,
 		},
-	}, nil); err != nil {
+	})); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
