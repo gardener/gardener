@@ -168,11 +168,23 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return fmt.Errorf("error retrieving default domains: %s", err)
 	}
 
-	if a.GetOperation() == admission.Create {
-		// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
-		// not disable DNS.
+	// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
+	// not disable DNS.
+	switch a.GetOperation() {
+	case admission.Create:
 		if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
 			return err
+		}
+	case admission.Update:
+		oldShoot, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+		seedGotAssigned := oldShoot.Spec.SeedName == nil && shoot.Spec.SeedName != nil
+		if seedGotAssigned {
+			if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
+				return err
+			}
 		}
 	}
 
