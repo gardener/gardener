@@ -1393,6 +1393,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.ImagePullProgressDeadline != nil {
+		in, out := &in.ImagePullProgressDeadline, &out.ImagePullProgressDeadline
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

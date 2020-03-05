@@ -290,6 +290,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
 			kubelet["podPIDsLimit"] = *podPIDsLimit
 		}
+		if imagePullProgressDeadline := kubeletConfig.ImagePullProgressDeadline; imagePullProgressDeadline != nil {
+			kubelet["imagePullProgressDeadline"] = *imagePullProgressDeadline
+		}
 		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
 			kubelet["cpuCFSQuota"] = *cpuCFSQuota
 		}

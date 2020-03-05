@@ -3854,6 +3854,21 @@ int64
 <p>PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>imagePullProgressDeadline</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
+Default: 1m</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
@@ -7309,5 +7324,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>8e6cde607</code>.
+on git commit <code>c29ab655e</code>.
 </em></p>

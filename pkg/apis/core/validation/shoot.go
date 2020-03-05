@@ -866,6 +866,9 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("podPIDsLimit"), *value, fmt.Sprintf("podPIDsLimit value must be at least %d", PodPIDsLimitMinimum)))
 		}
 	}
+	if kubeletConfig.ImagePullProgressDeadline != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.ImagePullProgressDeadline, fldPath.Child("imagePullProgressDeadline"))...)
+	}
 	if kubeletConfig.EvictionPressureTransitionPeriod != nil {
 		allErrs = append(allErrs, ValidatePositiveDuration(kubeletConfig.EvictionPressureTransitionPeriod, fldPath.Child("evictionPressureTransitionPeriod"))...)
 	}

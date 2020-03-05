@@ -2360,6 +2360,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
+		DescribeTable("validate the kubelet configuration - ImagePullProgressDeadline",
+			func(imagePullProgressDeadline metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ImagePullProgressDeadline: &imagePullProgressDeadline,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid configuration", validDuration, HaveLen(0)),
+			Entry("only allow positive Duration", invalidDuration, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
+				})),
+			)),
+		)
+
 		DescribeTable("validate the kubelet configuration - EvictionMaxPodGracePeriod",
 			func(evictionMaxPodGracePeriod int32, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

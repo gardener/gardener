@@ -58,6 +58,7 @@ spec:
     #     cpuCFSQuota: true
     #     cpuManagerPolicy: none
     #     podPidsLimit: 10
+    #     imagePullProgressDeadline: 1m
     #     maxPods: 110
     #     evictionPressureTransitionPeriod: 4m0s
     #     evictionMaxPodGracePeriod: 90
@@ -150,6 +151,7 @@ spec:
   #   cpuCFSQuota: true
   #   cpuManagerPolicy: none
   #   podPidsLimit: 10
+  #   imagePullProgressDeadline: 1m
   #   maxPods: 110
   #   evictionPressureTransitionPeriod: 4m0s
   #   evictionMaxPodGracePeriod: 90
