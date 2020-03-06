@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,17 @@ func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey
 
 	statefulset.Spec.Replicas = &replicas
 	return c.Update(ctx, statefulset)
+}
+
+// ScaleEtcd scales a Etcd resource.
+func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, replicas int) error {
+	etcd := &druidv1alpha1.Etcd{}
+	if err := c.Get(ctx, key, etcd); err != nil {
+		return err
+	}
+
+	etcd.Spec.Replicas = replicas
+	return c.Update(ctx, etcd)
 }
 
 // ScaleDeployment scales a Deployment.

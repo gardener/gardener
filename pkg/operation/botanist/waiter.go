@@ -28,6 +28,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,54 +58,54 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) err
 // WaitUntilEtcdReady waits until the etcd statefulsets indicate readiness in their statuses.
 func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		statefulSetList := &appsv1.StatefulSetList{}
-		err = b.K8sSeedClient.Client().List(ctx, statefulSetList,
+		etcdList := &druidv1alpha1.EtcdList{}
+		err = b.K8sSeedClient.Client().List(ctx, etcdList,
 			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels{"app": "etcd-statefulset"})
+			client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"})
 		if err != nil {
 			return retry.SevereError(err)
 		}
-		if n := len(statefulSetList.Items); n < 2 {
-			b.Logger.Info("Waiting until the etcd statefulsets gets created...")
-			return retry.MinorError(fmt.Errorf("only %d/%d etcd stateful sets found", n, 2))
+		if n := len(etcdList.Items); n < 2 {
+			b.Logger.Info("Waiting until the etcd gets created...")
+			return retry.MinorError(fmt.Errorf("only %d/%d etcd resources found", n, 2))
 		}
 
-		bothEtcdStatefulSetsReady := true
-		for _, statefulSet := range statefulSetList.Items {
-			if statefulSet.DeletionTimestamp != nil {
+		bothEtcdsReady := true
+		for _, etcd := range etcdList.Items {
+			if etcd.DeletionTimestamp != nil {
 				continue
 			}
 
-			if statefulSet.Status.ReadyReplicas < 1 {
-				bothEtcdStatefulSetsReady = false
+			if !etcd.Status.Ready {
+				bothEtcdsReady = false
 				break
 			}
 		}
 
-		if bothEtcdStatefulSetsReady {
+		if bothEtcdsReady {
 			return retry.Ok()
 		}
 
-		b.Logger.Info("Waiting until the both etcd statefulsets are ready...")
-		return retry.MinorError(fmt.Errorf("not all etcd stateful sets are ready"))
+		b.Logger.Info("Waiting until the both etcds are ready...")
+		return retry.MinorError(fmt.Errorf("not all etcds are ready"))
 	})
 }
 
 // WaitUntilEtcdMainReady waits until the etcd-main statefulsets indicate readiness in its status.
 func (b *Botanist) WaitUntilEtcdMainReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		b.Logger.Info("Waiting until the etcd-main statefulset is ready...")
-		sts := &appsv1.StatefulSet{}
-		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, "etcd-main"), sts)
+		b.Logger.Info("Waiting until the etcd-main etcd is ready...")
+		etcd := &druidv1alpha1.Etcd{}
+		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, "etcd-main"), etcd)
 		if err != nil {
 			return retry.SevereError(err)
 		}
 
-		if sts.Generation == sts.Status.ObservedGeneration && sts.DeletionTimestamp == nil && sts.Status.ReadyReplicas == 1 {
+		if etcd.DeletionTimestamp == nil && etcd.Status.Ready {
 			return retry.Ok()
 		}
 
-		return retry.MinorError(fmt.Errorf("etcd-main stateful set is not ready"))
+		return retry.MinorError(fmt.Errorf("etcd-main etcd is not ready"))
 	})
 }
 

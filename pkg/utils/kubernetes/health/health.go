@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -135,6 +136,15 @@ func CheckStatefulSet(statefulSet *appsv1.StatefulSet) error {
 
 	if statefulSet.Status.ReadyReplicas < replicas {
 		return fmt.Errorf("not enough ready replicas (%d/%d)", statefulSet.Status.ReadyReplicas, replicas)
+	}
+	return nil
+}
+
+// CheckEtcd checks whether the given Etcd is healthy.
+// A Etcd is considered healthy if its ready field in status is true.
+func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
+	if !etcd.Status.Ready {
+		return fmt.Errorf("etcd %s is not ready yet", etcd.Name)
 	}
 	return nil
 }

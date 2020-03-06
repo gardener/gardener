@@ -1,0 +1,77 @@
+apiVersion: druid.gardener.cloud/v1alpha1
+kind: Etcd
+metadata:
+  name: etcd-{{ .Values.role }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: controlplane
+    role: {{ .Values.role }}
+{{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.podAnnotations }}
+  annotations:
+{{ toYaml .Values.podAnnotations | indent 4 }}
+{{- end }}
+  selector:
+    matchLabels:
+      garden.sapcloud.io/role: controlplane
+      app: etcd-statefulset
+      role: {{ .Values.role }}
+  labels:
+    garden.sapcloud.io/role: controlplane
+    app: etcd-statefulset
+    role: {{ .Values.role }}
+    networking.gardener.cloud/to-dns: allowed
+    networking.gardener.cloud/to-public-networks: allowed
+    networking.gardener.cloud/to-private-networks: allowed
+  etcd:
+    tls:
+      serverTLSSecretRef:
+        name: {{ .Values.tlsServerSecretName }}
+        namespace: {{ .Release.Namespace }}
+      clientTLSSecretRef:
+        name: {{ .Values.tlsClientSecretName }}
+        namespace: {{ .Release.Namespace }}
+      tlsCASecretRef:
+        name: {{ .Values.tlsCASecretName }}
+        namespace: {{ .Release.Namespace }}
+    metrics: {{ .Values.metrics }}
+    image: {{ index .Values.images "etcd" }}
+    defragmentationSchedule: {{ .Values.etcd.defragmentSchedule }}
+{{- if .Values.etcd.resources }}
+    resources:
+{{ toYaml .Values.etcd.resources | indent 6 }}
+{{- end }}
+    clientPort: {{ .Values.servicePorts.client }}
+    serverPort: {{ .Values.servicePorts.server }}
+  backup:
+    image: {{ index .Values.images "etcd-backup-restore" }}
+    port: 8080
+{{- if .Values.sidecar.resources }}
+    resources:
+{{ toYaml .Values.sidecar.resources | indent 6 }}
+{{- end }}
+    garbageCollectionPolicy: Exponential
+    quota: {{ .Values.sidecar.quota }}
+    garbageCollectionPeriod: {{ .Values.sidecar.garbageCollectionPeriod }}
+{{- if .Values.backupEnabled }}
+    fullSnapshotSchedule: {{ .Values.fullSnapshotSchedule }}
+    deltaSnapshotPeriod: {{ .Values.sidecar.deltaSnapshotPeriod }}
+    deltaSnapshotMemoryLimit: {{ .Values.sidecar.deltaSnapshotMemoryLimit }}
+    store:
+      secretRef:
+        name: etcd-backup
+      container: {{ .Values.container }}
+      provider: {{ .Values.provider }}
+      prefix: {{ .Values.prefix }}
+{{- end }}
+  replicas: {{ .Values.replicas }}
+  storageClass: {{ .Values.storageClass }}
+  storageCapacity: {{ .Values.storageCapacity }}
+{{- if eq .Values.role "main" }}
+  volumeClaimTemplate: {{ .Values.role }}-etcd
+{{- else }}
+  volumeClaimTemplate: etcd-{{ .Values.role }}
+{{- end }}

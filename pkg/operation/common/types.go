@@ -452,6 +452,12 @@ const (
 	// ETCDImageName is the name of the ETCD image.
 	ETCDImageName = "etcd"
 
+	// ETCDBackupRestoreImageName is the name of the ETCD backup-restore image.
+	ETCDBackupRestoreImageName = "etcd-backup-restore"
+
+	// EtcdDruidImageName is the name of Etcd Druid image
+	EtcdDruidImageName = "etcd-druid"
+
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
 
@@ -524,6 +530,10 @@ const (
 	PrometheusTLS = "prometheus-tls"
 	// KibanaTLS is the name of the secret resource which holds the TLS certificate for Kibana.
 	KibanaTLS = "kibana-tls"
+	// EtcdServerTLS is the name of the secret resource which holds TLS server certificate of Etcd
+	EtcdServerTLS = "etcd-server-cert"
+	// EtcdClientTLS is the name of the secret resource which holds TLS client certificate of Etcd
+	EtcdClientTLS = "etcd-client-tls"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
@@ -539,9 +549,9 @@ var (
 		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
-	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
-	// sets running in the seed.
-	RequiredControlPlaneStatefulSets = sets.NewString(
+	// RequiredControlPlaneEtcds is a set of the required shoot control plane etcds
+	// running in the seed.
+	RequiredControlPlaneEtcds = sets.NewString(
 		v1beta1constants.ETCDMain,
 		v1beta1constants.ETCDEvents,
 	)

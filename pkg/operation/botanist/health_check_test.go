@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -76,6 +77,12 @@ func constWorkerLister(workers []*extensionsv1alpha1.Worker) kutil.WorkerLister 
 	})
 }
 
+func constEtcdLister(etcds []*druidv1alpha1.Etcd) kutil.EtcdLister {
+	return kutil.NewEtcdLister(func() ([]*druidv1alpha1.Etcd, error) {
+		return etcds, nil
+	})
+}
+
 func roleLabels(role string) map[string]string {
 	return map[string]string{v1beta1constants.DeprecatedGardenRole: role}
 }
@@ -110,6 +117,21 @@ func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.Stateful
 	}
 
 	return statefulSet
+}
+
+func newEtcd(namespace, name, role string, healthy bool) *druidv1alpha1.Etcd {
+	etcd := &druidv1alpha1.Etcd{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		etcd.Status.Ready = true
+	}
+
+	return etcd
 }
 
 func newDaemonSet(namespace, name, role string, healthy bool) *appsv1.DaemonSet {
@@ -199,15 +221,23 @@ var _ = Describe("health check", func() {
 			clusterAutoscalerDeployment,
 		}
 
-		// control plane stateful sets
+		// control plane etcds
+		etcdMain   = newEtcd(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true)
+		etcdEvents = newEtcd(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
+
+		// control plane etcds
 		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true)
 		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
+
+		requiredControlPlaneEtcds = []*druidv1alpha1.Etcd{
+			etcdMain,
+			etcdEvents,
+		}
 
 		requiredControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			etcdMainStatefulSet,
 			etcdEventsStatefulSet,
 		}
-
 		// system component deployments
 		coreDNSDeployment       = newDeployment(shootNamespace, common.CoreDNSDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
 		vpnShootDeployment      = newDeployment(shootNamespace, common.VPNShootDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
@@ -274,23 +304,32 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardencorev1beta1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardencorev1beta1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
+				etcdLister        = constEtcdLister(etcds)
 				workerLister      = constWorkerLister(workers)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
 			)
+			versionsToCheck := []string{
+				"v1.0.4",
+				"v1.2.0",
+			}
 
-			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, statefulSetLister, workerLister)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
+			for _, version := range versionsToCheck {
+				exitCondition, err := checker.CheckControlPlane(version, shoot, seedNamespace, condition, deploymentLister, statefulSetLister, etcdLister, workerLister)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exitCondition).To(conditionMatcher)
+			}
+
 		},
 		Entry("all healthy",
 			gcpShoot,
 			"gcp",
 			requiredControlPlaneDeployments,
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			nil,
 			BeNil()),
 		Entry("all healthy (AWS)",
@@ -303,6 +342,7 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			nil,
 			BeNil()),
 		Entry("all healthy (needs autoscaler)",
@@ -316,6 +356,7 @@ var _ = Describe("health check", func() {
 				clusterAutoscalerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			[]*extensionsv1alpha1.Worker{
 				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
@@ -331,6 +372,7 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required deployment unhealthy",
@@ -343,6 +385,7 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("missing required stateful set",
@@ -351,6 +394,9 @@ var _ = Describe("health check", func() {
 			requiredControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				etcdEventsStatefulSet,
+			},
+			[]*druidv1alpha1.Etcd{
+				etcdEvents,
 			},
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
@@ -361,6 +407,10 @@ var _ = Describe("health check", func() {
 			[]*appsv1.StatefulSet{
 				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),
 				etcdEventsStatefulSet,
+			},
+			[]*druidv1alpha1.Etcd{
+				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false),
+				etcdEvents,
 			},
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
@@ -374,6 +424,7 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			requiredControlPlaneEtcds,
 			[]*extensionsv1alpha1.Worker{
 				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{

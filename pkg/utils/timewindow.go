@@ -156,6 +156,11 @@ func (m *MaintenanceTimeWindow) String() string {
 	return fmt.Sprintf("begin=%s, end=%s", m.begin, m.end)
 }
 
+// Equal returns true if the time windows are the same.
+func (m *MaintenanceTimeWindow) Equal(o *MaintenanceTimeWindow) bool {
+	return m.Begin().Compare(o.Begin()) == 0 && m.End().Compare(o.End()) == 0
+}
+
 // Begin returns the begin of the time window.
 func (m *MaintenanceTimeWindow) Begin() *MaintenanceTime {
 	return m.begin

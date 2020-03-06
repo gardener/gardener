@@ -32,7 +32,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -95,6 +97,31 @@ func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, 
 	for _, object := range objects {
 		if err := health.CheckDeployment(object); err != nil {
 			c := b.FailedCondition(condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %s is unhealthy: %v", object.Name, err.Error()))
+			return &c
+		}
+	}
+
+	return nil
+}
+
+func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+	actualNames := sets.NewString()
+	for _, object := range objects {
+		actualNames.Insert(object.Name)
+	}
+
+	if missingNames := requiredNames.Difference(actualNames); missingNames.Len() != 0 {
+		c := b.FailedCondition(condition, "EtcdMissing", fmt.Sprintf("Missing required etcds: %v", missingNames.List()))
+		return &c
+	}
+
+	return nil
+}
+
+func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []*druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+	for _, object := range objects {
+		if err := health.CheckEtcd(object); err != nil {
+			c := b.FailedCondition(condition, "EtcdUnhealthy", fmt.Sprintf("Etcd %s is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
 	}
@@ -213,13 +240,20 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
+	gardenerVersion string,
 	shoot *gardencorev1beta1.Shoot,
 	namespace string,
 	condition gardencorev1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
+	etcdLister kutil.EtcdLister,
 	workerLister kutil.WorkerLister,
 ) (*gardencorev1beta1.Condition, error) {
+
+	gardenerVersionLessThan120, err := versionutils.CompareVersions(gardenerVersion, "<", "v1.2.0")
+	if err != nil {
+		return nil, err
+	}
 
 	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, workerLister)
 	if err != nil {
@@ -238,17 +272,31 @@ func (b *HealthChecker) CheckControlPlane(
 		return exitCondition, nil
 	}
 
-	statefulSets, err := statefulSetLister.StatefulSets(namespace).List(controlPlaneSelector)
-	if err != nil {
-		return nil, err
+	// TODO (georgekuruvillak): remove this once all shoots have been reconciled to version 1.2.0
+	if gardenerVersionLessThan120 {
+		statefulSets, err := statefulSetLister.StatefulSets(namespace).List(controlPlaneSelector)
+		if err != nil {
+			return nil, err
+		}
+		if exitCondition := b.checkRequiredStatefulSets(condition, common.RequiredControlPlaneEtcds, statefulSets); exitCondition != nil {
+			return exitCondition, nil
+		}
+		if exitCondition := b.checkStatefulSets(condition, statefulSets); exitCondition != nil {
+			return exitCondition, nil
+		}
+	} else {
+		etcds, err := etcdLister.Etcds(namespace).List(controlPlaneSelector)
+		if err != nil {
+			return nil, err
+		}
+		if exitCondition := b.checkRequiredEtcds(condition, common.RequiredControlPlaneEtcds, etcds); exitCondition != nil {
+			return exitCondition, nil
+		}
+		if exitCondition := b.checkEtcds(condition, etcds); exitCondition != nil {
+			return exitCondition, nil
+		}
 	}
 
-	if exitCondition := b.checkRequiredStatefulSets(condition, common.RequiredControlPlaneStatefulSets, statefulSets); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkStatefulSets(condition, statefulSets); exitCondition != nil {
-		return exitCondition, nil
-	}
 	return nil, nil
 }
 
@@ -584,11 +632,12 @@ func (b *Botanist) checkControlPlane(
 	condition gardencorev1beta1.Condition,
 	seedDeploymentLister kutil.DeploymentLister,
 	seedStatefulSetLister kutil.StatefulSetLister,
+	seedEtcdLister kutil.EtcdLister,
 	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []extensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
 
-	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info.Status.Gardener.Version, b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
@@ -706,6 +755,31 @@ func makeStatefulSetLister(clientset kubernetes.Interface, namespace string, opt
 	)
 
 	return kutil.NewStatefulSetLister(func() ([]*appsv1.StatefulSet, error) {
+		once.Do(onceBody)
+		return items, err
+	})
+}
+
+func makeEtcdLister(c client.Client, namespace string) kutil.EtcdLister {
+	var (
+		once  sync.Once
+		items []*druidv1alpha1.Etcd
+		err   error
+
+		onceBody = func() {
+			list := &druidv1alpha1.EtcdList{}
+			if err := c.List(context.TODO(), list, client.InNamespace(namespace)); err != nil {
+				return
+			}
+
+			for _, item := range list.Items {
+				it := item
+				items = append(items, &it)
+			}
+		}
+	)
+
+	return kutil.NewEtcdLister(func() ([]*druidv1alpha1.Etcd, error) {
 		once.Do(onceBody)
 		return items, err
 	})
@@ -830,6 +904,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	var (
 		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
 		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
+		seedEtcdLister        = makeEtcdLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 		seedWorkerLister      = makeWorkerLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 
 		checker = NewHealthChecker(thresholdMappings)
@@ -846,7 +921,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
@@ -866,7 +941,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	go func() {
 		defer wg.Done()
-		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	go func() {

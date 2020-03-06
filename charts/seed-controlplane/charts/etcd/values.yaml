@@ -3,10 +3,12 @@ replicas: 1
 
 images:
   etcd: image-repository:image-tag
+  etcd-backup-restore: image-repository:image-tag
 
 storageCapacity: 16Gi
 
-tlsServerSecretName: etcd-server-tls
+tlsCASecretName: ca-etcd
+tlsServerSecretName: etcd-server-cert
 tlsClientSecretName: etcd-client-tls
 podAnnotations: {}
 servicePorts:
@@ -39,19 +41,28 @@ scaleDownStabilization:
 targetAverageUtilizationCpu: 80
 targetAverageUtilizationMemory: 80
 
-maintenanceWindow: {}
-# maintenanceWindow example:
-#maintenanceWindow:
-  #begin: 230000+0000
-  #end: 000000+0000
+etcd:
+  defragmentSchedule: "0 */24 * * *"
+  resources:
+    requests:
+      cpu: 300m
+      memory: 1G
+    limits:
+      cpu: 900m
+      memory: 3G
 
-etcdResources:
-  requests:
-    cpu: 300m
-    memory: 1G
-  limits:
-    cpu: 900m
-    memory: 3G
+sidecar:
+  deltaSnapshotMemoryLimit: 100Mi
+  deltaSnapshotPeriod: 5m
+  garbageCollectionPeriod: 12h
+  quota: 8Gi
+  resources:
+    limits:
+      cpu: "1"
+      memory: 10G
+    requests: 
+      cpu: 23m 
+      memory: 128Mi
 
 hvpa:
   enabled: false
@@ -69,3 +80,10 @@ limitsRequestsGapScaleParams:
   memory:
     value: "5G"
     percentage: 80
+
+backupEnabled: false
+prefix: temp 
+storageClass: gardener.cloud-fast
+provider: aws
+container: temp
+fullSnapshotSchedule: "0 */24 * * *"

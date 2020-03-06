@@ -69,11 +69,6 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	},
 }
 
-const (
-	certificateETCDServer = "etcd-server-tls"
-	certificateETCDClient = "etcd-client-tls"
-)
-
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
@@ -462,7 +457,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
-			Name: certificateETCDServer,
+			Name: common.EtcdServerTLS,
 
 			CommonName:   "etcd-server",
 			Organization: nil,
@@ -475,7 +470,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
-			Name: certificateETCDClient,
+			Name: common.EtcdClientTLS,
 
 			CommonName:   "etcd-client",
 			Organization: nil,
@@ -810,6 +805,13 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	for name, secret := range existingSecretsMap {
 		_, ok := secret.Labels[renewedLabel]
 		if browserCerts.Has(name) && !ok {
+			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			delete(existingSecretsMap, name)
+		}
+
+		if name == "etcd-server-tls" {
 			if err := b.K8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 				return err
 			}
@@ -1213,8 +1215,8 @@ func dnsNamesForService(name, namespace string) []string {
 
 func dnsNamesForEtcd(namespace string) []string {
 	names := []string{
-		fmt.Sprintf("%s-0", v1beta1constants.ETCDMain),
-		fmt.Sprintf("%s-0", v1beta1constants.ETCDEvents),
+		fmt.Sprintf("%s-local", v1beta1constants.ETCDMain),
+		fmt.Sprintf("%s-local", v1beta1constants.ETCDEvents),
 	}
 	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
 	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
