@@ -20,19 +20,30 @@ import (
 	"sync"
 	"time"
 
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsclientset "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned"
 	extensionsinformers "github.com/gardener/gardener/pkg/client/extensions/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+var gardenscheme *runtime.Scheme
+
+func init() {
+	gardenscheme = runtime.NewScheme()
+	gardencoreinstall.Install(gardenscheme)
+}
 
 // SyncController replicates the extensions' resources states in Shoot's ShootState resource
 type SyncController struct {
@@ -41,6 +52,7 @@ type SyncController struct {
 	extensionsInformers     extensionsinformers.SharedInformerFactory
 	extensionsSeedClient    extensionsclientset.Interface
 	syncControllerArtifacts *syncControllerArtifacts
+	shootRetriever          *ShootRetriever
 	log                     *logrus.Entry
 	recorder                record.EventRecorder
 
@@ -57,12 +69,12 @@ func NewSyncController(ctx context.Context, gardenClient, seedClient kubernetes.
 		extensionsSeedClient: extensionsSeedClient,
 		extensionsInformers:  extensionsInformers,
 		log:                  log,
-
-		recorder:  recorder,
-		waitGroup: sync.WaitGroup{},
-		workerCh:  make(chan int),
+		recorder:             recorder,
+		waitGroup:            sync.WaitGroup{},
+		workerCh:             make(chan int),
 	}
 
+	controller.shootRetriever = newShootRetriever()
 	controller.syncControllerArtifacts = &syncControllerArtifacts{
 		controllerArtifacts: make(map[string]*artifacts),
 	}
@@ -171,4 +183,31 @@ func (sca *syncControllerArtifacts) shutdownQueues() {
 	for _, artifact := range sca.controllerArtifacts {
 		artifact.workqueue.ShutDown()
 	}
+}
+
+// ShootRetriever decodes raw Shoots into objects
+type ShootRetriever struct {
+	runtime.Decoder
+}
+
+func newShootRetriever() *ShootRetriever {
+	return &ShootRetriever{serializer.NewCodecFactory(gardenscheme).UniversalDecoder()}
+}
+
+// FromCluster retrieves the shoot resource from the Cluster resource
+func (s *ShootRetriever) FromCluster(ctx context.Context, clusterName string, seedClient kubernetes.Interface) (*gardencorev1beta1.Shoot, error) {
+	cluster := &extensionsv1alpha1.Cluster{}
+
+	if err := seedClient.Client().Get(ctx, kutil.Key(clusterName), cluster); err != nil {
+		return nil, fmt.Errorf("could not get cluster with name %s : %v", clusterName, err)
+	}
+	shoot := &gardencorev1beta1.Shoot{}
+
+	if cluster.Spec.Shoot.Raw == nil {
+		return nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", clusterName)
+	}
+	if _, _, err := s.Decode(cluster.Spec.Shoot.Raw, nil, shoot); err != nil {
+		return nil, err
+	}
+	return shoot, nil
 }

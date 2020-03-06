@@ -2093,7 +2093,7 @@ func schema_pkg_apis_core_v1alpha1_ExtensionResourceState(ref common.ReferenceCa
 					"state": {
 						SchemaProps: spec.SchemaProps{
 							Description: "State of the extension resource",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
@@ -2101,7 +2101,7 @@ func schema_pkg_apis_core_v1alpha1_ExtensionResourceState(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -2154,25 +2154,25 @@ func schema_pkg_apis_core_v1alpha1_GardenerResourceData(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type of the object",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"data": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Data contains the payload required to generate resources",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
-				Required: []string{"name", "data"},
+				Required: []string{"name", "type", "data"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

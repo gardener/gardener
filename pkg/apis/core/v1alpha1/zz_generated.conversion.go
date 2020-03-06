@@ -2216,9 +2216,7 @@ func autoConvert_v1alpha1_ExtensionResourceState_To_core_ExtensionResourceState(
 	out.Kind = in.Kind
 	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	if err := Convert_v1alpha1_ProviderConfig_To_core_ProviderConfig(&in.State, &out.State, s); err != nil {
-		return err
-	}
+	out.State = in.State
 	return nil
 }
 
@@ -2231,9 +2229,7 @@ func autoConvert_core_ExtensionResourceState_To_v1alpha1_ExtensionResourceState(
 	out.Kind = in.Kind
 	out.Name = (*string)(unsafe.Pointer(in.Name))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	if err := Convert_core_ProviderConfig_To_v1alpha1_ProviderConfig(&in.State, &out.State, s); err != nil {
-		return err
-	}
+	out.State = in.State
 	return nil
 }
 
@@ -2268,7 +2264,8 @@ func Convert_core_Gardener_To_v1alpha1_Gardener(in *core.Gardener, out *Gardener
 
 func autoConvert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *GardenerResourceData, out *core.GardenerResourceData, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Data = *(*map[string]string)(unsafe.Pointer(&in.Data))
+	out.Type = in.Type
+	out.Data = in.Data
 	return nil
 }
 
@@ -2279,7 +2276,8 @@ func Convert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *Gard
 
 func autoConvert_core_GardenerResourceData_To_v1alpha1_GardenerResourceData(in *core.GardenerResourceData, out *GardenerResourceData, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Data = *(*map[string]string)(unsafe.Pointer(&in.Data))
+	out.Type = in.Type
+	out.Data = in.Data
 	return nil
 }
 

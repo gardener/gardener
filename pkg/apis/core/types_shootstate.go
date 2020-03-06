@@ -16,6 +16,7 @@ package core
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -53,8 +54,10 @@ type ShootStateSpec struct {
 type GardenerResourceData struct {
 	// Name of the object required to generate resources
 	Name string
+	// Type of the object
+	Type string
 	// Data contains the payload required to generate resources
-	Data map[string]string
+	Data runtime.RawExtension
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
@@ -67,5 +70,5 @@ type ExtensionResourceState struct {
 	// Purpose of the extension custom resource
 	Purpose *string
 	// State of the extension resource
-	State ProviderConfig
+	State runtime.RawExtension
 }

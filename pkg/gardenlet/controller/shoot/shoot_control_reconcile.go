@@ -105,6 +105,10 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name: "Syncing shoot cluster information to seed",
 			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Ensuring that ShootState exists",
+			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 		deployNamespace = g.Add(flow.Task{
 			Name:         "Deploying Shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),

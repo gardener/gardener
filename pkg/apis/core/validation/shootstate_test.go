@@ -17,6 +17,7 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo"
@@ -44,10 +45,7 @@ var _ = Describe("validation", func() {
 		It("should forbid shootState containing data required for gardener resource generation with empty name", func() {
 			shootState.Spec.Gardener = []core.GardenerResourceData{
 				{
-					Data: map[string]string{
-						"ca.key": "ca-key",
-						"ca.crt": "ca-crt",
-					},
+					Data: runtime.RawExtension{},
 				},
 			}
 
@@ -61,7 +59,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid shootState containing extension resource with empty kind", func() {
 			shootState.Spec.Extensions = append(shootState.Spec.Extensions, core.ExtensionResourceState{
-				State: core.ProviderConfig{},
+				State: runtime.RawExtension{},
 			})
 
 			errorList := ValidateShootState(shootState)
@@ -75,7 +73,7 @@ var _ = Describe("validation", func() {
 		It("should forbid shootState containing extension resource with empty purpose", func() {
 			purpose := ""
 			shootState.Spec.Extensions = append(shootState.Spec.Extensions, core.ExtensionResourceState{
-				State:   core.ProviderConfig{},
+				State:   runtime.RawExtension{},
 				Kind:    "ControlPlane",
 				Purpose: &purpose,
 			})

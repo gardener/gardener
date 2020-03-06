@@ -255,27 +255,6 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	return fmt.Sprintf("%s%s--%s", TechnicalIDPrefix, projectName, shoot.Name)
 }
 
-// UnfoldTechnicalID extracts the project and shoot names from Shoot's TechnicalID which is also used
-// for namespace
-func UnfoldTechnicalID(technicalID string) (projectName, shootName string) {
-	if len(technicalID) == 0 {
-		return
-	}
-
-	var technicalIDComponents []string
-	if strings.HasPrefix(technicalID, "shoot--") {
-		technicalIDComponents = strings.Split(technicalID, "--")
-	} else if strings.HasPrefix(technicalID, "shoot-") {
-		technicalIDComponents = strings.Split(technicalID, "-")
-	} else {
-		return
-	}
-
-	projectName = technicalIDComponents[1]
-	shootName = technicalIDComponents[2]
-	return
-}
-
 // ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
 // It is only used for internal purposes (all kubeconfigs except the one which is received by the
 // user will only talk with the kube-apiserver via a DNS record of domain). In case the given <internalDomain>

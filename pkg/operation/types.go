@@ -19,6 +19,7 @@ import (
 	"crypto/x509"
 	"net/http"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
@@ -46,6 +47,7 @@ type Operation struct {
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed
 	Shoot                     *shoot.Shoot
+	ShootState                *gardencorev1alpha1.ShootState
 	ShootedSeed               *gardencorev1beta1helper.ShootedSeed
 	K8sGardenClient           kubernetes.Interface
 	K8sGardenCoreInformers    gardencoreinformers.Interface
