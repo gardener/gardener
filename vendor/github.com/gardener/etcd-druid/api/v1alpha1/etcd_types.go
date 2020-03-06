@@ -42,19 +42,18 @@ type MetricsLevel string
 type GarbageCollectionPolicy string
 
 // StorageProvider defines the type of object store provider for storing backups.
-// +kubebuilder:validation:Enum=aws;gcp;os;azure;alicloud
 type StorageProvider string
 
 // StoreSpec defines parameters related to ObjectStore persisting backups
 type StoreSpec struct {
+	// +optional
+	Container *string `json:"container,omitempty"`
 	// +required
-	Container string `json:"container"`
-	// +required
-	Prefix *string `json:"prefix"`
-	// +required
-	Provider StorageProvider `json:"provider"`
-	// +required
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	Prefix string `json:"prefix"`
+	// +optional
+	Provider *StorageProvider `json:"provider,omitempty"`
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 }
 
 // TLSConfig hold the TLS configuration details.
@@ -196,7 +195,7 @@ const (
 
 // Condition holds the information about the state of a resource.
 type Condition struct {
-	// Type of the Shoot condition.
+	// Type of the Etcd condition.
 	Type ConditionType `json:"type,omitempty"`
 	// Status of the condition, one of True, False, Unknown.
 	Status ConditionStatus `json:"status,omitempty"`
@@ -267,8 +266,6 @@ type EtcdStatus struct {
 	// +optional
 	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
 	// +optional
-	Endpoints []corev1.Endpoints `json:"endpoints,omitempty"`
-	// +optional
 	ServiceName *string `json:"serviceName,omitempty"`
 	// +optional
 	LastError *string `json:"lastError,omitempty"`
@@ -292,6 +289,8 @@ type EtcdStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.ready`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector
 
 // Etcd is the Schema for the etcds API

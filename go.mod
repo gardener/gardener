@@ -11,7 +11,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gardener/controller-manager-library v0.1.1-0.20191212112146-917449ad760c // indirect
-	github.com/gardener/etcd-druid v0.1.1-0.20200206100633-e7606e1225d7
+	github.com/gardener/etcd-druid v0.1.3
 	github.com/gardener/external-dns-management v0.7.3
 	github.com/gardener/gardener-resource-manager v0.10.0
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
