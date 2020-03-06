@@ -29,9 +29,9 @@ import (
 
 	_ "github.com/gardener/gardener/test/integration/plants"
 	_ "github.com/gardener/gardener/test/integration/shoots/applications"
+	_ "github.com/gardener/gardener/test/integration/shoots/care"
 	_ "github.com/gardener/gardener/test/integration/shoots/logging"
 	_ "github.com/gardener/gardener/test/integration/shoots/operations"
-	_ "github.com/gardener/gardener/test/integration/shoots/care"
 )
 
 var (

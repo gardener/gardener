@@ -270,7 +270,6 @@ func Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec(in *core.ProjectSpec, out 
 	return nil
 }
 
-
 func Convert_v1alpha1_ProjectMember_To_core_ProjectMember(in *ProjectMember, out *core.ProjectMember, s conversion.Scope) error {
 	if err := autoConvert_v1alpha1_ProjectMember_To_core_ProjectMember(in, out, s); err != nil {
 		return err
@@ -304,8 +303,7 @@ func Convert_core_ProjectMember_To_v1alpha1_ProjectMember(in *core.ProjectMember
 	return nil
 }
 
-
-func removeRoleFromRoles(roles []string, role string) []string{
+func removeRoleFromRoles(roles []string, role string) []string {
 	var newRoles []string
 	for _, r := range roles {
 		if r != role {
