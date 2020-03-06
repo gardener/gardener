@@ -18,6 +18,8 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
+
+	"k8s.io/client-go/rest"
 )
 
 // ChartApplier is an interface that describes needed methods that render and apply
@@ -37,6 +39,19 @@ type chartApplier struct {
 // NewChartApplier returns a new chart applier.
 func NewChartApplier(renderer chartrenderer.Interface, applier ApplierInterface) ChartApplier {
 	return &chartApplier{renderer, applier}
+}
+
+// NewChartApplierForConfig returns a new chart applier based on the given REST config.
+func NewChartApplierForConfig(config *rest.Config) (ChartApplier, error) {
+	renderer, err := chartrenderer.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	applier, err := NewApplierForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return NewChartApplier(renderer, applier), nil
 }
 
 // Apply takes a path to a chart <chartPath>, name of the release <name>,

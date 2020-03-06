@@ -154,7 +154,7 @@ var _ = Describe("Conversion", func() {
 						{Subject: member1},
 						{
 							Subject: owner,
-							Role:   ProjectMemberOwner,
+							Role:    ProjectMemberOwner,
 						},
 						{Subject: member2},
 					},
@@ -195,7 +195,7 @@ var _ = Describe("Conversion", func() {
 						},
 						{
 							Subject: member4,
-							Role:   ProjectMemberOwner,
+							Role:    ProjectMemberOwner,
 						},
 					},
 				}
@@ -295,7 +295,7 @@ var _ = Describe("Conversion", func() {
 							{Subject: member1},
 							{
 								Subject: owner,
-								Role:   "foo",
+								Role:    "foo",
 								Roles:   []string{ProjectMemberOwner},
 							},
 							{Subject: member2},
@@ -322,7 +322,7 @@ var _ = Describe("Conversion", func() {
 							{Subject: member1},
 							{
 								Subject: owner,
-								Role:   ProjectMemberOwner,
+								Role:    ProjectMemberOwner,
 							},
 							{Subject: member2},
 						},
@@ -390,7 +390,7 @@ var _ = Describe("Conversion", func() {
 							},
 							{
 								Subject: owner,
-								Role:   ProjectMemberOwner,
+								Role:    ProjectMemberOwner,
 							},
 							{
 								Subject: member2,

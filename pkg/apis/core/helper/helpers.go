@@ -167,4 +167,3 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 	}
 	return nil
 }
-
