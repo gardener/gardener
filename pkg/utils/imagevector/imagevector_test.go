@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("imagevector", func() {
@@ -361,7 +362,7 @@ images:
 					}
 				)
 
-				image := source.ToImage(stringPtr("1.8.0"))
+				image := source.ToImage(pointer.StringPtr("1.8.0"))
 
 				Expect(image).To(Equal(&Image{
 					Name:       name,
@@ -387,7 +388,7 @@ images:
 				Expect(image).To(Equal(&Image{
 					Name:       name,
 					Repository: repository,
-					Tag:        stringPtr(fmt.Sprintf("v%s", version)),
+					Tag:        pointer.StringPtr(fmt.Sprintf("v%s", version)),
 				}))
 			})
 		})
@@ -407,8 +408,4 @@ func withTempFile(pattern string, data []byte) (*os.File, func()) {
 			GinkgoT().Logf("Could not delete temp file %q: %v", tmpFile.Name(), err)
 		}
 	}
-}
-
-func stringPtr(s string) *string {
-	return &s
 }

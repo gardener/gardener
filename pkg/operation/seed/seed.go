@@ -300,7 +300,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
+func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
 	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
@@ -575,10 +575,18 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		kibanaTLSOverride = wildcardCert.GetName()
 	}
 
+	imageVectorOverwrites := map[string]interface{}{}
+	if componentImageVectors != nil {
+		for name, data := range componentImageVectors {
+			imageVectorOverwrites[name] = data
+		}
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
-			"images": chart.ImageMapToValues(images),
+			"images":                chart.ImageMapToValues(images),
+			"imageVectorOverwrites": imageVectorOverwrites,
 		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{

@@ -24,6 +24,8 @@ global:
     vpa: false
   # imageVectorOverwrite: |
   #  Please find documentation in docs/deployment/image_vector.md
+  # componentImageVectorOverwrites: |
+  #  Please find documentation in docs/deployment/image_vector.md
     config:
       gardenClientConnection:
         acceptContentTypes: application/json

@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -115,6 +116,12 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))
 	runtime.Must(err)
 
+	var componentImageVectors imagevector.ComponentImageVectors
+	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
+		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
+		runtime.Must(err)
+	}
+
 	gardenNamespace := &corev1.Namespace{}
 	runtime.Must(f.k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
@@ -125,7 +132,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, secrets, imageVector, f.identity, f.cfg, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
 		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)

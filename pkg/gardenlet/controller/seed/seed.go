@@ -80,6 +80,7 @@ func NewSeedController(
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
+	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
 	config *config.GardenletConfiguration,
 	recorder record.EventRecorder,
@@ -100,7 +101,7 @@ func NewSeedController(
 	seedController := &Controller{
 		k8sGardenClient:         k8sGardenClient,
 		k8sGardenCoreInformers:  gardenCoreInformerFactory,
-		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, identity, recorder, config, secretLister, shootLister),
+		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, componentImageVectors, identity, recorder, config, secretLister, shootLister),
 		heartbeatControl:        NewDefaultHeartbeatControl(k8sGardenClient, gardenCoreV1beta1Informer, identity, config),
 		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient.GardenCore(), controllerInstallationLister, metav1.Now),
 		config:                  config,
