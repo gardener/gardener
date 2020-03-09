@@ -27,6 +27,9 @@ import (
 	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 	"strings"
 	"time"
 )
@@ -88,14 +91,21 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 	if f.DisableStateDump {
 		return
 	}
-	if f.Shoot != nil && f.ShootClient != nil {
-		ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
-		f.Logger.Info(ctxIdentifier)
-		if err := f.dumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
-			f.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", f.Shoot.Name, err.Error())
+
+	if f.Shoot != nil {
+		if err := PrettyPrintObject(f.Shoot); err != nil {
+			f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		}
-		if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {
-			f.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", f.Shoot.Name, err.Error())
+
+		if f.ShootClient != nil {
+			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
+			f.Logger.Info(ctxIdentifier)
+			if err := f.dumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
+				f.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", f.Shoot.Name, err.Error())
+			}
+			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {
+				f.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", f.Shoot.Name, err.Error())
+			}
 		}
 	}
 
@@ -109,11 +119,21 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 	ctxIdentifier := "[GARDENER]"
 	f.Logger.Info(ctxIdentifier)
 	if f.Shoot != nil {
-
 		project, err := f.GetShootProject(ctx, f.Shoot.GetNamespace())
 		if err != nil {
 			f.Logger.Errorf("unable to get project namespace of shoot %s: %s", f.Shoot.GetNamespace(), err.Error())
 			return
+		}
+
+		// dump seed status if seed is available
+		if f.Shoot.Spec.SeedName != nil {
+			seed := &gardencorev1beta1.Seed{}
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
+				f.Logger.Errorf("unable to get seed %s: %s", *f.Shoot.Spec.SeedName, err.Error())
+				return
+			}
+			f.Logger.Infof("%s [SEED]", ctxIdentifier)
+			f.dumpSeed(seed)
 		}
 
 		err = f.dumpEventsInNamespace(ctx, ctxIdentifier, f.GardenClient, *project.Spec.Namespace, func(event corev1.Event) bool {
@@ -240,4 +260,14 @@ func generateRandomShootName(prefix string, length int) (string, error) {
 	}
 
 	return IntegrationTestPrefix + strings.ToLower(randomString), nil
+}
+
+// PrettyPrintObject prints a object as pretty printed yaml to stdout
+func PrettyPrintObject(obj runtime.Object) error {
+	d, err := yaml.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(d))
+	return nil
 }

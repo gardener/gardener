@@ -37,7 +37,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -169,7 +168,7 @@ var _ = Describe("Shoot Creation testing", func() {
 		}
 
 		f.Logger.Infof("Creating shoot %s in namespace %s", shoot.GetName(), f.ProjectNamespace)
-		if err := printShoot(shoot); err != nil {
+		if err := framework.PrettyPrintObject(shoot); err != nil {
 			f.Logger.Fatalf("Cannot decode shoot %s: %s", shoot.GetName(), err)
 		}
 
@@ -247,13 +246,4 @@ func prepareShoot(ctx context.Context, f *framework.GardenerFramework) *gardenco
 	}
 
 	return shootObject
-}
-
-func printShoot(shoot *gardencorev1beta1.Shoot) error {
-	d, err := yaml.Marshal(shoot)
-	if err != nil {
-		return err
-	}
-	fmt.Print(string(d))
-	return nil
 }
