@@ -128,6 +128,7 @@ spec:
   #       configMapRef:
   #         name: auditpolicy
   # kubeControllerManager:
+  #   nodeCIDRMaskSize: 24
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   horizontalPodAutoscaler:
