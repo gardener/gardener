@@ -110,7 +110,7 @@ func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
 // DomainIsDefaultDomain identifies whether the given domain is a default domain.
 func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 	for _, defaultDomain := range defaultDomains {
-		if strings.HasSuffix(domain, defaultDomain.Domain) {
+		if strings.HasSuffix(domain, "."+defaultDomain.Domain) {
 			return defaultDomain
 		}
 	}
