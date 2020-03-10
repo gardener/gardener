@@ -47,8 +47,9 @@ type Controller struct {
 	projectSynced cache.InformerSynced
 
 	namespaceLister kubecorev1listers.NamespaceLister
-	namespaceQueue  workqueue.RateLimitingInterface
 	namespaceSynced cache.InformerSynced
+
+	rolebindingSynced cache.InformerSynced
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -61,12 +62,15 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInform
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
+		rbacv1Informer            = kubeInformerFactory.Rbac().V1()
 
 		projectInformer = gardenCoreV1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
 		namespaceInformer = corev1Informer.Namespaces()
 		namespaceLister   = namespaceInformer.Lister()
+
+		rolebindingInformer = rbacv1Informer.RoleBindings()
 
 		projectUpdater = NewRealUpdater(k8sGardenClient, projectLister)
 	)
@@ -79,7 +83,6 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInform
 		projectLister:          projectLister,
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		namespaceLister:        namespaceLister,
-		namespaceQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
 		workerCh:               make(chan int),
 	}
 
@@ -88,8 +91,15 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInform
 		UpdateFunc: projectController.projectUpdate,
 		DeleteFunc: projectController.projectDelete,
 	})
+
+	rolebindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: projectController.rolebindingUpdate,
+		DeleteFunc: projectController.rolebindingDelete,
+	})
+
 	projectController.projectSynced = projectInformer.Informer().HasSynced
 	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
+	projectController.rolebindingSynced = rolebindingInformer.Informer().HasSynced
 
 	return projectController
 }
@@ -98,7 +108,7 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInform
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.rolebindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
