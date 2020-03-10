@@ -1,0 +1,10 @@
+{{- define "containerd-service" -}}
+- name: containerd.service
+  command: restart
+  enable: true
+  dropIns:
+  - name: 10-exec-start-pre-init-config.conf
+    content: |
+     [Service]
+     ExecStartPre=/opt/bin/init-containerd
+{{- end -}}

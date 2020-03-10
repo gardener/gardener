@@ -6,8 +6,14 @@
     [Unit]
     Description=kubelet daemon
     Documentation=https://kubernetes.io/docs/admin/kubelet
+    {{- if .Values.worker.cri }}
+    {{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+    After=containerd.service
+    {{- end }}
+    {{- else }}
     After=docker.service
     Wants=docker.socket rpc-statd.service
+    {{- end }}
     [Install]
     WantedBy=multi-user.target
     [Service]

@@ -50,6 +50,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryList":                       schema_pkg_apis_core_v1alpha1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntrySpec":                       schema_pkg_apis_core_v1alpha1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryStatus":                     schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI":                                   schema_pkg_apis_core_v1alpha1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudInfo":                             schema_pkg_apis_core_v1alpha1_CloudInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile":                          schema_pkg_apis_core_v1alpha1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfileList":                      schema_pkg_apis_core_v1alpha1_CloudProfileList(ref),
@@ -163,6 +164,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryList":                        schema_pkg_apis_core_v1beta1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec":                        schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus":                      schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                    schema_pkg_apis_core_v1beta1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudInfo":                              schema_pkg_apis_core_v1beta1_CloudInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                           schema_pkg_apis_core_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                       schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
@@ -1098,6 +1100,27 @@ func schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CRI(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CRI contains information about the Container Runtimes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The name of the CRI library",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 
@@ -5433,6 +5456,12 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 							Format:      "",
 						},
 					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI contains configurations of CRI support of every machine in the worker pool",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI"),
+						},
+					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains configuration for Kubernetes components related to this worker pool.",
@@ -5557,7 +5586,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -6145,6 +6174,27 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CRI contains information about the Container Runtimes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The name of the CRI library",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 
@@ -10258,6 +10308,12 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							Format:      "",
 						},
 					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI contains configurations of CRI support of every machine in the worker pool",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
+						},
+					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains configuration for Kubernetes components related to this worker pool.",
@@ -10382,7 +10438,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

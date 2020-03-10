@@ -636,6 +636,8 @@ type Worker struct {
 	Annotations map[string]string
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
+	// CRI contains configurations of CRI support of every machine in the worker pool
+	CRI *CRI
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	Kubernetes *WorkerKubernetes
 	// Labels is a map of key/value pairs for labels for all the `Node` objects in this worker pool.
@@ -704,6 +706,19 @@ type Volume struct {
 	// Encrypted determines if the volume should be encrypted.
 	Encrypted *bool
 }
+
+// CRI contains information about the Container Runtimes.
+type CRI struct {
+	// The name of the CRI library
+	Name CRIName
+}
+
+// CRIName is a type alias for the CRI name string.
+type CRIName string
+
+const (
+	CRINameContainerD CRIName = "containerd"
+)
 
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.

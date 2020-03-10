@@ -168,6 +168,34 @@ status:
 
 Once the `.status` indicates that the extension controller finished reconciling Gardener will continue with the next step of the shoot reconciliation flow.
 
+## CRI Support
+Gardener supports specifying Container Runtime Interface (CRI) configuration in the `OperatingSystemConfig` resource. The only CRI supported at the moment is: "containerd".
+For example:
+```yaml
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: OperatingSystemConfig
+metadata:
+  name: pool-01-original
+  namespace: default
+spec:
+  type: <my-operating-system>
+  purpose: reconcile
+  reloadConfigFilePath: /var/lib/cloud-config-downloader/cloud-config
+  cri:
+    name: containerd
+...
+```
+If the `.spec.cri` section exists then the `name` property is mandatory. The only valid value at the moment is `containerd`.
+When the `.spec.cri` field is declared the kubelet will be configured by Gardener to work with ContainerD. Gardener expects that ContainerD service is running on the OS with the default socket path: `unix:///run/containerd/containerd.sock`. 
+
+Each OS extension must support the CRI configurations by:
+1. The operating system must have built-in  [ContainerD](https://containerd.io/) and the  [Client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/)
+2. ContainerD service should be configure to work with the default configuration file in: /etc/containerd.config.toml (Created by Gardener).
+
+
+If CRI configurations are not supported it is recommended create a validating webhook running in the garden cluster that prevents specifying the `.spec.providers.workers[].cri` section in the `Shoot` objects.
+
 ## References and additional resources
 
 * [`OperatingSystemConfig` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)

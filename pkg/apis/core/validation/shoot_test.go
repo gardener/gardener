@@ -816,6 +816,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(HaveLen(0))
 			})
+
+			It("should not allow update cri configurations enablement", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newWorker := *shoot.Spec.Provider.Workers[0].DeepCopy()
+				newWorker.Name = "second-worker"
+				newWorker.CRI = &core.CRI{Name: core.CRINameContainerD}
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, newWorker)
+
+				newShoot.Spec.Provider.Workers = []core.Worker{newWorker, shoot.Spec.Provider.Workers[0]}
+				newShoot.Spec.Provider.Workers[0].CRI = nil
+				newShoot.Spec.Provider.Workers[1].CRI = &core.CRI{Name: core.CRINameContainerD}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(HaveLen(2))
+			})
+
+			It("should not allow update cri name", func() {
+				shoot.Spec.Provider.Workers[0].CRI = &core.CRI{Name: "test-cri"}
+				newShoot := prepareShootForUpdate(shoot)
+
+				newShoot.Spec.Provider.Workers[0].CRI = &core.CRI{Name: core.CRINameContainerD}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(HaveLen(1))
+			})
 		})
 
 		Context("dns section", func() {
@@ -2141,6 +2168,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		DescribeTable("validate that CRI name is valid",
+			func(name core.CRIName, matcher gomegatypes.GomegaMatcher) {
+				worker := core.Worker{
+					Name: "worker",
+					CRI:  &core.CRI{Name: name}}
+
+				errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid CRI name", core.CRINameContainerD, HaveLen(0)),
+			Entry("not valid CRI name", core.CRIName("other"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("cri.name"),
+			})))),
+		)
 	})
 
 	Describe("#ValidateWorkers", func() {

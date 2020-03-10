@@ -2107,6 +2107,47 @@ BackupEntry&rsquo;s generation, which is updated on mutation by the API Server.<
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.CRI">CRI
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>CRI contains information about the Container Runtimes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CRIName">
+CRIName
+</a>
+</em>
+</td>
+<td>
+<p>The name of the CRI library</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.CRIName">CRIName
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CRI">CRI</a>)
+</p>
+<p>
+<p>CRIName is a type alias for the CRI name string.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.CloudInfo">CloudInfo
 </h3>
 <p>
@@ -7107,6 +7148,20 @@ string
 </tr>
 <tr>
 <td>
+<code>cri</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CRI">
+CRI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI contains configurations of CRI support of every machine in the worker pool</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>kubernetes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.WorkerKubernetes">
@@ -7324,5 +7379,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>6115ae8fb</code>.
+on git commit <code>216d9e07c</code>.
 </em></p>

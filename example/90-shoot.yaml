@@ -28,6 +28,8 @@ spec:
       # https://github.com/gardener/gardener-extension-provider-packet/blob/master/example/30-controlplane.yaml#L58-L59
     workers:
     - name: cpu-worker
+    # cri:
+    #   name: containerd
       minimum: 3
       maximum: 5
     # maxSurge: 1

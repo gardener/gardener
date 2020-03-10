@@ -921,6 +921,20 @@ OperatingSystemConfigSpec
 <table>
 <tr>
 <td>
+<code>criConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
+CRIConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI config is a structure contains configurations of the CRI library</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -1394,6 +1408,47 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>CRI config is a structure contains configurations of the CRI library</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIName">
+CRIName
+</a>
+</em>
+</td>
+<td>
+<p>Name is a mandatory string containing the name of the CRI library.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CRIName">CRIName
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig</a>)
+</p>
+<p>
+<p>CRIName is a type alias for the CRI name string.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.CloudConfig">CloudConfig
 </h3>
 <p>
@@ -2415,6 +2470,20 @@ DefaultStatus
 <tbody>
 <tr>
 <td>
+<code>criConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">
+CRIConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI config is a structure contains configurations of the CRI library</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>DefaultSpec</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
@@ -3102,5 +3171,5 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>6115ae8fb</code>.
+on git commit <code>216d9e07c</code>.
 </em></p>

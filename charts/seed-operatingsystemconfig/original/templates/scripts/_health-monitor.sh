@@ -21,6 +21,18 @@
             fi
           done
         }
+        function containerd_monitoring {
+          echo "ContainerD monitor has started !"
+          while [ 1 ]; do
+            if ! timeout 60 ctr c list > /dev/null; then
+              echo "ContainerD daemon failed!"
+              pkill containerd
+              sleep 30
+            else
+              sleep $SLEEP_SECONDS
+            fi
+          done
+        }
         function kubelet_monitoring {
           echo "Wait for 2 minutes for kubelet to be functional"
           sleep 120
@@ -136,6 +148,8 @@
         echo "Start kubernetes health monitoring for $component"
         if [[ $component == "docker" ]]; then
           docker_monitoring
+        elif [[ $component == "containerd" ]]; then
+          containerd_monitoring
         elif [[ $component == "kubelet" ]]; then
           kubelet_monitoring
         else
