@@ -790,7 +790,7 @@ func (b *Botanist) DeployKubeAPIServer() error {
 		for k := range deployment.Spec.Template.Spec.Containers {
 			v := &deployment.Spec.Template.Spec.Containers[k]
 			if v.Name == "kube-apiserver" {
-				defaultValues["apiserverResources"] = v.Resources.DeepCopy()
+				defaultValues["apiServerResources"] = v.Resources.DeepCopy()
 				break
 			}
 		}
