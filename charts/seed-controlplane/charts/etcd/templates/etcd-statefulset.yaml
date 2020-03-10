@@ -1,8 +1,6 @@
 apiVersion: {{ include "statefulsetversion" . }}
 kind: StatefulSet
 metadata:
-  annotations:
-    "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
   name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
@@ -21,6 +19,7 @@ spec:
   template:
     metadata:
       annotations:
+        "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
         checksum/configmap-etcd-bootstrap-config: {{ include (print $.Template.BasePath "/configmap-etcd-bootstrap.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
