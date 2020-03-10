@@ -15,11 +15,8 @@ package utils_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils"
-	"github.com/onsi/gomega/types"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -60,12 +57,4 @@ var _ = Describe("utils", func() {
 			}))
 		})
 	})
-
-	DescribeTable("#IsTrue", func(value *bool, matcher types.GomegaMatcher) {
-		Expect(IsTrue(value)).To(matcher)
-	},
-		Entry("nil", nil, BeFalse()),
-		Entry("false", pointer.BoolPtr(false), BeFalse()),
-		Entry("true", pointer.BoolPtr(true), BeTrue()),
-	)
 })

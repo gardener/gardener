@@ -22,105 +22,13 @@ import (
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Strategy", func() {
-	Context("PrepareForCreate", func() {
-		Context("dns providers", func() {
-			DescribeTable("#updateDNSProviders", func(providers []core.DNSProvider, matcher types.GomegaMatcher) {
-				shoot := newShoot("foo")
-				shoot.Spec.DNS = &core.DNS{
-					Providers: providers,
-				}
-
-				shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
-
-				Expect(shoot.Spec.DNS.Providers).To(matcher)
-			},
-				Entry("without provider", []core.DNSProvider{}, BeEmpty()),
-				Entry("one provider",
-					[]core.DNSProvider{{Type: pointer.StringPtr("dns"), SecretName: pointer.StringPtr("secret")}},
-					ConsistOf(MatchFields(IgnoreExtras, Fields{
-						"Type":       PointTo(Equal("dns")),
-						"SecretName": PointTo(Equal("secret")),
-					}))),
-				Entry("multiple providers with one remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3")},
-					},
-					ConsistOf(MatchFields(IgnoreExtras, Fields{
-						"Type":       PointTo(Equal("dns2")),
-						"SecretName": PointTo(Equal("secret")),
-					}))),
-				Entry("multiple providers with multiple remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns2")),
-							"SecretName": PointTo(Equal("secret")),
-						})),
-				),
-				Entry("multiple providers with all remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3"), SecretName: pointer.StringPtr("secret")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns2")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns3")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-					)),
-				Entry("multiple providers with primary",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), Primary: pointer.BoolPtr(true)},
-						{Type: pointer.StringPtr("dns3"), SecretName: pointer.StringPtr("secret")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":    PointTo(Equal("dns2")),
-							"Primary": PointTo(Equal(true)),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns3")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-					)),
-			)
-		})
-	})
 	Context("PrepareForUpdate", func() {
 		Context("pod pids limit", func() {
 			It("should enforce the minimum limit value", func() {
@@ -183,93 +91,6 @@ var _ = Describe("Strategy", func() {
 				Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(highEnoughValue))
 				Expect(*oldShoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(highEnoughValue))
 			})
-		})
-		Context("dns providers", func() {
-			DescribeTable("#updateDNSProviders", func(providers []core.DNSProvider, matcher types.GomegaMatcher) {
-				shoot := newShoot("foo")
-				shoot.Spec.DNS = &core.DNS{
-					Providers: providers,
-				}
-				oldShoot := shoot.DeepCopy()
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
-
-				Expect(shoot.Spec.DNS.Providers).To(matcher)
-			},
-				Entry("without provider", []core.DNSProvider{}, BeEmpty()),
-				Entry("one provider",
-					[]core.DNSProvider{{Type: pointer.StringPtr("dns"), SecretName: pointer.StringPtr("secret")}},
-					ConsistOf(MatchFields(IgnoreExtras, Fields{
-						"Type":       PointTo(Equal("dns")),
-						"SecretName": PointTo(Equal("secret")),
-					}))),
-				Entry("multiple providers with one remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3")},
-					},
-					ConsistOf(MatchFields(IgnoreExtras, Fields{
-						"Type":       PointTo(Equal("dns2")),
-						"SecretName": PointTo(Equal("secret")),
-					}))),
-				Entry("multiple providers with multiple remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns2")),
-							"SecretName": PointTo(Equal("secret")),
-						})),
-				),
-				Entry("multiple providers with all remaining",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns3"), SecretName: pointer.StringPtr("secret")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns2")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns3")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-					)),
-				Entry("multiple providers with primary",
-					[]core.DNSProvider{
-						{Type: pointer.StringPtr("dns1"), SecretName: pointer.StringPtr("secret")},
-						{Type: pointer.StringPtr("dns2"), Primary: pointer.BoolPtr(true)},
-						{Type: pointer.StringPtr("dns3"), SecretName: pointer.StringPtr("secret")},
-					},
-					ConsistOf(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns1")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":    PointTo(Equal("dns2")),
-							"Primary": PointTo(Equal(true)),
-						}),
-						MatchFields(IgnoreExtras, Fields{
-							"Type":       PointTo(Equal("dns3")),
-							"SecretName": PointTo(Equal("secret")),
-						}),
-					)),
-			)
 		})
 	})
 })
