@@ -114,7 +114,7 @@ var _ = Describe("dns", func() {
 			seed = seedBase
 		})
 
-		It("should do nothing because the shoot does not specify a seed (create)", func() {
+		It("should do nothing because the shoot status is updated", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.SeedName = nil
 			shootBefore := shootCopy.DeepCopy()
@@ -127,7 +127,7 @@ var _ = Describe("dns", func() {
 			Expect(*shootCopy).To(Equal(*shootBefore))
 		})
 
-		It("should do nothing because the shoot status is updated", func() {
+		It("should do nothing because the shoot does not specify a seed (create)", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.SeedName = nil
 			shootBefore := shootCopy.DeepCopy()

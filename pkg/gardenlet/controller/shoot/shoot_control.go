@@ -27,6 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/utils"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -38,6 +40,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -368,6 +372,24 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		return reconcile.Result{}, err
 	}
 
+	var dnsEnabled = !o.Shoot.DisableDNS
+
+	// TODO: timuthy - Only required for migration and can be removed in a future version
+	if dnsEnabled && o.Shoot.Info.Spec.DNS != nil {
+		updated, err := migrateDNSProviders(context.TODO(), c.k8sGardenClient.Client(), o)
+		if err != nil {
+			message := "Cannot reconcile Shoot: Migrating DNS providers failed"
+			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, message)
+			return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("migrating dns providers failed: %v", err), c.updateShootStatusProcessing(shoot, message))
+		}
+		if updated {
+			message := "Requeue Shoot after migrating DNS providers"
+			o.Logger.Info(message)
+			c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, message)
+			return reconcile.Result{}, nil
+		}
+	}
+
 	if err := c.runReconcileShootFlow(o, operationType); err != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Description)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusReconcileError(o, operationType, err.Description, err.LastErrors...))
@@ -382,4 +404,39 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 	message := fmt.Sprintf("Scheduled next queuing time for Shoot in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
 	c.recorder.Event(shoot, corev1.EventTypeNormal, "ScheduledNextSync", message)
 	return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
+}
+
+func migrateDNSProviders(ctx context.Context, c client.Client, o *operation.Operation) (bool, error) {
+	o.Logger.Info("Migration step - DNS providers")
+	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, o.Shoot.Info, func() error {
+		var (
+			dns                = o.Shoot.Info.Spec.DNS
+			primaryDNSProvider = gardencorev1beta1helper.FindPrimaryDNSProvider(dns.Providers)
+			usesDefaultDomain  = o.Shoot.ExternalClusterDomain != nil && garden.DomainIsDefaultDomain(*o.Shoot.ExternalClusterDomain, o.Garden.DefaultDomains) != nil
+		)
+		// Set primary DNS provider field
+		if !usesDefaultDomain && primaryDNSProvider != nil && primaryDNSProvider.Primary == nil {
+			for i, provider := range dns.Providers {
+				if provider.Type == primaryDNSProvider.Type && provider.SecretName == primaryDNSProvider.SecretName {
+					dns.Providers[i].Primary = pointer.BoolPtr(true)
+					break
+				}
+			}
+		}
+
+		// Remove functionless DNS providers
+		// TODO: timuhty - Validation should forbid to create functionless DNS providers in the future.
+		var providers []gardencorev1beta1.DNSProvider
+		for _, provider := range dns.Providers {
+			if utils.IsTrue(provider.Primary) || (provider.Type != nil && provider.SecretName != nil) {
+				providers = append(providers, provider)
+			}
+		}
+		dns.Providers = providers
+		return nil
+	}); err != nil {
+		return false, nil
+	}
+	updated := o.Shoot.Info.ObjectMeta.Generation > o.Shoot.Info.Status.ObservedGeneration
+	return updated, nil
 }

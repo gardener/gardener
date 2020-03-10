@@ -16,17 +16,13 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -53,30 +49,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	for _, lastError := range o.Shoot.Info.Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
-		}
-	}
-
-	var dnsEnabled = !o.Shoot.DisableDNS
-
-	// TODO: timuthy - Only required for migration and can be removed in a future version
-	if dnsEnabled {
-		var (
-			primaryDNSProvider = gardencorev1beta1helper.FindPrimaryDNSProvider(o.Shoot.Info.Spec.DNS.Providers)
-			usesDefaultDomain  = o.Shoot.ExternalClusterDomain != nil && garden.DomainIsDefaultDomain(*o.Shoot.ExternalClusterDomain, o.Garden.DefaultDomains) != nil
-		)
-		if !usesDefaultDomain && primaryDNSProvider != nil && primaryDNSProvider.Primary == nil {
-			o.Logger.Info("Migration step - setting primary DNS provider field")
-			if err := kutil.TryUpdate(context.TODO(), retry.DefaultBackoff, c.k8sGardenClient.Client(), o.Shoot.Info, func() error {
-				for i, provider := range o.Shoot.Info.Spec.DNS.Providers {
-					if provider.Type == primaryDNSProvider.Type && provider.SecretName == primaryDNSProvider.SecretName {
-						o.Shoot.Info.Spec.DNS.Providers[i].Primary = pointer.BoolPtr(true)
-						return nil
-					}
-				}
-				return fmt.Errorf("migration error - wanted to set primary DNS provider but it was not found: %+v", *primaryDNSProvider)
-			}); err != nil {
-				return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
-			}
 		}
 	}
 
@@ -113,6 +85,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	var (
 		defaultTimeout     = 30 * time.Second
 		defaultInterval    = 5 * time.Second
+		dnsEnabled         = !o.Shoot.DisableDNS
 		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
 		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 		allowBackup        = o.Seed.Info.Spec.Backup != nil
