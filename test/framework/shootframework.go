@@ -184,9 +184,12 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return err
 	}
 
-	f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName, f.Config.SeedScheme)
-	if err != nil {
-		return err
+	// seed could be temporarily offline so no specified seed is a valid state
+	if shoot.Spec.SeedName != nil {
+		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName, f.Config.SeedScheme)
+		if err != nil {
+			return err
+		}
 	}
 
 	f.Shoot = shoot

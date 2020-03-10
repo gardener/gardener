@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -399,14 +400,39 @@ func (f *GardenerFramework) DumpState(ctx context.Context) {
 		return
 	}
 
-	// only dump shoot related events if a shoot is given
 	ctxIdentifier := "[GARDENER]"
 	f.Logger.Info(ctxIdentifier)
 
+	if err := f.dumpSeeds(ctx, ctxIdentifier); err != nil {
+		f.Logger.Errorf("unable to dump seed status: %s", err.Error())
+	}
+
 	// dump all events if no shoot is given
-	err := f.dumpEventsInAllNamespace(ctx, ctxIdentifier, f.GardenClient)
-	if err != nil {
+	if err := f.dumpEventsInAllNamespace(ctx, ctxIdentifier, f.GardenClient); err != nil {
 		f.Logger.Errorf("unable to dump Events from namespaces gardener: %s", err.Error())
+	}
+}
+
+// dumpSeeds prints information about all seeds
+func (f *GardenerFramework) dumpSeeds(ctx context.Context, ctxIdentifier string) error {
+	f.Logger.Infof("%s [SEEDS]", ctxIdentifier)
+	seeds := &gardencorev1beta1.SeedList{}
+	if err := f.GardenClient.Client().List(ctx, seeds); err != nil {
+		return err
+	}
+
+	for _, seed := range seeds.Items {
+		f.dumpSeed(&seed)
+	}
+	return nil
+}
+
+// dumpSeed prints information about a seed
+func (f *GardenerFramework) dumpSeed(seed *gardencorev1beta1.Seed) {
+	if err := health.CheckSeed(seed, seed.Status.Gardener); err != nil {
+		f.Logger.Printf("Seed %s is %s - Error: %s - Conditions %v", seed.Name, unhealthy, err.Error(), seed.Status.Conditions)
+	} else {
+		f.Logger.Printf("Seed %s is %s", seed.Name, healthy)
 	}
 }
 
