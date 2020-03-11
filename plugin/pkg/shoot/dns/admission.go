@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -166,6 +167,19 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		oldShoot, ok := a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+
+		if oldShoot.Spec.DNS != nil && shoot.Spec.DNS != nil {
+			oldPrimaryProvider := helper.FindPrimaryDNSProvider(oldShoot.Spec.DNS.Providers)
+			primaryProvider := helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+			if oldPrimaryProvider != nil && primaryProvider == nil {
+				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
+				for i, provider := range shoot.Spec.DNS.Providers {
+					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
+						shoot.Spec.DNS.Providers[i].Primary = pointer.BoolPtr(true)
+					}
+				}
+			}
 		}
 
 		if shoot.Spec.SeedName == nil {

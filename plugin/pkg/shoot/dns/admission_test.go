@@ -267,6 +267,44 @@ var _ = Describe("dns", func() {
 				))
 			})
 
+			It("should re-set the correct primary DNS provider on updates", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+				}
+
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.DNS.Providers[1].Primary = pointer.BoolPtr(true)
+
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(pointer.StringPtr(providerType)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Primary":    Equal(pointer.BoolPtr(true)),
+						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+				))
+			})
+
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
