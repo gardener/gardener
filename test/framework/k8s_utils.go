@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 	k8sretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 // WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
@@ -56,6 +57,27 @@ func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, sta
 	})
 }
 
+// WaitUntilDeploymentIsReady waits until the given deployment is ready
+func (f *CommonFramework) WaitUntilDeploymentIsReady(ctx context.Context, name string, namespace string, k8sClient kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		deployment := &appsv1.Deployment{}
+		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				f.Logger.Infof("Waiting for deployment %s/%s to be ready!", namespace, name)
+				return retry.MinorError(fmt.Errorf("deployment %q in namespace %q does not exist", name, namespace))
+			}
+			return retry.SevereError(err)
+		}
+
+		err = health.CheckDeployment(deployment)
+		if err != nil {
+			f.Logger.Infof("Waiting for deployment %s/%s to be ready!", namespace, name)
+			return retry.MinorError(fmt.Errorf("deployment %q in namespace %q is not healthy", name, namespace))
+		}
+		return retry.Ok()
+	})
+}
+
 // WaitUntilDeploymentsWithLabelsIsReady wait until pod with labels <podLabels> is running
 func (f *CommonFramework) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Context, deploymentLabels labels.Selector, namespace string, k8sClient kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
@@ -90,6 +112,52 @@ func (f *CommonFramework) WaitUntilNamespaceIsDeleted(ctx context.Context, k8sCl
 		}
 		return retry.MinorError(errors.Errorf("Namespace %s is not deleted yet", ns))
 	})
+}
+
+// WaitForNNodesToBeHealthy waits for exactly <n> Nodes to be healthy within a given timeout
+func WaitForNNodesToBeHealthy(ctx context.Context, k8sClient kubernetes.Interface, n int, timeout time.Duration) error {
+	return WaitForNNodesToBeHealthyInWorkerPool(ctx, k8sClient, n, nil, timeout)
+}
+
+// WaitForNNodesToBeHealthyInWorkerPool waits for exactly <n> Nodes in a given worker pool to be healthy within a given timeout
+func WaitForNNodesToBeHealthyInWorkerPool(ctx context.Context, k8sClient kubernetes.Interface, n int, workerGroup *string, timeout time.Duration) error {
+	return retry.UntilTimeout(ctx, defaultPollInterval, timeout, func(ctx context.Context) (done bool, err error) {
+		nodeList, err := GetAllNodesInWorkerPool(ctx, k8sClient, workerGroup)
+		if err != nil {
+			return retry.SevereError(err)
+		}
+
+		nodeCount := len(nodeList.Items)
+		if nodeCount != n {
+			return retry.MinorError(fmt.Errorf("waiting for exactly %d nodes to be ready: only %d nodes registered in the cluster", n, nodeCount))
+		}
+
+		for _, node := range nodeList.Items {
+			if err := health.CheckNode(&node); err != nil {
+				return retry.MinorError(fmt.Errorf("waiting for exactly %d nodes to be ready: node %q is not healthy: %v", n, node.Name, err))
+			}
+		}
+
+		return retry.Ok()
+	})
+}
+
+// GetAllNodes fetches all nodes
+func GetAllNodes(ctx context.Context, c kubernetes.Interface) (*corev1.NodeList, error) {
+	return GetAllNodesInWorkerPool(ctx, c, nil)
+}
+
+// GetAllNodesInWorkerPool fetches all nodes of a specific worker group
+func GetAllNodesInWorkerPool(ctx context.Context, c kubernetes.Interface, workerGroup *string) (*corev1.NodeList, error) {
+	nodeList := &corev1.NodeList{}
+
+	selectorOption := &client.MatchingLabelsSelector{}
+	if workerGroup != nil && len(*workerGroup) > 0 {
+		selectorOption.Selector = labels.SelectorFromSet(labels.Set{"worker.gardener.cloud/pool": *workerGroup})
+	}
+
+	err := c.Client().List(ctx, nodeList, selectorOption)
+	return nodeList, err
 }
 
 // GetPodsByLabels fetches all pods with the desired set of labels <labelsMap>
