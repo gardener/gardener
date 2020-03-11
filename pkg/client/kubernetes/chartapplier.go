@@ -62,7 +62,9 @@ func (c *chartApplier) Apply(ctx context.Context, chartPath, namespace, name str
 	applyOpts := &ApplyOptions{}
 
 	for _, o := range opts {
-		o.MutateApplyOptions(applyOpts)
+		if o != nil {
+			o.MutateApplyOptions(applyOpts)
+		}
 	}
 
 	if len(applyOpts.MergeFuncs) == 0 {
@@ -92,7 +94,9 @@ func (c *chartApplier) Delete(ctx context.Context, chartPath, namespace, name st
 	deleteOpts := &DeleteOptions{}
 
 	for _, o := range opts {
-		o.MutateDeleteOptions(deleteOpts)
+		if o != nil {
+			o.MutateDeleteOptions(deleteOpts)
+		}
 	}
 
 	manifestReader, err := c.manifestReader(chartPath, namespace, name, deleteOpts.Values)
