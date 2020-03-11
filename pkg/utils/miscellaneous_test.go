@@ -15,12 +15,12 @@ package utils_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils"
-	"github.com/onsi/gomega/types"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/types"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("utils", func() {
@@ -61,7 +61,7 @@ var _ = Describe("utils", func() {
 		})
 	})
 
-	DescribeTable("#IsTrue", func(value *bool, matcher types.GomegaMatcher) {
+	DescribeTable("#IsTrue", func(value *bool, matcher GomegaMatcher) {
 		Expect(IsTrue(value)).To(matcher)
 	},
 		Entry("nil", nil, BeFalse()),

@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -56,11 +55,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
-
-	// DNS providers without a secret name were formerly without a function but could still be configured in the shoot.
-	// With the support of multiple DNS providers, this is not possible anymore.
-	// TODO: This can be replaced in a future version in favor of a appropriate validation.
-	updateDNSProviders(shoot.Spec.DNS)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -87,25 +81,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 			updateKubeletConfig(oldShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet)
 		}
 	}
-
-	// DNS providers without a secret name were formerly without a function but could still be configured in the shoot.
-	// With the support of multiple DNS providers, this is not possible anymore.
-	// TODO: This can be replaced in a future version in favor of a appropriate validation.
-	updateDNSProviders(newShoot.Spec.DNS)
-	updateDNSProviders(oldShoot.Spec.DNS)
-}
-
-func updateDNSProviders(dns *core.DNS) {
-	if dns == nil {
-		return
-	}
-	var providers []core.DNSProvider
-	for _, provider := range dns.Providers {
-		if utils.IsTrue(provider.Primary) || (provider.Type != nil && provider.SecretName != nil) {
-			providers = append(providers, provider)
-		}
-	}
-	dns.Providers = providers
 }
 
 func updateKubeletConfig(kubeletConfig *core.KubeletConfig) {

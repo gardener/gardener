@@ -169,5 +169,6 @@ var _ = Describe("Garden", func() {
 
 		Entry("no default domain", "foo.bar.com", nil, BeNil()),
 		Entry("default domain", "foo.bar.com", []*garden.Domain{defaultDomain}, Equal(defaultDomain)),
+		Entry("no default domain but with same suffix", "foo.foobar.com", []*garden.Domain{defaultDomain}, BeNil()),
 	)
 })
