@@ -51,6 +51,12 @@ spec:
           type: object
         spec:
           properties:
+            criConfig:
+              description: CRI config is the configurations of the CRI library
+              properties:
+                name:
+                  description: Name of the CRI library to use
+                  type: string
             files:
               description: Files is a list of files that should get written to the
                 host's file system.

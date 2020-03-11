@@ -67,9 +67,11 @@ type OperatingSystemConfigList struct {
 
 // OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 type OperatingSystemConfigSpec struct {
+	// CRI config is a structure contains configurations of the CRI library
+	// +optional
+	CRIConfig *CRIConfig  `json:"criConfig,omitempty"`
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
 	// cloud-config-downloader script already running on a bootstrapped VM.
@@ -201,4 +203,18 @@ const (
 	// OperatingSystemConfigSecretDataKey is a constant for the key in a secret's `.data` field containing the
 	// results of a computed cloud config.
 	OperatingSystemConfigSecretDataKey = "cloud_config"
+)
+
+// CRI config is a structure contains configurations of the CRI library
+type CRIConfig struct {
+	// Name is a mandatory string containing the name of the CRI library.
+	Name CRIName `json:"name"`
+}
+
+// CRIName is a type alias for the CRI name string.
+type CRIName string
+
+const (
+	// CRINameContainerD is a constant for ContainerD CRI name
+	CRINameContainerD = "containerd"
 )

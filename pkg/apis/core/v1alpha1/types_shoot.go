@@ -775,6 +775,9 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
+	// CRI contains configurations of CRI support of every machine in the worker pool
+	// +optional
+	CRI *CRI `json:"cri,omitempty"`
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	// +optional
 	Kubernetes *WorkerKubernetes `json:"kubernetes,omitempty"`
@@ -859,6 +862,19 @@ type Volume struct {
 	// +optional
 	Encrypted *bool `json:"encrypted,omitempty"`
 }
+
+// CRI contains information about the Container Runtimes.
+type CRI struct {
+	// The name of the CRI library
+	Name CRIName `json:"name"`
+}
+
+// CRIName is a type alias for the CRI name string.
+type CRIName string
+
+const (
+	CRINameContainerD CRIName = "containerd"
+)
 
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.

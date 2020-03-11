@@ -65,6 +65,9 @@ var (
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
+	avaliableWorkerCRINames = sets.NewString(
+		string(core.CRINameContainerD),
+	)
 )
 
 // ValidateShoot validates a Shoot object.
@@ -169,8 +172,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerConfiguration(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
-
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Provider.Type, oldSpec.Provider.Type, fldPath.Child("provider", "type"))...)
+	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
 	if oldSpec.Networking.Pods != nil {
@@ -183,6 +185,49 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
 	}
 
+	return allErrs
+}
+
+// ValidateShootProviderUpdate validates the specification of a Provider object.
+func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, ValidateWorkersUpdate(newProvider.Workers, oldProvider.Workers, fldPath.Child("workers"))...)
+
+	return allErrs
+}
+
+// ValidateShootProviderUpdate validates the specification of a Provider object.
+func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	oldWorkersMap := make(map[string]core.Worker)
+	for _, w := range oldWorkers {
+		oldWorkersMap[w.Name] = w
+	}
+	for i, w := range newWorkers {
+		if _, ok := oldWorkersMap[w.Name]; ok {
+			oldWorker := oldWorkersMap[w.Name]
+			allErrs = append(allErrs, ValidateWorkerUpdate(&w, &oldWorker, fldPath.Index(i))...)
+		}
+	}
+	return allErrs
+}
+
+// ValidateShootProviderUpdate validates the specification of a Provider object.
+func ValidateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validateCRIUpdate(newWorker.CRI, oldWorker.CRI, fldPath.Child("cri"))...)
+
+	return allErrs
+}
+
+func validateCRIUpdate(newCri *core.CRI, oldCri *core.CRI, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if (newCri == nil && oldCri != nil) || (newCri != nil && oldCri == nil) || (newCri != nil && oldCri != nil && newCri.Name != oldCri.Name) {
+		allErrs = append(allErrs, field.Invalid(fldPath, newCri, "can't update cri configurations"))
+	}
 	return allErrs
 }
 
@@ -848,6 +893,10 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
+	if worker.CRI != nil {
+		allErrs = append(allErrs, ValidateCRI(worker.CRI, fldPath.Child("cri"))...)
+	}
+
 	return allErrs
 }
 
@@ -1156,6 +1205,16 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 		return nil
 	}
 	allErrs = append(allErrs, field.Invalid(fldPath, intOrStringValue, "must not be greater than 100%"))
+
+	return allErrs
+}
+
+func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !avaliableWorkerCRINames.Has(string(CRI.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, avaliableWorkerCRINames.List()))
+	}
 
 	return allErrs
 }

@@ -310,11 +310,20 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		}
 	}
 
-	originalConfig["worker"] = map[string]interface{}{
+	workerConfig := map[string]interface{}{
 		"name":              worker.Name,
 		"kubelet":           kubelet,
 		"kubeletDataVolume": worker.KubeletDataVolumeName,
 	}
+
+	if worker.CRI != nil {
+		criConfig := map[string]interface{}{
+			"name": worker.CRI.Name,
+		}
+		workerConfig["cri"] = criConfig
+	}
+
+	originalConfig["worker"] = workerConfig
 
 	var (
 		downloaderName = fmt.Sprintf("%s-downloader", secretName)

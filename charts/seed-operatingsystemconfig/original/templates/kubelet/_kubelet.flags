@@ -29,4 +29,10 @@
 {{- end }}
 --volume-plugin-dir=/var/lib/kubelet/volumeplugins
 --v=2 $KUBELET_EXTRA_ARGS
+{{- if .Values.worker.cri }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+--container-runtime=remote
+--container-runtime-endpoint=unix:///run/containerd/containerd.sock
+{{- end -}}
+{{- end -}}
 {{- end -}}

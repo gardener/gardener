@@ -4,6 +4,8 @@ osc:
   reloadConfigFilePath: /var/lib/...
   secretName: cpu-worker-0
   sshKey: "ssh-rsa"
+  cri:
+    containerdName: containerd
 
 # caBundle: |
 #   root certificates
@@ -16,6 +18,8 @@ kubernetes:
   version: 1.11.2
 worker:
   name: cpu-worker
+# cri:
+#   name: containerd
   kubelet:
     caCert: abcd
     cpuCFSQuota: true
