@@ -146,7 +146,9 @@ var _ = Describe("chart applier", func() {
 				cn,
 				kubernetes.Values(val),
 				kubernetes.ForceNamespace,
+				nil, // simulate nil entry
 				m,
+				nil, // simulate nil entry
 			)).ToNot(HaveOccurred())
 
 			actual := &corev1.ConfigMap{}
@@ -206,7 +208,9 @@ var _ = Describe("chart applier", func() {
 				newNS,
 				cn,
 				kubernetes.Values(val),
+				nil, // simulate nil entry
 				kubernetes.ForceNamespace,
+				nil, // simulate nil entry
 			)).ToNot(HaveOccurred())
 
 			actual := &corev1.ConfigMap{}
