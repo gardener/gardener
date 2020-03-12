@@ -19,11 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,35 +32,8 @@ const (
 	ManagedResourceLabelValueGardener = "gardener"
 )
 
-// LabelWellKnownManagedResources labels well-known MRs that were potentially created without origin label.
-// TODO: This code can be removed in a future version.
-func (b *Botanist) LabelWellKnownManagedResources(ctx context.Context) error {
-	for _, name := range []string{"shoot-cloud-config-execution", "shoot-core", "shoot-core-namespaces", "addons"} {
-		obj := &resourcesv1alpha1.ManagedResource{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), obj); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-			continue
-		}
-
-		objCopy := obj.DeepCopy()
-		kutil.SetMetaDataLabel(objCopy, ManagedResourceLabelKeyOrigin, ManagedResourceLabelValueGardener)
-		if err := b.K8sSeedClient.Client().Patch(ctx, objCopy, client.MergeFrom(obj)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
-	// TODO: This labelling code can be removed in a future version.
-	if err := b.LabelWellKnownManagedResources(ctx); err != nil {
-		return err
-	}
-
 	return b.K8sSeedClient.Client().DeleteAllOf(
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
