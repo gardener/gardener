@@ -228,4 +228,4 @@ images:
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
-  tag: "v0.2.2"
+  tag: "v0.2.4"
