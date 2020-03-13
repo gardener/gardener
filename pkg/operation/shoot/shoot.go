@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -33,8 +34,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -349,11 +352,9 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 				continue
 			}
 
-			var timeout time.Duration
+			timeout := ExtensionDefaultTimeout
 			if res.ReconcileTimeout != nil {
 				timeout = res.ReconcileTimeout.Duration
-			} else {
-				timeout = ExtensionDefaultTimeout
 			}
 
 			typeToExtension[res.Type] = Extension{
@@ -430,4 +431,62 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 		Services:  svc,
 		APIServer: apiserver,
 	}, nil
+}
+
+// ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
+// reconciliation flow.
+func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList []*gardencorev1beta1.ControllerRegistration, internalDomain, externalDomain *garden.Domain) sets.String {
+	requiredExtensions := sets.NewString()
+
+	if seed.Spec.Backup != nil {
+		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
+		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
+	}
+	// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
+	// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
+	// does not reflect this today.
+	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+
+	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
+	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
+
+	for _, extension := range shoot.Spec.Extensions {
+		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ExtensionResource, extension.Type))
+	}
+
+	for _, pool := range shoot.Spec.Provider.Workers {
+		if pool.Machine.Image != nil {
+			requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
+		}
+	}
+
+	if !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
+		if shoot.Spec.DNS != nil {
+			for _, provider := range shoot.Spec.DNS.Providers {
+				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
+					requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, *provider.Type))
+				}
+			}
+		}
+
+		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
+			requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
+		}
+
+		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
+			requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
+		}
+	}
+
+	for _, controllerRegistration := range controllerRegistrationList {
+		for _, resource := range controllerRegistration.Spec.Resources {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled {
+				requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ExtensionResource, resource.Type))
+			}
+		}
+	}
+
+	return requiredExtensions
 }

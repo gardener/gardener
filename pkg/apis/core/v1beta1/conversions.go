@@ -24,7 +24,36 @@ import (
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
-	if err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("BackupBucket"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", core.BackupBucketSeedName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("BackupEntry"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", core.BackupEntrySeedName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "metadata.name", "metadata.namespace", core.ShootSeedName, core.ShootCloudProfileName:

@@ -153,13 +153,21 @@ func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resou
 // IsControllerInstallationSuccessful returns true if a ControllerInstallation has been marked as "successfully"
 // installed.
 func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1.ControllerInstallation) bool {
+	var (
+		installed bool
+		healthy bool
+	)
+
 	for _, condition := range controllerInstallation.Status.Conditions {
 		if condition.Type == gardencorev1beta1.ControllerInstallationInstalled && condition.Status == gardencorev1beta1.ConditionTrue {
-			return true
+			installed = true
+		}
+		if condition.Type == gardencorev1beta1.ControllerInstallationHealthy && condition.Status == gardencorev1beta1.ConditionTrue {
+			healthy = true
 		}
 	}
 
-	return false
+	return installed && healthy
 }
 
 // ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation

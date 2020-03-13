@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,85 +23,107 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 )
 
-// FinalizerName is the name of the ControllerRegistration finalizer.
+// FinalizerName is the finalizer used by this controller.
 const FinalizerName = "core.gardener.cloud/controllerregistration"
 
 // Controller controls ControllerRegistration.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	k8sGardenClient kubernetes.Interface
 
-	config *config.ControllerManagerConfiguration
+	controllerRegistrationControl     ControlInterface
+	controllerRegistrationSeedControl RegistrationSeedControlInterface
+	seedControl                       SeedControlInterface
 
-	seedControl                   SeedControlInterface
-	controllerRegistrationControl ControlInterface
-
-	recorder record.EventRecorder
-
-	seedQueue  workqueue.RateLimitingInterface
-	seedLister gardencorelisters.SeedLister
-	seedSynced cache.InformerSynced
-
-	controllerRegistrationQueue  workqueue.RateLimitingInterface
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	controllerRegistrationSynced cache.InformerSynced
-
+	backupBucketSynced           cache.InformerSynced
+	backupEntrySynced            cache.InformerSynced
 	controllerInstallationSynced cache.InformerSynced
+	controllerRegistrationSynced cache.InformerSynced
+	seedSynced                   cache.InformerSynced
+	shootSynced                  cache.InformerSynced
+
+	backupBucketLister           gardencorelisters.BackupBucketLister
+	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
+	seedLister                   gardencorelisters.SeedLister
+
+	controllerRegistrationQueue     workqueue.RateLimitingInterface
+	controllerRegistrationSeedQueue workqueue.RateLimitingInterface
+	seedQueue                       workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
 // NewController instantiates a new ControllerRegistration controller.
-func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewController(
+	k8sGardenClient kubernetes.Interface,
+	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
+	secrets map[string]*corev1.Secret,
+) *Controller {
+
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
-		seedInformer = gardenCoreInformer.Seeds()
-		seedLister   = seedInformer.Lister()
-		seedQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
+		backupBucketInformer = gardenCoreInformer.BackupBuckets()
+		backupBucketLister   = backupBucketInformer.Lister()
+
+		backupEntryInformer = gardenCoreInformer.BackupEntries()
 
 		controllerRegistrationInformer = gardenCoreInformer.ControllerRegistrations()
 		controllerRegistrationLister   = controllerRegistrationInformer.Lister()
-		controllerRegistrationQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration")
 
 		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
 		controllerInstallationLister   = controllerInstallationInformer.Lister()
+
+		seedInformer = gardenCoreInformer.Seeds()
+		seedLister   = seedInformer.Lister()
+
+		shootInformer = gardenCoreInformer.Shoots()
+
+		controllerRegistrationQueue     = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration")
+		controllerRegistrationSeedQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed")
+		seedQueue                       = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
 	)
 
 	controller := &Controller{
-		k8sGardenClient:               k8sGardenClient,
-		k8sGardenCoreInformers:        gardenCoreInformerFactory,
-		seedControl:                   NewDefaultSeedControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, controllerRegistrationLister, controllerInstallationLister, controllerRegistrationQueue),
-		controllerRegistrationControl: NewDefaultControllerRegistrationControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister),
-		config:                        config,
-		recorder:                      recorder,
+		k8sGardenClient: k8sGardenClient,
 
-		seedLister: seedLister,
-		seedQueue:  seedQueue,
+		controllerRegistrationControl:     NewDefaultControllerRegistrationControl(k8sGardenClient, controllerInstallationLister),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(k8sGardenClient, secrets, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
+		seedControl:                       NewDefaultSeedControl(k8sGardenClient, controllerInstallationLister),
 
+		backupBucketLister:           backupBucketLister,
 		controllerRegistrationLister: controllerRegistrationLister,
-		controllerRegistrationQueue:  controllerRegistrationQueue,
+		seedLister:                   seedLister,
+
+		controllerRegistrationQueue:     controllerRegistrationQueue,
+		controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
+		seedQueue:                       seedQueue,
 
 		workerCh: make(chan int),
 	}
 
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.seedAdd,
-		UpdateFunc: controller.seedUpdate,
-		DeleteFunc: controller.seedDelete,
+	backupBucketInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.backupBucketAdd,
+		UpdateFunc: controller.backupBucketUpdate,
+		DeleteFunc: controller.backupBucketDelete,
 	})
-	controller.seedSynced = seedInformer.Informer().HasSynced
+	controller.backupBucketSynced = backupBucketInformer.Informer().HasSynced
+
+	backupEntryInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.backupEntryAdd,
+		UpdateFunc: controller.backupEntryUpdate,
+		DeleteFunc: controller.backupEntryDelete,
+	})
+	controller.backupEntrySynced = backupEntryInformer.Informer().HasSynced
 
 	controllerRegistrationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.controllerRegistrationAdd,
@@ -112,6 +134,20 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFacto
 
 	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
+	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.seedAdd,
+		UpdateFunc: controller.seedUpdate,
+		DeleteFunc: controller.seedDelete,
+	})
+	controller.seedSynced = seedInformer.Informer().HasSynced
+
+	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.shootAdd,
+		UpdateFunc: controller.shootUpdate,
+		DeleteFunc: controller.shootDelete,
+	})
+	controller.shootSynced = shootInformer.Informer().HasSynced
+
 	return controller
 }
 
@@ -119,7 +155,7 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFacto
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.controllerRegistrationSynced, c.controllerInstallationSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.backupBucketSynced, c.backupEntrySynced, c.controllerRegistrationSynced, c.controllerInstallationSynced, c.seedSynced, c.shootSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -137,21 +173,23 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("ControllerRegistration controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.controllerRegistrationQueue, "ControllerRegistration", c.reconcileControllerRegistrationKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.controllerRegistrationSeedQueue, "ControllerRegistration-Seed", c.reconcileControllerRegistrationSeedKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedQueue.ShutDown()
 	c.controllerRegistrationQueue.ShutDown()
+	c.controllerRegistrationSeedQueue.ShutDown()
+	c.seedQueue.ShutDown()
 
 	for {
-		if c.controllerRegistrationQueue.Len() == 0 && c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.controllerRegistrationQueue.Len() == 0 && c.seedQueue.Len() == 0 && c.controllerRegistrationSeedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running ControllerRegistration worker and no items left in the queues. Terminated ControllerRegistration controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d ControllerRegistration worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerRegistrationQueue.Len()+c.seedQueue.Len())
+		logger.Logger.Debugf("Waiting for %d ControllerRegistration worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerRegistrationQueue.Len()+c.seedQueue.Len()+c.controllerRegistrationSeedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

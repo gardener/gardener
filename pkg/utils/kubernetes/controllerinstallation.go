@@ -20,9 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 )
@@ -107,37 +105,4 @@ func TryUpdateControllerInstallationStatus(g gardencore.Interface, backoff wait.
 	return TryUpdateControllerInstallationStatusWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
 		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
 	})
-}
-
-// CreateOrPatchControllerInstallation either creates the object or patches the existing one with the strategic merge patch type.
-func CreateOrPatchControllerInstallation(g gardencore.Interface, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-	transformed := transform(&gardencorev1beta1.ControllerInstallation{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Kind:       "ControllerInstallation",
-		},
-		ObjectMeta: meta,
-	})
-
-	controllerInstallation, err := g.CoreV1beta1().ControllerInstallations().Get(meta.Name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return g.CoreV1beta1().ControllerInstallations().Create(transformed)
-		}
-		return nil, err
-	}
-	return patchControllerInstallation(g, controllerInstallation, transform(controllerInstallation.DeepCopy()))
-}
-
-func patchControllerInstallation(g gardencore.Interface, oldObj, newObj *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-	patch, err := CreateTwoWayMergePatch(oldObj, newObj)
-	if err != nil {
-		return nil, err
-	}
-
-	if IsEmptyPatch(patch) {
-		return oldObj, nil
-	}
-
-	return g.CoreV1beta1().ControllerInstallations().Patch(oldObj.Name, types.StrategicMergePatchType, patch)
 }

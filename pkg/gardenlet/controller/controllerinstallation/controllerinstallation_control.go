@@ -30,6 +30,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -45,7 +46,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -149,16 +149,7 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1beta1.
 func (c *defaultControllerInstallationControl) reconcile(controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
 	ctx := context.TODO()
 
-	controllerInstallation, err := kutil.TryUpdateControllerInstallationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta, func(c *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-		if finalizers := sets.NewString(c.Finalizers...); !finalizers.Has(FinalizerName) {
-			finalizers.Insert(FinalizerName)
-			c.Finalizers = finalizers.UnsortedList()
-		}
-		return c, nil
-	}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
-		return sets.NewString(cur.Finalizers...).Has(FinalizerName)
-	})
-	if err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
 
@@ -368,20 +359,12 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
-	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
+	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	_, err = kutil.TryUpdateControllerInstallationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta, func(c *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-		finalizers := sets.NewString(c.Finalizers...)
-		finalizers.Delete(FinalizerName)
-		c.Finalizers = finalizers.UnsortedList()
-		return c, nil
-	}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
-		return !sets.NewString(cur.Finalizers...).Has(FinalizerName)
-	})
-	return err
+	return controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), controllerInstallation.DeepCopy(), FinalizerName)
 }
 
 func (c *defaultControllerInstallationControl) updateConditions(controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,30 +17,21 @@ package controllerregistration
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
-	"github.com/hashicorp/go-multierror"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
 )
 
 func (c *Controller) seedAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.seedQueue.Add(key)
@@ -53,7 +44,6 @@ func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
 func (c *Controller) seedDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.seedQueue.Add(key)
@@ -75,12 +65,7 @@ func (c *Controller) reconcileSeedKey(key string) error {
 		return err
 	}
 
-	if err := c.seedControl.Reconcile(seed); err != nil {
-		return err
-	}
-
-	c.seedQueue.AddAfter(key, 30*time.Second)
-	return nil
+	return c.seedControl.Reconcile(seed)
 }
 
 // SeedControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
@@ -92,47 +77,26 @@ type SeedControlInterface interface {
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
 // for any scenario other than testing.
-func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, controllerRegistrationQueue workqueue.RateLimitingInterface) SeedControlInterface {
-	return &defaultSeedControl{k8sGardenClient, k8sGardenCoreInformers, recorder, config, controllerRegistrationLister, controllerInstallationLister, controllerRegistrationQueue}
+func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, controllerInstallationLister gardencorelisters.ControllerInstallationLister) SeedControlInterface {
+	return &defaultSeedControl{k8sGardenClient, controllerInstallationLister}
 }
 
 type defaultSeedControl struct {
 	k8sGardenClient              kubernetes.Interface
-	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
-	recorder                     record.EventRecorder
-	config                       *config.ControllerManagerConfiguration
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	controllerRegistrationQueue  workqueue.RateLimitingInterface
 }
 
 func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 	var (
-		ctx    = context.TODO()
-		seed   = obj.DeepCopy()
-		logger = logger.NewFieldLogger(logger.Logger, "controllerregistration-seed", seed.Name)
-		result error
+		ctx  = context.TODO()
+		seed = obj.DeepCopy()
 	)
 
-	controllerRegistrationList, err := c.controllerRegistrationLister.List(labels.Everything())
-	if err != nil {
-		return err
-	}
-
-	for _, controllerRegistration := range controllerRegistrationList {
-		key, err := cache.MetaNamespaceKeyFunc(controllerRegistration)
-		if err != nil {
-			result = multierror.Append(result, err)
-			continue
-		}
-		c.controllerRegistrationQueue.Add(key)
-	}
-
-	if result != nil {
-		return result
-	}
-
 	if seed.DeletionTimestamp != nil {
+		if !controllerutils.HasFinalizer(seed, FinalizerName) {
+			return nil
+		}
+
 		controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
 		if err != nil {
 			return err
@@ -140,17 +104,12 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 
 		for _, controllerInstallation := range controllerInstallationList {
 			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
-				message := fmt.Sprintf("ControllerInstallations for seed %q still pending, cannot release seed", seed.Name)
-				c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-				return fmt.Errorf(message)
+				return fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
 			}
 		}
 
-		if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), seed, FinalizerName); err != nil {
-			logger.Errorf("Could not update the Seed specification: %s", err.Error())
-			return err
-		}
+		return controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), seed, FinalizerName)
 	}
 
-	return nil
+	return controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), seed, FinalizerName)
 }
