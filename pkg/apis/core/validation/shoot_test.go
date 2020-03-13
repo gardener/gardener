@@ -105,7 +105,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
 			}
-			workerAutoScalingInvalid = core.Worker{
+			workerAutoScalingMinZero = core.Worker{
 				Name: "cpu-worker",
 				Machine: core.Machine{
 					Type: "large",
@@ -643,15 +643,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should enforce workers min > 0 if max > 0", func() {
-				shoot.Spec.Provider.Workers = []core.Worker{workerAutoScalingInvalid, worker}
+			It("should allow workers min = 0 if max > 0", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{workerAutoScalingMinZero, worker}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.provider.workers[0].minimum"),
-				}))))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should allow workers having min=max=0 if at least one pool is active", func() {
