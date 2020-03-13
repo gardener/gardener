@@ -40,6 +40,15 @@ type Image struct {
 // ImageVector is a list of image sources.
 type ImageVector []*ImageSource
 
+// ComponentImageVector contains an image vector overwrite for a component deployed by Gardener.
+type ComponentImageVector struct {
+	Name                 string `json:"name" yaml:"name"`
+	ImageVectorOverwrite string `json:"imageVectorOverwrite" yaml:"imageVectorOverwrite"`
+}
+
+// ComponentImageVectors maps a component with a given name (key) to the image vector overwrite content (value).
+type ComponentImageVectors map[string]string
+
 // FindOptions are options that can be supplied during either `FindImage` or `FindImages`.
 type FindOptions struct {
 	RuntimeVersion *string

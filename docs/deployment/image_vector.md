@@ -86,3 +86,25 @@ spec:
           name: gardenlet-images-overwrite
   ...
 ```
+
+## Image vectors for dependent components
+
+The gardenlet is deploying a lot of different components that might deploy other images themselves.
+These components might use an image vector as well.
+Operators might want to customize the image locations for these transitive images as well, hence, they might need to specify an image vector overwrite for the components directly deployed by Gardener.
+
+It is possible to specify the `IMAGEVECTOR_OVERWRITE_COMPONENTS` environment variable to the gardenlet that points to a file with the following content:
+
+```yaml
+components:
+- name: etcd-druid
+  imageVectorOverwrite: |
+    images:
+    - name: etcd
+      tag: v1.2.3
+      repository: etcd/etcd
+...
+``` 
+
+The gardenlet will, if supported by the directly deployed component (`etcd-druid` in this example), inject the given `imageVectorOverwrite` into the `Deployment` manifest.
+The respective component is responsible for using the overwritten images instead of its defaults.

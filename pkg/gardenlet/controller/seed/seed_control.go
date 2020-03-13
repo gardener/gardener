@@ -122,6 +122,7 @@ func NewDefaultControl(
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
+	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
 	recorder record.EventRecorder,
 	config *config.GardenletConfiguration,
@@ -133,6 +134,7 @@ func NewDefaultControl(
 		k8sGardenCoreInformers,
 		secrets,
 		imageVector,
+		componentImageVectors,
 		identity,
 		recorder,
 		config,
@@ -146,6 +148,7 @@ type defaultControl struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	secrets                map[string]*corev1.Secret
 	imageVector            imagevector.ImageVector
+	componentImageVectors  imagevector.ComponentImageVectors
 	identity               *gardencorev1beta1.Gardener
 	recorder               record.EventRecorder
 	config                 *config.GardenletConfiguration
@@ -323,7 +326,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	if gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableCapacityReservation) {
 		seedObj.MustReserveExcessCapacity(false)
 	}
-	if err := seedpkg.BootstrapCluster(c.k8sGardenClient, seedObj, c.config, c.secrets, c.imageVector); err != nil {
+	if err := seedpkg.BootstrapCluster(c.k8sGardenClient, seedObj, c.config, c.secrets, c.imageVector, c.componentImageVectors); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
 		seedLogger.Errorf("Seed bootstrapping failed: %+v", err)

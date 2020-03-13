@@ -24,6 +24,9 @@ spec:
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
         checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+        checksum/configmap-gardenlet-imagevector-overwrite-components: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite-components.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
         {{- end }}
@@ -71,11 +74,15 @@ spec:
         command:
         - /gardenlet
         - --config=/etc/gardenlet/config/config.yaml
-        {{- if or .Values.global.gardenlet.env .Values.global.gardenlet.imageVectorOverwrite }}
+        {{- if or .Values.global.gardenlet.env .Values.global.gardenlet.imageVectorOverwrite .Values.global.gardenlet.componentImageVectorOverwrites }}
         env:
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
           value: /charts_overwrite/images_overwrite.yaml
+        {{- end }}
+        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+        - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
+          value: /charts_overwrite_components/components.yaml
         {{- end }}
         {{- range $index, $value := .Values.global.gardenlet.env }}
         {{- if not (empty $value) }}
@@ -110,6 +117,11 @@ spec:
           mountPath: /charts_overwrite
           readOnly: true
         {{- end }}
+        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+        - name: gardenlet-imagevector-overwrite-components
+          mountPath: /charts_overwrite_components
+          readOnly: true
+        {{- end }}
         - name: gardenlet-config
           mountPath: /etc/gardenlet/config
 {{- if .Values.global.gardenlet.additionalVolumeMounts }}
@@ -131,6 +143,11 @@ spec:
       - name: gardenlet-imagevector-overwrite
         configMap:
           name: gardenlet-imagevector-overwrite
+      {{- end }}
+      {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+      - name: gardenlet-imagevector-overwrite-components
+        configMap:
+          name: gardenlet-imagevector-overwrite-components
       {{- end }}
       - name: gardenlet-config
         configMap:

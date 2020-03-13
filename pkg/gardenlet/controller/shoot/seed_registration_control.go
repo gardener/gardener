@@ -590,6 +590,15 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		imageVectorOverwrite = string(data)
 	}
 
+	var componentImageVectorOverwrites string
+	if overWritePath := os.Getenv(imagevector.ComponentOverrideEnv); len(overWritePath) > 0 {
+		data, err := ioutil.ReadFile(overWritePath)
+		if err != nil {
+			return err
+		}
+		componentImageVectorOverwrites = string(data)
+	}
+
 	var (
 		repository = gardenletImage.String()
 		tag        = version.Get().GitVersion
@@ -606,9 +615,10 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 					"repository": repository,
 					"tag":        tag,
 				},
-				"revisionHistoryLimit": 0,
-				"vpa":                  true,
-				"imageVectorOverwrite": imageVectorOverwrite,
+				"revisionHistoryLimit":           0,
+				"vpa":                            true,
+				"imageVectorOverwrite":           imageVectorOverwrite,
+				"componentImageVectorOverwrites": componentImageVectorOverwrites,
 				"config": map[string]interface{}{
 					"gardenClientConnection": map[string]interface{}{
 						"acceptContentTypes":   externalConfig.GardenClientConnection.AcceptContentTypes,

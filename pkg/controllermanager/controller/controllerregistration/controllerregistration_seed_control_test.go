@@ -466,8 +466,8 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets, seedName)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket1.Spec.Provider.Type,
-				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket2.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket1.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket2.Spec.Provider.Type,
 			)))
 		})
 	})
