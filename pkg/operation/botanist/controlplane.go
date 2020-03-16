@@ -136,10 +136,6 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 
 	var workerPools []map[string]interface{}
 	for _, worker := range b.Shoot.MachineDeployments {
-		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
-		if worker.Minimum == 0 {
-			continue
-		}
 
 		workerPools = append(workerPools, map[string]interface{}{
 			"name": worker.Name,
