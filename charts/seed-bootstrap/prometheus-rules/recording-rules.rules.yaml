@@ -5,6 +5,12 @@ groups:
   - record: seed:container_cpu_usage_seconds_total:sum_by_container
     expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (container)
 
+  - record: seed:container_cpu_cfs_throttled_seconds_total:sum_by_container
+    expr: sum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (container)
+
+  - record: seed:container_cpu_cfs_throttled_periods_total:sum_by_container
+    expr: sum(rate(container_cpu_cfs_throttled_periods_total[5m])) by (container)
+
   - record: seed:container_memory_working_set_bytes:sum_by_container
     expr: sum(container_memory_working_set_bytes) by (container)
 
@@ -65,6 +71,12 @@ groups:
   # Recording rules for the sum of the entire seed usage
   - record: seed:container_cpu_usage_seconds_total:sum
     expr: sum(rate(container_cpu_usage_seconds_total[5m]))
+
+  - record: seed:container_cpu_cfs_throttled_seconds_total:sum
+    expr: sum(rate(container_cpu_cfs_throttled_seconds_total[5m]))
+
+  - record: seed:container_cpu_cfs_throttled_periods_total:sum
+    expr: sum(rate(container_cpu_cfs_throttled_periods_total[5m]))
 
   - record: seed:container_memory_working_set_bytes:sum
     expr: sum(container_memory_working_set_bytes)
@@ -191,6 +203,12 @@ groups:
   # Recording rules for the sum of all control plane usage
   - record: seed:container_cpu_usage_seconds_total:sum_cp
     expr: sum(rate(container_cpu_usage_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+  - record: seed:container_cpu_cfs_throttled_seconds_total:sum_cp
+    expr: sum(rate(container_cpu_cfs_throttled_seconds_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
+
+  - record: seed:container_cpu_cfs_throttled_periods_total:sum_cp
+    expr: sum(rate(container_cpu_cfs_throttled_periods_total{namespace=~"((shoot-|shoot--)(\\w.+))"}[5m]))
 
   - record: seed:container_memory_working_set_bytes:sum_cp
     expr: sum(container_memory_working_set_bytes{namespace=~"((shoot-|shoot--)(\\w.+))"})
