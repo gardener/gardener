@@ -365,6 +365,9 @@ const (
 	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
 	GardenerResourceManagerImageName = "gardener-resource-manager"
 
+	// GardenerSeedAdmissionControllerImageName is the name of the GardenerSeedAdmissionController image.
+	GardenerSeedAdmissionControllerImageName = "gardener-seed-admission-controller"
+
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"
 

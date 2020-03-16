@@ -361,6 +361,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			common.FluentBitImageName,
 			common.FluentdEsImageName,
 			common.GardenerResourceManagerImageName,
+			common.GardenerSeedAdmissionControllerImageName,
 			common.GrafanaImageName,
 			common.KibanaImageName,
 			common.PauseContainerImageName,

@@ -103,7 +103,7 @@ data:
         Name                parser
         Match               kubernetes.etcd*backup-restore*
         Key_Name            log
-        Parser              geacParser
+        Parser              gsacParser
         Reserve_Data        True
 
     [FILTER]

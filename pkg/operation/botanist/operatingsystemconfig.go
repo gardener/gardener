@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -36,9 +37,10 @@ import (
 
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -74,10 +76,10 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 	}
 
 	var (
-		results      = make(chan *oscOutput)
-		wg           sync.WaitGroup
-		errorList    = []error{}
-		usedOscNames = make(map[string]string)
+		results        = make(chan *oscOutput)
+		wg             sync.WaitGroup
+		errorList      []error
+		wantedOSCNames = sets.NewString()
 	)
 
 	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
@@ -107,8 +109,8 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 		}
 
 		b.Shoot.OperatingSystemConfigsMap[out.workerName] = *out.oscs
-		usedOscNames[out.oscs.Downloader.Name] = out.oscs.Downloader.Name
-		usedOscNames[out.oscs.Original.Name] = out.oscs.Original.Name
+		wantedOSCNames.Insert(out.oscs.Downloader.Name)
+		wantedOSCNames.Insert(out.oscs.Original.Name)
 	}
 
 	if len(errorList) > 0 {
@@ -116,7 +118,7 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 	}
 
 	// Delete all old operating system configs (i.e. those which were previously computed but now are unused).
-	return b.CleanupOperatingSystemConfigs(ctx, usedOscNames)
+	return b.DeleteStaleOperatingSystemConfigs(ctx, wantedOSCNames)
 }
 
 func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
@@ -450,24 +452,42 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 
-// CleanupOperatingSystemConfigs deletes all unused operating system configs in the shoot seed namespace
+// DeleteStaleOperatingSystemConfigs deletes all unused operating system configs in the shoot seed namespace
 // (i.e., those which are not part of the provided map <usedOscNames>.
-func (b *Botanist) CleanupOperatingSystemConfigs(ctx context.Context, usedOscNames map[string]string) error {
-	var (
-		k8sSeedClient = b.K8sSeedClient.Client()
-		list          = &extensionsv1alpha1.OperatingSystemConfigList{}
-	)
-	if err := k8sSeedClient.List(ctx, list, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+func (b *Botanist) DeleteStaleOperatingSystemConfigs(ctx context.Context, wantedOSCNames sets.String) error {
+	return b.deleteOperatingSystemConfigs(ctx, wantedOSCNames)
+}
+
+// DeleteAllOperatingSystemConfigs deletes all operating system config resources in the shoot namespace in the seed.
+func (b *Botanist) DeleteAllOperatingSystemConfigs(ctx context.Context) error {
+	return b.deleteOperatingSystemConfigs(ctx, sets.NewString())
+}
+
+func (b *Botanist) deleteOperatingSystemConfigs(ctx context.Context, wantedOSCNames sets.String) error {
+	c := b.K8sSeedClient.Client()
+
+	oscList := &extensionsv1alpha1.OperatingSystemConfigList{}
+	if err := c.List(ctx, oscList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
-	for _, osc := range list.Items {
-		if _, ok := usedOscNames[osc.Name]; !ok {
-			if err := k8sSeedClient.Delete(ctx, &osc); err != nil && !apierrors.IsNotFound(err) {
-				return err
+	fns := make([]flow.TaskFn, 0, meta.LenList(oscList))
+	for _, osc := range oscList.Items {
+		if !wantedOSCNames.Has(osc.Name) {
+			toDelete := &extensionsv1alpha1.OperatingSystemConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      osc.Name,
+					Namespace: osc.Namespace,
+				},
 			}
+			fns = append(fns, func(ctx context.Context) error {
+				if err := common.ConfirmDeletion(ctx, c, toDelete); err != nil {
+					return err
+				}
+				return client.IgnoreNotFound(c.Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
+			})
 		}
 	}
 
-	return nil
+	return flow.Parallel(fns...)(ctx)
 }

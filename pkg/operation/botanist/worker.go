@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -132,14 +133,18 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 // DestroyWorker deletes the `Worker` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 5m until it is deleted.
 func (b *Botanist) DestroyWorker(ctx context.Context) error {
-	worker := &extensionsv1alpha1.Worker{
+	obj := &extensionsv1alpha1.Worker{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Shoot.SeedNamespace,
 			Name:      b.Shoot.Info.Name,
 		},
 	}
 
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, worker))
+	if err := common.ConfirmDeletion(context.TODO(), b.K8sSeedClient.Client(), obj); err != nil {
+		return err
+	}
+
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
 }
 
 // WaitUntilWorkerReady waits until the worker extension resource has been successfully reconciled.

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -48,6 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -708,4 +710,35 @@ func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
 
 func annotationRequiredError() error {
 	return fmt.Errorf("must have a %q annotation to delete", ConfirmationDeletion)
+}
+
+// ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
+func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		key, err := client.ObjectKeyFromObject(obj)
+		if err != nil {
+			return err
+		}
+
+		if err := c.Get(ctx, key, obj); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+			return nil
+		}
+
+		existing := obj.DeepCopyObject()
+
+		acc, err := meta.Accessor(obj)
+		if err != nil {
+			return err
+		}
+		kutil.SetMetaDataAnnotation(acc, ConfirmationDeletion, "true")
+
+		if reflect.DeepEqual(existing, obj) {
+			return nil
+		}
+
+		return c.Update(ctx, obj)
+	})
 }
