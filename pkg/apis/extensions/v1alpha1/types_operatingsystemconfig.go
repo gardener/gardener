@@ -69,7 +69,7 @@ type OperatingSystemConfigList struct {
 type OperatingSystemConfigSpec struct {
 	// CRI config is a structure contains configurations of the CRI library
 	// +optional
-	CRIConfig *CRIConfig  `json:"criConfig,omitempty"`
+	CRIConfig *CRIConfig `json:"criConfig,omitempty"`
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it

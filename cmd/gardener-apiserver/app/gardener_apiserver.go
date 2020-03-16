@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
+	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
@@ -145,6 +146,7 @@ func (o *Options) complete() error {
 	// Admission plugin registration
 	resourcereferencemanager.Register(o.Recommended.Admission.Plugins)
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
+	extensionvalidation.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootdns.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
@@ -156,6 +158,7 @@ func (o *Options) complete() error {
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
+		extensionvalidation.PluginName,
 		shootdns.PluginName,
 		shootquotavalidator.PluginName,
 		shootvalidator.PluginName,
