@@ -17,6 +17,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -62,6 +64,45 @@ func (c *Controller) projectDelete(obj interface{}) {
 		return
 	}
 	c.projectQueue.Add(key)
+}
+
+func (c *Controller) rolebindingDelete(obj interface{}) {
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		return
+	}
+
+	rolens, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		return
+	}
+
+	if name == "gardener.cloud:system:project-member" ||
+		name == "gardener.cloud:system:project-viewer" ||
+		strings.HasPrefix(name, "gardener.cloud:extension:project:") {
+		logger.Logger.Debugf("[PROJECT RECONCILE] %q rolebinding modified", key)
+
+		projects, err := c.projectLister.List(labels.Everything())
+		if err != nil {
+			logger.Logger.Errorf("Couldn't get list keys for object %+v: %v", obj, err)
+			return
+		}
+
+		for _, proj := range projects {
+			if proj.DeletionTimestamp != nil {
+				continue
+			}
+
+			if ns := proj.Spec.Namespace; ns != nil && *ns == rolens {
+				c.projectQueue.Add(proj.Name)
+			}
+		}
+	}
+}
+func (c *Controller) rolebindingUpdate(old, new interface{}) {
+	c.rolebindingDelete(new)
 }
 
 func (c *Controller) reconcileProjectKey(key string) error {

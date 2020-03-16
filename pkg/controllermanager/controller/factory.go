@@ -78,10 +78,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
 		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
 		// Kubernetes core informers
-		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
-		csrInformer       = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
-		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
-		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
+		configMapInformer   = f.k8sInformers.Core().V1().ConfigMaps().Informer()
+		csrInformer         = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
+		namespaceInformer   = f.k8sInformers.Core().V1().Namespaces().Informer()
+		secretInformer      = f.k8sInformers.Core().V1().Secrets().Informer()
+		rolebindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
 	)
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
@@ -90,7 +91,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, rolebindingInformer.HasSynced) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 
