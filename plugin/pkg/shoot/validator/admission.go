@@ -148,30 +148,28 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return nil
 	}
 
-	// Ignore updates if shoot spec hasn't changed
-	if a.GetOperation() == admission.Update {
-		newShoot, ok := a.GetObject().(*core.Shoot)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
-		}
-		oldShoot, ok := a.GetOldObject().(*core.Shoot)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
-		}
-
-		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
-		if reflect.DeepEqual(newShoot.Spec, oldShoot.Spec) && reflect.DeepEqual(newShoot.ObjectMeta, oldShoot.ObjectMeta) {
-			return nil
-		}
-
-		if newShoot.Spec.Provider.Type != oldShoot.Spec.Provider.Type {
-			return apierrors.NewBadRequest("shoot provider type was changed which is not allowed")
-		}
-	}
-
 	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+	}
+
+	// We only want to validate fields in the Shoot against the CloudProfile/Seed constraints which have changed.
+	// On CREATE operations we just use an empty Shoot object, forcing the validator functions to always validate.
+	// On UPDATE operations we fetch the current Shoot object.
+	var oldShoot = &core.Shoot{}
+
+	// Exit early if shoot spec hasn't changed
+	if a.GetOperation() == admission.Update {
+		old, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
+		}
+		oldShoot = old
+
+		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
+		if reflect.DeepEqual(shoot.Spec, oldShoot.Spec) && reflect.DeepEqual(shoot.ObjectMeta, oldShoot.ObjectMeta) {
+			return nil
+		}
 	}
 
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
@@ -214,11 +212,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	changed, err := seedChanged(a)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-	needCheckForProtectedSeed := changed || a.GetOperation() == admission.Create
+	needCheckForProtectedSeed := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
 	// Check whether seed is protected or not only if the shoot.spec.seedName has been updated. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
 	if needCheckForProtectedSeed && shoot.Namespace != v1beta1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, core.SeedTaintProtected) {
 		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a protected seed"))
@@ -231,18 +225,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
 		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
-	}
-
-	// We only want to validate fields in the Shoot against the CloudProfile/Seed constraints which have changed.
-	// On CREATE operations we just use an empty Shoot object, forcing the validator functions to always validate.
-	// On UPDATE operations we fetch the current Shoot object.
-	var oldShoot = &core.Shoot{}
-	if a.GetOperation() == admission.Update {
-		old, ok := a.GetOldObject().(*core.Shoot)
-		if !ok {
-			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
-		}
-		oldShoot = old
 	}
 
 	var (
@@ -746,29 +728,4 @@ func getOldWorkerMachineImageOrDefault(workers []core.Worker, name string, defau
 		return oldWorker.Machine.Image
 	}
 	return defaultImage
-}
-
-func seedChanged(attr admission.Attributes) (bool, error) {
-	if attr.GetOperation() != admission.Update {
-		return false, nil
-	}
-	newShoot, ok := attr.GetObject().(*core.Shoot)
-	if !ok {
-		return false, errors.New("could not convert resource into Shoot object")
-	}
-	oldShoot, ok := attr.GetOldObject().(*core.Shoot)
-	if !ok {
-		return false, errors.New("could not convert old resource into Shoot object")
-	}
-
-	newSeedName := ""
-	if newShoot.Spec.SeedName != nil {
-		newSeedName = *newShoot.Spec.SeedName
-	}
-	oldSeedName := ""
-	if oldShoot.Spec.SeedName != nil {
-		oldSeedName = *oldShoot.Spec.SeedName
-	}
-
-	return newSeedName != oldSeedName, nil
 }
