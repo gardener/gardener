@@ -12,8 +12,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
             -X github.com/gardener/gardener/pkg/version.buildDate=$(date --iso-8601=seconds)" \
   ./...
 
+############# base
+FROM alpine:3.11.3 AS base
+
 #############      apiserver     #############
-FROM alpine:3.11.3 AS apiserver
+FROM base AS apiserver
 
 RUN apk add --update tzdata
 
@@ -24,7 +27,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
-FROM alpine:3.11.3 AS controller-manager
+FROM base AS controller-manager
 
 RUN apk add --update tzdata
 
@@ -36,7 +39,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-controller-manager"]
 
 ############# scheduler #############
-FROM alpine:3.11.3 AS scheduler
+FROM base AS scheduler
 
 COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
 
@@ -45,7 +48,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-scheduler"]
 
 ############# gardenlet #############
-FROM alpine:3.11.3 AS gardenlet
+FROM base AS gardenlet
 
 RUN apk add --update openvpn tzdata
 
@@ -56,8 +59,17 @@ WORKDIR /
 
 ENTRYPOINT ["/gardenlet"]
 
+############# seed-admission-controller #############
+FROM base AS seed-admission-controller
+
+COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-admission-controller
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-seed-admission-controller"]
+
 ############# registry-migrator #############
-FROM alpine:3.11.3 AS registry-migrator
+FROM base AS registry-migrator
 
 COPY --from=builder /go/bin/registry-migrator /registry-migrator
 

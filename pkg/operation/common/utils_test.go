@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -479,4 +480,64 @@ var _ = Describe("common", func() {
 				utils.NewMaintenanceTime(1, 0, 0),
 				utils.NewMaintenanceTime(1, 45, 0))),
 	)
+
+	Describe("#CheckIfDeletionIsConfirmed", func() {
+		It("should prevent the deletion due to missing annotations", func() {
+			obj := &corev1.Namespace{}
+
+			Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+		})
+
+		Context("deprecated annotation", func() {
+			It("should prevent the deletion due annotation value != true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletionDeprecated: "false",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+			})
+
+			It("should allow the deletion due annotation value == true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletionDeprecated: "true",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
+			})
+		})
+
+		Context("non-deprecated annotation", func() {
+			It("should prevent the deletion due annotation value != true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletion: "false",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+			})
+
+			It("should allow the deletion due annotation value == true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletion: "true",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
+			})
+		})
+	})
 })

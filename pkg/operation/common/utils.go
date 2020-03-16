@@ -678,7 +678,7 @@ func GetShootIgnoreAnnotation(annotations map[string]string) (string, bool) {
 }
 
 // GetTasksAnnotation fetches the value for ShootTasks annotation.
-// If not present, it fallbacks to ShootTasksDeprecated.
+// If not present, it falls back to ShootTasksDeprecated.
 func GetTasksAnnotation(annotations map[string]string) (string, bool) {
 	return getDeprecatedAnnotation(annotations, ShootTasks, ShootTasksDeprecated)
 }
@@ -690,4 +690,22 @@ func getDeprecatedAnnotation(annotations map[string]string, annotationKey, depre
 	}
 
 	return val, ok
+}
+
+// CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
+func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return annotationRequiredError()
+	}
+
+	value, _ := GetConfirmationDeletionAnnotation(annotations)
+	if true, err := strconv.ParseBool(value); err != nil || !true {
+		return annotationRequiredError()
+	}
+	return nil
+}
+
+func annotationRequiredError() error {
+	return fmt.Errorf("must have a %q annotation to delete", ConfirmationDeletion)
 }
