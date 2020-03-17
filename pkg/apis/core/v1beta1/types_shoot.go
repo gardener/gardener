@@ -215,12 +215,11 @@ type DNSProvider struct {
 	Primary *bool `json:"primary,omitempty"`
 	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
-	// by the Shoot and try to find respective credentials there. Specifying this field may override
+	// by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
 	// this behavior, i.e. forcing the Gardener to only look into the given secret.
 	// +optional
 	SecretName *string `json:"secretName,omitempty"`
-	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
-	// this shoot.
+	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty"`
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.

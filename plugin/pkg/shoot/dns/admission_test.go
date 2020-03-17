@@ -114,6 +114,19 @@ var _ = Describe("dns", func() {
 			seed = seedBase
 		})
 
+		It("should do nothing because the shoot status is updated", func() {
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.SeedName = nil
+			shootBefore := shootCopy.DeepCopy()
+
+			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*shootCopy).To(Equal(*shootBefore))
+		})
+
 		It("should do nothing because the shoot does not specify a seed (create)", func() {
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.SeedName = nil
@@ -168,8 +181,9 @@ var _ = Describe("dns", func() {
 			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot's .spec.dns section must be nil if seed with disabled DNS is chosen")))
 		})
 
-		It("should do nothing because the shoot specifies the 'unmanaged' dns provider", func() {
+		It("should set the 'unmanaged' dns provider as the primary one", func() {
 			shootBefore := shoot.DeepCopy()
+			shootBefore.Spec.DNS.Providers[0].Primary = pointer.BoolPtr(true)
 
 			coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -253,6 +267,44 @@ var _ = Describe("dns", func() {
 				))
 			})
 
+			It("should re-set the correct primary DNS provider on updates", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+				}
+
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.DNS.Providers[1].Primary = pointer.BoolPtr(true)
+
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(pointer.StringPtr(providerType)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Primary":    Equal(pointer.BoolPtr(true)),
+						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+				))
+			})
+
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -291,6 +343,32 @@ var _ = Describe("dns", func() {
 			})
 
 			It("should forbid setting a primary provider because a default domain was generated for the shoot (no domain)", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+						Primary:    pointer.BoolPtr(true),
+					},
+				}
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusBadRequest)),
+						"Message": Equal("primary dns provider must not be set when default domain is used"),
+					}),
+				})))
+			})
+
+			It("should forbid setting a primary provider because a default domain was manually configured for the shoot", func() {
+				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						Type:       &providerType,

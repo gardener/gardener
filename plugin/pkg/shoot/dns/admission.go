@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -136,15 +137,57 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {
 		return nil
 	}
+	// Ignore updates to shoot status or other subresources
+	if a.GetSubresource() != "" {
+		return nil
+	}
 	shoot, ok := a.GetObject().(*core.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
 
+	defaultDomains, err := getDefaultDomains(d.secretLister)
+	if err != nil {
+		return fmt.Errorf("error retrieving default domains: %s", err)
+	}
+
+	if err := checkPrimaryDNSProvider(shoot.Spec.DNS, defaultDomains); err != nil {
+		return err
+	}
+
 	// If a shoot is newly created and not yet assigned to a seed we do nothing. We need to know the seed
 	// in order to check whether it's tainted to not use DNS.
-	if shoot.Spec.SeedName == nil {
-		return nil
+	switch a.GetOperation() {
+	case admission.Create:
+		if shoot.Spec.SeedName == nil {
+			return nil
+		}
+
+	case admission.Update:
+		oldShoot, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+
+		if oldShoot.Spec.DNS != nil && shoot.Spec.DNS != nil {
+			oldPrimaryProvider := helper.FindPrimaryDNSProvider(oldShoot.Spec.DNS.Providers)
+			primaryProvider := helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+			if oldPrimaryProvider != nil && primaryProvider == nil {
+				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
+				for i, provider := range shoot.Spec.DNS.Providers {
+					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
+						shoot.Spec.DNS.Providers[i].Primary = pointer.BoolPtr(true)
+					}
+				}
+			}
+		}
+
+		if shoot.Spec.SeedName == nil {
+			return nil
+		}
+		if oldShoot.Spec.SeedName != nil {
+			return nil
+		}
 	}
 
 	dnsDisabled, err := seedDisablesDNS(d.seedLister, *shoot.Spec.SeedName)
@@ -158,40 +201,16 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return nil
 	}
 
-	// If the Shoot manifest specifies the 'unmanaged' DNS provider, then we do nothing.
-	if helper.ShootUsesUnmanagedDNS(shoot) {
-		return nil
-	}
-
-	defaultDomains, err := getDefaultDomains(d.secretLister)
-	if err != nil {
-		return fmt.Errorf("error retrieving default domains: %s", err)
-	}
-
 	// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
 	// not disable DNS.
-	switch a.GetOperation() {
-	case admission.Create:
+	if !helper.ShootUsesUnmanagedDNS(shoot) {
 		if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
-	case admission.Update:
-		oldShoot, ok := a.GetOldObject().(*core.Shoot)
-		if !ok {
-			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
-		}
-		seedGotAssigned := oldShoot.Spec.SeedName == nil && shoot.Spec.SeedName != nil
-		if seedGotAssigned {
-			if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
-				return err
-			}
-		}
-	}
 
-	// If the seed does not disable DNS and the shoot does not use the unmanaged DNS provider then we need
-	// a configured domain.
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
+		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
+		}
 	}
 
 	if err := managePrimaryDNSProvider(shoot.Spec.DNS, defaultDomains); err != nil {
@@ -201,27 +220,46 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	return nil
 }
 
-func managePrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
-	var usesDefaultDomain bool
-	for _, domain := range defaultDomains {
-		if strings.HasSuffix(*dns.Domain, "."+domain) {
-			usesDefaultDomain = true
-			break
-		}
-	}
-	primary := helper.FindPrimaryDNSProvider(dns.Providers)
-
-	if usesDefaultDomain {
-		if primary != nil {
-			return apierrors.NewBadRequest("primary dns provider must not be set when default domain is used")
-		}
+func checkPrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
+	if dns == nil || dns.Domain == nil || len(dns.Providers) == 0 {
 		return nil
 	}
 
+	var defaultDomain = isDefaultDomain(*dns.Domain, defaultDomains)
+	if defaultDomain {
+		primary := helper.FindPrimaryDNSProvider(dns.Providers)
+		if primary != nil {
+			return apierrors.NewBadRequest("primary dns provider must not be set when default domain is used")
+		}
+	}
+	return nil
+}
+
+func isDefaultDomain(domain string, defaultDomains []string) bool {
+	for _, defaultDomain := range defaultDomains {
+		if strings.HasSuffix(domain, "."+defaultDomain) {
+			return true
+		}
+	}
+	return false
+}
+
+func managePrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
+	if dns == nil {
+		return nil
+	}
+	if err := checkPrimaryDNSProvider(dns, defaultDomains); err != nil {
+		return err
+	}
+
+	if dns.Domain != nil && isDefaultDomain(*dns.Domain, defaultDomains) {
+		return nil
+	}
+
+	primary := helper.FindPrimaryDNSProvider(dns.Providers)
 	if primary == nil && len(dns.Providers) > 0 {
 		dns.Providers[0].Primary = pointer.BoolPtr(true)
 	}
-
 	return nil
 }
 

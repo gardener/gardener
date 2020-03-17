@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -50,14 +49,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	for _, lastError := range o.Shoot.Info.Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
-		}
-	}
-
-	// TODO: timuthy - Only required for migration and can be removed in a future version
-	if o.Shoot.ExternalClusterDomain != nil && garden.DomainIsDefaultDomain(*o.Shoot.ExternalClusterDomain, o.Garden.DefaultDomains) != nil {
-		o.Logger.Info("Migration step - setting primary DNS provider")
-		if err := kutil.SubmitEmptyPatch(context.TODO(), o.K8sGardenClient.Client(), o.Shoot.Info); err != nil {
-			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 		}
 	}
 
