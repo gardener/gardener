@@ -38,7 +38,7 @@ spec:
 {{ include "gardener-user" . | indent 2 }}
 {{- if .Values.worker.cri }}
 {{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
-{{ include "containerd-service" . | indent 2 }}
+{{ include "containerd-initializer" . | indent 2 }}
 {{- end }}
 {{- end }}
   files:
@@ -46,6 +46,7 @@ spec:
 {{- if .Values.worker.cri }}
 {{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
 {{ include "init-containerd-config-script" . | indent 2 }}
+{{ include "containerd-require-initializer" . | indent 2 }}
 {{ include "containerd-logrotate-config" . | indent 2 }}
 {{- end }}
 {{- else }}
