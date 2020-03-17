@@ -21,24 +21,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	botanistconstants "github.com/gardener/gardener/pkg/operation/botanist/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener-resource-manager/pkg/manager"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -48,29 +50,6 @@ const (
 	// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
 	SecretLabelKeyManagedResource = "managed-resource"
 )
-
-// EnsureIngressDNSRecord creates the respective wildcard DNS record for the nginx-ingress-controller.
-func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	if !b.Shoot.NginxIngressEnabled() {
-		return b.DestroyIngressDNSRecord(ctx)
-	}
-
-	loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sShootClient.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller")
-	if err != nil {
-		return err
-	}
-
-	if err := b.waitUntilDNSProviderReady(ctx, DNSExternalName); err != nil {
-		return err
-	}
-
-	return b.deployDNSEntry(ctx, DNSIngressName, b.Shoot.GetIngressFQDN("*"), loadBalancerIngress)
-}
-
-// DestroyIngressDNSRecord destroys the nginx-ingress resources created by Terraform.
-func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
-	return b.deleteDNSEntry(ctx, DNSIngressName)
-}
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
@@ -87,6 +66,45 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
+}
+
+// EnsureIngressDNSRecord ensures the nginx DNSEntry and waits for completion.
+func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
+	return component.OpWaiter(b.Shoot.Components.Nginx.DNSEntry).Deploy(ctx)
+}
+
+// DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEtnry.
+func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) component.DeployWaiter {
+	return component.OpDestroy(dns.NewDNSEntry(
+		&dns.EntryValues{
+			Name: DNSIngressName,
+		},
+		b.Shoot.SeedNamespace,
+		b.ChartApplierSeed,
+		b.ChartsRootPath,
+		b.Logger,
+		seedClient,
+		nil,
+	))
+}
+
+// SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
+func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
+	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+		b.Shoot.Components.Nginx.DNSEntry = dns.NewDNSEntry(
+			&dns.EntryValues{
+				Name:    DNSIngressName,
+				DNSName: b.Shoot.GetIngressFQDN("*"),
+				Targets: []string{address},
+			},
+			b.Shoot.SeedNamespace,
+			b.ChartApplierSeed,
+			b.ChartsRootPath,
+			b.Logger,
+			seedClient,
+			nil,
+		)
+	}
 }
 
 // GenerateNginxIngressConfig generates the values which are required to render the chart of

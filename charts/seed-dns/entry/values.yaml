@@ -3,4 +3,4 @@ dnsName: api.foo.bar.com
 ttl: 120
 targets:
 - 8.8.8.8
-#ownerId: foo
+#ownerID: foo

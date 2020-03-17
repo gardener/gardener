@@ -28,9 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -220,6 +220,14 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.DeployInternalDNS(ctx); err != nil {
+		return err
+	}
+
+	if err := b.DeployExternalDNS(ctx); err != nil {
+		return err
+	}
+
 	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
@@ -290,13 +298,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 			return err
 		}
 
-		if err := flow.Parallel(
-			func(ctx context.Context) error { return b.DestroyInternalDomainDNSRecord(ctx) },
-			func(ctx context.Context) error { return b.DestroyExternalDomainDNSRecord(ctx) },
-			func(ctx context.Context) error { return b.DestroyIngressDNSRecord(ctx) },
-		)(ctx); err != nil {
-			return err
-		}
 	}
 
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
@@ -1074,6 +1075,43 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	}
 
 	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
+}
+
+// SetAPIServerAddress sets the IP address of the API server's LoadBalancer.
+func (b *Botanist) SetAPIServerAddress(address string) {
+	b.Operation.APIServerAddress = address
+
+	if b.NeedsInternalDNS() {
+		b.Shoot.Components.DNS.InternalEntry = dns.NewDNSEntry(
+			&dns.EntryValues{
+				Name:    DNSInternalName,
+				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+			},
+			b.Shoot.SeedNamespace,
+			b.ChartApplierSeed,
+			b.ChartsRootPath,
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			nil,
+		)
+	}
+
+	if b.NeedsExternalDNS() {
+		b.Shoot.Components.DNS.ExternalEntry = dns.NewDNSEntry(
+			&dns.EntryValues{
+				Name:    DNSExternalName,
+				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+			},
+			b.Shoot.SeedNamespace,
+			b.ChartApplierSeed,
+			b.ChartsRootPath,
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			nil,
+		)
+	}
 }
 
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the

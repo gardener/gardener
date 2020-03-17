@@ -81,6 +81,9 @@ func NewBuilder() *Builder {
 		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
+		chartsRootPathFunc: func() string {
+			return common.ChartPath
+		},
 	}
 }
 
@@ -156,6 +159,13 @@ func (b *Builder) WithShoot(s *shoot.Shoot) *Builder {
 	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shoot.Shoot, error) {
 		return s, nil
 	}
+	return b
+}
+
+// WithChartsRootPath sets the ChartsRootPath attribute at the Builder.
+// Mainly used for testing. Optional.
+func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
+	b.chartsRootPathFunc = func() string { return chartsRootPath }
 	return b
 }
 
@@ -241,6 +251,8 @@ func (b *Builder) Build(ctx context.Context, k8sGardenClient kubernetes.Interfac
 	} else {
 		operation.ShootedSeed = shootedSeed
 	}
+
+	operation.ChartsRootPath = b.chartsRootPathFunc()
 
 	return operation, nil
 }

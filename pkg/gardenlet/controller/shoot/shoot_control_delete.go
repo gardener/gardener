@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -185,9 +186,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		dnsEnabled              = !o.Shoot.DisableDNS
-		managedExternalDNS      = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
-		managedInternalDNS      = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -231,20 +229,10 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
 		})
-		deployInternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedInternalDNS),
-			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(wakeupRequired && dnsEnabled && managedExternalDNS),
-			Dependencies: flow.NewTaskIDs(wakeUpControlPlane),
-		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
 		})
 
 		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
@@ -428,7 +416,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(dnsEnabled),
+			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.Nginx.DNSEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -442,8 +430,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDomainDNSRecord).DoIf(dnsEnabled),
+			Name:         "Destroying external DNS entry",
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
@@ -458,13 +446,13 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		)
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord).DoIf(dnsEnabled),
+			Name:         "Destroying internal DNS entry",
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(dnsEnabled),
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord),
 		})
 		deleteNamespace = g.Add(flow.Task{
@@ -477,9 +465,9 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
-
 		f = g.Compile()
 	)
+
 	if err := f.Run(flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: o.ReportShootProgress,

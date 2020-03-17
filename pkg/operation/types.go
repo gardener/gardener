@@ -39,14 +39,15 @@ import (
 
 // Builder is an object that builds Operation objects.
 type Builder struct {
-	configFunc       func() (*config.GardenletConfiguration, error)
-	gardenFunc       func(map[string]*corev1.Secret) (*garden.Garden, error)
-	gardenerInfoFunc func() (*gardencorev1beta1.Gardener, error)
-	imageVectorFunc  func() (imagevector.ImageVector, error)
-	loggerFunc       func() (*logrus.Entry, error)
-	secretsFunc      func() (map[string]*corev1.Secret, error)
-	seedFunc         func(context.Context, client.Client) (*seed.Seed, error)
-	shootFunc        func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
+	configFunc         func() (*config.GardenletConfiguration, error)
+	gardenFunc         func(map[string]*corev1.Secret) (*garden.Garden, error)
+	gardenerInfoFunc   func() (*gardencorev1beta1.Gardener, error)
+	imageVectorFunc    func() (imagevector.ImageVector, error)
+	loggerFunc         func() (*logrus.Entry, error)
+	secretsFunc        func() (map[string]*corev1.Secret, error)
+	seedFunc           func(context.Context, client.Client) (*seed.Seed, error)
+	shootFunc          func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
+	chartsRootPathFunc func() string
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -67,6 +68,7 @@ type Operation struct {
 	K8sShootClient            kubernetes.Interface
 	ChartApplierSeed          kubernetes.ChartApplier
 	ChartApplierShoot         kubernetes.ChartApplier
+	ChartsRootPath            string
 	APIServerAddress          string
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
