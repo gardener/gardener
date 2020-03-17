@@ -155,7 +155,7 @@ func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resou
 func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1.ControllerInstallation) bool {
 	var (
 		installed bool
-		healthy bool
+		healthy   bool
 	)
 
 	for _, condition := range controllerInstallation.Status.Conditions {

@@ -50,6 +50,7 @@ if [[ ! -z "$COVERAGE" ]]; then
   COVER_FLAG="-cover"
 fi
 
+echo "Running ginkgo..."
 GO111MODULE=on ginkgo ${COVER_FLAG} -r -mod=vendor cmd pkg plugin
 
 ###############################################################################
