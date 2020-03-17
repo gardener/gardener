@@ -75,7 +75,7 @@ spec:
                 cpu: "8"
               minAllowed:
                 memory: 400M
-                cpu: 300m
+                cpu: 100m
             - containerName: vpn-seed
               mode: "Off"
             - containerName: blackbox-exporter
