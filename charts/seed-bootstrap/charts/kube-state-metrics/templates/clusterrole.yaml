@@ -33,3 +33,7 @@ rules:
       - cronjobs
       - jobs
     verbs: ["list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources:
+      - horizontalpodautoscalers
+    verbs: ["list", "watch"]

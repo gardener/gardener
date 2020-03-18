@@ -37,7 +37,7 @@ spec:
         - /kube-state-metrics
         - --port=8080
         - --telemetry-port=8081
-        - --collectors=deployments,pods,statefulsets,nodes
+        - --collectors=deployments,pods,statefulsets,nodes,horizontalpodautoscalers
         ports:
         - name: metrics
           containerPort: 8080

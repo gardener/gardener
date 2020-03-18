@@ -92,6 +92,11 @@ allowedMetrics:
   - kube_statefulset_status_replicas_current
   - kube_statefulset_status_replicas_ready
   - kube_statefulset_status_replicas_updated
+  - kube_hpa_spec_max_replicas
+  - kube_hpa_spec_min_replicas
+  - kube_hpa_status_condition
+  - kube_hpa_status_current_replicas
+  - kube_hpa_status_desired_replicas
 
   fluentd: []
   fluentbit: []
