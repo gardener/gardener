@@ -62,6 +62,10 @@ var _ = Describe("#rolebindingDelete", func() {
 		}
 	})
 
+	AfterEach(func() {
+		queue.ShutDown()
+	})
+
 	It("should not requeue random rolebinding", func() {
 		Expect(indexer.Add(proj)).ToNot(HaveOccurred())
 
@@ -115,8 +119,10 @@ var _ = Describe("#rolebindingDelete", func() {
 
 		Expect(queue.Len()).To(Equal(2), "two items in queue")
 		actual, _ := queue.Get()
-		Expect(actual).To(Equal("project-1"))
+		Expect(actual).To(SatisfyAny(Equal("project-1"), Equal("project-2")))
 		actual, _ = queue.Get()
-		Expect(actual).To(Equal("project-2"))
+		Expect(actual).To(SatisfyAny(Equal("project-1"), Equal("project-2")))
+		Expect(queue.NumRequeues(proj)).To(Equal(0), "project-1 should not be requeued")
+		Expect(queue.NumRequeues(proj2)).To(Equal(0), "project-2 should not be requeued")
 	})
 })
