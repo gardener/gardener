@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -2205,15 +2206,74 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateWorkers(workers, field.NewPath("workers"))
-
-				Expect(errList).To(matcher)
+				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, HaveLen(0)),
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeForbidden),
 			})))),
+		)
+
+		DescribeTable("ensure that at least one worker pool exists that either has no taints or only those with `PreferNoSchedule` effect",
+			func(matcher gomegatypes.GomegaMatcher, taints ...[]corev1.Taint) {
+				var workers []core.Worker
+				for i, t := range taints {
+					workers = append(workers, core.Worker{
+						Name:    "pool-" + strconv.Itoa(i),
+						Minimum: 1,
+						Maximum: 2,
+						Taints:  t,
+					})
+				}
+
+				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
+			},
+
+			Entry(
+				"no pools with taints",
+				HaveLen(0),
+				[]corev1.Taint{},
+			),
+			Entry(
+				"all pools with PreferNoSchedule taints",
+				HaveLen(0),
+				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
+			),
+			Entry(
+				"at least one pools with either no or PreferNoSchedule taints (1)",
+				HaveLen(0),
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
+				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
+			),
+			Entry(
+				"at least one pools with either no or PreferNoSchedule taints (2)",
+				HaveLen(0),
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
+				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
+			),
+			Entry(
+				"all pools with NoSchedule taints",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				}))),
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
+			),
+			Entry(
+				"all pools with NoExecute taints",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				}))),
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
+			),
+			Entry(
+				"all pools with either NoSchedule or NoExecute taints",
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				}))),
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
+				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
+			),
 		)
 	})
 
