@@ -659,7 +659,7 @@ func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
 // DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	memoryMetricForHpaEnabled := false
+	memoryMetricForHpaEnabled := true
 
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds

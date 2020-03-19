@@ -91,7 +91,7 @@ minReplicas: 1
 hpa:
   targetAverageUtilizationCpu: 80
   memoryMetricForHpaEnabled: false
-  targetAverageUtilizationMemory: 80
+  targetAverageUtilizationMemory: 120
 
 auditConfig:
   auditPolicy: ""
