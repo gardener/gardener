@@ -97,6 +97,7 @@ func (c *Controller) rolebindingDelete(obj interface{}) {
 
 			if ns := proj.Spec.Namespace; ns != nil && *ns == rolens {
 				c.projectQueue.Add(proj.Name)
+				break
 			}
 		}
 	}

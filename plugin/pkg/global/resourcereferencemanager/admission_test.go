@@ -17,6 +17,7 @@ package resourcereferencemanager_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -25,6 +26,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +37,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
 )
 
 type fakeAuthorizerType struct{}
@@ -598,6 +601,84 @@ var _ = Describe("resourcereferencemanager", func() {
 						core.ProjectMemberAdmin,
 						core.ProjectMemberOwner,
 					},
+				})))
+			})
+
+			It("should allow specifying a namespace which is not in use (create)", func() {
+				project.Spec.Namespace = pointer.StringPtr("garden-foo")
+				projectCopy := project.DeepCopy()
+				projectCopy.Name = "project-2"
+				projectCopy.Spec.Namespace = pointer.StringPtr("garden-bar")
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&projectCopy)
+
+				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should allow specifying a namespace which is not in use (update)", func() {
+				projectOld := project.DeepCopy()
+				projectCopy := project.DeepCopy()
+				project.Spec.Namespace = pointer.StringPtr("garden-foo")
+				projectCopy.Name = "project-2"
+				projectCopy.Spec.Namespace = pointer.StringPtr("garden-bar")
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&projectCopy)
+
+				attrs := admission.NewAttributesRecord(&project, projectOld, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should allow specifying multiple projects w/o a namespace", func() {
+				projectCopy := project.DeepCopy()
+				projectCopy.Name = "project-2"
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&projectCopy)
+
+				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should forbid specifying a namespace which is already used by another project (create)", func() {
+				project.Spec.Namespace = pointer.StringPtr("garden-foo")
+				projectCopy := project.DeepCopy()
+				projectCopy.Name = "project-2"
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)
+
+				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusForbidden)),
+						"Message": ContainSubstring("namespace \"garden-foo\" is already used by another project"),
+					}),
+				})))
+			})
+
+			It("should forbid specifying a namespace which is already used by another project (update)", func() {
+				projectOld := project.DeepCopy()
+				project.Spec.Namespace = pointer.StringPtr("garden-foo")
+				projectCopy := project.DeepCopy()
+				projectCopy.Name = "project-2"
+				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(projectCopy)
+
+				attrs := admission.NewAttributesRecord(&project, projectOld, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusForbidden)),
+						"Message": ContainSubstring("namespace \"garden-foo\" is already used by another project"),
+					}),
 				})))
 			})
 		})

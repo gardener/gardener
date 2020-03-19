@@ -267,7 +267,8 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			return nil
 		}
 		// Set createdBy field in Project
-		if a.GetOperation() == admission.Create {
+		switch a.GetOperation() {
+		case admission.Create:
 			project.Spec.CreatedBy = &rbacv1.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     rbacv1.UserKind,
@@ -288,6 +289,16 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				}
 
 				project.Spec.Owner = owner
+			}
+
+			err = r.ensureProjectNamespace(project)
+		case admission.Update:
+			oldProject, ok := a.GetOldObject().(*core.Project)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into Project object")
+			}
+			if oldProject.Spec.Namespace == nil && project.Spec.Namespace != nil {
+				err = r.ensureProjectNamespace(project)
 			}
 		}
 
@@ -312,6 +323,20 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 
 	if err != nil {
 		return admission.NewForbidden(a, err)
+	}
+	return nil
+}
+
+func (r *ReferenceManager) ensureProjectNamespace(project *core.Project) error {
+	projects, err := r.projectLister.List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	for _, p := range projects {
+		if p.Spec.Namespace != nil && project.Spec.Namespace != nil && *p.Spec.Namespace == *project.Spec.Namespace && p.Name != project.Name {
+			return fmt.Errorf("namespace %q is already used by another project", *project.Spec.Namespace)
+		}
 	}
 	return nil
 }
