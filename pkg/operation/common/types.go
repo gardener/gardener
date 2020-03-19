@@ -290,6 +290,13 @@ const (
 	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
 	SecretRefChecksumAnnotation = "checksum/secret.data"
 
+	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
+	// It influences the size of the initial resource requests/limits.
+	// Possible values are [small, medium, large, xlarge, 2xlarge].
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
+
 	// ShootExperimentalAddonKyma is a constant for an annotation on the shoot stating that Kyma shall be installed.
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 	ShootExperimentalAddonKyma = "experimental.addons.shoot.gardener.cloud/kyma"
