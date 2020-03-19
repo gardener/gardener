@@ -6,5 +6,5 @@ metadata:
   annotations:
     project.garden.sapcloud.io/owner: john.doe@example.com
   labels:
-    garden.sapcloud.io/role: project
-    project.garden.sapcloud.io/name: dev
+    gardener.cloud/role: project
+    project.gardener.cloud/name: dev
