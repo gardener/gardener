@@ -29,10 +29,8 @@ func setProjectPhase(phase gardencorev1beta1.ProjectPhase) func(*gardencorev1bet
 
 func namespaceLabelsFromProject(project *gardencorev1beta1.Project) map[string]string {
 	return map[string]string{
-		v1beta1constants.GardenRole:           v1beta1constants.GardenRoleProject,
-		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleProject,
-		common.ProjectName:                    project.Name,
-		common.ProjectNameDeprecated:          project.Name,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleProject,
+		common.ProjectName:          project.Name,
 	}
 }
 

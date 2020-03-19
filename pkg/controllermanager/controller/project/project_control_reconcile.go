@@ -197,7 +197,7 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 	var (
 		namespaceName = project.Spec.Namespace
 
-		projectLabels      = namespaceLabelsFromProject(project)
+		projectLabels      = utils.MergeStringMaps(namespaceLabelsFromProject(project), namespaceLabelsFromProjectDeprecated(project))
 		projectAnnotations = namespaceAnnotationsFromProject(project)
 		ownerReference     = metav1.NewControllerRef(project, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
 	)
@@ -216,9 +216,10 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 	}
 
 	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		projectLabelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
-		if !apiequality.Semantic.DeepDerivative(projectLabelsDeprecated, ns.Labels) {
-			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabelsDeprecated)
+		labels := namespaceLabelsFromProject(project)
+		labelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
+		if !apiequality.Semantic.DeepDerivative(labels, ns.Labels) && !apiequality.Semantic.DeepDerivative(labelsDeprecated, ns.Labels) {
+			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", labels)
 		}
 
 		projectAnnotationsDeprecated := namespaceAnnotationsFromProjectDeprecated(project)
