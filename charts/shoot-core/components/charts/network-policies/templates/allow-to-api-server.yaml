@@ -1,0 +1,20 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows traffic to api server in TCP Port 443
+  name: gardener.cloud--allow-to-apiserver
+  namespace: kube-system
+  labels:
+    origin: gardener
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-apiserver: allowed
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+  policyTypes:
+  - Egress

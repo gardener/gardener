@@ -43,6 +43,8 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/from-seed: allowed
         garden.sapcloud.io/role: monitoring
         origin: gardener
         component: node-exporter
