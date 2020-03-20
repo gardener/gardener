@@ -8,7 +8,7 @@
 {{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
 - --feature-gates=TokenRequest=true
 {{- end }}
-{{- if semverCompare "1.11" .Values.kubernetesVersion }}
+{{- if semverCompare "1.11.x" .Values.kubernetesVersion }}
 - --feature-gates=TokenRequestProjection=true
 {{- end }}
 {{- end -}}

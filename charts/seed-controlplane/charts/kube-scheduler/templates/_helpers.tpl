@@ -5,6 +5,9 @@
 {{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
 - --feature-gates=PodPriority=true
 {{- end }}
+{{- if semverCompare "1.11.x" .Values.kubernetesVersion }}
+- --feature-gates=ScheduleDaemonSetPods=true
+{{- end }}
 {{- end -}}
 
 {{- define "kube-scheduler.componentconfigversion" -}}
