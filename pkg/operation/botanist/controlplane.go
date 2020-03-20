@@ -552,40 +552,56 @@ func init() {
 }
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int32) (string, string, string, string) {
+func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, string, string, string) {
 	var (
-		cpuRequest    string
-		memoryRequest string
-		cpuLimit      string
-		memoryLimit   string
+		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
+		cpuRequest          string
+		memoryRequest       string
+		cpuLimit            string
+		memoryLimit         string
 	)
 
+	if !validScalingClasses.Has(scalingClass) {
+		switch {
+		case nodeCount <= 2:
+			scalingClass = "small"
+		case nodeCount <= 10:
+			scalingClass = "medium"
+		case nodeCount <= 50:
+			scalingClass = "large"
+		case nodeCount <= 100:
+			scalingClass = "xlarge"
+		default:
+			scalingClass = "2xlarge"
+		}
+	}
+
 	switch {
-	case nodeCount <= 2:
+	case scalingClass == "small":
 		cpuRequest = "800m"
 		memoryRequest = "800Mi"
 
 		cpuLimit = "1000m"
 		memoryLimit = "1200Mi"
-	case nodeCount <= 10:
+	case scalingClass == "medium":
 		cpuRequest = "1000m"
 		memoryRequest = "1100Mi"
 
 		cpuLimit = "1200m"
 		memoryLimit = "1900Mi"
-	case nodeCount <= 50:
+	case scalingClass == "large":
 		cpuRequest = "1200m"
 		memoryRequest = "1600Mi"
 
 		cpuLimit = "1500m"
 		memoryLimit = "3900Mi"
-	case nodeCount <= 100:
+	case scalingClass == "xlarge":
 		cpuRequest = "2500m"
 		memoryRequest = "5200Mi"
 
 		cpuLimit = "3000m"
 		memoryLimit = "5900Mi"
-	default:
+	case scalingClass == "2xlarge":
 		cpuRequest = "3000m"
 		memoryRequest = "5200Mi"
 
@@ -764,9 +780,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 		var cpuRequest, memoryRequest, cpuLimit, memoryLimit string
 		if hvpaEnabled {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount())
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.Info.Annotations[common.ShootAlphaScalingAPIServerClass])
 		} else {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount())
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.Info.Annotations[common.ShootAlphaScalingAPIServerClass])
 		}
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
