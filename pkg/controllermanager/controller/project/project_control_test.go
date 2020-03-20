@@ -107,22 +107,4 @@ var _ = Describe("#rolebindingDelete", func() {
 		Entry("project-viewer", "gardener.cloud:system:project-viewer"),
 		Entry("custom role", "gardener.cloud:extension:project:project-1:foo"),
 	)
-
-	It("should requeue multiple projects with the same namespace", func() {
-		rolebinding.Name = "gardener.cloud:system:project-member"
-		proj2 := proj.DeepCopy()
-		proj2.Name = "project-2"
-		Expect(indexer.Add(proj)).ToNot(HaveOccurred())
-		Expect(indexer.Add(proj2)).ToNot(HaveOccurred())
-
-		c.rolebindingDelete(rolebinding)
-
-		Expect(queue.Len()).To(Equal(2), "two items in queue")
-		actual, _ := queue.Get()
-		Expect(actual).To(SatisfyAny(Equal("project-1"), Equal("project-2")))
-		actual, _ = queue.Get()
-		Expect(actual).To(SatisfyAny(Equal("project-1"), Equal("project-2")))
-		Expect(queue.NumRequeues(proj)).To(Equal(0), "project-1 should not be requeued")
-		Expect(queue.NumRequeues(proj2)).To(Equal(0), "project-2 should not be requeued")
-	})
 })
