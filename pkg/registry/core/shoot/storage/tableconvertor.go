@@ -42,6 +42,7 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["version"]},
 			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
 			{Name: "Domain", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["domain"]},
+			{Name: "Hibernation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["hibernation"]},
 			{Name: "Operation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["operation"]},
 			{Name: "Progress", Type: "integer", Format: "name", Description: swaggerMetadataDescriptions["progress"]},
 			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"]},
@@ -91,6 +92,18 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 			cells = append(cells, *shoot.Spec.DNS.Domain)
 		} else {
 			cells = append(cells, "<none>")
+		}
+		specHibernated := shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
+		statusHibernated := shoot.Status.IsHibernated
+		switch {
+		case specHibernated && statusHibernated:
+			cells = append(cells, "Hibernated")
+		case specHibernated && !statusHibernated:
+			cells = append(cells, "Hibernating")
+		case !specHibernated && statusHibernated:
+			cells = append(cells, "Waking Up")
+		default:
+			cells = append(cells, "Awake")
 		}
 		if lastOp := shoot.Status.LastOperation; lastOp != nil {
 			cells = append(cells, lastOp.State)
