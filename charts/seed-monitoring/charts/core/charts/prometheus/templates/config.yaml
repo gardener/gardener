@@ -181,7 +181,9 @@ data:
         replacement: shoot
       # get system services
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubelet | indent 6 }}
+      - source_labels: [ __name__ ]
+        regex: ^({{ if semverCompare "< 1.18-0" .Capabilities.KubeVersion.GitVersion }}kubelet_pod_start_latency_microseconds|{{ end }}|kubelet_running_pod_count|process_max_fds|process_open_fds)$
+        action: keep
 
     - job_name: cadvisor
       honor_labels: false
