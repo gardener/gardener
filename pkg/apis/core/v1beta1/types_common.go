@@ -28,6 +28,8 @@ const (
 	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
 	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the cloud provider level.
 	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"
+	// ErrorCleanupClusterResources indicates that the last error occurred due to resources in the cluster are stuck in deletion.
+	ErrorCleanupClusterResources ErrorCode = "ERR_CLEANUP_CLUSTER_RESOURCES"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.

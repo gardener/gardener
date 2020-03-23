@@ -86,7 +86,8 @@ type Coder interface {
 func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var codes []gardencorev1beta1.ErrorCode
 	for _, err := range utilerrors.Errors(err) {
-		if coder, ok := err.(Coder); ok {
+		var coder Coder
+		if errors.As(err, &coder) {
 			codes = append(codes, coder.Code())
 		}
 	}

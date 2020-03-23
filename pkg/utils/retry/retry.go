@@ -111,6 +111,12 @@ func (r *retryError) Cause() error {
 	return r.ctxError
 }
 
+// Unwrap implements the Unwrap function
+// https://golang.org/pkg/errors/#Unwrap
+func (r *retryError) Unwrap() error {
+	return r.err
+}
+
 // Error implements error.
 func (r *retryError) Error() string {
 	if r.err != nil {

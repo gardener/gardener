@@ -104,7 +104,7 @@ func (t *reconciliationError) Cause() error {
 }
 
 // GetID returns the ID of the error if possible.
-// If err does not implement ErrorID or is nill an empty string will be returned.
+// If err does not implement ErrorID or is nil an empty string will be returned.
 func GetID(err error) string {
 	type errorIDer interface {
 		ErrorID() string

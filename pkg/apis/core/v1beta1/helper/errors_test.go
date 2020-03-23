@@ -16,6 +16,7 @@ package helper_test
 
 import (
 	"errors"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -23,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("helper", func() {
@@ -39,6 +41,18 @@ var _ = Describe("helper", func() {
 				Entry("insufficient privileges", "accessdenied", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
 				Entry("infrastructure dependencies", "pendingverification", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
 				Entry("infrastructure dependencies", "not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "not available in the current hardware cluster")),
+			)
+		})
+		Describe("#ExtractErrorCodes", func() {
+			DescribeTable("appropriate error code should be extracted",
+				func(err error, matcher GomegaMatcher) {
+					Expect(ExtractErrorCodes(err)).To(matcher)
+				},
+
+				Entry("no error given", nil, BeEmpty()),
+				Entry("no code error given", errors.New("error"), BeEmpty()),
+				Entry("code error given", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, ""), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
+				Entry("wrapped code error", fmt.Errorf("error %w", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "")), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
 			)
 		})
 	})
