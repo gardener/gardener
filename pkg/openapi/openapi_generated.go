@@ -58,6 +58,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterAutoscaler":                     schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo":                           schema_pkg_apis_core_v1alpha1_ClusterInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition":                             schema_pkg_apis_core_v1alpha1_Condition(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime":                      schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":                  schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallation":                schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationList":            schema_pkg_apis_core_v1alpha1_ControllerInstallationList(ref),
@@ -172,6 +173,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                      schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterInfo":                            schema_pkg_apis_core_v1beta1_ClusterInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                              schema_pkg_apis_core_v1beta1_Condition(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                       schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                   schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                 schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationList":             schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref),
@@ -1117,10 +1119,25 @@ func schema_pkg_apis_core_v1alpha1_CRI(ref common.ReferenceCallback) common.Open
 							Format:      "",
 						},
 					},
+					"containerRuntimes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ContainerRuntimes is the list of the required container runtimes supported for a worker pool.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime"},
 	}
 }
 
@@ -1375,7 +1392,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"scaleDownDelayAfterAdd": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).",
+							Description: "ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -1393,7 +1410,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 					},
 					"scaleDownUnneededTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).",
+							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -1499,6 +1516,35 @@ func schema_pkg_apis_core_v1alpha1_Condition(ref common.ReferenceCallback) commo
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ContainerRuntime contains information about worker's available container runtime",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the Container Runtime.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to the ContainerRuntime resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
+				},
+				Required: []string{"type"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
 	}
 }
 
@@ -1966,14 +2012,14 @@ func schema_pkg_apis_core_v1alpha1_DNSProvider(ref common.ReferenceCallback) com
 					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
+							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for this shoot.",
+							Description: "Type is the DNS provider type.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6191,10 +6237,25 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 							Format:      "",
 						},
 					},
+					"containerRuntimes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ContainerRuntimes is the list of the required container runtimes supported for a worker pool.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime"},
 	}
 }
 
@@ -6449,7 +6510,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"scaleDownDelayAfterAdd": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).",
+							Description: "ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -6467,7 +6528,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"scaleDownUnneededTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).",
+							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -6573,6 +6634,35 @@ func schema_pkg_apis_core_v1beta1_Condition(ref common.ReferenceCallback) common
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ContainerRuntime(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ContainerRuntime contains information about worker's available container runtime",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the Container Runtime.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to container runtime resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
+				},
+				Required: []string{"type"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
 	}
 }
 
@@ -7040,14 +7130,14 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
+							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for this shoot.",
+							Description: "Type is the DNS provider type.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

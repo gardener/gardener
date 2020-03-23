@@ -22,7 +22,7 @@ spec:
 {{ include "var-lib-mount" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
 {{- if .Values.worker.cri }}
-{{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
 {{ include "containerd-monitor" . | indent 2 }}
 {{ include "containerd-logrotate" . | indent 2 }}
 {{ include "containerd-logrotate-timer" . | indent 2 }}
@@ -37,14 +37,14 @@ spec:
 {{ include "systemd-sysctl" . | indent 2 }}
 {{ include "gardener-user" . | indent 2 }}
 {{- if .Values.worker.cri }}
-{{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
 {{ include "containerd-initializer" . | indent 2 }}
 {{- end }}
 {{- end }}
   files:
 {{ include "root-certs" . | indent 2 }}
 {{- if .Values.worker.cri }}
-{{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
 {{ include "init-containerd-config-script" . | indent 2 }}
 {{ include "containerd-require-initializer" . | indent 2 }}
 {{ include "containerd-logrotate-config" . | indent 2 }}

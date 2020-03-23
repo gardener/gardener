@@ -40,6 +40,10 @@ func (c *FakeExtensionsV1alpha1) Clusters() v1alpha1.ClusterInterface {
 	return &FakeClusters{c}
 }
 
+func (c *FakeExtensionsV1alpha1) ContainerRuntimes(namespace string) v1alpha1.ContainerRuntimeInterface {
+	return &FakeContainerRuntimes{c, namespace}
+}
+
 func (c *FakeExtensionsV1alpha1) ControlPlanes(namespace string) v1alpha1.ControlPlaneInterface {
 	return &FakeControlPlanes{c, namespace}
 }

@@ -1213,5 +1213,26 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, avaliableWorkerCRINames.List()))
 	}
 
+	if CRI.ContainerRuntimes != nil {
+		allErrs = append(ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes")))
+	}
+
+	return allErrs
+}
+
+func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	crSet := make(map[string]bool)
+
+	for i, cr := range containerRuntime {
+		if len(cr.Type) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "must specify a container runtime type"))
+		}
+		if crSet[cr.Type] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
+		}
+		crSet[cr.Type] = true
+	}
+
 	return allErrs
 }

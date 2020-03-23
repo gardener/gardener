@@ -2137,6 +2137,20 @@ CRIName
 <p>The name of the CRI library</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>containerRuntimes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ContainerRuntime">
+[]ContainerRuntime
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContainerRuntimes is the list of the required container runtimes supported for a worker pool.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CRIName">CRIName
@@ -2588,6 +2602,50 @@ string
 <p>
 <p>ConditionType is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ContainerRuntime">ContainerRuntime
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CRI">CRI</a>)
+</p>
+<p>
+<p>ContainerRuntime contains information about worker&rsquo;s available container runtime</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the Container Runtime.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to container runtime resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment
 </h3>
 <p>
@@ -2982,7 +3040,7 @@ string
 <em>(Optional)</em>
 <p>SecretName is a name of a secret containing credentials for the stated domain and the
 provider. When not specified, the Gardener will use the cloud provider credentials referenced
-by the Shoot and try to find respective credentials there. Specifying this field may override
+by the Shoot and try to find respective credentials there (primary provider only). Specifying this field may override
 this behavior, i.e. forcing the Gardener to only look into the given secret.</p>
 </td>
 </tr>
@@ -2995,8 +3053,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
-this shoot.</p>
+<p>Type is the DNS provider type.</p>
 </td>
 </tr>
 <tr>
@@ -5763,6 +5820,7 @@ definition in the documentation of your provider extension.</p>
 <a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ContainerRuntime">ContainerRuntime</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>, 
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.Extension">Extension</a>, 
@@ -7379,5 +7437,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>216d9e07c</code>.
+on git commit <code>041bf5805</code>.
 </em></p>

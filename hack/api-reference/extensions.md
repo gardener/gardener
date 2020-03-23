@@ -16,6 +16,8 @@ Resource Types:
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.Cluster">Cluster</a>
 </li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntime">ContainerRuntime</a>
+</li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.Extension">Extension</a>
@@ -383,6 +385,108 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </td>
 </tr>
 </table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ContainerRuntime">ContainerRuntime
+</h3>
+<p>
+<p>ContainerRuntime is a specification for a container runtime resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ContainerRuntime</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">
+ContainerRuntimeSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>binaryPath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BinaryPath is the Worker&rsquo;s machine path where container runtime extensions should copy the binaries to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeStatus">
+ContainerRuntimeStatus
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -1542,6 +1646,87 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntime">ContainerRuntime</a>)
+</p>
+<p>
+<p>ContainerRuntimeSpec is the spec for a ContainerRuntime resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>binaryPath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>BinaryPath is the Worker&rsquo;s machine path where container runtime extensions should copy the binaries to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ContainerRuntimeStatus">ContainerRuntimeStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntime">ContainerRuntime</a>)
+</p>
+<p>
+<p>ContainerRuntimeStatus is the status for a ContainerRuntime resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec
 </h3>
 <p>
@@ -1671,6 +1856,7 @@ DefaultStatus
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.BackupEntrySpec">BackupEntrySpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec</a>, 
@@ -1710,8 +1896,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
 </td>
 </tr>
 </tbody>
@@ -1722,6 +1906,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeStatus">ContainerRuntimeStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">ControlPlaneStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionStatus">ExtensionStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>, 
@@ -3171,5 +3356,5 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>216d9e07c</code>.
+on git commit <code>041bf5805</code>.
 </em></p>

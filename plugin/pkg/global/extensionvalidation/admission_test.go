@@ -247,6 +247,8 @@ var _ = Describe("ExtensionValidator", func() {
 							},
 						},
 						{
+							CRI: &core.CRI{Name: "cri",
+								ContainerRuntimes: []core.ContainerRuntime{{Type: "cr1",}, {Type: "cr2",}}},
 							Machine: core.Machine{
 								Image: &core.ShootMachineImage{
 									Name: "foo6",
@@ -272,6 +274,8 @@ var _ = Describe("ExtensionValidator", func() {
 				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[0].Machine.Image.Name},
 				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[1].Machine.Image.Name},
 				{extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type},
+				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[0].Type},
+				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[1].Type},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
