@@ -228,6 +228,7 @@ var supportedKubernetesVersions = []string{
 	"1.15",
 	"1.16",
 	"1.17",
+	"1.18",
 }
 
 func checkIfSupportedKubernetesVersion(gitVersion string) error {
