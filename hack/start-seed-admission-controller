@@ -16,15 +16,13 @@
 
 source $(dirname "${0}")/common
 
-ld_flags="$(./hack/get-build-ld-flags)"
-
 kubeconfig="$(mktemp_kubeconfig)"
 trap cleanup_kubeconfig EXIT
 
 GO111MODULE=on \
     go run \
       -mod=vendor \
-      -ldflags "$ld_flags" \
+      -ldflags "$(./hack/get-build-ld-flags)" \
       cmd/gardener-seed-admission-controller/main.go \
       --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
       --tls-cert-path="example/seed-admission-controller/tls.crt" \

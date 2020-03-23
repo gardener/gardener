@@ -16,14 +16,12 @@
 
 source $(dirname "${0}")/common
 
-ld_flags="$(./hack/get-build-ld-flags)"
-
 kubeconfig="$(mktemp_kubeconfig)"
 trap cleanup_kubeconfig EXIT
 
 KUBECONFIG="${KUBECONFIG:-$kubeconfig}" GO111MODULE=on \
     go run \
       -mod=vendor \
-      -ldflags "$ld_flags" \
+      -ldflags "$(./hack/get-build-ld-flags)" \
       cmd/gardener-scheduler/main.go \
       --config=dev/20-componentconfig-gardener-scheduler.yaml
