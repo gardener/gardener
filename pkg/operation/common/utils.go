@@ -610,9 +610,9 @@ func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) *utils.
 	return EffectiveMaintenanceTimeWindow(timeWindow)
 }
 
-// GardenEtcdEncryptionSecretKey is the key to the 'backup' of the etcd encryption secret in the Garden cluster.
-func GardenEtcdEncryptionSecretKey(shootNamespace, shootName string) client.ObjectKey {
-	return kutil.Key(shootNamespace, fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName))
+// GardenEtcdEncryptionSecretName returns the name to the 'backup' of the etcd encryption secret in the Garden cluster.
+func GardenEtcdEncryptionSecretName(shootName string) string {
+	return fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName)
 }
 
 // ReadServiceAccountSigningKeySecret reads the signing key secret to extract the signing key.

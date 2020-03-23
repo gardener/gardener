@@ -60,3 +60,37 @@ func matchesExtensionResourceState(extensionResourceState *gardencorev1alpha1.Ex
 	}
 	return false
 }
+
+// GardenerResourceDataList defines function
+type GardenerResourceDataList []gardencorev1alpha1.GardenerResourceData
+
+// Delete deletes an item from the list
+func (g *GardenerResourceDataList) Delete(name string) {
+	for i, e := range *g {
+		if e.Name == name {
+			*g = append((*g)[:i], (*g)[i+1:]...)
+		}
+	}
+}
+
+// Get returns the item from the list
+func (g *GardenerResourceDataList) Get(name string) *gardencorev1alpha1.GardenerResourceData {
+	for _, resourceDataEntry := range *g {
+		if resourceDataEntry.Name == name {
+			return &resourceDataEntry
+		}
+	}
+	return nil
+}
+
+// Upsert inserts a new element or updates an existing one
+func (g *GardenerResourceDataList) Upsert(data *gardencorev1alpha1.GardenerResourceData) {
+	for i, obj := range *g {
+		if obj.Name == data.Name {
+			(*g)[i].Type = data.Type
+			(*g)[i].Data = data.Data
+			return
+		}
+	}
+	*g = append(*g, *data)
+}
