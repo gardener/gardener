@@ -433,6 +433,7 @@ data:
 
     - job_name: node-exporter
       honor_labels: false
+      scrape_timeout: 30s
       kubernetes_sd_configs:
       - role: endpoints
         api_server: https://kube-apiserver:443
