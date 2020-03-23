@@ -42,7 +42,8 @@ k8s_nodename() {
 
 k8s_env() {
     node_name=$(k8s_nodename)
-    if [[ "$node_name" == "$MINIKUBE" ]]; then
+    # for minikube >= v1.8.0 the default node name is "m01", for minikube < v1.8.0 - "minikube"
+    if [[ "$node_name" == "$MINIKUBE" || "$node_name" == "m01" ]]; then
         echo "$MINIKUBE"
         return
     fi

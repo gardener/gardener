@@ -177,7 +177,7 @@ Alternatively, spin up a cluster with minikube with this command:
 
 ```bash
 minikube start --embed-certs #  `--embed-certs` can be omitted if minikube has already been set to create self-contained kubeconfig files.
-😄  minikube v1.5.2 on darwin (amd64)
+😄  minikube v1.8.2 on Darwin 10.15.3
 🔥  Creating virtualbox VM (CPUs=2, Memory=2048MB, Disk=20000MB) ...
 [...]
 🏄  Done! Thank you for using minikube!
