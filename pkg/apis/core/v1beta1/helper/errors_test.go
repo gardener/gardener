@@ -31,16 +31,21 @@ var _ = Describe("helper", func() {
 	Describe("errors", func() {
 		Describe("#DetermineError", func() {
 			DescribeTable("appropriate error should be determined",
-				func(msg string, expectedErr error) {
-					Expect(DetermineError(msg)).To(Equal(expectedErr))
+				func(err error, msg string, expectedErr error) {
+					Expect(DetermineError(err, msg)).To(Equal(expectedErr))
 				},
 
-				Entry("no code to extract", "foo", errors.New("foo")),
-				Entry("unauthorized", "unauthorized", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "unauthorized")),
-				Entry("quota exceeded", "limitexceeded", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
-				Entry("insufficient privileges", "accessdenied", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
-				Entry("infrastructure dependencies", "pendingverification", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
-				Entry("infrastructure dependencies", "not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "not available in the current hardware cluster")),
+				Entry("no error", nil, "foo", errors.New("foo")),
+				Entry("no code to extract", errors.New("foo"), "", errors.New("foo")),
+				Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "unauthorized")),
+				Entry("unauthorized with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, ""), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "")),
+				Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
+				Entry("quota exceeded with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
+				Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
+				Entry("insufficient privileges with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
+				Entry("infrastructure dependencies", errors.New("pendingverification"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
+				Entry("infrastructure dependencies", errors.New("not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: not available in the current hardware cluster")),
+				Entry("infrastructure dependencies with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: not available in the current hardware cluster")),
 			)
 		})
 		Describe("#ExtractErrorCodes", func() {

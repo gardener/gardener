@@ -16,6 +16,7 @@ package backupbucket
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -207,7 +208,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		backupBucket = bb
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for backupBucket object to become ready: %v", err))
 	}
 
 	var (
@@ -307,9 +308,9 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
 		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil

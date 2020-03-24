@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"path/filepath"
@@ -425,7 +426,7 @@ func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) 
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed to create control plane: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed to create control plane: %v", err))
 	}
 	return nil
 }
@@ -463,9 +464,9 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 	return nil
 }
