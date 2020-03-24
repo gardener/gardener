@@ -118,8 +118,7 @@ groups:
 
   # etcd data restoration failure alert
   - alert: KubeEtcdRestorationFailed
-    expr: etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",succeeded="false"} > 0
-    for: 1m
+    expr: rate(etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",succeeded="false"}[2m]) > 0
     labels:
       service: etcd
       severity: critical
