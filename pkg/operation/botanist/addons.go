@@ -409,6 +409,16 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
+	apiserverProxyConfig := map[string]interface{}{
+		"advertiseIPAddress": b.APIServerClusterIP,
+		"proxySeedServer":    fmt.Sprintf("%s:8443", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
+	}
+
+	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerPorxySidecarImageName, common.APIServerProxyImageName)
+	if err != nil {
+		return nil, err
+	}
+
 	if nodeNetwork != nil {
 		shootInfo["nodeNetwork"] = *nodeNetwork
 	}
@@ -418,6 +428,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"cluster-autoscaler":      common.GenerateAddonConfig(nil, b.Shoot.WantsClusterAutoscaler),
 		"coredns":                 coreDNS,
 		"kube-apiserver-kubelet":  common.GenerateAddonConfig(nil, true),
+		"apiserver-proxy":         common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-controller-manager": common.GenerateAddonConfig(nil, true),
 		"kube-proxy":              common.GenerateAddonConfig(kubeProxy, true),
 		"kube-scheduler":          common.GenerateAddonConfig(nil, true),

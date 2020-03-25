@@ -559,6 +559,12 @@ const (
 	// IstioIngressGatewayServiceName is the name of the Service used for SNI to the Shoot API Servers.
 	IstioIngressGatewayServiceName = "istio-ingressgateway"
 
+	// APIServerProxyImageName is the image of apiserver-proxy
+	APIServerProxyImageName = "apiserver-proxy"
+
+	// APIServerPorxySidecarImageName is the image of apiserver-proxy sidecar
+	APIServerPorxySidecarImageName = "apiserver-proxy-sidecar"
+
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
 

@@ -22,6 +22,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -341,6 +343,12 @@ func (b *Botanist) NeedsAdditionalDNSProviders() bool {
 	return !b.Shoot.DisableDNS &&
 		b.Shoot.Info.Spec.DNS != nil &&
 		len(b.Shoot.Info.Spec.DNS.Providers) > 0
+}
+
+// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and
+// the shoot uses internal and external DNS.
+func (b *Botanist) APIServerSNIEnabled() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // DeleteDNSProviders deletes all DNS providers in the shoot namespace of the seed.

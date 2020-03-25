@@ -46,7 +46,6 @@ import (
 func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
-		namespace                            = &corev1.Namespace{}
 		shootNamespaceInDeletion             bool
 		kubeAPIServerDeploymentFound         = true
 		kubeControllerManagerDeploymentFound = true
@@ -85,7 +84,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 		// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
-			err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace)
+			botanist.SeedNamespaceObject = &corev1.Namespace{}
+			err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
@@ -127,7 +127,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		}),
 		errors.ToExecute("Check deletion timestamp for the Shoot namespace", func() error {
 			var deletionError error
-			shootNamespaceInDeletion, deletionError = kutil.HasDeletionTimestamp(namespace)
+			shootNamespaceInDeletion, deletionError = kutil.HasDeletionTimestamp(botanist.SeedNamespaceObject)
 			return deletionError
 		}),
 		// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
@@ -181,7 +181,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 	}
 
 	var (
-		nonTerminatingNamespace = namespace.Status.Phase != corev1.NamespaceTerminating
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultInterval         = 5 * time.Second

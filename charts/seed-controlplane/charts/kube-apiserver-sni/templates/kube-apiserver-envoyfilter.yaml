@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: {{ .Release.Namespace }}
+  namespace: {{ .Values.istioIngressNamespace }}
+  ownerReferences:
+  - apiVersion: v1
+    kind: Namespace
+    name: {{ .Release.Namespace }}
+    uid: {{ .Values.namespaceUID }}
+    controller: false
+    blockOwnerDeletion: false
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+  - applyTo: FILTER_CHAIN
+    match:
+      context: ANY
+      listener:
+        portNumber: 8443
+        name: 0.0.0.0_8443
+    patch:
+      operation: ADD
+      value:
+        filters:
+        - name: envoy.tcp_proxy
+          typed_config:
+            "@type": "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy"
+            stat_prefix: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
+            cluster: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
+        filter_chain_match:
+          destination_port: 443
+          prefix_ranges:
+          - address_prefix: {{ .Values.apiserverClusterIP }}
+            prefix_len: 32

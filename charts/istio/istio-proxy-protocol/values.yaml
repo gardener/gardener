@@ -1,0 +1,3 @@
+labels:
+  app: istio-ingressgateway
+  istio: ingressgateway

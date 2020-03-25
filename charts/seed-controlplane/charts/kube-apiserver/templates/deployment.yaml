@@ -7,6 +7,9 @@ metadata:
     garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: apiserver
+{{- if .Values.sni.enabled }}
+    core.gardener.cloud/apiserver-exposure: gardener-managed
+{{- end }}
 spec:
   minReadySeconds: 30
   revisionHistoryLimit: 0
@@ -108,6 +111,9 @@ spec:
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
         - --authorization-mode=Node,RBAC
+        {{- if .Values.sni.enabled }}
+        - --advertise-address={{ .Values.sni.advertiseIP }}
+        {{- end }}
         {{- if .Values.enableBasicAuthentication }}
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         {{- end }}

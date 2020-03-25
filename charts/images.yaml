@@ -233,7 +233,7 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
   tag: "v0.2.5"
 
-# Istio + SNI
+# Istio
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/proxyv2
@@ -242,3 +242,13 @@ images:
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/pilot
   tag: "1.6.0"
+
+# API Server SNI
+- name: apiserver-proxy
+  sourceRepository: github.com/nginxinc/docker-nginx
+  repository: nginx
+  tag: "1.17.8"
+- name: apiserver-proxy-sidecar
+  sourceRepository: github.com/gardener/apiserver-proxy
+  repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
+  tag: "v0.1.0"

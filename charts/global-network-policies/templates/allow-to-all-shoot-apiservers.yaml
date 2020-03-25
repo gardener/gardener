@@ -13,12 +13,20 @@ spec:
       networking.gardener.cloud/to-all-shoot-apiservers: allowed
   egress:
   - to:
-    - namespaceSelector: {}
+    - namespaceSelector:
+        matchLabels:
+          gardener.cloud/role: shoot
       podSelector:
         matchLabels:
           garden.sapcloud.io/role: controlplane
           app: kubernetes
           role: apiserver
+{{- if .Values.sniEnabled }}
+    - namespaceSelector: {} # we don't want to modify existing labels on the istio namespace
+      podSelector:
+        matchLabels:
+          app: istio-ingressgateway
+{{- end }}
   policyTypes:
   - Egress
   ingress: []

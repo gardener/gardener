@@ -70,6 +70,7 @@ type Operation struct {
 	ChartApplierShoot         kubernetes.ChartApplier
 	ChartsRootPath            string
 	APIServerAddress          string
+	APIServerClusterIP        string
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
 	MonitoringClient          prometheusclient.API

@@ -23,7 +23,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | Logging | `false` | `Alpha` | `0.13` | |
 | HVPA | `false` | `Alpha` | `0.31` | |
 | HVPAForShootedSeed | `false` | `Alpha` | `0.32` | |
-| ManagedIstio | `false` | `Alpha` | `1.4` | |
+| ManagedIstio | `false` | `Alpha` | `1.5` | |
+| APIServerSNI | `false` | `Alpha` | `1.7` | |
 
 ## Using a feature
 
@@ -64,5 +65,5 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `Logging` enables logging stack for Seed clusters.
 * `HVPA` enables simultaneous horizontal and vertical scaling in Seed Clusters.
 * `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in shooted Seed clusters.
-
 * `ManagedIstio` enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.
+* `APIServerSNI` enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.

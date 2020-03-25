@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: proxy-protocol
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  selector:
+{{ .Values.labels | toYaml | indent 4 }}
+  servers:
+  - port:
+      number: 8443
+      name: tcp
+      protocol: TCP
+    hosts:
+    - "*"

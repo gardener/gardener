@@ -40,24 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// WaitUntilKubeAPIServerServiceIsReady waits until the external load balancer of the kube-apiserver has
-// been created (i.e., its ingress information has been updated in the service status).
-func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
-
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
-		if err != nil {
-			b.Logger.Info("Waiting until the kube-apiserver service deployed in the Seed cluster is ready...")
-			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("kube-apiserver service deployed in the Seed cluster is not ready: %v", err))
-		}
-		b.SetAPIServerAddress(loadBalancerIngress)
-		return retry.Ok()
-	})
-}
-
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has
 // been created (i.e., its ingress information has been updated in the service status).
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {

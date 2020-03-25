@@ -1,0 +1,29 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.apiserver-proxy
+  labels:
+    gardener.cloud/role: system-component
+    origin: gardener
+spec:
+  privileged: true
+  volumes:
+  - secret
+  - configMap
+  hostNetwork: true
+  hostPorts:
+  - min: 443
+    max: 443
+  allowedHostPaths: []
+  allowedCapabilities:
+  - NET_ADMIN
+  - NET_BIND_SERVICE
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: false

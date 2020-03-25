@@ -1,0 +1,11 @@
+
+images:
+  apiserver-proxy: image-repository
+  apiserver-proxy-sidecar: image-repository
+
+advertiseIPAddress: 1.1.1.1
+proxySeedServer: dummy.127.0.0.1.nip.io
+accessLog: "off"
+# accessLog: /dev/stdout basic
+errorLog: "/dev/stdout notice"
+# errorLog: "/dev/stdout debug"

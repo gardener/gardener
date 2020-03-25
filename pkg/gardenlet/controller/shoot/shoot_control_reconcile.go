@@ -83,12 +83,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 	}
 
 	var (
-		defaultTimeout  = 30 * time.Second
-		defaultInterval = 5 * time.Second
-		dnsEnabled      = !o.Shoot.DisableDNS
-		allowBackup     = o.Seed.Info.Spec.Backup != nil
-		staticNodesCIDR = o.Shoot.Info.Spec.Networking.Nodes != nil
-
+		defaultTimeout                 = 30 * time.Second
+		defaultInterval                = 5 * time.Second
+		dnsEnabled                     = !o.Shoot.DisableDNS
+		allowBackup                    = o.Seed.Info.Spec.Backup != nil
+		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
+		useSNI                         = botanist.APIServerSNIEnabled()
 		allTasks                       = controllerutils.GetTasks(o.Shoot.Info.Annotations)
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
@@ -107,13 +107,20 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service in the Seed cluster",
-			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Name: "Deploying Kubernetes API server service in the Seed cluster",
+			Fn: flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).
+				RetryUntilTimeout(defaultInterval, defaultTimeout).
+				SkipIf(o.Shoot.HibernationEnabled && !useSNI),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
+		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server service in the Seed cluster has reported readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).SkipIf(o.Shoot.HibernationEnabled),
+			Name:         "Waiting until Kubernetes API LoadBalancer in the Seed cluster has reported readiness",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait).SkipIf(o.Shoot.HibernationEnabled && !useSNI),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -208,9 +215,16 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, persistETCDEncryptionConfiguration),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server",
-			Fn:           flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateETCDEncryptionConfiguration).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+			Name: "Deploying Kubernetes API server",
+			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(
+				deploySecrets,
+				deployETCD,
+				waitUntilEtcdReady,
+				waitUntilKubeAPIServerServiceIsReady,
+				waitUntilControlPlaneReady,
+				createOrUpdateETCDEncryptionConfiguration,
+			).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -219,18 +233,28 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
-			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(useSNI),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane exposure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady),
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady).SkipIf(useSNI),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
+		})
+		destroyControlPlaneExposure = g.Add(flow.Task{
+			Name:         "Destroying shoot control plane exposure",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure).DoIf(useSNI),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane exposure has been destroyed",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureDeleted).DoIf(useSNI),
+			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, deployInternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",

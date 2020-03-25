@@ -26,4 +26,5 @@ data:
             ca_file: "/var/run/secrets/blackbox/ca.crt"
             cert_file: "/var/run/secrets/blackbox/prometheus.crt"
             key_file: "/var/run/secrets/blackbox/prometheus.key"
+            server_name: {{ .Values.shoot.apiserverServerName }}
           preferred_ip_protocol: "ip4"

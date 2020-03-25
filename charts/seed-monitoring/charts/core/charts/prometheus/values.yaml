@@ -286,7 +286,9 @@ seed:
 
 shoot:
   apiserver: https://api.foo.bar
+  apiserverServerName: api.foo.bar
   provider: aws
+  sniEnabled: false
 
 rules:
   optional:
