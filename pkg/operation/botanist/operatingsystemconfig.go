@@ -164,6 +164,20 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 
 	sshKey := b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]
 
+	criNamesConfig := map[string]interface{}{
+		"containerd": extensionsv1alpha1.CRINameContainerD,
+	}
+
+	workerNameLabel := map[string]interface{}{
+		"workerLabel": extensionsv1alpha1.CRINameWorkerLabel,
+	}
+
+	criConfig := map[string]interface{}{
+		"containerRuntimesBinaryPath": extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
+		"names":                       criNamesConfig,
+		"labels":                      workerNameLabel,
+	}
+
 	originalConfig["osc"] = map[string]interface{}{
 		"type":                 machineImage.Name,
 		"purpose":              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
@@ -171,6 +185,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		"secretName":           secretName,
 		"customization":        customization,
 		"sshKey":               string(sshKey),
+		"cri":                  criConfig,
 	}
 
 	if data := worker.CABundle; data != nil {
@@ -319,6 +334,13 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 	if worker.CRI != nil {
 		criConfig := map[string]interface{}{
 			"name": worker.CRI.Name,
+		}
+		if len(worker.CRI.ContainerRuntimes) > 0 {
+			crWorkerLabels := make([]string, len(worker.CRI.ContainerRuntimes))
+			for i, cr := range worker.CRI.ContainerRuntimes {
+				crWorkerLabels[i] = fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type) + "=true"
+			}
+			criConfig["labels"] = crWorkerLabels
 		}
 		workerConfig["cri"] = criConfig
 	}

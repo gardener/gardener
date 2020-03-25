@@ -218,3 +218,6 @@ const (
 	// CRINameContainerD is a constant for ContainerD CRI name
 	CRINameContainerD = "containerd"
 )
+
+// ContainerDRuntimeContainersBinFolder is the folder where Container Runtime binaries should be saved for ContainerD usage
+const ContainerDRuntimeContainersBinFolder = "/var/bin/containerruntimes"

@@ -24,6 +24,8 @@ type BackupEntryExpansion interface{}
 
 type ClusterExpansion interface{}
 
+type ContainerRuntimeExpansion interface{}
+
 type ControlPlaneExpansion interface{}
 
 type ExtensionExpansion interface{}

@@ -25,6 +25,7 @@ type DefaultSpec struct {
 	Type string `json:"type"`
 	// ProviderConfig is the provider specific configuration.
 	// +optional
+
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 

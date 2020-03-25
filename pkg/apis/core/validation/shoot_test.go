@@ -2183,6 +2183,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				"Field": Equal("cri.name"),
 			})))),
 		)
+
+		It("validate that container runtime has a type", func() {
+			worker := core.Worker{
+				Name:    "worker",
+				CRI: &core.CRI{Name: core.CRINameContainerD,
+					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: ""}}},
+			}
+
+			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("cri.containerruntimes[1].type"),
+				})),
+			))
+		})
+
+		It("validate duplicate container runtime types", func() {
+			worker := core.Worker{
+				Name:    "worker",
+				CRI: &core.CRI{Name: core.CRINameContainerD,
+					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: "gVisor"}}},
+			}
+
+			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("cri.containerruntimes[1].type"),
+				})),
+			))
+		})
 	})
 
 	Describe("#ValidateWorkers", func() {

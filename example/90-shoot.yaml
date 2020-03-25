@@ -30,6 +30,8 @@ spec:
     - name: cpu-worker
     # cri:
     #   name: containerd
+    #   containerRuntimes:
+    #   - type: gvisor
       minimum: 3
       maximum: 5
     # maxSurge: 1

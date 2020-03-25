@@ -5,7 +5,11 @@ osc:
   secretName: cpu-worker-0
   sshKey: "ssh-rsa"
   cri:
-    containerdName: containerd
+    containerRuntimesBinaryPath: /var/bin/containerruntimes
+    labels:
+      workerLabel: worker.gardener.cloud/cri-name
+    names:
+      containerd: containerd
 
 # caBundle: |
 #   root certificates
@@ -20,6 +24,8 @@ worker:
   name: cpu-worker
 # cri:
 #   name: containerd
+#   labels:
+#   - containerruntime.worker.gardener.cloud/gvisor=true
   kubelet:
     caCert: abcd
     cpuCFSQuota: true

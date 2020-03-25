@@ -30,6 +30,8 @@ type Interface interface {
 	BackupEntries() BackupEntryInformer
 	// Clusters returns a ClusterInformer.
 	Clusters() ClusterInformer
+	// ContainerRuntimes returns a ContainerRuntimeInformer.
+	ContainerRuntimes() ContainerRuntimeInformer
 	// ControlPlanes returns a ControlPlaneInformer.
 	ControlPlanes() ControlPlaneInformer
 	// Extensions returns a ExtensionInformer.
@@ -68,6 +70,11 @@ func (v *version) BackupEntries() BackupEntryInformer {
 // Clusters returns a ClusterInformer.
 func (v *version) Clusters() ClusterInformer {
 	return &clusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ContainerRuntimes returns a ContainerRuntimeInformer.
+func (v *version) ContainerRuntimes() ContainerRuntimeInformer {
+	return &containerRuntimeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ControlPlanes returns a ControlPlaneInformer.

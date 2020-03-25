@@ -460,6 +460,11 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		if pool.Machine.Image != nil {
 			requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
 		}
+		if pool.CRI != nil {
+			for _, cr := range pool.CRI.ContainerRuntimes {
+				requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
+			}
+		}
 	}
 
 	if !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {

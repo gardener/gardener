@@ -30,6 +30,14 @@ type BackupEntryListerExpansion interface{}
 // ClusterLister.
 type ClusterListerExpansion interface{}
 
+// ContainerRuntimeListerExpansion allows custom methods to be added to
+// ContainerRuntimeLister.
+type ContainerRuntimeListerExpansion interface{}
+
+// ContainerRuntimeNamespaceListerExpansion allows custom methods to be added to
+// ContainerRuntimeNamespaceLister.
+type ContainerRuntimeNamespaceListerExpansion interface{}
+
 // ControlPlaneListerExpansion allows custom methods to be added to
 // ControlPlaneLister.
 type ControlPlaneListerExpansion interface{}

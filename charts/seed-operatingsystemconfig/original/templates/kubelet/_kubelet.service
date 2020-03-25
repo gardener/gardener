@@ -7,7 +7,7 @@
     Description=kubelet daemon
     Documentation=https://kubernetes.io/docs/admin/kubelet
     {{- if .Values.worker.cri }}
-    {{- if eq .Values.worker.cri.name .Values.osc.cri.containerdName }}
+    {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
     After=containerd.service
     {{- end }}
     {{- else }}

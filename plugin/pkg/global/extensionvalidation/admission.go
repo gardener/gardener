@@ -252,6 +252,12 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.String
 	}
 
 	for i, worker := range spec.Provider.Workers {
+		if worker.CRI != nil {
+			for j, cr := range worker.CRI.ContainerRuntimes {
+				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ContainerRuntimeResource, cr.Type, fmt.Sprintf("%s container runtime type: %s", message, field.NewPath("spec", "provider", "workers").Index(i).Child("cri", "containerRuntimes").Index(j).Child("type"))})
+			}
+		}
+
 		if worker.Machine.Image == nil {
 			continue
 		}

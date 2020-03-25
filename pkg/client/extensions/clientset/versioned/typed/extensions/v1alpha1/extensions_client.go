@@ -29,6 +29,7 @@ type ExtensionsV1alpha1Interface interface {
 	BackupBucketsGetter
 	BackupEntriesGetter
 	ClustersGetter
+	ContainerRuntimesGetter
 	ControlPlanesGetter
 	ExtensionsGetter
 	InfrastructuresGetter
@@ -52,6 +53,10 @@ func (c *ExtensionsV1alpha1Client) BackupEntries() BackupEntryInterface {
 
 func (c *ExtensionsV1alpha1Client) Clusters() ClusterInterface {
 	return newClusters(c)
+}
+
+func (c *ExtensionsV1alpha1Client) ContainerRuntimes(namespace string) ContainerRuntimeInterface {
+	return newContainerRuntimes(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterface {

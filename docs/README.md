@@ -73,6 +73,8 @@
     * [`Network` resource](extensions/network.md)
   * Operating systems
     * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
+  * Container runtimes
+    * [`ContainerRuntime` resource](extensions/containerruntime.md)    
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
 * [Extending project roles](extensions/project-roles.md)

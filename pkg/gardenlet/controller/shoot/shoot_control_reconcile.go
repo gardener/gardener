@@ -330,6 +330,26 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
+		deployContainerRuntimeResources = g.Add(flow.Task{
+			Name:         "Deploying container runtime resources",
+			Fn:           flow.TaskFn(botanist.DeployContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until container runtime resources are ready",
+			Fn:           flow.TaskFn(botanist.WaitUntilContainerRuntimeResourcesReady),
+			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
+		})
+		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
+			Name:         "Delete stale container runtime  resources",
+			Fn:           flow.TaskFn(botanist.DeleteStaleContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale container runtime resources are deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilContainerRuntimeResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
+		})
 		f = g.Compile()
 	)
 
