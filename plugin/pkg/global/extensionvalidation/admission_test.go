@@ -248,7 +248,7 @@ var _ = Describe("ExtensionValidator", func() {
 						},
 						{
 							CRI: &core.CRI{Name: "cri",
-								ContainerRuntimes: []core.ContainerRuntime{{Type: "cr1",}, {Type: "cr2",}}},
+								ContainerRuntimes: []core.ContainerRuntime{{Type: "cr1"}, {Type: "cr2"}}},
 							Machine: core.Machine{
 								Image: &core.ShootMachineImage{
 									Name: "foo6",
