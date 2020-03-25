@@ -29,6 +29,7 @@ spec:
         command:
         - /bin/etcd-druid
         - --enable-leader-election=true
+        - --ignore-operation-annotation=false
         - --workers=50
         {{- if index .Values.global "imageVectorOverwrites" }}
         {{- if index .Values.global.imageVectorOverwrites "etcd-druid" }}

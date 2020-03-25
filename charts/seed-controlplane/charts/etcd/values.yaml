@@ -1,48 +1,14 @@
-role: for-test
 replicas: 1
+role: for-test
+labels: {}
+annotations: {}
+podAnnotations: {}
 
 images:
   etcd: image-repository:image-tag
   etcd-backup-restore: image-repository:image-tag
 
-storageCapacity: 16Gi
-
-tlsCASecretName: ca-etcd
-tlsServerSecretName: etcd-server-cert
-tlsClientSecretName: etcd-client-tls
-podAnnotations: {}
-servicePorts:
-  client: 2379
-  server: 2380
-  backuprestore: 8080
-
-metrics: basic
-
-scaleUpStabilization:
-  stabilizationDuration: "5m"
-  minChange:
-    cpu:
-      value: "1"
-      percentage: 80
-    memory:
-      value: 2G
-      percentage: 80
-
-scaleDownStabilization:
-  stabilizationDuration: "15m"
-  minChange:
-    cpu:
-      value: "1"
-      percentage: 80
-    memory:
-      value: 2G
-      percentage: 80
-
-targetAverageUtilizationCpu: 80
-targetAverageUtilizationMemory: 80
-
 etcd:
-  defragmentSchedule: "0 */24 * * *"
   resources:
     requests:
       cpu: 300m
@@ -50,19 +16,37 @@ etcd:
     limits:
       cpu: 900m
       memory: 3G
+  tlsCASecretName: ca-etcd
+  tlsServerSecretName: etcd-server-cert
+  tlsClientSecretName: etcd-client-tls
+  serverPort: 2380
+  clientPort: 2379
+  defragmentSchedule: "0 */24 * * *"
+  metrics: basic
 
 sidecar:
-  deltaSnapshotMemoryLimit: 100Mi
-  deltaSnapshotPeriod: 5m
-  garbageCollectionPeriod: 12h
-  quota: 8Gi
   resources:
     limits:
       cpu: "1"
       memory: 10G
-    requests: 
-      cpu: 23m 
+    requests:
+      cpu: 23m
       memory: 128Mi
+  port: 8080
+  quota: 8Gi
+  garbageCollectionPeriod: 12h
+  garbageCollectionPolicy: Exponential
+# backup:
+#   provider: aws
+#   container: temp
+#   secretRefName: etcd-backup
+#   prefix: temp
+#   fullSnapshotSchedule: "0 */24 * * *"
+#   deltaSnapshotMemoryLimit: 100Mi
+#   deltaSnapshotPeriod: 5m
+
+#storageClass: gardener.cloud-fast
+storageCapacity: 16Gi
 
 hvpa:
   enabled: false
@@ -72,18 +56,31 @@ hvpa:
   minAllowed:
     cpu: 200m
     memory: 700M
-
-limitsRequestsGapScaleParams:
-  cpu:
-    value: "3"
-    percentage: 80
-  memory:
-    value: "5G"
-    percentage: 80
-
-backupEnabled: false
-prefix: temp 
-storageClass: gardener.cloud-fast
-provider: aws
-container: temp
-fullSnapshotSchedule: "0 */24 * * *"
+  targetAverageUtilizationCpu: 80
+  targetAverageUtilizationMemory: 80
+# maintenanceWindow: <time-window>
+  scaleUpStabilization:
+    stabilizationDuration: "5m"
+    minChange:
+      cpu:
+        value: "1"
+        percentage: 80
+      memory:
+        value: 2G
+        percentage: 80
+  scaleDownStabilization:
+    stabilizationDuration: "15m"
+    minChange:
+      cpu:
+        value: "1"
+        percentage: 80
+      memory:
+        value: 2G
+        percentage: 80
+  limitsRequestsGapScaleParams:
+    cpu:
+      value: "3"
+      percentage: 80
+    memory:
+      value: "5G"
+      percentage: 80

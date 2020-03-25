@@ -12,9 +12,9 @@ metadata:
     role: {{ .Values.role }}
 spec:
   replicas: 1
-{{- if .Values.maintenanceWindow }}
+{{- if .Values.hvpa.maintenanceWindow }}
   maintenanceTimeWindow:
-{{ toYaml .Values.maintenanceWindow | indent 4 }}
+{{ toYaml .Values.hvpa.maintenanceWindow | indent 4 }}
 {{- end }}
   hpa:
     selector:
@@ -31,11 +31,11 @@ spec:
         metrics:
         - resource:
             name: memory
-            targetAverageUtilization: {{ .Values.targetAverageUtilizationMemory }}
+            targetAverageUtilization: {{ .Values.hvpa.targetAverageUtilizationMemory }}
           type: Resource
         - resource:
             name: cpu
-            targetAverageUtilization: {{ .Values.targetAverageUtilizationCpu }}
+            targetAverageUtilization: {{ .Values.hvpa.targetAverageUtilizationCpu }}
           type: Resource
   vpa:
     selector:
@@ -45,18 +45,18 @@ spec:
     scaleUp:
       updatePolicy:
         updateMode: "Auto"
-{{- if .Values.scaleUpStabilization }}
-{{ toYaml .Values.scaleUpStabilization | indent 6 }}
+{{- if .Values.hvpa.scaleUpStabilization }}
+{{ toYaml .Values.hvpa.scaleUpStabilization | indent 6 }}
 {{- end }}
     scaleDown:
       updatePolicy:
         updateMode: "MaintenanceWindow"
-{{- if .Values.scaleDownStabilization }}
-{{ toYaml .Values.scaleDownStabilization | indent 6 }}
+{{- if .Values.hvpa.scaleDownStabilization }}
+{{ toYaml .Values.hvpa.scaleDownStabilization | indent 6 }}
 {{- end }}
-{{- if .Values.limitsRequestsGapScaleParams }}
+{{- if .Values.hvpa.limitsRequestsGapScaleParams }}
     limitsRequestsGapScaleParams:
-{{ toYaml .Values.limitsRequestsGapScaleParams | indent 6 }}
+{{ toYaml .Values.hvpa.limitsRequestsGapScaleParams | indent 6 }}
 {{- end }}
     template:
       metadata:

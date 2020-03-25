@@ -34,7 +34,6 @@ const (
 
 // MetricsLevel defines the level 'basic' or 'extensive'.
 // +kubebuilder:validation:Enum=basic;extensive
-
 type MetricsLevel string
 
 // GarbageCollectionPolicy defines the type of policy for snapshot garbage collection.
@@ -74,8 +73,8 @@ type BackupSpec struct {
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
 	// Image defines the etcd container image and tag
-	// +required
-	Image string `json:"image"`
+	// +optional
+	Image *string `json:"image,omitempty"`
 	// Store defines the specification of object store provider for storing backups.
 	// +optional
 	Store *StoreSpec `json:"store,omitempty"`
@@ -113,8 +112,8 @@ type EtcdConfig struct {
 	// +optional
 	ClientPort *int `json:"clientPort,omitempty"`
 	// Image defines the etcd container image and tag
-	// +required
-	Image string `json:"image"`
+	// +optional
+	Image *string `json:"image,omitempty"`
 	// +optional
 	AuthSecretRef *corev1.SecretReference `json:"authSecretRef,omitempty"`
 	// Metrics defines the level of detail for exported metrics of etcd, specify 'extensive' to include histogram metrics.
@@ -259,6 +258,9 @@ type LastOperation struct {
 
 // EtcdStatus defines the observed state of Etcd
 type EtcdStatus struct {
+	// ObservedGeneration is the most recent generation observed for this resource.
+	// +optional
+	ObservedGeneration *int64 `json:"observedGeneration,omitempty"`
 	// +optional
 	Etcd CrossVersionObjectReference `json:"etcd,omitempty"`
 	// +optional
