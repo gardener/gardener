@@ -41,14 +41,14 @@ import (
 )
 
 const (
-	timeout = 10 * time.Minute
+	timeout = 20 * time.Minute
 )
 
 var _ = ginkgo.Describe("Shoot Care testing", func() {
 
 	f := testframework.NewShootFramework(nil)
 
-	f.Default().Serial().Release().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
+	f.Beta().Serial().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
 		var (
 			origReplicas *int32
 			err          error
@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 
 				// wait for healthy condition
 				f.Logger.Infof("Test cleanup: wait for Shoot Health condition '%s' to become healthy again", gardencorev1beta1.ShootAPIServerAvailable)
-				err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue)
+				err = f.WaitForShootCondition(ctx, 20*time.Second, 15*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue)
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 				f.Logger.Info("Test cleanup successful")
@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		// wait for unhealthy condition
-		err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionFalse)
+		err = f.WaitForShootCondition(ctx, 20*time.Second, 15*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionFalse)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}, timeout)
 })
