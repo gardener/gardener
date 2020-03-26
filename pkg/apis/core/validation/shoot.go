@@ -1076,6 +1076,8 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
 	}
 
+	allErrs = append(allErrs, ValidateContainerRuntimesConfigurations(workers, fldPath.Child("workers"))...)
+
 	return allErrs
 }
 
@@ -1256,6 +1258,27 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
+	}
+
+	return allErrs
+}
+
+func ValidateContainerRuntimesConfigurations(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+	definedContainerRuntimesMap := map[string]core.ContainerRuntime{}
+	allErrs := field.ErrorList{}
+
+	for i, worker := range workers {
+		if worker.CRI != nil {
+			for j, cr := range worker.CRI.ContainerRuntimes {
+				if val, ok := definedContainerRuntimesMap[cr.Type]; ok {
+					if &cr.ProviderConfig != &val.ProviderConfig {
+						allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), &cr.ProviderConfig, fmt.Sprintf("must specify same provider config for all the ContainerRuntimes from type %s", cr.Type)))
+					}
+				} else {
+					definedContainerRuntimesMap[cr.Type] = cr
+				}
+			}
+		}
 	}
 
 	return allErrs
