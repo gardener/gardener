@@ -51,6 +51,7 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 					requiredContainerRuntimeTypes.Insert(containerRuntime.Type)
 
 					var (
+						cr      = containerRuntime
 						toApply = extensionsv1alpha1.ContainerRuntime{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      containerRuntime.Type,
@@ -63,9 +64,9 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 						_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
 							metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 							toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
-							toApply.Spec.Type = containerRuntime.Type
-							if containerRuntime.ProviderConfig != nil {
-								toApply.Spec.ProviderConfig = &containerRuntime.ProviderConfig.RawExtension
+							toApply.Spec.Type = cr.Type
+							if cr.ProviderConfig != nil {
+								toApply.Spec.ProviderConfig = &cr.ProviderConfig.RawExtension
 							}
 							return nil
 						})
