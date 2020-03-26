@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -144,7 +145,7 @@ func (b *Botanist) WaitUntilContainerRuntimeResourcesReady(ctx context.Context) 
 
 							return retry.Ok()
 						}); err != nil {
-							return gardencorev1beta1helper.DetermineError(fmt.Sprintf("failed waiting for container runtime %s to be ready: %v", name, err))
+							return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed waiting for container runtime %s to be ready: %v", name, err))
 						}
 						return nil
 					})
@@ -202,9 +203,9 @@ func (b *Botanist) WaitUntilContainerRuntimeResourcesDeleted(ctx context.Context
 			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for container runtime delete")
 				if lastError != nil {
-					return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+					return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 				}
-				return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+				return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 			}
 			return nil
 		})
