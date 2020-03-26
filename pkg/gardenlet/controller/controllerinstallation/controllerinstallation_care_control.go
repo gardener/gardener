@@ -59,6 +59,10 @@ func (c *Controller) reconcileControllerInstallationCareKey(key string) error {
 		return err
 	}
 
+	if controllerInstallation.DeletionTimestamp != nil {
+		return nil
+	}
+
 	if err := c.careControl.Care(controllerInstallation, key); err != nil {
 		return err
 	}

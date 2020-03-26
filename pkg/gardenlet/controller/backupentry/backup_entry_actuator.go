@@ -151,7 +151,7 @@ func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, bb *
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for BackupBucket object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for BackupBucket object to become ready: %v", err))
 	}
 	return nil
 }
@@ -243,7 +243,7 @@ func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) 
 		}
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for backupEntry object to become ready: %v", err))
 	}
 	return nil
 }
@@ -287,9 +287,9 @@ func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) err
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for backupEntry object to be deleted")
 		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 	return nil
 }

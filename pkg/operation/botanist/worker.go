@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -158,7 +159,7 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 		b.Shoot.MachineDeployments = worker.Status.MachineDeployments
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
 	}
 	return nil
 }
@@ -186,9 +187,9 @@ func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for worker object to be deleted")
 		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
-		return gardencorev1beta1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil

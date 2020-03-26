@@ -52,16 +52,36 @@ var (
 	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|not available in the current hardware cluster)`)
 )
 
-// DetermineError determines the Garden error code for the given error message.
-func DetermineError(message string) error {
-	code := determineErrorCode(message)
-	if code == "" {
+// DetermineError determines the Garden error code for the given error and creates a new error with the given message.
+func DetermineError(err error, message string) error {
+	if err == nil {
 		return errors.New(message)
 	}
-	return &errorWithCode{code, message}
+
+	errMsg := message
+	if errMsg == "" {
+		errMsg = err.Error()
+	}
+
+	code := determineErrorCode(err)
+	if code == "" {
+		return errors.New(errMsg)
+	}
+	return &errorWithCode{code, errMsg}
 }
 
-func determineErrorCode(message string) gardencorev1beta1.ErrorCode {
+func determineErrorCode(err error) gardencorev1beta1.ErrorCode {
+	var coder Coder
+
+	// first try to re-use code from error
+	if errors.As(err, &coder) {
+		switch coder.Code() {
+		case gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorInfraQuotaExceeded, gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraDependencies:
+			return coder.Code()
+		}
+	}
+
+	message := err.Error()
 	switch {
 	case unauthorizedRegexp.MatchString(message):
 		return gardencorev1beta1.ErrorInfraUnauthorized
@@ -86,7 +106,8 @@ type Coder interface {
 func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var codes []gardencorev1beta1.ErrorCode
 	for _, err := range utilerrors.Errors(err) {
-		if coder, ok := err.(Coder); ok {
+		var coder Coder
+		if errors.As(err, &coder) {
 			codes = append(codes, coder.Code())
 		}
 	}

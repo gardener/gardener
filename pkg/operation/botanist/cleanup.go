@@ -18,7 +18,9 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -170,7 +172,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list runtime
 		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
 			if err := cleanOps.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
 				if utilclient.AreObjectsRemaining(err) {
-					return retry.MinorError(err)
+					return retry.MinorError(helper.NewErrorWithCode(gardencorev1beta1.ErrorCleanupClusterResources, err.Error()))
 				}
 				return retry.SevereError(err)
 			}
