@@ -684,5 +684,318 @@ var _ = Describe("resourcereferencemanager", func() {
 				})))
 			})
 		})
+
+		Context("CloudProfile - Update Kubernetes versions", func() {
+			versions := []core.ExpirableVersion{
+				{Version: "1.17.2"},
+				{Version: "1.17.1"},
+				{Version: "1.17.0"},
+			}
+			shootOne := shootBase
+			shootOne.Name = "shoot-One"
+			shootOne.Spec.Provider.Type = "aws"
+			shootOne.Spec.CloudProfileName = "aws-profile"
+			shootOne.Spec.Kubernetes.Version = "1.17.2"
+
+			shootTwo := shootOne
+			shootTwo.Name = "shoot-Two"
+			shootTwo.Spec.Kubernetes.Version = "1.17.1"
+			var (
+				cloudProfile = core.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "aws-profile"},
+					Spec: core.CloudProfileSpec{
+						Kubernetes: core.KubernetesSettings{
+							Versions: versions,
+						},
+					},
+				}
+			)
+			It("should accept if no kubernetes version has been removed", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept removal of kubernetes version that is not in use by any shoot", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.17.2"},
+							{Version: "1.17.1"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject removal of kubernetes versions that are still in use by shoots", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.17.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("1.17.1"))
+			})
+		})
+
+		Context("CloudProfile - Update Machine image versions", func() {
+			versions := []core.ExpirableVersion{
+				{Version: "1.17.3"},
+				{Version: "1.17.2"},
+				{Version: "1.17.1"},
+				{Version: "1.17.0"},
+				{Version: "1.16.0"},
+			}
+			shootOne := shootBase
+			shootOne.Name = "shoot-One"
+			shootOne.Spec.Provider.Type = "aws"
+			shootOne.Spec.CloudProfileName = "aws-profile"
+			shootOne.Spec.Provider.Workers = []core.Worker{
+				{
+					Name: "coreos-worker",
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Name:    "coreos",
+							Version: "1.17.3",
+						},
+					},
+				},
+			}
+
+			shootTwo := shootOne
+			shootTwo.Name = "shoot-Two"
+			shootTwo.Spec.Provider.Workers = []core.Worker{
+				{
+					Name: "ubuntu-worker-1",
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Name:    "ubuntu",
+							Version: "1.17.2",
+						},
+					},
+				},
+				{
+					Name: "ubuntu-worker-2",
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Name:    "ubuntu",
+							Version: "1.17.1",
+						},
+					},
+				},
+			}
+
+			var (
+				cloudProfile = core.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{Name: "aws-profile"},
+					Spec: core.CloudProfileSpec{
+						MachineImages: []core.MachineImage{
+							{
+								Name:     "coreos",
+								Versions: versions,
+							},
+							{
+								Name:     "ubuntu",
+								Versions: versions,
+							},
+						},
+					},
+				}
+			)
+			It("should accept if no machine image version has been removed", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should accept removal of a machine version that is not in use by any shoot", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				newVersions := []core.ExpirableVersion{
+					{Version: "1.17.3"},
+					{Version: "1.17.2"},
+					{Version: "1.17.1"},
+				}
+
+				// new cloud profile has version 1.17.0 and 1.16.0 removed. These are not in use by any worker of any shoot
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject removal of a machine image version that is in use by a shoot", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				newVersions := []core.ExpirableVersion{
+					{Version: "1.17.3"},
+					{Version: "1.17.0"},
+					{Version: "1.16.0"},
+				}
+
+				// new cloud profile has version 1.17.1 removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("1.17.2"))
+				Expect(err.Error()).To(ContainSubstring("1.17.1"))
+				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[0].Machine.Image.Name))
+				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Machine.Image.Name))
+			})
+
+			// for existing Gardener installations
+			// Shoot uses Machine Image that does not exist in the CloudProfile and uses machine image version that should be removed
+			It("should reject deletion of image version", func() {
+				s := shootTwo.DeepCopy()
+				s.Spec.Provider.Workers = []core.Worker{
+					{
+						Name: "dummy-worker-1",
+						Machine: core.Machine{
+							Image: &core.ShootMachineImage{
+								Name: "dummy",
+								// version does not matter for this test, as image does not exist
+								Version: "1.1.1",
+							},
+						},
+					},
+					{
+						Name: "ubuntu-worker",
+						Machine: core.Machine{
+							Image: &core.ShootMachineImage{
+								Name:    "ubuntu",
+								Version: "1.17.2",
+							},
+						},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(s)).To(Succeed())
+
+				newVersions := []core.ExpirableVersion{
+					{Version: "1.17.3"},
+					{Version: "1.17.0"},
+					{Version: "1.16.0"},
+				}
+
+				// new cloud profile has version 1.17.1 removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("1.17.2"))
+				Expect(err.Error()).To(ContainSubstring(s.Spec.Provider.Workers[1].Name))
+			})
+
+			It("should reject removal of a whole machine image which versions are in use by a shoot", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
+
+				newVersions := []core.ExpirableVersion{
+					{Version: "1.17.3"},
+					{Version: "1.17.2"},
+					{Version: "1.17.1"},
+					{Version: "1.17.0"},
+					{Version: "1.16.0"},
+				}
+
+				// new cloud profile has ubuntu image removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("1.17.2"))
+				Expect(err.Error()).To(ContainSubstring("1.17.1"))
+				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[0].Name))
+				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Name))
+			})
+		})
 	})
 })
