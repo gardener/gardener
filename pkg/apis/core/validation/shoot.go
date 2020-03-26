@@ -1271,7 +1271,7 @@ func ValidateContainerRuntimesConfigurations(workers []core.Worker, fldPath *fie
 		if worker.CRI != nil {
 			for j, cr := range worker.CRI.ContainerRuntimes {
 				if val, ok := definedContainerRuntimesMap[cr.Type]; ok {
-					if &cr.ProviderConfig != &val.ProviderConfig {
+					if !apiequality.Semantic.DeepEqual(cr.ProviderConfig, val.ProviderConfig) {
 						allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), &cr.ProviderConfig, fmt.Sprintf("must specify same provider config for all the ContainerRuntimes from type %s", cr.Type)))
 					}
 				} else {
