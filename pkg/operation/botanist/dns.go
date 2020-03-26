@@ -32,7 +32,6 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -232,7 +231,7 @@ func (b *Botanist) waitUntilDNSProviderReady(ctx context.Context, name string) e
 }
 
 func (b *Botanist) deleteDNSProvider(ctx context.Context, name string) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -287,7 +286,7 @@ func (b *Botanist) waitUntilDNSEntryReady(ctx context.Context, name string) erro
 }
 
 func (b *Botanist) deleteDNSEntry(ctx context.Context, name string) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
