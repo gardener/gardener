@@ -23,9 +23,11 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -122,13 +124,14 @@ type MaintenanceControlInterface interface {
 // NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
 // implements the documented semantics for maintaining Shoots. You should use an instance returned from
 // NewDefaultMaintenanceControl() for any scenario other than testing.
-func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) MaintenanceControlInterface {
-	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenCoreInformers, recorder}
+func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) MaintenanceControlInterface {
+	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenCoreInformers, config, recorder}
 }
 
 type defaultMaintenanceControl struct {
 	k8sGardenClient        kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.Interface
+	config                 config.ShootMaintenanceControllerConfiguration
 	recorder               record.EventRecorder
 }
 
@@ -170,6 +173,10 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		delete(s.Annotations, v1beta1constants.GardenerOperation)
 		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
 		s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+
+		if utils.IsTrue(c.config.EnableShootControlPlaneRestarter) {
+			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
+		}
 
 		if updatedMachineImages != nil {
 			gardencorev1beta1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)

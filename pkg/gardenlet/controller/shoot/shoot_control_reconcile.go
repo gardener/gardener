@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -83,13 +84,14 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	var (
-		defaultTimeout     = 30 * time.Second
-		defaultInterval    = 5 * time.Second
-		dnsEnabled         = !o.Shoot.DisableDNS
-		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
-		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
-		allowBackup        = o.Seed.Info.Spec.Backup != nil
-		staticNodesCIDR    = o.Shoot.Info.Spec.Networking.Nodes != nil
+		defaultTimeout                 = 30 * time.Second
+		defaultInterval                = 5 * time.Second
+		dnsEnabled                     = !o.Shoot.DisableDNS
+		managedExternalDNS             = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS             = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
+		allowBackup                    = o.Seed.Info.Spec.Backup != nil
+		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
+		restartControlPlaneControllers = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -349,6 +351,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Waiting until stale container runtime resources are deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilContainerRuntimeResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Restart control plane pods",
+			Fn:           flow.TaskFn(botanist.RestartControlPlanePods).DoIf(restartControlPlaneControllers),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
 		f = g.Compile()
 	)

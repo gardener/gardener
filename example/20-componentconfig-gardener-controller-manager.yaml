@@ -17,6 +17,7 @@ controllers:
   # shootMonitorPeriod: 300s
   shootMaintenance:
     concurrentSyncs: 5
+  # enableShootControlPlaneRestarter: true
   shootHibernation:
     concurrentSyncs: 5
   shootQuota:

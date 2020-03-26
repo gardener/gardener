@@ -4,6 +4,7 @@ serviceNetwork: 10.0.0.0/24
 podNetwork: 192.168.0.0/16
 clusterName: shoot-foo-bar
 podAnnotations: {}
+podLabels: {}
 featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
