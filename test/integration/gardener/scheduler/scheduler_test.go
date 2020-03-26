@@ -61,6 +61,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -177,8 +178,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		if testMachineryRun != nil && *testMachineryRun {
 			schedulerOperationsTestLogger.Info("Running in test Machinery")
-			zero := int32(0)
-			replicas, err := ScaleGardenerControllerManager(setupContextTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), &zero)
+			replicas, err := ScaleGardenerControllerManager(setupContextTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), pointer.Int32Ptr(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
 			schedulerOperationsTestLogger.Info("Environment for test-machinery run is prepared")

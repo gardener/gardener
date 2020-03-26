@@ -74,8 +74,13 @@ type ShootCreationFramework struct {
 
 // NewShootCreationFramework creates a new simple Shoot creation framework
 func NewShootCreationFramework(cfg *ShootCreationConfig) *ShootCreationFramework {
+	var gardenerConfig *GardenerConfig
+	if cfg != nil {
+		gardenerConfig = cfg.GardenerConfig
+	}
+
 	f := &ShootCreationFramework{
-		GardenerFramework: NewGardenerFrameworkFromConfig(nil),
+		GardenerFramework: NewGardenerFramework(gardenerConfig),
 		TestDescription:   NewTestDescription("SHOOTCREATION"),
 		Config:            cfg,
 	}
@@ -86,21 +91,6 @@ func NewShootCreationFramework(cfg *ShootCreationConfig) *ShootCreationFramework
 	})
 	CAfterEach(f.AfterEach, 10*time.Minute)
 	return f
-}
-
-// NewShootCreationFrameworkFromConfig creates a new Shoot creation framework from a shoot creation configuration
-// without registering ginkgo specific functions
-func NewShootCreationFrameworkFromConfig(cfg *ShootCreationConfig) (*ShootCreationFramework, error) {
-	var gardenerConfig *GardenerConfig
-	if cfg != nil {
-		gardenerConfig = cfg.GardenerConfig
-	}
-	f := &ShootCreationFramework{
-		GardenerFramework: NewGardenerFramework(gardenerConfig),
-		TestDescription:   NewTestDescription("SHOOTCREATION"),
-		Config:            cfg,
-	}
-	return f, nil
 }
 
 // BeforeEach should be called in ginkgo's BeforeEach.
@@ -325,15 +315,21 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	return shootCreationCfg
 }
 
-func (f *ShootCreationFramework) CreateShoot(ctx context.Context) (*gardencorev1beta1.Shoot, error) {
-	if err := f.prepareShoot(ctx); err != nil {
-		return nil, err
+func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShootWithFlags, waitUntilShootIsReconciled bool) (*gardencorev1beta1.Shoot, error) {
+	if initializeShootWithFlags {
+		if err := f.InitializeShootWithFlags(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	f.Logger.Infof("Creating shoot %s in namespace %s", f.Shoot.GetName(), f.ProjectNamespace)
 	if err := PrettyPrintObject(f.Shoot); err != nil {
 		f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		return nil, err
+	}
+
+	if !waitUntilShootIsReconciled {
+		return f.GardenerFramework.createShootResource(ctx, f.Shoot)
 	}
 
 	if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
@@ -369,7 +365,7 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context) (*gardencorev1
 	return f.Shoot, nil
 }
 
-func (f *ShootCreationFramework) prepareShoot(ctx context.Context) error {
+func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) error {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", f.Config.shootYamlPath)) {
 		// locally, we need find the example shoot

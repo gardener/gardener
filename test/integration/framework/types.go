@@ -77,9 +77,11 @@ type SchedulerGardenerTest struct {
 
 // ShootMaintenanceTest contains all necessary data for the shoot maintenance integration test
 type ShootMaintenanceTest struct {
-	ShootGardenerTest *ShootGardenerTest
+	GardenClient      kubernetes.Interface
+	Shoot             *gardencorev1beta1.Shoot
 	CloudProfile      *gardencorev1beta1.CloudProfile
 	ShootMachineImage gardencorev1beta1.ShootMachineImage
+	Logger            *logrus.Logger
 }
 
 // WorkerGardenerTest represents an instance of worker tests which contains a shoot test & adds the worker configuration

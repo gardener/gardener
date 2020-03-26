@@ -195,20 +195,19 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		return err
 	}
 
-	msg := "Maintenance completed."
 	// no update to Kubernetes and Machine Image version --> one event
 	if updatedKubernetesVersion == nil && updatedMachineImages == nil {
-		sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("%s - no action required.", msg))
+		sendMaintenanceCompletedEvent(c.recorder, shoot, "No action required.")
 		return nil
 	}
 
 	if updatedKubernetesVersion != nil {
-		sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Updated  %s %s.", msg, *reasonForKubernetesUpdate))
+		sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Updated %s.", *reasonForKubernetesUpdate))
 	}
 
 	if updatedMachineImages != nil {
 		for _, reason := range reasonForImageUpdatePerPool {
-			sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Maintenance for worker pool completed. Updated %s.", reason))
+			sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Updated %s.", reason))
 		}
 	}
 

@@ -81,15 +81,24 @@ func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace 
 	return project, nil
 }
 
-// CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
-func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+// createShootResource creates a shoot from a shoot Object
+func (f *GardenerFramework) createShootResource(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	err := f.GetShoot(ctx, shoot)
 	if !apierrors.IsNotFound(err) {
-		return err
+		return nil, err
 	}
 
-	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = f.GardenClient.Client().Create(ctx, shoot)
+	if err := f.GardenClient.Client().Create(ctx, shoot); err != nil {
+		return nil, err
+	}
+	f.Logger.Infof("Shoot resource %s was created!", shoot.Name)
+	return shoot, nil
+}
+
+// CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
+func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		_, err = f.createShootResource(ctx, shoot)
 		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) {
 			return retry.SevereError(err)
 		}
@@ -373,7 +382,7 @@ func (f *GardenerFramework) MergePatchShoot(oldShoot, newShoot *gardencorev1beta
 func (f *GardenerFramework) GetCloudProfile(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: name}, cloudProfile); err != nil {
-		return nil, errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
+		return nil, errors.Wrap(err, fmt.Sprintf("could not get CloudProfile '%s' in Garden cluster", name))
 	}
 	return cloudProfile, nil
 }
