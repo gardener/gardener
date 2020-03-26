@@ -21,6 +21,12 @@ spec:
       terminationGracePeriodSeconds: 5
       nodeSelector:
         worker.gardener.cloud/pool: {{ .WorkerPool }}
+{{- if .TolerationKey }}
+      tolerations:
+      - key: {{ .TolerationKey }}
+        operator: "Exists"
+        effect: "NoSchedule"
+{{- end }}
       containers:
       - name: pause-container
         image: gcr.io/google_containers/pause-amd64:3.1
