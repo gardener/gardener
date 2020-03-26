@@ -500,14 +500,21 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 		}
 	}
 
-	validValues := []string{}
+	var validValues []string
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
-		if versionConstraint.ExpirationDate != nil && versionConstraint.ExpirationDate.Time.Before(time.Now()) {
+		if versionConstraint.ExpirationDate != nil && versionConstraint.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
 			continue
 		}
 
-		validValues = append(validValues, versionConstraint.Version)
+		if !getLatestPatchVersion {
+			validValues = append(validValues, versionConstraint.Version)
+		} else {
+			// ignore preview versions for defaulting
+			if versionConstraint.Classification != nil && *versionConstraint.Classification == core.ClassificationPreview {
+				continue
+			}
+		}
 
 		if versionConstraint.Version == shootVersion {
 			return true, nil, nil
@@ -517,6 +524,7 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 			// CloudProfile cannot contain invalid semVer shootVersion
 			cpVersion, _ := semver.NewVersion(versionConstraint.Version)
 
+			// defaulting on patch level: version has to have the the same major and minor kubernetes version
 			if cpVersion.Major() != shootVersionMajor || cpVersion.Minor() != shootVersionMinor {
 				continue
 			}

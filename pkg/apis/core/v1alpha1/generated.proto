@@ -542,6 +542,10 @@ message ExpirableVersion {
   // ExpirationDate defines the time at which this version expires.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationDate = 2;
+
+  // Classification defines the state of a version (preview, supported, deprecated)
+  // +optional
+  optional string classification = 3;
 }
 
 // Extension contains type and provider information for Shoot extensions.

@@ -105,14 +105,12 @@ var _ = Describe("Admission", func() {
 				},
 			}
 
-			err := coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
-			err = coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-			err = admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("another plant resource already exists"))
@@ -129,14 +127,12 @@ var _ = Describe("Admission", func() {
 			plant.Namespace = namespaceName
 			plant.Spec.SecretRef.Name = "secretref"
 
-			err := coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 			attrs = admission.NewAttributesRecord(&plant, &plant, core.Kind("Plant").WithVersion("version"), "", plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			err = coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
-			Expect(err).NotTo(HaveOccurred())
+			Expect(coreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})).To(Succeed())
 
-			err = admissionHandler.Validate(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
