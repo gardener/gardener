@@ -88,7 +88,7 @@ type WorkerPool struct {
 	// MachineType contains information about the machine type that should be used for this worker pool.
 	MachineType string `json:"machineType"`
 	// Maximum is the maximum size of the worker pool.
-	Maximum int `json:"maximum"`
+	Maximum int32 `json:"maximum"`
 	// MaxSurge is maximum number of VMs that are created during an update.
 	MaxSurge intstr.IntOrString `json:"maxSurge"`
 	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
@@ -107,7 +107,7 @@ type WorkerPool struct {
 	// AMIs, ...) by the provider itself.
 	MachineImage MachineImage `json:"machineImage,omitempty"`
 	// Minimum is the minimum size of the worker pool.
-	Minimum int `json:"minimum"`
+	Minimum int32 `json:"minimum"`
 	// Name is the name of this worker pool.
 	Name string `json:"name"`
 	// ProviderConfig is a provider specific configuration for the worker pool.
@@ -171,7 +171,7 @@ type MachineDeployment struct {
 	// Name is the name of the `MachineDeployment` resource.
 	Name string `json:"name"`
 	// Minimum is the minimum number for this machine deployment.
-	Minimum int `json:"minimum"`
+	Minimum int32 `json:"minimum"`
 	// Maximum is the maximum number for this machine deployment.
-	Maximum int `json:"maximum"`
+	Maximum int32 `json:"maximum"`
 }

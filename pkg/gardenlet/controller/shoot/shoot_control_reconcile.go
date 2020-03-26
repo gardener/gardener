@@ -449,10 +449,10 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 
 func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1beta1.LastOperationType, description string, lastErrors ...gardencorev1beta1.LastError) error {
 	var (
-		state         = gardencorev1beta1.LastOperationStateFailed
-		lastOperation = o.Shoot.Info.Status.LastOperation
-		progress      = 1
-		willRetry     = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
+		state               = gardencorev1beta1.LastOperationStateFailed
+		lastOperation       = o.Shoot.Info.Status.LastOperation
+		progress      int32 = 1
+		willRetry           = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,

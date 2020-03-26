@@ -164,8 +164,8 @@ var _ = Describe("Accessor", func() {
 				Describe("#GetProgress", func() {
 					It("should get the progress", func() {
 						var (
-							progress = 10
-							acc      = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Progress: progress})
+							progress int32 = 10
+							acc            = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Progress: progress})
 						)
 
 						Expect(acc.GetProgress()).To(Equal(progress))

@@ -81,7 +81,7 @@ type LastOperation struct {
 	// Last time the operation state transitioned from one to another.
 	LastUpdateTime metav1.Time
 	// The progress in percentage (0-100) of the last operation.
-	Progress int
+	Progress int32
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State LastOperationState
 	// Type of the last operation, one of Create, Reconcile, Delete.
