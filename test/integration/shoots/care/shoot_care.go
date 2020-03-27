@@ -48,7 +48,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 
 	f := testframework.NewShootFramework(nil)
 
-	f.Default().Serial().Release().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
+	f.Beta().Serial().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
 		var (
 			origReplicas *int32
 			err          error
