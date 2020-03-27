@@ -170,8 +170,6 @@ spec:
                   - serverTLSSecretRef
                   - tlsCASecretRef
                   type: object
-              required:
-              - image
               type: object
             etcd:
               description: EtcdConfig defines parametes associated etcd deployed
@@ -276,8 +274,6 @@ spec:
                   - serverTLSSecretRef
                   - tlsCASecretRef
                   type: object
-              required:
-              - image
               type: object
             labels:
               additionalProperties:
@@ -442,6 +438,11 @@ spec:
               type: object
             lastError:
               type: string
+            observedGeneration:
+              description: ObservedGeneration is the most recent generation observed for etcd
+                this resource.
+              format: int64
+              type: integer
             ready:
               type: boolean
             readyReplicas:
@@ -458,14 +459,14 @@ spec:
           type: object
       {{- if semverCompare ">= 1.12" .Capabilities.KubeVersion.GitVersion }}
       type: object
-      {{- end }} 
+      {{- end }}
   additionalPrinterColumns:
   - name: Ready
     type: string
     JSONPath: .status.ready
   - name: Age
     type: date
-    JSONPath: .metadata.creationTimestamp  
+    JSONPath: .metadata.creationTimestamp
   version: v1alpha1
   versions:
   - name: v1alpha1
