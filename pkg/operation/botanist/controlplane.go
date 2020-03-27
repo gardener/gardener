@@ -1000,6 +1000,9 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
+		"podLabels": map[string]interface{}{
+			v1beta1constants.LabelPodMaintenanceRestart: "true",
+		},
 	}
 
 	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
@@ -1309,4 +1312,14 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 	creationMinute := shoot.CreationTimestamp.Minute()
 	creationHour := shoot.CreationTimestamp.Hour()
 	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
+}
+
+// RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
+func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
+	return b.K8sSeedClient.Client().DeleteAllOf(
+		ctx,
+		&corev1.Pod{},
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
+	)
 }

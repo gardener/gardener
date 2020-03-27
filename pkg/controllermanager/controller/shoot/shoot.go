@@ -83,7 +83,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 
 		config:                      config,
 		recorder:                    recorder,
-		maintenanceControl:          NewDefaultMaintenanceControl(k8sGardenClient, gardenCoreV1beta1Informer, recorder),
+		maintenanceControl:          NewDefaultMaintenanceControl(k8sGardenClient, gardenCoreV1beta1Informer, config.Controllers.ShootMaintenance, recorder),
 		quotaControl:                NewDefaultQuotaControl(k8sGardenClient, gardenCoreV1beta1Informer),
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 

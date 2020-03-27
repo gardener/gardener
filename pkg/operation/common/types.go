@@ -349,6 +349,9 @@ const (
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
 
+	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
+	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
+
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be retried.
 	ShootOperationRetry = "retry"
 

@@ -144,6 +144,9 @@ type ShootMaintenanceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
+	// +optional
+	EnableShootControlPlaneRestarter *bool
 }
 
 // ShootQuotaControllerConfiguration defines the configuration of the
