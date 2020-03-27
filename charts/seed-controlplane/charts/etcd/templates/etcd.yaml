@@ -65,7 +65,7 @@ spec:
         name: etcd-backup
       container: {{ .Values.container }}
       provider: {{ .Values.provider }}
-      prefix: {{ .Values.prefix }}
+      prefix: {{ .Values.prefix }}/etcd-{{ .Values.role }}
 {{- end }}
   replicas: {{ .Values.replicas }}
   storageClass: {{ .Values.storageClass }}
