@@ -277,7 +277,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(dnsEnabled && managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployManagedResources),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{

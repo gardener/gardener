@@ -31,6 +31,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -288,6 +289,14 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 	if !b.Shoot.DisableDNS {
 		if err := c.Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+
+		if err := flow.Parallel(
+			func(ctx context.Context) error { return b.DestroyInternalDomainDNSRecord(ctx) },
+			func(ctx context.Context) error { return b.DestroyExternalDomainDNSRecord(ctx) },
+			func(ctx context.Context) error { return b.DestroyIngressDNSRecord(ctx) },
+		)(ctx); err != nil {
 			return err
 		}
 	}
