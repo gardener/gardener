@@ -18,16 +18,12 @@ rules:
   - persistentvolumeclaims
   - namespaces
   verbs: ["list", "watch"]
-- apiGroups: ["extensions"]
+- apiGroups: ["extensions", "apps"]
   resources:
   - daemonsets
   - deployments
   - replicasets
-  verbs: ["list", "watch"]
-- apiGroups: ["apps"]
-  resources:
   - statefulsets
-  - deployments
   verbs: ["list", "watch"]
 - apiGroups: ["batch"]
   resources:
