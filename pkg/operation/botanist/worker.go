@@ -86,8 +86,8 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           worker.Name,
-			Minimum:        int(worker.Minimum),
-			Maximum:        int(worker.Maximum),
+			Minimum:        worker.Minimum,
+			Maximum:        worker.Maximum,
 			MaxSurge:       *worker.MaxSurge,
 			MaxUnavailable: *worker.MaxUnavailable,
 			Annotations:    worker.Annotations,

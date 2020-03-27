@@ -85,8 +85,8 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			quotaProjectLifetime = 1
-			quotaProjectBase     = core.Quota{
+			quotaProjectLifetime int32 = 1
+			quotaProjectBase           = core.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: trialNamespace,
 					Name:      "project-quota",
@@ -108,8 +108,8 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			quotaSecretLifetime = 7
-			quotaSecretBase     = core.Quota{
+			quotaSecretLifetime int32 = 7
+			quotaSecretBase           = core.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: trialNamespace,
 					Name:      "secret-quota",

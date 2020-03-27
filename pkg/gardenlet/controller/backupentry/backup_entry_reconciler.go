@@ -177,7 +177,7 @@ func (r *reconciler) deleteBackupEntry(backupEntry *gardencorev1beta1.BackupEntr
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1beta1.BackupEntry, message string, progress int) error {
+func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1beta1.BackupEntry, message string, progress int32) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
 		be.Status.LastOperation = &gardencorev1beta1.LastOperation{
 			Type:           gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation),
@@ -192,7 +192,7 @@ func (r *reconciler) updateBackupEntryStatusProcessing(be *gardencorev1beta1.Bac
 
 func (r *reconciler) updateBackupEntryStatusError(be *gardencorev1beta1.BackupEntry, message string, lastError *gardencorev1beta1.LastError) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, be, func() error {
-		progress := 1
+		var progress int32 = 1
 		if be.Status.LastOperation != nil {
 			progress = be.Status.LastOperation.Progress
 		}

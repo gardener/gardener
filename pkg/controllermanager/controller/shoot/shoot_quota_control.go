@@ -77,7 +77,7 @@ type defaultQuotaControl struct {
 
 func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key string) error {
 	var (
-		clusterLifeTime *int
+		clusterLifeTime *int32
 		shoot           = shootObj.DeepCopy()
 		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)

@@ -107,7 +107,7 @@ type LastOperation struct {
 	// Last time the operation state transitioned from one to another.
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 	// The progress in percentage (0-100) of the last operation.
-	Progress int `json:"progress"`
+	Progress int32 `json:"progress"`
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State LastOperationState `json:"state"`
 	// Type of the last operation, one of Create, Reconcile, Delete.
@@ -125,7 +125,7 @@ func (l *LastOperation) GetLastUpdateTime() metav1.Time {
 }
 
 // GetProgress implements LastOperation.
-func (l *LastOperation) GetProgress() int {
+func (l *LastOperation) GetProgress() int32 {
 	return l.Progress
 }
 

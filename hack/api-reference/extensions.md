@@ -2467,7 +2467,7 @@ string
 <td>
 <code>minimum</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -2478,7 +2478,7 @@ int
 <td>
 <code>maximum</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -3017,7 +3017,7 @@ string
 <td>
 <code>maximum</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -3107,7 +3107,7 @@ AMIs, &hellip;) by the provider itself.</p>
 <td>
 <code>minimum</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -3356,5 +3356,5 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>041bf5805</code>.
+on git commit <code>17208ace4</code>.
 </em></p>

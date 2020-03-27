@@ -163,7 +163,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 
 	var (
 		oldShoot         *core.Shoot
-		maxShootLifetime *int
+		maxShootLifetime *int32
 		checkLifetime    = false
 		checkQuota       = false
 	)

@@ -48,7 +48,7 @@ type LastOperation interface {
 	// GetLastUpdateTime returns the last update time of the last operation.
 	GetLastUpdateTime() metav1.Time
 	// GetProgress returns progress of the last operation.
-	GetProgress() int
+	GetProgress() int32
 	// GetState returns the LastOperationState of the last operation.
 	GetState() gardencorev1beta1.LastOperationState
 	// GetType returns the LastOperationType of the last operation.

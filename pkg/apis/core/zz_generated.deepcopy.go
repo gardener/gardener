@@ -2467,7 +2467,7 @@ func (in *QuotaSpec) DeepCopyInto(out *QuotaSpec) {
 	*out = *in
 	if in.ClusterLifetimeDays != nil {
 		in, out := &in.ClusterLifetimeDays, &out.ClusterLifetimeDays
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.Metrics != nil {

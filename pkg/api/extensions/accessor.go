@@ -84,6 +84,25 @@ func nestedString(obj map[string]interface{}, fields ...string) string {
 	return v
 }
 
+func nestedInt32(obj map[string]interface{}, fields ...string) int32 {
+	v, ok, err := unstructured.NestedFieldNoCopy(obj, fields...)
+	if err != nil || !ok {
+		return 0
+	}
+
+	switch x := v.(type) {
+	case int64:
+		// safe, as the DefaultUnstructuredConverter uses int64 to store int16, int32, etc.
+		return int32(x)
+	case int32:
+		return x
+	case int:
+		return int32(x)
+	default:
+		return 0
+	}
+}
+
 func nestedInt64(obj map[string]interface{}, fields ...string) int64 {
 	v, ok, err := unstructured.NestedInt64(obj, fields...)
 	if err != nil || !ok {
@@ -99,24 +118,6 @@ func nestedStringReference(obj map[string]interface{}, fields ...string) *string
 	}
 
 	return &v
-}
-
-func nestedInt(obj map[string]interface{}, fields ...string) int {
-	v, ok, err := unstructured.NestedFieldNoCopy(obj, fields...)
-	if err != nil || !ok {
-		return 0
-	}
-
-	switch x := v.(type) {
-	case int64:
-		return int(x)
-	case int32:
-		return int(x)
-	case int:
-		return x
-	default:
-		return 0
-	}
 }
 
 func nestedRawExtension(obj map[string]interface{}, fields ...string) *runtime.RawExtension {
@@ -151,8 +152,8 @@ func (u unstructuredLastOperationAccessor) GetLastUpdateTime() metav1.Time {
 }
 
 // GetProgress implements LastOperation.
-func (u unstructuredLastOperationAccessor) GetProgress() int {
-	return nestedInt(u.UnstructuredContent(), "status", "lastOperation", "progress")
+func (u unstructuredLastOperationAccessor) GetProgress() int32 {
+	return nestedInt32(u.UnstructuredContent(), "status", "lastOperation", "progress")
 }
 
 // GetState implements LastOperation.

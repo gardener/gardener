@@ -48,7 +48,7 @@ type QuotaList struct {
 type QuotaSpec struct {
 	// ClusterLifetimeDays is the lifetime of a Shoot cluster in days before it will be terminated automatically.
 	// +optional
-	ClusterLifetimeDays *int `json:"clusterLifetimeDays,omitempty"`
+	ClusterLifetimeDays *int32 `json:"clusterLifetimeDays,omitempty"`
 	// Metrics is a list of resources which will be put under constraints.
 	Metrics corev1.ResourceList `json:"metrics"`
 	// Scope is the scope of the Quota object, either 'project' or 'secret'.

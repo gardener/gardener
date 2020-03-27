@@ -232,7 +232,7 @@ func (r *reconciler) deleteBackupBucket(backupBucket *gardencorev1beta1.BackupBu
 	return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(r.ctx, r.client, backupBucket)
 }
 
-func (r *reconciler) updateBackupBucketStatusProcessing(bb *gardencorev1beta1.BackupBucket, message string, progress int) error {
+func (r *reconciler) updateBackupBucketStatusProcessing(bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, bb, func() error {
 		bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
 			Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
@@ -247,7 +247,7 @@ func (r *reconciler) updateBackupBucketStatusProcessing(bb *gardencorev1beta1.Ba
 
 func (r *reconciler) updateBackupBucketStatusError(bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, bb, func() error {
-		progress := 1
+		var progress int32 = 1
 		if bb.Status.LastOperation != nil {
 			progress = bb.Status.LastOperation.Progress
 		}
@@ -265,7 +265,7 @@ func (r *reconciler) updateBackupBucketStatusError(bb *gardencorev1beta1.BackupB
 
 func (r *reconciler) updateBackupBucketStatusPending(bb *gardencorev1beta1.BackupBucket, message string) error {
 	return kutil.TryUpdateStatus(r.ctx, retry.DefaultRetry, r.client, bb, func() error {
-		progress := 1
+		var progress int32 = 1
 		if bb.Status.LastOperation != nil {
 			progress = bb.Status.LastOperation.Progress
 		}

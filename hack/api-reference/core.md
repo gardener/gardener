@@ -978,7 +978,7 @@ QuotaSpec
 <td>
 <code>clusterLifetimeDays</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -4616,7 +4616,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>progress</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -5895,7 +5895,7 @@ and the fall back path is firstly iptables and then userspace.</p>
 <td>
 <code>clusterLifetimeDays</code></br>
 <em>
-int
+int32
 </em>
 </td>
 <td>
@@ -7437,5 +7437,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>041bf5805</code>.
+on git commit <code>17208ace4</code>.
 </em></p>

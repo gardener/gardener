@@ -3314,7 +3314,7 @@ func Convert_core_QuotaList_To_v1beta1_QuotaList(in *core.QuotaList, out *QuotaL
 }
 
 func autoConvert_v1beta1_QuotaSpec_To_core_QuotaSpec(in *QuotaSpec, out *core.QuotaSpec, s conversion.Scope) error {
-	out.ClusterLifetimeDays = (*int)(unsafe.Pointer(in.ClusterLifetimeDays))
+	out.ClusterLifetimeDays = (*int32)(unsafe.Pointer(in.ClusterLifetimeDays))
 	out.Metrics = *(*v1.ResourceList)(unsafe.Pointer(&in.Metrics))
 	out.Scope = in.Scope
 	return nil
@@ -3326,7 +3326,7 @@ func Convert_v1beta1_QuotaSpec_To_core_QuotaSpec(in *QuotaSpec, out *core.QuotaS
 }
 
 func autoConvert_core_QuotaSpec_To_v1beta1_QuotaSpec(in *core.QuotaSpec, out *QuotaSpec, s conversion.Scope) error {
-	out.ClusterLifetimeDays = (*int)(unsafe.Pointer(in.ClusterLifetimeDays))
+	out.ClusterLifetimeDays = (*int32)(unsafe.Pointer(in.ClusterLifetimeDays))
 	out.Metrics = *(*v1.ResourceList)(unsafe.Pointer(&in.Metrics))
 	out.Scope = in.Scope
 	return nil
