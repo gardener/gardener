@@ -629,6 +629,7 @@ func Convert_config_ShootHibernationControllerConfiguration_To_v1alpha1_ShootHib
 
 func autoConvert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMaintenanceControllerConfiguration(in *ShootMaintenanceControllerConfiguration, out *config.ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.EnableShootControlPlaneRestarter = (*bool)(unsafe.Pointer(in.EnableShootControlPlaneRestarter))
 	return nil
 }
 
@@ -639,6 +640,7 @@ func Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMai
 
 func autoConvert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(in *config.ShootMaintenanceControllerConfiguration, out *ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.EnableShootControlPlaneRestarter = (*bool)(unsafe.Pointer(in.EnableShootControlPlaneRestarter))
 	return nil
 }
 

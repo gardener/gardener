@@ -145,7 +145,6 @@ type ShootMaintenanceControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs int
 	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
-	// +optional
 	EnableShootControlPlaneRestarter *bool
 }
 

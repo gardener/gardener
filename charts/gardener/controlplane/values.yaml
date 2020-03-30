@@ -208,6 +208,7 @@ global:
           shootMonitorPeriod: 300s
         shootMaintenance:
           concurrentSyncs: 5
+          enableShootControlPlaneRestarter: true
         shootQuota:
           concurrentSyncs: 5
           syncPeriod: 60m
