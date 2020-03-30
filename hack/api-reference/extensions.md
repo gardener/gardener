@@ -3356,5 +3356,5 @@ the cluster-autoscaler properly.</p>
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>17208ace4</code>.
+on git commit <code>479bafda0</code>.
 </em></p>
