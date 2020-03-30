@@ -527,8 +527,8 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 	return err
 }
 
-func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) error {
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+func (c *Controller) updateShootStatusDeleteSuccess(shoot *gardencorev1beta1.Shoot) error {
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastErrors = nil
@@ -544,17 +544,16 @@ func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) erro
 	if err != nil {
 		return err
 	}
-	o.Shoot.Info = newShoot
 
 	// Remove finalizer with retry on conflict
-	if err = controllerutils.RemoveGardenerFinalizer(context.TODO(), c.k8sGardenClient.Client(), o.Shoot.Info); err != nil {
+	if err = controllerutils.RemoveGardenerFinalizer(context.TODO(), c.k8sGardenClient.Client(), newShoot); err != nil {
 		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
 	}
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return retryutils.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
-		shoot, err := c.shootLister.Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
+		shoot, err := c.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
 		}
