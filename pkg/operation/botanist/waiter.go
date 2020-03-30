@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,53 +60,41 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) err
 func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 		etcdList := &druidv1alpha1.EtcdList{}
-		err = b.K8sSeedClient.Client().List(ctx, etcdList,
+		if err := b.K8sSeedClient.Client().List(ctx, etcdList,
 			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"})
-		if err != nil {
+			client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"},
+		); err != nil {
 			return retry.SevereError(err)
 		}
+
 		if n := len(etcdList.Items); n < 2 {
 			b.Logger.Info("Waiting until the etcd gets created...")
 			return retry.MinorError(fmt.Errorf("only %d/%d etcd resources found", n, 2))
 		}
 
-		bothEtcdsReady := true
-		for _, etcd := range etcdList.Items {
-			if etcd.DeletionTimestamp != nil {
-				continue
-			}
+		var lastErrors error
 
-			if !etcd.Status.Ready {
-				bothEtcdsReady = false
-				break
+		for _, etcd := range etcdList.Items {
+			switch {
+			case etcd.DeletionTimestamp != nil:
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s unexpectedly has a deletion timestamp", etcd.Name))
+			case etcd.Status.ObservedGeneration == nil || etcd.Generation != *etcd.Status.ObservedGeneration:
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation pending", etcd.Name))
+			case metav1.HasAnnotation(etcd.ObjectMeta, v1beta1constants.GardenerOperation):
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
+			case etcd.Status.LastError != nil:
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation errored with %s", etcd.Name, err))
+			case !etcd.Status.Ready:
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
 			}
 		}
 
-		if bothEtcdsReady {
+		if lastErrors == nil {
 			return retry.Ok()
 		}
 
 		b.Logger.Info("Waiting until the both etcds are ready...")
-		return retry.MinorError(fmt.Errorf("not all etcds are ready"))
-	})
-}
-
-// WaitUntilEtcdMainReady waits until the etcd-main statefulsets indicate readiness in its status.
-func (b *Botanist) WaitUntilEtcdMainReady(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		b.Logger.Info("Waiting until the etcd-main etcd is ready...")
-		etcd := &druidv1alpha1.Etcd{}
-		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, "etcd-main"), etcd)
-		if err != nil {
-			return retry.SevereError(err)
-		}
-
-		if etcd.DeletionTimestamp == nil && etcd.Status.Ready {
-			return retry.Ok()
-		}
-
-		return retry.MinorError(fmt.Errorf("etcd-main etcd is not ready"))
+		return retry.MinorError(lastErrors)
 	})
 }
 

@@ -27,9 +27,9 @@ spec:
           role: monitoring
     ports:
     - protocol: TCP
-      port: {{ .Values.servicePorts.client }}
+      port: {{ .Values.etcd.clientPort }}
     - protocol: TCP
-      port: {{ .Values.servicePorts.backuprestore }}
+      port: {{ .Values.sidecar.port }}
   policyTypes:
   - Ingress
   egress: []

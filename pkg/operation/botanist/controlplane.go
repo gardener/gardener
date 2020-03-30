@@ -1074,23 +1074,25 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 // store the events data. The objectstore is also set up to store the backups.
 func (b *Botanist) DeployETCD(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-
 	if b.ShootedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	defaultValues := map[string]interface{}{
+		"annotations": map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+		},
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
 			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
 		},
-		"maintenanceWindow": b.Shoot.Info.Spec.Maintenance.TimeWindow,
-		"storageCapacity":   b.Seed.GetValidVolumeSize("10Gi"),
+		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues,
+	values, err := b.InjectSeedShootImages(
+		defaultValues,
 		common.ETCDImageName,
 		common.ETCDBackupRestoreImageName,
 	)
@@ -1098,108 +1100,114 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		return err
 	}
 
-	values["etcd"] = map[string]interface{}{}
-	values["sidecar"] = map[string]interface{}{}
+	var (
+		etcdValues    = make(map[string]interface{})
+		sidecarValues = make(map[string]interface{})
+		hvpaValues    = make(map[string]interface{})
+	)
 
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
+		name := fmt.Sprintf("etcd-%s", role)
 		values["role"] = role
-		values["backupEnabled"] = false
-		values["provider"] = ""
-		if role == common.EtcdRoleMain {
-			// etcd-main emits extensive (histogram) metrics
-			values["metrics"] = "extensive"
-			values["hvpa"] = map[string]interface{}{
-				"enabled": hvpaEnabled,
-				"minAllowed": map[string]interface{}{
-					"cpu":    "200m",
-					"memory": "700M",
-				},
-			}
-			if b.Seed.Info.Spec.Backup != nil {
-				values["provider"] = b.Seed.Info.Spec.Backup.Provider
-				values["backupEnabled"] = true
-				secret := &corev1.Secret{}
-				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BackupSecretName), secret); err != nil {
-					return err
-				}
-				values["prefix"] = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-				values["container"] = string(secret.Data[common.BackupBucketName])
-			}
-		}
-
-		if role == common.EtcdRoleEvents {
-			values["hvpa"] = map[string]interface{}{
-				"enabled": hvpaEnabled,
-				"minAllowed": map[string]interface{}{
-					"cpu":    "50m",
-					"memory": "200M",
-				},
-			}
-		}
 
 		foundEtcd := true
 		etcd := &druidv1alpha1.Etcd{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), etcd); client.IgnoreNotFound(err) != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), etcd); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if apierrors.IsNotFound(err) {
 			foundEtcd = false
 		}
 
-		name := fmt.Sprintf("etcd-%s", role)
+		statefulSetName := name
 		if foundEtcd && etcd.Status.Etcd.Name != "" {
-			name = etcd.Status.Etcd.Name
+			statefulSetName = etcd.Status.Etcd.Name
 		}
 
 		foundStatefulset := true
-		statefulset := &appsv1.StatefulSet{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), statefulset); client.IgnoreNotFound(err) != nil {
+		statefulSet := &appsv1.StatefulSet{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, statefulSetName), statefulSet); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if apierrors.IsNotFound(err) {
 			foundStatefulset = false
+		}
+
+		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd)
+		if err != nil {
+			return err
+		}
+		etcdValues["defragmentSchedule"] = defragmentSchedule
+
+		hvpaValues["enabled"] = hvpaEnabled
+		hvpaValues["maintenanceWindow"] = b.Shoot.Info.Spec.Maintenance.TimeWindow
+
+		switch role {
+		case common.EtcdRoleMain:
+			etcdValues["metrics"] = "extensive" // etcd-main emits extensive (histogram) metrics
+
+			hvpaValues["minAllowed"] = map[string]interface{}{
+				"cpu":    "200m",
+				"memory": "700M",
+			}
+
+			if b.Seed.Info.Spec.Backup != nil {
+				secret := &corev1.Secret{}
+				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BackupSecretName), secret); err != nil {
+					return err
+				}
+
+				snapshotSchedule, err := DetermineBackupSchedule(b.Shoot.Info, etcd)
+				if err != nil {
+					return err
+				}
+
+				sidecarValues["backup"] = map[string]interface{}{
+					"provider":                 b.Seed.Info.Spec.Backup.Provider,
+					"secretRefName":            common.BackupSecretName,
+					"prefix":                   common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+					"container":                string(secret.Data[common.BackupBucketName]),
+					"fullSnapshotSchedule":     snapshotSchedule,
+					"deltaSnapshotMemoryLimit": "100Mi",
+					"deltaSnapshotPeriod":      "5m",
+				}
+			}
+
+		case common.EtcdRoleEvents:
+			hvpaValues["minAllowed"] = map[string]interface{}{
+				"cpu":    "50m",
+				"memory": "200M",
+			}
 		}
 
 		// TODO(georgekuruvillak): Remove this, once HVPA support updating resources in CRD spec
 		if foundStatefulset && hvpaEnabled {
 			// etcd is already created AND is controlled by HVPA
 			// Keep the "resources" as it is.
-			for k := range statefulset.Spec.Template.Spec.Containers {
-				v := &statefulset.Spec.Template.Spec.Containers[k]
+			for k := range statefulSet.Spec.Template.Spec.Containers {
+				v := &statefulSet.Spec.Template.Spec.Containers[k]
 				if v.Name == "etcd" {
-					values["etcd"].(map[string]interface{})["resources"] = v.Resources.DeepCopy()
+					etcdValues["resources"] = v.Resources.DeepCopy()
 					break
 				} else if v.Name == "backup-restore" {
-					values["sidecar"].(map[string]interface{})["resources"] = v.Resources.DeepCopy()
+					sidecarValues["resources"] = v.Resources.DeepCopy()
 					break
 				}
 			}
 		}
 
 		if b.Shoot.HibernationEnabled {
-			// Restore the replica count from capture statefulset state.
+			// Restore the replica count from capture statefulSet state.
 			values["replicas"] = 0
 			if foundEtcd {
 				values["replicas"] = etcd.Spec.Replicas
-			} else if foundStatefulset && statefulset.Spec.Replicas != nil {
-				values["replicas"] = *statefulset.Spec.Replicas
+			} else if foundStatefulset && statefulSet.Spec.Replicas != nil {
+				values["replicas"] = *statefulSet.Spec.Replicas
 			}
 		}
-
-		snapshotSchedule, err := DetermineBackupSchedule(b.Shoot.Info, etcd)
-		if err != nil {
-			return err
-		}
-		values["fullSnapshotSchedule"] = snapshotSchedule
-
-		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd)
-		if err != nil {
-			return err
-		}
-		values["etcd"].(map[string]interface{})["defragmentSchedule"] = defragmentSchedule
 
 		if !hvpaEnabled {
 			// If HVPA is disabled, delete any HVPA that was already deployed
 			u := &unstructured.Unstructured{}
-			u.SetName(fmt.Sprintf("etcd-%s", role))
+			u.SetName(name)
 			u.SetNamespace(b.Shoot.SeedNamespace)
 			u.SetGroupVersionKind(schema.GroupVersionKind{
 				Group:   "autoscaling.k8s.io",
@@ -1212,7 +1220,12 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 				}
 			}
 		}
-		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), kubernetes.Values(values)); err != nil {
+
+		values["etcd"] = etcdValues
+		values["sidecar"] = sidecarValues
+		values["hvpa"] = hvpaValues
+
+		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 			return err
 		}
 	}
