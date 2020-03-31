@@ -1100,15 +1100,14 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		etcdValues    = make(map[string]interface{})
-		sidecarValues = make(map[string]interface{})
-		hvpaValues    = make(map[string]interface{})
-	)
-
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
-		name := fmt.Sprintf("etcd-%s", role)
-		values["role"] = role
+		var (
+			etcdValues    = make(map[string]interface{})
+			sidecarValues = make(map[string]interface{})
+			hvpaValues    = make(map[string]interface{})
+
+			name = fmt.Sprintf("etcd-%s", role)
+		)
 
 		foundEtcd := true
 		etcd := &druidv1alpha1.Etcd{}
@@ -1221,6 +1220,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			}
 		}
 
+		values["role"] = role
 		values["etcd"] = etcdValues
 		values["sidecar"] = sidecarValues
 		values["hvpa"] = hvpaValues
