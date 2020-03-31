@@ -11,14 +11,13 @@ LABEL=${1:-local-garden}
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-IMAGE=k8s.gcr.io/hyperkube:v1.15.11
+IMAGE=k8s.gcr.io/kube-apiserver:v1.17.3
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys"
 ETCD_PORT=12379
 LISTEN_PORT="2443"
 
 echo "Starting gardener-dev kube-apiserver..!"
-docker run -d --name kube-apiserver -l $LABEL --add-host $HOSTS_LINE --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS  $IMAGE /hyperkube \
-  kube-apiserver \
+docker run -d --name kube-apiserver -l $LABEL --add-host $HOSTS_LINE --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS $IMAGE /usr/local/bin/kube-apiserver \
   --etcd-servers="https://etcd:$ETCD_PORT" \
   --storage-media-type='application/json' \
   --authorization-mode="Node,RBAC" \
