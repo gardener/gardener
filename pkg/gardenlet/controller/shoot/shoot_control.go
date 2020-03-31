@@ -164,6 +164,9 @@ func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1beta1.Shoot,
 				Description:    message,
 				LastUpdateTime: metav1.Now(),
 			}
+			if len(shoot.Status.UID) == 0 {
+				shoot.Status.UID = shoot.UID
+			}
 			return shoot, nil
 		})
 	return err
@@ -185,8 +188,16 @@ func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) 
 }
 
 func (c *Controller) deleteShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
-	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+	if shoot.DeletionTimestamp != nil && !controllerutils.HasFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
+	}
+
+	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
+	// cluster. This implies that there can not be any resource which we have to delete.
+	// We accept the deletion.
+	if len(shoot.Status.UID) == 0 {
+		logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
+		return reconcile.Result{}, c.updateShootStatusDeleteSuccess(shoot)
 	}
 
 	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
@@ -232,22 +243,6 @@ func (c *Controller) deleteShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.
 		return reconcile.Result{}, nil
 	}
 
-	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
-	// cluster. This implies that there can not be any resource which we have to delete.
-	// We accept the deletion.
-	if len(o.Shoot.Info.Status.UID) == 0 {
-		o.Logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
-		return c.finalizeShootDeletion(shoot, o)
-	}
-
-	// If the shoot has never been scheduled (this is the case e.g when the scheduler cannot find a seed for the shoot),
-	// the gardener controller manager has never reconciled it. This implies that there can not be any resource which we
-	// have to delete. We accept the deletion.
-	if o.Shoot.Info.Spec.SeedName == nil {
-		o.Logger.Info("`.spec.cloud.seed` is empty, assuming Shoot cluster has never been scheduled - thus never existed. Deletion accepted.")
-		return c.finalizeShootDeletion(shoot, o)
-	}
-
 	// Trigger regular shoot deletion flow.
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
 	if err := c.updateShootStatusDeleteStart(o); err != nil {
@@ -272,7 +267,7 @@ func (c *Controller) finalizeShootDeletion(shoot *gardencorev1beta1.Shoot, o *op
 		}
 	}
 
-	return reconcile.Result{}, c.updateShootStatusDeleteSuccess(o)
+	return reconcile.Result{}, c.updateShootStatusDeleteSuccess(o.Shoot.Info)
 }
 
 func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.Entry) (reconcile.Result, error) {
@@ -331,6 +326,12 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", err.Error())))
 	}
 
+	if !failedOrIgnored {
+		if err := c.updateShootStatusProcessing(shoot, "Shoot initialization"); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
@@ -359,12 +360,6 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		message := fmt.Sprintf("Scheduled next queuing time for Shoot in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
 		c.recorder.Event(shoot, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
-	}
-
-	if shoot.Spec.SeedName == nil || o.Seed == nil {
-		message := "Cannot reconcile Shoot: Waiting for Shoot to get assigned to a Seed"
-		c.recorder.Event(shoot, corev1.EventTypeWarning, "OperationPending", message)
-		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("shoot %s/%s has not yet been scheduled on a Seed", shoot.Namespace, shoot.Name), c.updateShootStatusProcessing(shoot, message))
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
