@@ -164,9 +164,6 @@ func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1beta1.Shoot,
 				Description:    message,
 				LastUpdateTime: metav1.Now(),
 			}
-			if len(shoot.Status.UID) == 0 {
-				shoot.Status.UID = shoot.UID
-			}
 			return shoot, nil
 		})
 	return err
@@ -302,6 +299,30 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 	// make sure that the latest version of the shoot object is used as the basis for next operations
 	shoot = updatedShoot
 
+	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
+	if err != nil {
+		if failedOrIgnored {
+			// do not set error from operation initialization in Shoot status if Shoot would not be reconciled anyways
+			logger.Infof("Shoot is failed or ignored, but error occurred while initializing a new operation: %s", err.Error())
+			return reconcile.Result{}, nil
+		}
+
+		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", err.Error())))
+	}
+
+	// write UID to status when operation was created successfully once
+	if len(shoot.Status.UID) == 0 {
+		_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
+			func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+				shoot.Status.UID = shoot.UID
+				return shoot, nil
+			})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
+
 	logger.WithFields(logrus.Fields{
 		"operationType":              operationType,
 		"respectSyncPeriodOverwrite": respectSyncPeriodOverwrite,
@@ -314,23 +335,6 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		"reconcileAllowed":                           reconcileAllowed,
 		"allowedToUpdate":                            allowedToUpdate,
 	}).Info("Checking if Shoot can be reconciled")
-
-	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
-	if err != nil {
-		if failedOrIgnored {
-			// do not set error from operation initialization in Shoot status if Shoot would not be reconciled anyways
-			logger.Infof("Shoot is failed or ignored, but error occurred while initializing a new operation: %s", err.Error())
-			return reconcile.Result{}, nil
-		}
-
-		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", err.Error())))
-	}
-
-	if !failedOrIgnored {
-		if err := c.updateShootStatusProcessing(shoot, "Shoot initialization"); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
 
 	if err := c.checkSeedAndSyncClusterResource(shoot, o); err != nil {
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)

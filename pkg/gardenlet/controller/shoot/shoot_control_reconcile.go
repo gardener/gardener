@@ -378,9 +378,6 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if len(status.UID) == 0 {
-				shoot.Status.UID = shoot.UID
-			}
 			if len(status.TechnicalID) == 0 {
 				shoot.Status.TechnicalID = o.Shoot.SeedNamespace
 			}
