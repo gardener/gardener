@@ -21,12 +21,12 @@ import (
 var _ Object = (*ContainerRuntime)(nil)
 
 const (
-// ContainerRuntimeResource is a constant for the name of the Container Runtime Extension resource.
-ContainerRuntimeResource = "ContainerRuntime"
-// CRINameWorkerLabel is the name of the label describing the CRI name used in this node.
-CRINameWorkerLabel = "worker.gardener.cloud/cri-name"
-// ContainerRuntimeNameWorkerLabel is a label describing a Container Runtime which should be supported on the node.
-ContainerRuntimeNameWorkerLabel = "containerruntime.worker.gardener.cloud/%s"
+	// ContainerRuntimeResource is a constant for the name of the Container Runtime Extension resource.
+	ContainerRuntimeResource = "ContainerRuntime"
+	// CRINameWorkerLabel is the name of the label describing the CRI name used in this node.
+	CRINameWorkerLabel = "worker.gardener.cloud/cri-name"
+	// ContainerRuntimeNameWorkerLabel is a label describing a Container Runtime which should be supported on the node.
+	ContainerRuntimeNameWorkerLabel = "containerruntime.worker.gardener.cloud/%s"
 )
 
 // +genclient

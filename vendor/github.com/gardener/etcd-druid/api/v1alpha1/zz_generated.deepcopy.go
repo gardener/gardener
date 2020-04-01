@@ -312,6 +312,11 @@ func (in *EtcdStatus) DeepCopyInto(out *EtcdStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Ready != nil {
+		in, out := &in.Ready, &out.Ready
+		*out = new(bool)
+		**out = **in
+	}
 	if in.LabelSelector != nil {
 		in, out := &in.LabelSelector, &out.LabelSelector
 		*out = new(metav1.LabelSelector)

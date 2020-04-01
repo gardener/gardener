@@ -276,7 +276,7 @@ type EtcdStatus struct {
 	// +optional
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 	// +optional
-	Ready bool `json:"ready,omitempty"`
+	Ready *bool `json:"ready,omitempty"`
 	// +optional
 	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
 	// selector is a label query over pods that should match the replica count.
