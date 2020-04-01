@@ -36,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -128,7 +129,7 @@ func newEtcd(namespace, name, role string, healthy bool) *druidv1alpha1.Etcd {
 		},
 	}
 	if healthy {
-		etcd.Status.Ready = true
+		etcd.Status.Ready = pointer.BoolPtr(true)
 	}
 
 	return etcd

@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -84,7 +85,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
 			case etcd.Status.LastError != nil:
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation errored with %s", etcd.Name, err))
-			case !etcd.Status.Ready:
+			case !utils.IsTrue(etcd.Status.Ready):
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
 			}
 		}
