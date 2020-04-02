@@ -78,6 +78,17 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
+		// add CRI labels selected by the RuntimeClass
+		if worker.CRI != nil && len(worker.CRI.ContainerRuntimes) > 0 {
+			for _, cr := range worker.CRI.ContainerRuntimes {
+				key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
+				if worker.Labels == nil {
+					worker.Labels = make(map[string]string, 1)
+				}
+				worker.Labels[key] = "true"
+			}
+		}
+
 		var pConfig *runtime.RawExtension
 		if worker.ProviderConfig != nil {
 			pConfig = &runtime.RawExtension{

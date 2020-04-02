@@ -55,7 +55,24 @@ spec:
             binaryPath:
               description: Path to container runtime binaries folder.
               type: string
+            workerPool:
+              description: WorkerPool identifies the worker pool of the Shoot.
+              type: object
+              properties:
+                name:
+                  description: Name specifies the name of the worker pool the container runtime should be available for.
+                  type: string
+                selector:
+                  description: Selector is the label selector used by the extension to match the nodes belonging to the worker pool.
+                  type: object
+              required:
+                - name
+                - selector
             providerConfig:
               description: ProviderConfig contains provider-specific configuration
                 for this container runtime.
               type: object
+          required:
+          - type
+          - binaryPath
+          - workerPool
