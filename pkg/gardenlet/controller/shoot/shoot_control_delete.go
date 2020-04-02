@@ -357,8 +357,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
 		})
 		deleteContainerRuntimeResources = g.Add(flow.Task{
-			Name:         "Delete stale container runtime resources",
-			Fn:           botanist.DeleteContainerRuntimeResources,
+			Name:         "Deleting container runtime resources",
+			Fn:           flow.TaskFn(botanist.DeleteAllContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, cleanKubernetesResources, cleanShootNamespaces),
 		})
 		waitUntilContainerRuntimeResourcesDeleted = g.Add(flow.Task{

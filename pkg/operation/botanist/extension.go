@@ -132,10 +132,12 @@ func (b *Botanist) deleteExtensionResources(ctx context.Context, wantedExtension
 					Namespace: deployedExtension.Namespace,
 				},
 			}
+
 			fns = append(fns, func(ctx context.Context) error {
-				if err := common.ConfirmDeletion(context.TODO(), b.K8sSeedClient.Client(), toDelete); err != nil {
+				if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), toDelete); err != nil {
 					return err
 				}
+
 				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
 			})
 		}
