@@ -4,9 +4,8 @@ Currently, the Gardener supports the following Kubernetes versions:
 
 ## Garden cluster version
 
-:warning: The Kubernetes version of a garden cluster that can be used to run Gardener must be in the range of **`1.10.x`** to  **`1.15.x`**.
+:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.10.x`**.
 The reason for that is that the least supported Kubernetes version in Gardener is `1.10`.
-Furthermore, Gardener's [extension API server](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/) does not support version >= `1.16` yet.
 
 ## Seed cluster versions
 
