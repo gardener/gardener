@@ -8,9 +8,13 @@ metadata:
     helm.sh/chart: {{ include "node-problem-detector.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 rules:
-- apiGroups: ['extensions']
-  resources: ['podsecuritypolicies']
-  verbs:     ['use']
+- apiGroups:
+  - extensions
+  - policy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
   resourceNames:
   - node-problem-detector
 {{- end }}

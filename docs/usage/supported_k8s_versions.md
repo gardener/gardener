@@ -15,6 +15,6 @@ The reason for that is that we require CRD status subresources for the extension
 
 ## Shoot cluster versions
 
-Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.10`** up to **`1.17`**.
+Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.10`** up to **`1.18`**.
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
