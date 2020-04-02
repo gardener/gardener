@@ -19,6 +19,7 @@ rules:
   resources:
   - backupbuckets
   - backupentries
+  - containerruntimes
   - controlplanes
   - extensions
   - infrastructures
