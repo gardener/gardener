@@ -143,6 +143,9 @@ type EtcdSpec struct {
 	Backup BackupSpec `json:"backup"`
 	// +required
 	Replicas int `json:"replicas"`
+	// PriorityClassName is the name of a priority class that shall be used for the etcd pods.
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 	// StorageClass defines the name of the StorageClass required by the claim.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
 	// +optional

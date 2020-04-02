@@ -7,7 +7,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/etcd v3.3.15+incompatible
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/gardener/etcd-druid v0.1.11
+	github.com/gardener/etcd-druid v0.1.12
 	github.com/gardener/external-dns-management v0.7.3
 	github.com/gardener/gardener-resource-manager v0.10.0
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25

@@ -15,6 +15,7 @@ metadata:
 {{- end }}
 spec:
   replicas: {{ .Values.replicas }}
+  priorityClassName: gardener-shoot-controlplane
 {{- if .Values.podAnnotations }}
   annotations:
 {{ toYaml .Values.podAnnotations | indent 4 }}
