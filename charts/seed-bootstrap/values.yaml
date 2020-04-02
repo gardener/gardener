@@ -154,6 +154,7 @@ global:
     elasticsearch-searchguard-oss: image-repository:image-tag
     fluentd-es: image-repository:image-tag
     gardener-resource-manager: image-repository:image-tag
+    gardener-seed-admission-controller: image-repository:image-tag
     grafana: image-repository:image-tag
     kibana-oss: image-repository:image-tag
     pause-container: image-repository:image-tag
@@ -206,3 +207,13 @@ gardenerResourceManager:
   healthSyncPeriod: 1m0s
   concurrentSyncs: 20
   podAnnotations: {}
+
+gardenerSeedAdmissionController:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+  replicas: 3

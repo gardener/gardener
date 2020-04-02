@@ -103,7 +103,7 @@ data:
         Name                parser
         Match               kubernetes.etcd*backup-restore*
         Key_Name            log
-        Parser              geacParser
+        Parser              gsacParser
         Reserve_Data        True
 
     [FILTER]
@@ -196,6 +196,13 @@ data:
         Match               kubernetes.*curator*
         Key_Name            log
         Parser              curatorParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.gardener-seed-admission-controller*gardener-seed-admission-controller*
+        Key_Name            log
+        Parser              gsacParser
         Reserve_Data        True
 
     [FILTER]
@@ -357,7 +364,7 @@ data:
         Time_Format %Y-%m-%d %H:%M:%S.%L
 
     [PARSER]
-        Name        geacParser
+        Name        gsacParser
         Format      regex
         Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
         Time_Key    time

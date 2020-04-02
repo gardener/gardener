@@ -18,16 +18,20 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,7 +53,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#CleanupOperatingSystemConfigs", func() {
+	Describe("#DeleteStaleOperatingSystemConfigs()", func() {
 		It("should cleanup unused operating system configs", func() {
 			var (
 				ctx              = context.TODO()
@@ -66,8 +70,18 @@ var _ = Describe("operatingsystemconfig", func() {
 			})
 
 			// Expect that the old OperatingSystemConfigs will be cleaned up
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, &oldDownloaderOsc)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, &oldOriginalOsc)
+			oldDownloaderOscCopy := oldDownloaderOsc.DeepCopy()
+			oldDownloaderOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+			oldOriginalOscCopy := oldOriginalOsc.DeepCopy()
+			oldOriginalOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+
+			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldOriginalOsc.Namespace, oldOriginalOsc.Name), &oldOriginalOsc)
+			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldOriginalOscCopy)
+			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldOriginalOscCopy, kubernetes.DefaultDeleteOptions)
+
+			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldDownloaderOsc.Namespace, oldDownloaderOsc.Name), &oldDownloaderOsc)
+			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldDownloaderOscCopy)
+			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldDownloaderOscCopy, kubernetes.DefaultDeleteOptions)
 
 			op := &operation.Operation{
 				K8sSeedClient: k8sSeedClient,
@@ -77,11 +91,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			}
 			botanist := botanist.Botanist{Operation: op}
 
-			usedOscNames := map[string]string{
-				newDownloaderOsc.Name: newDownloaderOsc.Name,
-				newOriginalOsc.Name:   newOriginalOsc.Name,
-			}
-			err := botanist.CleanupOperatingSystemConfigs(ctx, usedOscNames)
+			err := botanist.DeleteStaleOperatingSystemConfigs(ctx, sets.NewString(newDownloaderOsc.Name, newOriginalOsc.Name))
 
 			Expect(err).NotTo(HaveOccurred())
 		})

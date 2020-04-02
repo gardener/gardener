@@ -261,6 +261,10 @@ func (a *actuator) deleteBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
+	if err := common.ConfirmDeletion(ctx, a.seedClient, be); err != nil {
+		return err
+	}
+
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, be))
 }
 

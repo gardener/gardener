@@ -44,18 +44,6 @@ const (
 	// will be downloaded.
 	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
 
-	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
-	CloudProviderConfigName = "cloud-provider-config"
-
-	// CloudProviderConfigMapKey is the key storing the cloud provider config as value in the cloud provider configmap.
-	CloudProviderConfigMapKey = "cloudprovider.conf"
-
-	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
-	CloudPurposeShoot = "shoot"
-
-	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
-	CloudPurposeSeed = "seed"
-
 	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
@@ -138,6 +126,11 @@ const (
 	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
 	EtcdEncryptionKeySecretLen = 32
 
+	// GardenerDeletionProtected is a label on CustomResourceDefinitions indicating that the deletion is protected, i.e.
+	// it must be confirmed with the `confirmation.gardener.cloud/deletion=true` annotation before a `DELETE` call
+	// is accepted.
+	GardenerDeletionProtected = "gardener.cloud/deletion-protected"
+
 	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
 	GardenRoleDefaultDomain = "default-domain"
 
@@ -149,9 +142,6 @@ const (
 
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
-
-	// GardenRoleMembers is the value of GardenRole key indicating type 'members'.
-	GardenRoleMembers = "members"
 
 	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'
 	GardenRoleGlobalMonitoring = "global-monitoring"
@@ -253,17 +243,11 @@ const (
 	// DependencyWatchdogUserName is the user name of the dependency-watchdog.
 	DependencyWatchdogUserName = "gardener.cloud:system:dependency-watchdog"
 
-	// DeprecatedKubecfgInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
-	DeprecatedKubecfgInternalProbeSecretName = "kubecfg-internal"
-
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
 
 	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
 	StaticTokenSecretName = "static-token"
-
-	// FluentBitDaemonSetName is the name of the fluent-bit daemon set.
-	FluentBitDaemonSetName = "fluent-bit"
 
 	// FluentdEsStatefulSetName is the name of the fluentd-es stateful set.
 	FluentdEsStatefulSetName = "fluentd-es"
@@ -286,9 +270,6 @@ const (
 	//
 	// Deprecated: Use `NamespaceProject` instead.
 	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
-
-	// SecretRefChecksumAnnotation is the annotation key for checksum of referred secret in resource spec.
-	SecretRefChecksumAnnotation = "checksum/secret.data"
 
 	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
 	// It influences the size of the initial resource requests/limits.
@@ -384,11 +365,11 @@ const (
 	// Deprecated: Use `ShootIgnore` instead.
 	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
-	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
-	BackupNamespacePrefix = "backup"
-
 	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
 	GardenerResourceManagerImageName = "gardener-resource-manager"
+
+	// GardenerSeedAdmissionControllerImageName is the name of the GardenerSeedAdmissionController image.
+	GardenerSeedAdmissionControllerImageName = "gardener-seed-admission-controller"
 
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"

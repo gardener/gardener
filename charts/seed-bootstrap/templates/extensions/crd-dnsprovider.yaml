@@ -3,6 +3,8 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: dnsproviders.dns.gardener.cloud
+  labels:
+    gardener.cloud/deletion-protected: "true"
 spec:
   group: dns.gardener.cloud
   scope: Namespaced

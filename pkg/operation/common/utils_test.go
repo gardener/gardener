@@ -15,24 +15,33 @@
 package common_test
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/version"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("common", func() {
@@ -479,4 +488,150 @@ var _ = Describe("common", func() {
 				utils.NewMaintenanceTime(1, 0, 0),
 				utils.NewMaintenanceTime(1, 45, 0))),
 	)
+
+	Describe("#CheckIfDeletionIsConfirmed", func() {
+		It("should prevent the deletion due to missing annotations", func() {
+			obj := &corev1.Namespace{}
+
+			Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+		})
+
+		Context("deprecated annotation", func() {
+			It("should prevent the deletion due annotation value != true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletionDeprecated: "false",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+			})
+
+			It("should allow the deletion due annotation value == true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletionDeprecated: "true",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
+			})
+		})
+
+		Context("non-deprecated annotation", func() {
+			It("should prevent the deletion due annotation value != true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletion: "false",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
+			})
+
+			It("should allow the deletion due annotation value == true", func() {
+				obj := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							ConfirmationDeletion: "true",
+						},
+					},
+				}
+
+				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
+			})
+		})
+	})
+
+	Describe("#ConfirmDeletion", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should add the deletion confirmation annotation for an object without annotations", func() {
+			var (
+				ctx = context.TODO()
+				obj = &corev1.Namespace{}
+			)
+
+			expectedObj := obj.DeepCopy()
+			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true"}
+
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
+			c.EXPECT().Update(ctx, expectedObj)
+
+			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+		})
+
+		It("should add the deletion confirmation annotation for an object with annotations", func() {
+			var (
+				ctx = context.TODO()
+				obj = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"foo": "bar",
+						},
+					},
+				}
+			)
+
+			expectedObj := obj.DeepCopy()
+			expectedObj.Annotations[ConfirmationDeletion] = "true"
+
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
+			c.EXPECT().Update(ctx, expectedObj)
+
+			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+		})
+
+		It("should ignore non-existing objects", func() {
+			var (
+				ctx         = context.TODO()
+				obj         = &corev1.Namespace{}
+				expectedObj = obj.DeepCopy()
+			)
+
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj).Return(apierrors.NewNotFound(corev1.Resource("namespaces"), ""))
+
+			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+			Expect(obj).To(Equal(expectedObj))
+		})
+
+		It("should retry on conflict and add the deletion confirmation annotation", func() {
+			var (
+				ctx     = context.TODO()
+				baseObj = &corev1.Namespace{}
+				obj     = baseObj.DeepCopy()
+			)
+
+			expectedObj := obj.DeepCopy()
+			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true"}
+
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
+			c.EXPECT().Update(ctx, expectedObj).Return(apierrors.NewConflict(corev1.Resource("namespaces"), "", errors.New("conflict")))
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), expectedObj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+				baseObj.DeepCopyInto(o.(*corev1.Namespace))
+				return nil
+			})
+			c.EXPECT().Update(ctx, expectedObj)
+
+			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+		})
+	})
 })

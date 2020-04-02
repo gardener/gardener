@@ -143,7 +143,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			if shootIgnored(obj) {
 				return fmt.Errorf("cannot delete shoot if %s annotation is set", common.ShootIgnore)
 			}
-			return checkIfDeletionIsConfirmed(obj)
+			return common.CheckIfDeletionIsConfirmed(obj)
 		}
 
 	case core.Kind("Project"):
@@ -164,7 +164,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (metav1.Object, error) {
 			return d.gardenCoreClient.Core().Projects().Get(a.GetName(), metav1.GetOptions{})
 		}
-		checkFunc = checkIfDeletionIsConfirmed
+		checkFunc = common.CheckIfDeletionIsConfirmed
 
 	default:
 		return nil
@@ -253,19 +253,6 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 	return nil
 }
 
-func checkIfDeletionIsConfirmed(obj metav1.Object) error {
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		return annotationRequiredError()
-	}
-
-	value, _ := common.GetConfirmationDeletionAnnotation(annotations)
-	if present, _ := strconv.ParseBool(value); !present {
-		return annotationRequiredError()
-	}
-	return nil
-}
-
 func shootIgnored(obj metav1.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
@@ -276,8 +263,4 @@ func shootIgnored(obj metav1.Object) bool {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore
-}
-
-func annotationRequiredError() error {
-	return fmt.Errorf("must have a %q annotation to delete", common.ConfirmationDeletion)
 }

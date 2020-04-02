@@ -4,10 +4,13 @@
 # the respective tag can be used. The syntax must be as described in the
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
 images:
-# Gardenlet
+# Gardener components
 - name: gardenlet
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
+- name: gardener-seed-admission-controller
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
 
 # Seed bootstrap
 - name: pause-container

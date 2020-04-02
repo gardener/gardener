@@ -11,6 +11,7 @@
 * [Gardener API server](concepts/apiserver.md)
 * [Gardener Scheduler](concepts/scheduler.md)
 * [Gardenlet](concepts/gardenlet.md)
+* [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
 
 ## Usage
 

@@ -563,11 +563,6 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		return fmt.Errorf("error converting config to external version")
 	}
 
-	gardenletImage, err := imageVector.FindImage("gardenlet")
-	if err != nil {
-		return err
-	}
-
 	var secretRef *corev1.SecretReference
 	if shootedSeedConfig.WithSecretRef {
 		secretRef = &corev1.SecretReference{
@@ -599,6 +594,10 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		componentImageVectorOverwrites = string(data)
 	}
 
+	gardenletImage, err := imageVector.FindImage("gardenlet")
+	if err != nil {
+		return err
+	}
 	var (
 		repository = gardenletImage.String()
 		tag        = version.Get().GitVersion

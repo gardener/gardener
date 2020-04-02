@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +19,11 @@ source $(dirname "${0}")/common
 kubeconfig="$(mktemp_kubeconfig)"
 trap cleanup_kubeconfig EXIT
 
-KUBECONFIG="${KUBECONFIG:-$kubeconfig}" GO111MODULE=on \
+GO111MODULE=on \
     go run \
       -mod=vendor \
       -ldflags "$(./hack/get-build-ld-flags)" \
-      cmd/gardener-scheduler/main.go \
-      --config=dev/20-componentconfig-gardener-scheduler.yaml
+      cmd/gardener-seed-admission-controller/main.go \
+      --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
+      --tls-cert-path="example/seed-admission-controller/tls.crt" \
+      --tls-private-key-path="example/seed-admission-controller/tls.key"

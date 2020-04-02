@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -69,7 +70,18 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 // DestroyNetwork deletes the `Network` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) DestroyNetwork(ctx context.Context) error {
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: b.Shoot.Info.Name}}))
+	obj := &extensionsv1alpha1.Network{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: b.Shoot.SeedNamespace,
+			Name:      b.Shoot.Info.Name,
+		},
+	}
+
+	if err := common.ConfirmDeletion(context.TODO(), b.K8sSeedClient.Client(), obj); err != nil {
+		return err
+	}
+
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
 }
 
 // WaitUntilNetworkIsReady waits until the network resource has been reconciled successfully.

@@ -267,7 +267,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 	return nil
 }
 
-// deleteBackupBucketExtension deletes BackupBucket extension resource in seed .
+// deleteBackupBucketExtension deletes BackupBucket extension resource in seed.
 func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
 	if err := a.deleteGeneratedBackupBucketSecretInGarden(ctx); err != nil {
 		return err
@@ -282,6 +282,11 @@ func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
 			Name: a.backupBucket.Name,
 		},
 	}
+
+	if err := common.ConfirmDeletion(ctx, a.seedClient, bb); err != nil {
+		return err
+	}
+
 	return client.IgnoreNotFound(a.seedClient.Delete(ctx, bb))
 }
 

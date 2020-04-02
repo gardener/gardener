@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -69,36 +70,6 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// DeleteStaleExtensionResources deletes unused extensions from the shoot namespace in the seed.
-func (b *Botanist) DeleteStaleExtensionResources(ctx context.Context) error {
-	wantedExtensions := sets.NewString()
-	for _, extension := range b.Shoot.Extensions {
-		wantedExtensions.Insert(extension.Spec.Type)
-	}
-
-	deployedExtensions := &extensionsv1alpha1.ExtensionList{}
-	if err := b.K8sSeedClient.Client().List(ctx, deployedExtensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-		return err
-	}
-
-	fns := make([]flow.TaskFn, 0, meta.LenList(deployedExtensions))
-	for _, deployedExtension := range deployedExtensions.Items {
-		if !wantedExtensions.Has(deployedExtension.Spec.Type) {
-			toDelete := &extensionsv1alpha1.Extension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      deployedExtension.Name,
-					Namespace: deployedExtension.Namespace,
-				},
-			}
-			fns = append(fns, func(ctx context.Context) error {
-				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
-			})
-		}
-	}
-
-	return flow.Parallel(fns...)(ctx)
-}
-
 // WaitUntilExtensionResourcesReady waits until all extension resources report `Succeeded` in their last operation state.
 // The state must be reported before the passed context is cancelled or an extension's timeout has been reached.
 // As soon as one timeout has been overstepped the function returns an error, further waits on extensions will be aborted.
@@ -132,9 +103,45 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 	return flow.ParallelExitOnError(fns...)(ctx)
 }
 
-// DeleteExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
-func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
-	return b.K8sSeedClient.Client().DeleteAllOf(ctx, &extensionsv1alpha1.Extension{}, client.InNamespace(b.Shoot.SeedNamespace))
+// DeleteStaleExtensionResources deletes unused extensions from the shoot namespace in the seed.
+func (b *Botanist) DeleteStaleExtensionResources(ctx context.Context) error {
+	wantedExtensionTypes := sets.NewString()
+	for _, extension := range b.Shoot.Extensions {
+		wantedExtensionTypes.Insert(extension.Spec.Type)
+	}
+	return b.deleteExtensionResources(ctx, wantedExtensionTypes)
+}
+
+// DeleteAllExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
+func (b *Botanist) DeleteAllExtensionResources(ctx context.Context) error {
+	return b.deleteExtensionResources(ctx, sets.NewString())
+}
+
+func (b *Botanist) deleteExtensionResources(ctx context.Context, wantedExtensionTypes sets.String) error {
+	deployedExtensions := &extensionsv1alpha1.ExtensionList{}
+	if err := b.K8sSeedClient.Client().List(ctx, deployedExtensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+		return err
+	}
+
+	fns := make([]flow.TaskFn, 0, meta.LenList(deployedExtensions))
+	for _, deployedExtension := range deployedExtensions.Items {
+		if !wantedExtensionTypes.Has(deployedExtension.Spec.Type) {
+			toDelete := &extensionsv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deployedExtension.Name,
+					Namespace: deployedExtension.Namespace,
+				},
+			}
+			fns = append(fns, func(ctx context.Context) error {
+				if err := common.ConfirmDeletion(context.TODO(), b.K8sSeedClient.Client(), toDelete); err != nil {
+					return err
+				}
+				return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
+			})
+		}
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.
