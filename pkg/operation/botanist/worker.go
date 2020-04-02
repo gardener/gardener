@@ -141,7 +141,7 @@ func (b *Botanist) DestroyWorker(ctx context.Context) error {
 		},
 	}
 
-	if err := common.ConfirmDeletion(context.TODO(), b.K8sSeedClient.Client(), obj); err != nil {
+	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
 		return err
 	}
 

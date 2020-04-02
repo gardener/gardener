@@ -343,7 +343,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
 		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
-			Name:         "Delete stale container runtime  resources",
+			Name:         "Delete stale container runtime resources",
 			Fn:           flow.TaskFn(botanist.DeleteStaleContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
