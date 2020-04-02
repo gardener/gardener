@@ -30,7 +30,7 @@ const (
 // https://github.com/kubernetes/kubernetes/issues/55890
 // https://github.com/kubernetes-sigs/cluster-api/issues/137
 type ProviderConfig struct {
-	runtime.RawExtension `json:",inline"`
+	runtime.RawExtension `json:",inline" protobuf:"bytes,1,opt,name=rawExtension"`
 }
 
 // OpenAPISchemaType is used by the kube-openapi generator when constructing
@@ -51,17 +51,17 @@ type ConditionType string
 // Condition holds the information about the state of a resource.
 type Condition struct {
 	// Type of the Shoot condition.
-	Type ConditionType `json:"type"`
+	Type ConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=ConditionType"`
 	// Status of the condition, one of True, False, Unknown.
-	Status ConditionStatus `json:"status"`
+	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime" protobuf:"bytes,3,opt,name=lastTransitionTime"`
 	// Last time the condition was updated.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime" protobuf:"bytes,4,opt,name=lastUpdateTime"`
 	// The reason for the condition's last transition.
-	Reason string `json:"reason"`
+	Reason string `json:"reason" protobuf:"bytes,5,opt,name=reason"`
 	// A human readable message indicating details about the transition.
-	Message string `json:"message"`
+	Message string `json:"message" protobuf:"bytes,6,opt,name=message"`
 }
 
 const (

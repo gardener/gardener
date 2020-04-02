@@ -13,6 +13,7 @@ require (
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.2
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.3.1
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect

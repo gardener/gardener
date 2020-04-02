@@ -403,7 +403,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 		size, _ := resource.ParseQuantity("0Gi")
 		if worker.Volume != nil {
-			size, err = resource.ParseQuantity(worker.Volume.Size)
+			size, err = resource.ParseQuantity(worker.Volume.VolumeSize)
 			if err != nil {
 				return nil, err
 			}
@@ -437,8 +437,8 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 			for _, machineType := range cloudProfile.Spec.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil {
 					workerCopy.Volume = &core.Volume{
-						Type: &machineType.Storage.Type,
-						Size: machineType.Storage.Size.String(),
+						Type:       &machineType.Storage.Type,
+						VolumeSize: machineType.Storage.StorageSize.String(),
 					}
 				}
 			}

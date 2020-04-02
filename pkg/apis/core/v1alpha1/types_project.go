@@ -28,13 +28,13 @@ type Project struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec defines the project properties.
 	// +optional
-	Spec ProjectSpec `json:"spec,omitempty"`
+	Spec ProjectSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Project.
 	// +optional
-	Status ProjectStatus `json:"status,omitempty"`
+	Status ProjectStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -44,9 +44,9 @@ type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of Projects.
-	Items []Project `json:"items"`
+	Items []Project `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // ProjectSpec is the specification of a Project.
@@ -54,10 +54,10 @@ type ProjectSpec struct {
 	// CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
 	// who created the project.
 	// +optional
-	CreatedBy *rbacv1.Subject `json:"createdBy,omitempty"`
+	CreatedBy *rbacv1.Subject `json:"createdBy,omitempty" protobuf:"bytes,1,opt,name=createdBy"`
 	// Description is a human-readable description of what the project is used for.
 	// +optional
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty" protobuf:"bytes,2,opt,name=description"`
 	// Owner is a subject representing a user name, an email address, or any other identifier of a user owning
 	// the project.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `owner`
@@ -65,42 +65,42 @@ type ProjectSpec struct {
 	// to change the owner is to use this field.
 	// +optional
 	// TODO: Remove this field in favor of the `owner` role in `v1`.
-	Owner *rbacv1.Subject `json:"owner,omitempty"`
+	Owner *rbacv1.Subject `json:"owner,omitempty" protobuf:"bytes,3,opt,name=owner"`
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
-	Purpose *string `json:"purpose,omitempty"`
+	Purpose *string `json:"purpose,omitempty" protobuf:"bytes,4,opt,name=purpose"`
 	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user,
 	// group, or service account that has a certain role.
 	// +optional
-	Members []ProjectMember `json:"members,omitempty"`
+	Members []ProjectMember `json:"members,omitempty" protobuf:"bytes,5,rep,name=members"`
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	// +optional
-	Namespace *string `json:"namespace,omitempty"`
+	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,6,opt,name=namespace"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
 type ProjectStatus struct {
 	// ObservedGeneration is the most recent generation observed for this project.
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 	// Phase is the current phase of the project.
-	Phase ProjectPhase `json:"phase,omitempty"`
+	Phase ProjectPhase `json:"phase,omitempty" protobuf:"bytes,2,opt,name=phase,casttype=ProjectPhase"`
 }
 
 // ProjectMember is a member of a project.
 type ProjectMember struct {
 	// Subject is representing a user name, an email address, or any other identifier of a user, group, or service
 	// account that has a certain role.
-	rbacv1.Subject `json:",inline"`
+	rbacv1.Subject `json:",inline" protobuf:"bytes,1,opt,name=subject"`
 	// Role represents the role of this member.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
 	// list.
 	// TODO: Remove this field in favor of the `owner` role in `v1`.
-	Role string `json:"role"`
+	Role string `json:"role" protobuf:"bytes,2,opt,name=role"`
 	// Roles represents the list of roles of this member.
 	// +optional
-	Roles []string `json:"roles,omitempty"`
+	Roles []string `json:"roles,omitempty" protobuf:"bytes,3,rep,name=roles"`
 }
 
 const (

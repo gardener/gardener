@@ -436,7 +436,7 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 			for _, dataVolume := range worker.DataVolumes {
 				volName := dataVolume.Name
 				if *volName == *kubeletDataVolName {
-					size, err := resource.ParseQuantity(dataVolume.Size)
+					size, err := resource.ParseQuantity(dataVolume.VolumeSize)
 					if err != nil {
 						return nil, err
 					}
@@ -444,7 +444,7 @@ func (b *Botanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedC
 					if !ok {
 						sizeInBytes, ok = size.AsDec().Unscaled()
 						if !ok {
-							return nil, fmt.Errorf("failed to parse volume size %s", dataVolume.Size)
+							return nil, fmt.Errorf("failed to parse volume size %s", dataVolume.VolumeSize)
 						}
 					}
 					w["kubeletDataVolume"] = map[string]interface{}{

@@ -28,11 +28,11 @@ import (
 type Seed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec contains the specification of this installation.
-	Spec SeedSpec `json:"spec,omitempty"`
+	Spec SeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the status of this installation.
-	Status SeedStatus `json:"status,omitempty"`
+	Status SeedStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -42,9 +42,9 @@ type SeedList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list object metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of Seeds.
-	Items []Seed `json:"items"`
+	Items []Seed `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // SeedSpec is the specification of a Seed.
@@ -54,27 +54,27 @@ type SeedSpec struct {
 	// If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
 	// under the configured object store.
 	// +optional
-	Backup *SeedBackup `json:"backup,omitempty"`
+	Backup *SeedBackup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
 	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
-	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
+	BlockCIDRs []string `json:"blockCIDRs,omitempty" protobuf:"bytes,2,rep,name=blockCIDRs"`
 	// DNS contains DNS-relevant information about this seed cluster.
-	DNS SeedDNS `json:"dns"`
+	DNS SeedDNS `json:"dns" protobuf:"bytes,3,opt,name=dns"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
-	Networks SeedNetworks `json:"networks"`
+	Networks SeedNetworks `json:"networks" protobuf:"bytes,4,opt,name=networks"`
 	// Provider defines the provider type and region for this Seed cluster.
-	Provider SeedProvider `json:"provider"`
+	Provider SeedProvider `json:"provider" protobuf:"bytes,5,opt,name=provider"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
 	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,6,opt,name=secretRef"`
 	// Taints describes taints on the seed.
 	// +optional
-	Taints []SeedTaint `json:"taints,omitempty"`
+	Taints []SeedTaint `json:"taints,omitempty" protobuf:"bytes,7,rep,name=taints"`
 	// Volume contains settings for persistentvolumes created in the seed cluster.
 	// +optional
-	Volume *SeedVolume `json:"volume,omitempty"`
+	Volume *SeedVolume `json:"volume,omitempty" protobuf:"bytes,8,opt,name=volume"`
 }
 
 // SeedStatus is the status of a Seed.
@@ -83,81 +83,81 @@ type SeedStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// Gardener holds information about the Gardener instance which last acted on the Seed.
 	// +optional
-	Gardener *Gardener `json:"gardener,omitempty"`
+	Gardener *Gardener `json:"gardener,omitempty" protobuf:"bytes,2,opt,name=gardener"`
 	// KubernetesVersion is the Kubernetes version of the seed cluster.
 	// +optional
-	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
+	KubernetesVersion *string `json:"kubernetesVersion,omitempty" protobuf:"bytes,3,opt,name=kubernetesVersion"`
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
 type SeedBackup struct {
 	// Provider is a provider name.
-	Provider string `json:"provider"`
+	Provider string `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty"`
+	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a region name.
 	// +optional
-	Region *string `json:"region,omitempty"`
+	Region *string `json:"region,omitempty" protobuf:"bytes,3,opt,name=region"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
 	// the object store where backups should be stored. It should have enough privileges to manipulate
 	// the objects as well as buckets.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,4,opt,name=secretRef"`
 }
 
 // SeedDNS contains DNS-relevant information about this seed cluster.
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters.
-	IngressDomain string `json:"ingressDomain"`
+	IngressDomain string `json:"ingressDomain" protobuf:"bytes,1,opt,name=ingressDomain"`
 }
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
 	// +optional
-	Nodes *string `json:"nodes,omitempty"`
+	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
 	// Pods is the CIDR of the pod network.
-	Pods string `json:"pods"`
+	Pods string `json:"pods" protobuf:"bytes,2,opt,name=pods"`
 	// Services is the CIDR of the service network.
-	Services string `json:"services"`
+	Services string `json:"services" protobuf:"bytes,3,opt,name=services"`
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional
-	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty"`
+	ShootDefaults *ShootNetworks `json:"shootDefaults,omitempty" protobuf:"bytes,4,opt,name=shootDefaults"`
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.
 type ShootNetworks struct {
 	// Pods is the CIDR of the pod network.
 	// +optional
-	Pods *string `json:"pods,omitempty"`
+	Pods *string `json:"pods,omitempty" protobuf:"bytes,1,opt,name=pods"`
 	// Services is the CIDR of the service network.
 	// +optional
-	Services *string `json:"services,omitempty"`
+	Services *string `json:"services,omitempty" protobuf:"bytes,2,opt,name=services"`
 }
 
 // SeedProvider defines the provider type and region for this Seed cluster.
 type SeedProvider struct {
 	// Type is the name of the provider.
-	Type string `json:"type"`
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Region is a name of a region.
-	Region string `json:"region"`
+	Region string `json:"region" protobuf:"bytes,2,opt,name=region"`
 }
 
 // SeedTaint describes a taint on a seed.
 type SeedTaint struct {
 	// Key is the taint key to be applied to a seed.
-	Key string `json:"key"`
+	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
 	// Value is the taint value corresponding to the taint key.
 	// +optional
-	Value *string `json:"value,omitempty"`
+	Value *string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
 const (
@@ -181,20 +181,20 @@ const (
 type SeedVolume struct {
 	// MinimumSize defines the minimum size that should be used for PVCs in the seed.
 	// +optional
-	MinimumSize *resource.Quantity `json:"minimumSize,omitempty"`
+	MinimumSize *resource.Quantity `json:"minimumSize,omitempty" protobuf:"bytes,1,opt,name=minimumSize"`
 	// Providers is a list of storage class provisioner types for the seed.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	Providers []SeedVolumeProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Providers []SeedVolumeProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=providers"`
 }
 
 // SeedVolumeProvider is a storage class provisioner type.
 type SeedVolumeProvider struct {
 	// Purpose is the purpose of this provider.
-	Purpose string `json:"purpose"`
+	Purpose string `json:"purpose" protobuf:"bytes,1,opt,name=purpose"`
 	// Name is the name of the storage class provisioner type.
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 }
 
 const (

@@ -843,8 +843,8 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 
 	if worker.Volume != nil {
-		if !volumeSizeRegex.MatchString(worker.Volume.Size) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.Size, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
+		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
 		}
 	}
 
@@ -870,8 +870,8 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 				} else {
 					volumeNames[volName] = 1
 				}
-				if !volumeSizeRegex.MatchString(volume.Size) {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.Size, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
+				if !volumeSizeRegex.MatchString(volume.VolumeSize) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.VolumeSize, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
 				}
 			}
 		}

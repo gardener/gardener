@@ -701,8 +701,8 @@ type Volume struct {
 	Name *string
 	// Type is the type of the volume.
 	Type *string
-	// Size is the size of the volume.
-	Size string
+	// VolumeSize is the size of the volume.
+	VolumeSize string
 	// Encrypted determines if the volume should be encrypted.
 	Encrypted *bool
 }

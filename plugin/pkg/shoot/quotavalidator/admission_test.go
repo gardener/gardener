@@ -157,8 +157,8 @@ var _ = Describe("quotavalidator", func() {
 					Maximum: 1,
 					Minimum: 1,
 					Volume: &core.Volume{
-						Size: "30Gi",
-						Type: &volumeTypeName,
+						VolumeSize: "30Gi",
+						Type:       &volumeTypeName,
 					},
 				},
 			}
@@ -172,8 +172,8 @@ var _ = Describe("quotavalidator", func() {
 					Maximum: 1,
 					Minimum: 1,
 					Volume: &core.Volume{
-						Size: "30Gi",
-						Type: &volumeTypeName,
+						VolumeSize: "30Gi",
+						Type:       &volumeTypeName,
 					},
 				},
 				{
@@ -184,8 +184,8 @@ var _ = Describe("quotavalidator", func() {
 					Maximum: 1,
 					Minimum: 1,
 					Volume: &core.Volume{
-						Size: "30Gi",
-						Type: &volumeTypeName,
+						VolumeSize: "30Gi",
+						Type:       &volumeTypeName,
 					},
 				},
 			}
@@ -290,7 +290,7 @@ var _ = Describe("quotavalidator", func() {
 				It("should pass because quota is large enough", func() {
 					shoot2 := *shoot.DeepCopy()
 					shoot2.Spec.Provider.Workers[0].Machine.Type = machineTypeName2
-					shoot2.Spec.Provider.Workers[0].Volume.Size = "19Gi"
+					shoot2.Spec.Provider.Workers[0].Volume.VolumeSize = "19Gi"
 
 					quotaProject.Spec.Metrics[core.QuotaMetricStorageStandard] = resource.MustParse("20Gi")
 
@@ -303,7 +303,7 @@ var _ = Describe("quotavalidator", func() {
 				It("should fail because quota is not large enough", func() {
 					shoot2 := *shoot.DeepCopy()
 					shoot2.Spec.Provider.Workers[0].Machine.Type = machineTypeName2
-					shoot2.Spec.Provider.Workers[0].Volume.Size = "21Gi"
+					shoot2.Spec.Provider.Workers[0].Volume.VolumeSize = "21Gi"
 
 					quotaProject.Spec.Metrics[core.QuotaMetricStorageStandard] = resource.MustParse("20Gi")
 

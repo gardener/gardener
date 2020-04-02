@@ -4890,7 +4890,7 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </em>
 </td>
 <td>
-<p>Size is the storage size.</p>
+<p>StorageSize is the storage size.</p>
 </td>
 </tr>
 <tr>
@@ -7093,7 +7093,7 @@ string
 </em>
 </td>
 <td>
-<p>Size is the size of the volume.</p>
+<p>VolumeSize is the size of the volume.</p>
 </td>
 </tr>
 <tr>
@@ -7437,5 +7437,5 @@ KubeletConfig
 <hr/>
 <p><em>
 Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>479bafda0</code>.
+on git commit <code>c09925d0c</code>.
 </em></p>

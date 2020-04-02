@@ -23,5 +23,6 @@ import (
 	_ "github.com/onsi/ginkgo/ginkgo"
 	_ "golang.org/x/lint/golint"
 	_ "k8s.io/code-generator"
+	_ "k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo"
 	_ "k8s.io/kube-openapi/cmd/openapi-gen"
 )
