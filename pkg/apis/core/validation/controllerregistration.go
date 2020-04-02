@@ -115,6 +115,7 @@ func ValidateControllerRegistrationUpdate(new, old *core.ControllerRegistration)
 	return allErrs
 }
 
+// ValidateControllerRegistrationSpecUpdate validates a ControllerRegistration spec before an update.
 func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrationSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

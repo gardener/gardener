@@ -30,6 +30,11 @@ spec:
   - name: ubuntu
     versions:
     - version: 18.04.201906170
+    # cri:
+    # - name: containerd
+    #   containerRuntimes:
+    #   - type: gvisor
+    #   - type: kata-containers
   machineTypes:
   - name: m5.large
     cpu: "2"

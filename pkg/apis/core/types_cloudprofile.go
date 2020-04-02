@@ -95,8 +95,15 @@ type KubernetesSettings struct {
 type MachineImage struct {
 	// Name is the name of the image.
 	Name string
-	// Versions contains versions and expiration dates of the machine image
-	Versions []ExpirableVersion
+	// Versions contains versions, expiration dates and container runtimes of the machine image
+	Versions []MachineImageVersion
+}
+
+// MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
+type MachineImageVersion struct {
+	ExpirableVersion
+	// CRI list of supported container runtime and interfaces supported by this version
+	CRI []CRI
 }
 
 // ExpirableVersion contains a version and an expiration date.

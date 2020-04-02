@@ -573,9 +573,17 @@ var _ = Describe("helper", func() {
 		BeforeEach(func() {
 			constraint = gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
-					{Version: "0.0.2"},
-					{Version: "0.0.3"},
+				Versions: []gardencorev1alpha1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.3",
+						},
+					},
 				},
 			}
 
@@ -631,10 +639,22 @@ var _ = Describe("helper", func() {
 			latestVersion := "1.0.0"
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
-					{Version: "0.0.2"},
-					{Version: latestVersion},
-					{Version: "0.0.2"},
+				Versions: []gardencorev1alpha1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: latestVersion,
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
+					},
 				},
 			}
 
@@ -651,8 +671,12 @@ var _ = Describe("helper", func() {
 			latestVersion := "1.1"
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
-					{Version: latestVersion},
+				Versions: []gardencorev1alpha1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: latestVersion,
+						},
+					},
 				},
 			}
 
@@ -668,8 +692,12 @@ var _ = Describe("helper", func() {
 		It("should return an error for invalid semVerVersion", func() {
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
-					{Version: "0.0.XX"},
+				Versions: []gardencorev1alpha1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.XX",
+						},
+					},
 				},
 			}
 
@@ -778,15 +806,21 @@ var _ = Describe("helper", func() {
 			latestVersion := "1.0.0"
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
+				Versions: []gardencorev1alpha1.MachineImageVersion{
 					{
-						Version: "0.0.2",
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
 					},
 					{
-						Version: latestVersion,
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: latestVersion,
+						},
 					},
 					{
-						Version: "0.0.2",
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
 					},
 				},
 			}
@@ -804,9 +838,11 @@ var _ = Describe("helper", func() {
 			latestVersion := "1.1"
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
+				Versions: []gardencorev1alpha1.MachineImageVersion{
 					{
-						Version: latestVersion,
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: latestVersion,
+						},
 					},
 				},
 			}
@@ -823,9 +859,11 @@ var _ = Describe("helper", func() {
 		It("should return an error for invalid semVerVersion", func() {
 			inputImage := gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
+				Versions: []gardencorev1alpha1.MachineImageVersion{
 					{
-						Version: "0.0.XX",
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.XX",
+						},
 					},
 				},
 			}
@@ -843,12 +881,16 @@ var _ = Describe("helper", func() {
 		BeforeEach(func() {
 			constraint = gardencorev1alpha1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1alpha1.ExpirableVersion{
+				Versions: []gardencorev1alpha1.MachineImageVersion{
 					{
-						Version: "0.0.2",
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.2",
+						},
 					},
 					{
-						Version: "0.0.3",
+						ExpirableVersion: gardencorev1alpha1.ExpirableVersion{
+							Version: "0.0.3",
+						},
 					},
 				},
 			}

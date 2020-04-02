@@ -2184,6 +2184,7 @@ BackupEntry&rsquo;s generation, which is updated on mutation by the API Server.<
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>, 
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
@@ -3347,7 +3348,7 @@ string
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.KubernetesSettings">KubernetesSettings</a>, 
-<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
 <p>ExpirableVersion contains a version and an expiration date.</p>
@@ -5234,13 +5235,61 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
-[]ExpirableVersion
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">
+[]MachineImageVersion
 </a>
 </em>
 </td>
 <td>
-<p>Versions contains versions and expiration dates of the machine image</p>
+<p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+</p>
+<p>
+<p>MachineImageVersion is an expirable version with list of supported container runtimes and interfaces</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ExpirableVersion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
+ExpirableVersion
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>ExpirableVersion</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cri</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CRI">
+[]CRI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI list of supported container runtime and interfaces supported by this version</p>
 </td>
 </tr>
 </tbody>

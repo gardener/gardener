@@ -631,16 +631,16 @@ func ShootMachineImageVersionExists(constraint gardencorev1alpha1.MachineImage, 
 }
 
 // DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
-func DetermineLatestMachineImageVersion(image gardencorev1alpha1.MachineImage) (*semver.Version, gardencorev1alpha1.ExpirableVersion, error) {
+func DetermineLatestMachineImageVersion(image gardencorev1alpha1.MachineImage) (*semver.Version, gardencorev1alpha1.MachineImageVersion, error) {
 	var (
 		latestSemVerVersion       *semver.Version
-		latestMachineImageVersion gardencorev1alpha1.ExpirableVersion
+		latestMachineImageVersion gardencorev1alpha1.MachineImageVersion
 	)
 
 	for _, imageVersion := range image.Versions {
 		v, err := semver.NewVersion(imageVersion.Version)
 		if err != nil {
-			return nil, gardencorev1alpha1.ExpirableVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
+			return nil, gardencorev1alpha1.MachineImageVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
 		}
 		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
 			latestSemVerVersion = v
@@ -738,7 +738,7 @@ func determineNextKubernetesVersions(cloudProfile *gardencorev1alpha1.CloudProfi
 }
 
 // SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
-func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1alpha1.MachineImage, imageName string, imageVersions []gardencorev1alpha1.ExpirableVersion) ([]gardencorev1alpha1.MachineImage, error) {
+func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1alpha1.MachineImage, imageName string, imageVersions []gardencorev1alpha1.MachineImageVersion) ([]gardencorev1alpha1.MachineImage, error) {
 	for index, image := range machineImages {
 		if strings.EqualFold(image.Name, imageName) {
 			machineImages[index].Versions = imageVersions

@@ -830,9 +830,17 @@ var _ = Describe("helper", func() {
 		BeforeEach(func() {
 			constraint = gardencorev1beta1.MachineImage{
 				Name: "coreos",
-				Versions: []gardencorev1beta1.ExpirableVersion{
-					{Version: "0.0.2"},
-					{Version: "0.0.3"},
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "0.0.2",
+						},
+					},
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "0.0.3",
+						},
+					},
 				},
 			}
 
@@ -878,18 +886,26 @@ var _ = Describe("helper", func() {
 			Entry("Get latest version",
 				gardencorev1beta1.MachineImage{
 					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version: "1.17.1",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.17.1",
+							},
 						},
 						{
-							Version: "1.15.0",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.15.0",
+							},
 						},
 						{
-							Version: "1.14.3",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.14.3",
+							},
 						},
 						{
-							Version: "1.13.1",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.13.1",
+							},
 						},
 					},
 				},
@@ -903,22 +919,30 @@ var _ = Describe("helper", func() {
 			Entry("Expect no qualifying version to be found - machine image has only versions in preview and expired versions",
 				gardencorev1beta1.MachineImage{
 					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version:        "1.17.1",
-							Classification: &previewClassification,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.17.1",
+								Classification: &previewClassification,
+							},
 						},
 						{
-							Version:        "1.15.0",
-							Classification: &previewClassification,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.15.0",
+								Classification: &previewClassification,
+							},
 						},
 						{
-							Version:        "1.14.3",
-							ExpirationDate: &expirationDateInThePast,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.14.3",
+								ExpirationDate: &expirationDateInThePast,
+							},
 						},
 						{
-							Version:        "1.13.1",
-							ExpirationDate: &expirationDateInThePast,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.13.1",
+								ExpirationDate: &expirationDateInThePast,
+							},
 						},
 					},
 				},

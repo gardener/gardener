@@ -193,7 +193,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 	return allErrs
 }
 
-// ValidateShootProviderUpdate validates the specification of a Provider object.
+// ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -203,7 +203,7 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 	return allErrs
 }
 
-// ValidateShootProviderUpdate validates the specification of a Provider object.
+// ValidateWorkersUpdate validates the specification of a Provider object.
 func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	oldWorkersMap := make(map[string]core.Worker)
@@ -219,7 +219,7 @@ func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.
 	return allErrs
 }
 
-// ValidateShootProviderUpdate validates the specification of a Provider object.
+// ValidateWorkerUpdate validates the specification of a Provider object.
 func ValidateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validateCRIUpdate(newWorker.CRI, oldWorker.CRI, fldPath.Child("cri"))...)
@@ -1348,6 +1348,7 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 	return allErrs
 }
 
+// ValidateCRI validates container runtime interface name and its container runtimes
 func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -1362,6 +1363,7 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
+// ValidateContainerRuntimes validates the given container runtimes
 func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	crSet := make(map[string]bool)

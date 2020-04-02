@@ -333,7 +333,14 @@ func prepareCloudProfile(ctx context.Context, profile gardencorev1beta1.CloudPro
 	gomega.Expect(err).To(gomega.BeNil())
 	gomega.Expect(found).To(gomega.Equal(true))
 
-	imageVersions := append(image.Versions, gardencorev1beta1.ExpirableVersion{Version: testMachineImageVersion, Classification: &deprecatedClassification})
+	imageVersions := append(
+		image.Versions,
+		gardencorev1beta1.MachineImageVersion{
+			ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+				Version:        testMachineImageVersion,
+				Classification: &deprecatedClassification,
+			},
+		})
 	updatedCloudProfileImages, err := helper.SetMachineImageVersionsToMachineImage(profile.Spec.MachineImages, machineImageName, imageVersions)
 	gomega.Expect(err).To(gomega.BeNil())
 	// need one image in Cloud Profile to be updated with one additional version

@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-// ValidateCloudProfile validates a CloudProfile object when it is initially created.
+// ValidateCloudProfileCreation validates a CloudProfile object when it is initially created.
 func ValidateCloudProfileCreation(cloudProfile *core.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 	fldPath := field.NewPath("spec")
@@ -46,7 +46,7 @@ func ValidateCloudProfileCreation(cloudProfile *core.CloudProfile) field.ErrorLi
 		fldPathImage := fldPathMachineImage.Index(index)
 		for index, version := range image.Versions {
 			fldPathImageVersion := fldPathImage.Child("versions")
-			allErrs = append(allErrs, validateVersionExpiration(version, fldPathImageVersion.Index(index))...)
+			allErrs = append(allErrs, validateVersionExpiration(version.ExpirableVersion, fldPathImageVersion.Index(index))...)
 		}
 	}
 
@@ -93,7 +93,14 @@ func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *fi
 	for _, oldImage := range old.MachineImages {
 		for index, newImage := range new.MachineImages {
 			if oldImage.Name == newImage.Name {
-				allErrs = append(allErrs, validateCloudProfileVersionsUpdate(newImage.Versions, oldImage.Versions, fldPath.Child("machineImages").Index(index).Child("versions"))...)
+				allErrs = append(
+					allErrs,
+					validateCloudProfileVersionsUpdate(
+						helper.ToExpirableVersions(newImage.Versions),
+						helper.ToExpirableVersions(oldImage.Versions),
+						fldPath.Child("machineImages").Index(index).Child("versions"),
+					)...,
+				)
 			}
 		}
 	}
@@ -284,8 +291,44 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			if err != nil {
 				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
-			allErrs = append(allErrs, validateExpirableVersion(machineVersion, image.Versions, versionsPath)...)
+
+			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
+			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 		}
+	}
+
+	return allErrs
+}
+
+func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	duplicateCRI := sets.String{}
+
+	for i, cri := range cris {
+		criPath := fldPath.Index(i)
+		if duplicateCRI.Has(string(cri.Name)) {
+			allErrs = append(allErrs, field.Duplicate(criPath, cri.Name))
+		}
+		duplicateCRI.Insert(string(cri.Name))
+
+		if !avaliableWorkerCRINames.Has(string(cri.Name)) {
+			allErrs = append(allErrs, field.NotSupported(criPath, cri, avaliableWorkerCRINames.List()))
+		}
+		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
+	}
+
+	return allErrs
+}
+
+func validateContainerRuntimes(containerRuntimes []core.ContainerRuntime, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	duplicateCR := sets.String{}
+
+	for i, cr := range containerRuntimes {
+		if duplicateCR.Has(cr.Type) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), cr.Type))
+		}
+		duplicateCR.Insert(cr.Type)
 	}
 
 	return allErrs
