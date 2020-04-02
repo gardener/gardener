@@ -259,6 +259,11 @@ func (in *EtcdSpec) DeepCopyInto(out *EtcdSpec) {
 	}
 	in.Etcd.DeepCopyInto(&out.Etcd)
 	in.Backup.DeepCopyInto(&out.Backup)
+	if in.PriorityClassName != nil {
+		in, out := &in.PriorityClassName, &out.PriorityClassName
+		*out = new(string)
+		**out = **in
+	}
 	if in.StorageClass != nil {
 		in, out := &in.StorageClass, &out.StorageClass
 		*out = new(string)
