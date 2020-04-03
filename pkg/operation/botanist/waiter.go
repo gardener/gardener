@@ -84,7 +84,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 			case metav1.HasAnnotation(etcd.ObjectMeta, v1beta1constants.GardenerOperation):
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
 			case etcd.Status.LastError != nil:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation errored with %s", etcd.Name, err))
+				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
 			case !utils.IsTrue(etcd.Status.Ready):
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
 			}
