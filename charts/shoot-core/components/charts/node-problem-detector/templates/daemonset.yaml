@@ -38,7 +38,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image:  {{ index .Values.images "node-problem-detector" }} 
+          image:  {{ index .Values.images "node-problem-detector" }}
           imagePullPolicy: {{ .Values.images.pullPolicy | default "IfNotPresent" | quote }}
           command:
             - "/bin/sh"

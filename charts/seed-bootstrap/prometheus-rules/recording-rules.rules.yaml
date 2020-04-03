@@ -16,22 +16,22 @@ groups:
 
   # Recording rules for the sum of the requests per container
   - record: seed:kube_pod_container_resource_requests_cpu_cores:sum_by_container
-    expr: sum(kube_pod_container_resource_requests_cpu_cores) by (container) 
+    expr: sum(kube_pod_container_resource_requests_cpu_cores) by (container)
 
   - record: seed:kube_pod_container_resource_requests_memory_bytes:sum_by_container
-    expr: sum(kube_pod_container_resource_requests_memory_bytes) by (container) 
+    expr: sum(kube_pod_container_resource_requests_memory_bytes) by (container)
 
   # Recording rules for the sum of the limits per container
   - record: seed:kube_pod_container_resource_limits_cpu_cores:sum_by_container
-    expr: sum(kube_pod_container_resource_limits_cpu_cores) by (container) 
+    expr: sum(kube_pod_container_resource_limits_cpu_cores) by (container)
 
   - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
-    expr: sum(kube_pod_container_resource_limits_memory_bytes) by (container) 
+    expr: sum(kube_pod_container_resource_limits_memory_bytes) by (container)
 
   # Recording rules for the sum of vpa recommendations per container
   - record: seed:vpa_status_recommendation_target:sum_by_container
     expr: sum(vpa_status_recommendation{recommendation="target"}) by (container, resource)
-  
+
   # Recording rules for the sum of hvpa applied recommendations per container
   - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
     expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (container, resource)
@@ -215,35 +215,35 @@ groups:
   # Recording rules for container count per container
   - record: seed:kube_pod_container_info:count_by_container
     expr: count(kube_pod_container_info) by (container)
-  
+
   # Recording rules for container restart count per container
   - record: seed:kube_pod_container_status_restarts_total:sum_by_container
     expr: sum(kube_pod_container_status_restarts_total) by (container)
-  
+
   # Recording rules for deployment spec replicas per deployment
   - record: seed:kube_deployment_spec_replicas:sum_by_deployment
     expr: sum(kube_deployment_spec_replicas) by (deployment)
-  
+
   # Recording rules for deployment status replicas per deployment
   - record: seed:kube_deployment_status_replicas:sum_by_deployment
     expr: sum(kube_deployment_status_replicas) by (deployment)
-  
+
   # Recording rules for deployment status replicas available per deployment
   - record: seed:kube_deployment_status_replicas_available:sum_by_deployment
     expr: sum(kube_deployment_status_replicas_available) by (deployment)
-  
+
   # Recording rules for statefulset spec replicas per statefulset
   - record: seed:kube_statefulset_replicas:sum_by_statefulset
     expr: sum(kube_statefulset_replicas) by (statefulset)
-  
+
   # Recording rules for statefulset status replicas per statefulset
   - record: seed:kube_statefulset_status_replicas:sum_by_statefulset
     expr: sum(kube_statefulset_status_replicas) by (statefulset)
-  
+
   # Recording rules for statefulset status replicas available per statefulset
   - record: seed:kube_statefulset_status_replicas_ready:sum_by_statefulset
     expr: sum(kube_statefulset_status_replicas_ready) by (statefulset)
-  
+
   # Recording rules for the sum of the entire seed usage
   - record: seed:container_cpu_usage_seconds_total:sum
     expr: sum(rate(container_cpu_usage_seconds_total[5m]))
@@ -280,7 +280,7 @@ groups:
   # Recording rules for the sum of vpa recommendations for the entire seed
   - record: seed:vpa_status_recommendation_target:sum
     expr: sum(vpa_status_recommendation{recommendation="target"})  by (resource)
-  
+
   # Recording rules for the sum of hvpa applied recommendations for the entire seed
   - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
     expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (resource)
@@ -304,7 +304,7 @@ groups:
   # Recording rules for images running on seed
   - record: seed:images:count
     expr: count(kube_pod_container_info) by (image)
-  
+
   # Recording rules for container count for the entire seed
   - record: seed:kube_pod_container_info:count
     expr: count(kube_pod_container_info)
@@ -312,31 +312,31 @@ groups:
   # Recording rules for container restart count for the entire seed
   - record: seed:kube_pod_container_status_restarts_total:sum
     expr: sum(kube_pod_container_status_restarts_total)
-  
+
   # Recording rules for deployment spec replicas for the entire seed
   - record: seed:kube_deployment_spec_replicas:sum
     expr: sum(kube_deployment_spec_replicas)
-  
+
   # Recording rules for deployment status replicas for the entire seed
   - record: seed:kube_deployment_status_replicas:sum
     expr: sum(kube_deployment_status_replicas)
-  
+
   # Recording rules for deployment status replicas available for the entire seed
   - record: seed:kube_deployment_status_replicas_available:sum
     expr: sum(kube_deployment_status_replicas_available)
-  
+
   # Recording rules for statefulset spec replicas for the entire seed
   - record: seed:kube_statefulset_replicas:sum
     expr: sum(kube_statefulset_replicas)
-  
+
   # Recording rules for statefulset status replicas for the entire seed
   - record: seed:kube_statefulset_status_replicas:sum
     expr: sum(kube_statefulset_status_replicas)
-  
+
   # Recording rules for statefulset status replicas available for the entire seed
   - record: seed:kube_statefulset_status_replicas_ready:sum
     expr: sum(kube_statefulset_status_replicas_ready)
-  
+
   # Recording rules for node metrics for the entire seed
   - record: seed:kube_node_info:count
     expr: count(kube_node_info)
@@ -352,7 +352,7 @@ groups:
 
   - record: seed:kube_node_status_allocatable_cpu_cores:max
     expr: max(kube_node_status_allocatable_cpu_cores)
-  
+
   - record: seed:kube_node_status_allocatable_cpu_cores:sum
     expr: sum(kube_node_status_allocatable_cpu_cores)
 
@@ -361,7 +361,7 @@ groups:
 
   - record: seed:kube_node_status_allocatable_memory_bytes:sum
     expr: sum(kube_node_status_allocatable_memory_bytes)
-  
+
   - record: seed:kube_node_status_allocatable_pods:max
     expr: max(kube_node_status_allocatable_pods)
 
@@ -412,7 +412,7 @@ groups:
   # Recording rules for the sum of vpa recommendations for all the control-planes
   - record: seed:vpa_status_recommendation_target:sum
     expr: sum(vpa_status_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
-  
+
   # Recording rules for the sum of hvpa applied recommendations for all the control-planes
   - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
     expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
@@ -420,7 +420,7 @@ groups:
   # Recording rules for pod count for all the control-planes
   - record: seed:kube_pod_info:count_cp
     expr: count(kube_pod_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for pod count by status for all the control-planes
   - record: seed:kube_pod_status_ready:sum_cp_by_condition
     expr: sum(kube_pod_status_ready{namespace=~"((shoot-|shoot--)(\\w.+))"}) by (condition)
@@ -432,32 +432,31 @@ groups:
   # Recording rules for container count for all the control-planes
   - record: seed:kube_pod_container_info:count_cp
     expr: count(kube_pod_container_info{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for container restart count for all the control-planes
   - record: seed:kube_pod_container_status_restarts_total:sum_cp
     expr: sum(kube_pod_container_status_restarts_total{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for deployment spec replicas for all the control-planes
   - record: seed:kube_deployment_spec_replicas:sum_cp
     expr: sum(kube_deployment_spec_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for deployment status replicas for all the control-planes
   - record: seed:kube_deployment_status_replicas:sum_cp
     expr: sum(kube_deployment_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for deployment status replicas available for all the control-planes
   - record: seed:kube_deployment_status_replicas_available:sum_cp
     expr: sum(kube_deployment_status_replicas_available{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for statefulset spec replicas for all the control-planes
   - record: seed:kube_statefulset_replicas:sum_cp
     expr: sum(kube_statefulset_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for statefulset status replicas for all the control-planes
   - record: seed:kube_statefulset_status_replicas:sum_cp
     expr: sum(kube_statefulset_status_replicas{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
+
   # Recording rules for statefulset status replicas available for all the control-planes
   - record: seed:kube_statefulset_status_replicas_ready:sum_cp
     expr: sum(kube_statefulset_status_replicas_ready{namespace=~"((shoot-|shoot--)(\\w.+))"})
-  
