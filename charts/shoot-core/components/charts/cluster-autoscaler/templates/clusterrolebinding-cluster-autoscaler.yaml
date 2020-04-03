@@ -2,6 +2,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:cluster-autoscaler-shoot
 roleRef:
   apiGroup: rbac.authorization.k8s.io

@@ -5,6 +5,8 @@ metadata:
     gardener.cloud/description: |
       Allows Egress from pods labeled with 'networking.gardener.cloud/to-public-networks=allowed'
       to all networks.
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-to-public-networks
   namespace: kube-system
   labels:

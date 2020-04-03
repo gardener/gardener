@@ -4,6 +4,8 @@ metadata:
   annotations:
     gardener.cloud/description: |
       Allows traffic to api server in TCP Port 443
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-to-apiserver
   namespace: kube-system
   labels:

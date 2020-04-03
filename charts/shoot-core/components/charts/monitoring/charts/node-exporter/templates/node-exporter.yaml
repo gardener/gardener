@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-exporter
   namespace: kube-system
   labels:
@@ -9,6 +11,8 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-exporter
   namespace: kube-system
   labels:
@@ -26,6 +30,8 @@ spec:
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-exporter
   namespace: kube-system
   labels:

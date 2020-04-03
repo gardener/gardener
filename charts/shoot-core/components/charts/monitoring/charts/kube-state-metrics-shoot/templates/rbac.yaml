@@ -1,6 +1,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: gardener.cloud:monitoring:kube-state-metrics
   labels:
     component: kube-state-metrics
@@ -42,6 +44,8 @@ rules:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: gardener.cloud:monitoring:kube-state-metrics
   labels:
     component: kube-state-metrics

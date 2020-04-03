@@ -5,6 +5,8 @@ metadata:
     gardener.cloud/description: |
       Allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed'
       to DNS running in the 'kube-system' namespace.
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-to-dns
   namespace: kube-system
   labels:

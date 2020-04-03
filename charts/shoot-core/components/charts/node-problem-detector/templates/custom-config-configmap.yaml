@@ -3,6 +3,8 @@ data:
 {{ .Values.settings.custom_monitor_definitions | toYaml | indent 2 }}
 kind: ConfigMap
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-problem-detector-custom-config
   labels:
     app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}

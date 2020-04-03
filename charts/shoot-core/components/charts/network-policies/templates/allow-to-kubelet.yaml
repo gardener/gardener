@@ -4,6 +4,8 @@ metadata:
   annotations:
     gardener.cloud/description: |
       Allows traffic to kubelet in TCP Port 10250
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-to-kubelet
   namespace: kube-system
   labels:

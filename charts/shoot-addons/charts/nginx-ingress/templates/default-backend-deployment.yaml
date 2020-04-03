@@ -2,6 +2,8 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   labels:
     garden.sapcloud.io/role: optional-addon
     app: {{ template "nginx-ingress.name" . }}

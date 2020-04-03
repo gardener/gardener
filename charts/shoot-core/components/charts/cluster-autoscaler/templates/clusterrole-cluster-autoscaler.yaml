@@ -2,6 +2,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:cluster-autoscaler-shoot
 rules:
 - apiGroups:

@@ -1,6 +1,8 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: blackbox-exporter
   namespace: kube-system
   labels:

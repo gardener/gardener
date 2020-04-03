@@ -5,6 +5,8 @@ metadata:
   annotations:
     gardener.cloud/description: |
       Allow all authenticated users to use the unprivileged PSP.
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

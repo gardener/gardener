@@ -2,6 +2,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   labels:
     app: {{ template "nginx-ingress.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}

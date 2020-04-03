@@ -1,6 +1,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: gardener.cloud:psp:kube-system:node-exporter
 rules:
 - apiGroups:

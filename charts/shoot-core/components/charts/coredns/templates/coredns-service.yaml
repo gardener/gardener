@@ -3,8 +3,9 @@ kind: Service
 metadata:
   name: kube-dns
   namespace: kube-system
-{{- if .Values.service.annotations }}
   annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
+{{- if .Values.service.annotations }}
 {{ .Values.service.annotations | toYaml | trimSuffix "\n" | indent 4  }}
 {{- end }}
   labels:

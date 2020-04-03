@@ -3,6 +3,8 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
   labels:

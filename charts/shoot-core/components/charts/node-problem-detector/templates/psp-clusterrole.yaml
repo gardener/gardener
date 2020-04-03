@@ -2,6 +2,8 @@
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-problem-detector-psp
   labels:
     app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}

@@ -2,6 +2,8 @@
 apiVersion: {{ include "apiserviceversion" . }}
 kind: APIService
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: v1beta1.metrics.k8s.io
 spec:
   service:

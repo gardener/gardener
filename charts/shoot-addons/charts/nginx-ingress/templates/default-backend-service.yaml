@@ -2,8 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-{{- if .Values.defaultBackend.service.annotations }}
   annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
+{{- if .Values.defaultBackend.service.annotations }}
 {{ toYaml .Values.defaultBackend.service.annotations | indent 4 }}
 {{- end }}
   labels:

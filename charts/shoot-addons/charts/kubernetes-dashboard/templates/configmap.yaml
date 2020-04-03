@@ -3,6 +3,8 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: kubernetes-dashboard-settings
   namespace: kubernetes-dashboard
   labels:

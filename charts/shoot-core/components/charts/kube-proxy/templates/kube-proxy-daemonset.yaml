@@ -2,6 +2,8 @@
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: kube-proxy
   namespace: kube-system
   labels:

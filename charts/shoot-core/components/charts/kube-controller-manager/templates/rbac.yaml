@@ -2,6 +2,8 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:controller:kube-controller-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -14,6 +16,8 @@ subjects:
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:controller:kube-controller-manager:auth-reader
   namespace: kube-system
 roleRef:

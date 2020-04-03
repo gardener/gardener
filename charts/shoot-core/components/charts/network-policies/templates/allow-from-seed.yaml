@@ -5,6 +5,8 @@ metadata:
     gardener.cloud/description: |
       Allows Ingress from the control plane to pods labeled with
       'networking.gardener.cloud/from-seed=allowed'.
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-from-seed
   namespace: kube-system
   labels:

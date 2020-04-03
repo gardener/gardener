@@ -6,6 +6,8 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
     garden.cloud/description: |
       gardener.privileged allows full unrestricted access to Pod features, as if the PodSecurityPolicy controller was not enabled.
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
 spec:
   privileged: true
   allowPrivilegeEscalation: true

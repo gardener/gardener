@@ -1,6 +1,8 @@
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: node-problem-detector
   labels:
     garden.sapcloud.io/role: system-component
@@ -38,7 +40,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image:  {{ index .Values.images "node-problem-detector" }} 
+          image:  {{ index .Values.images "node-problem-detector" }}
           imagePullPolicy: {{ .Values.images.pullPolicy | default "IfNotPresent" | quote }}
           command:
             - "/bin/sh"

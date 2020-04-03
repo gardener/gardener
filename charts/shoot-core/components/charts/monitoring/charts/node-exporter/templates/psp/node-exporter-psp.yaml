@@ -1,6 +1,8 @@
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: gardener.kube-system.node-exporter
 spec:
   privileged: false

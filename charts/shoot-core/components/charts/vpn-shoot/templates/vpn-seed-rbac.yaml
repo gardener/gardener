@@ -2,6 +2,8 @@
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRole
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:gardener.cloud:vpn-seed
 rules:
 - apiGroups:
@@ -16,6 +18,8 @@ rules:
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: system:gardener.cloud:vpn-seed
 roleRef:
   apiGroup: rbac.authorization.k8s.io

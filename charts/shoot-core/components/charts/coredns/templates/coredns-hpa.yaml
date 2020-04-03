@@ -1,6 +1,8 @@
 apiVersion: {{ include "hpaversion" . }}
 kind: HorizontalPodAutoscaler
 metadata:
+  annotations:
+{{ include "utils-templates.reconcile-warning-annotation" . | indent 4 }}
   name: coredns
   namespace: {{ .Release.Namespace }}
 spec:

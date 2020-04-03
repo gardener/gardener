@@ -4,6 +4,8 @@ metadata:
   annotations:
     gardener.cloud/description: |
       Allows all Egress and Ingress for the nginx-controller
+
+{{ include "utils-templates.reconcile-warning-annotation-text" . | indent 6 }}
   name: gardener.cloud--allow-to-from-nginx
   namespace: kube-system
   labels:
