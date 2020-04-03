@@ -32,7 +32,7 @@ settings:
     # An example of activating a custom log monitor definition in
     # Node Problem Detector
     # - /custom-config/docker-monitor-filelog.json
-  custom_plugin_monitors: 
+  custom_plugin_monitors:
     - /config/kernel-monitor-counter.json
     - /config/systemd-monitor-counter.json
   system_stats_monitor:
@@ -64,7 +64,7 @@ hostNetwork: false
 
 priorityClassName: ""
 
-resources: 
+resources:
   limits:
     cpu: "200m"
     memory: "100Mi"
@@ -74,7 +74,7 @@ resources:
 
 annotations: {}
 
-tolerations: 
+tolerations:
   - effect: NoSchedule
     operator: Exists
   - key: CriticalAddonsOnly
