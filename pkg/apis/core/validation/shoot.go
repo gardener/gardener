@@ -851,12 +851,12 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	if worker.DataVolumes != nil {
 		var volumeNames = make(map[string]int)
 		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
-			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), fmt.Sprintf("a worker volume must be defined if data volumes are defined")))
+			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), "a worker volume must be defined if data volumes are defined"))
 		}
 		for idx, volume := range worker.DataVolumes {
 			idxPath := fldPath.Child("dataVolumes").Index(idx)
 			if volume.Name == nil {
-				allErrs = append(allErrs, field.Required(idxPath.Child("name"), fmt.Sprintf("data volume name is required")))
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "data volume name is required"))
 			} else {
 				volName := *volume.Name
 				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
@@ -1240,7 +1240,7 @@ func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	}
 
 	if CRI.ContainerRuntimes != nil {
-		allErrs = append(ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes")))
+		allErrs = append(allErrs, ValidateContainerRuntimes(CRI.ContainerRuntimes, fldPath.Child("containerruntimes"))...)
 	}
 
 	return allErrs
