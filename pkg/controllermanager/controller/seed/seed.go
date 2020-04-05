@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -49,6 +50,8 @@ type Controller struct {
 	shootLister gardencorelisters.ShootLister
 	shootSynced cache.InformerSynced
 
+	leaseSynced cache.InformerSynced
+
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -56,7 +59,8 @@ type Controller struct {
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <gardenInformerFactory>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory,
+	config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
 
@@ -65,13 +69,16 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
+
+		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
+		leaseLister   = leaseInformer.Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:        k8sGardenClient,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		control:                NewDefaultControl(k8sGardenClient, shootLister, config),
+		control:                NewDefaultControl(k8sGardenClient, leaseLister, shootLister, config),
 		recorder:               recorder,
 		seedLister:             seedLister,
 		shootLister:            shootLister,
@@ -84,6 +91,7 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 	})
 	seedController.seedSynced = seedInformer.Informer().HasSynced
 	seedController.shootSynced = shootInformer.Informer().HasSynced
+	seedController.leaseSynced = leaseInformer.Informer().HasSynced
 
 	return seedController
 }
@@ -92,7 +100,7 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.shootSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.shootSynced, c.leaseSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

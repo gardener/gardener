@@ -83,6 +83,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		namespaceInformer   = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer      = f.k8sInformers.Core().V1().Secrets().Informer()
 		rolebindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
+		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
 	)
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
@@ -91,7 +92,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, rolebindingInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, rolebindingInformer.HasSynced, leaseInformer.HasSynced) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 
@@ -112,7 +113,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		plantController                  = plantcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
 		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 	)
 
