@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -e
+
+repo_root_dir="$1"
+descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
+
+echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
+
+if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
+  images="$(yaml2json < "$repo_root_dir/charts/images.yaml")"
+  eval "$(jq -r ".images |
+    map(if (.name == \"hyperkube\" or .repository == \"k8s.gcr.io/hyperkube\") then
+      \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    elif (.repository | startswith(\"eu.gcr.io/gardener-project\")) then
+      \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    else
+      \"--container-image-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"image_reference\\\": \\\"\" + .repository + \":\" + .tag + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
+    end) |
+    \"${ADD_DEPENDENCIES_CMD} \\\\\n\" +
+    join(\" \\\\\n\")" <<< "$images")"
+fi
+
+if [[ -d "$repo_root_dir/charts/" ]]; then
+  for image_tpl_path in "$repo_root_dir/charts/"*"/templates/_images.tpl"; do
+    if [[ ! -f "$image_tpl_path" ]]; then
+      continue
+    fi
+
+    outputFile=$(sed 's/{{-//' $image_tpl_path | sed 's/}}//' | sed 's/define//' | sed 's/-//' | sed 's/end//' | sed 's/"//' | sed 's/"//' |sed 's/image.//' |  sed -e 's/^[ \t]*//' | awk -v RS= '{for (i=1; i<=NF; i++) printf "%s%s", $i, (i==NF?"\n":" ")}')
+    echo "enriching creating component descriptor from ${image_tpl_path}"
+
+    while read p; do
+      line="$(echo -e "$p")"
+      IFS=' ' read -r -a array <<< "$line"
+      IFS=': ' read -r -a imageAndTag <<< ${array[1]}
+
+      NAME=${array[0]}
+      REPOSITORY=${imageAndTag[0]}
+      TAG=${imageAndTag[1]}
+
+      gardener="eu.gcr.io/gardener-project/gardener"
+      if [[ "$NAME" == "hyperkube" ]]; then
+        ${ADD_DEPENDENCIES_CMD} --generic-dependencies "{\"name\": \"$NAME\", \"version\": \"$TAG\"}"
+      elif [[ $REPOSITORY =~ "eu.gcr.io/gardener-project/gardener*" ]]; then
+        ${ADD_DEPENDENCIES_CMD} --generic-dependencies "{\"name\": \"$NAME\", \"version\": \"$TAG\"}"
+      else
+        ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
+      fi
+    done < <(echo "$outputFile")
+  done
+fi
+
+cp "${BASE_DEFINITION_PATH}" "${descriptor_out_file}"

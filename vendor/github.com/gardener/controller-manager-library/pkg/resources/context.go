@@ -34,6 +34,7 @@ type ResourceContext interface {
 	GetGroups() []schema.GroupVersion
 	GetResourceInfos(gv schema.GroupVersion) []*Info
 
+	GetParameterCodec() runtime.ParameterCodec
 	GetClient(gv schema.GroupVersion) (restclient.Interface, error)
 
 	Resources() Resources

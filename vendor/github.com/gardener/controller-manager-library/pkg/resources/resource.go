@@ -18,6 +18,7 @@ package resources
 
 import (
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -78,6 +79,7 @@ func (this *_resource) Resources() Resources {
 }
 
 var unstructuredType = reflect.TypeOf(unstructured.Unstructured{})
+
 var unstructuredListType = reflect.TypeOf(unstructured.UnstructuredList{})
 
 func (this *_resource) IsUnstructured() bool {
@@ -90,6 +92,10 @@ func (this *_resource) Info() *Info {
 
 func (this *_resource) Client() restclient.Interface {
 	return this.client
+}
+
+func (this *_resource) GetParameterCodec() runtime.ParameterCodec {
+	return this.context.parametercodec
 }
 
 func (this *_resource) ResourceContext() ResourceContext {

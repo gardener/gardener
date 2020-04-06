@@ -32,10 +32,6 @@ LOCAL_GARDEN_LABEL                 := local-garden
 dev-setup:
 	@./hack/dev-setup
 
-.PHONY: dev-setup-extensions
-dev-setup-extensions:
-	@./hack/dev-setup-extensions
-
 .PHONY: local-garden-up
 local-garden-up:
 	# Remove old containers and create the docker user network
@@ -167,6 +163,13 @@ clean:
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #
 #####################################################################
+
+.PHONY: install-requirements
+install-requirements:
+	@go install -mod=vendor ./vendor/github.com/gobuffalo/packr/v2/packr2
+	@go install -mod=vendor ./vendor/github.com/golang/mock/mockgen
+	@go install -mod=vendor ./vendor/github.com/onsi/ginkgo/ginkgo
+	@./hack/install-requirements.sh
 
 .PHONY: verify
 verify: check test

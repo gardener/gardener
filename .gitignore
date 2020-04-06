@@ -28,3 +28,5 @@ config.vmdk
 .virtualgo
 .fuse_hidden*
 
+# Packr generated files
+*-packr.go
