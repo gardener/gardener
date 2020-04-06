@@ -311,7 +311,7 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 		a.logger.Infof("Waiting for backupBucket to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("BackupBucket is still present"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Error while waiting for backupBucket object to be deleted")
+		message := "Error while waiting for backupBucket object to be deleted"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}
