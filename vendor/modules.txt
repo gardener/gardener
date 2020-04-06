@@ -151,34 +151,11 @@ github.com/go-openapi/spec
 github.com/go-openapi/swag
 # github.com/gobuffalo/envy v1.7.0
 github.com/gobuffalo/envy
-# github.com/gobuffalo/genny v0.0.0-20190403191548-3ca520ef0d9e
-github.com/gobuffalo/genny
-# github.com/gobuffalo/gogen v0.0.0-20190315121717-8f38393713f5
-github.com/gobuffalo/gogen
-github.com/gobuffalo/gogen/goimports
-github.com/gobuffalo/gogen/gomods
-# github.com/gobuffalo/logger v0.0.0-20190315122211-86e12af44bc2
-github.com/gobuffalo/logger
-# github.com/gobuffalo/mapi v1.0.2
-github.com/gobuffalo/mapi
-# github.com/gobuffalo/packd v0.0.0-20190315124812-a385830c7fc0
+# github.com/gobuffalo/packd v0.3.0
 github.com/gobuffalo/packd
-# github.com/gobuffalo/packr v1.25.0
+github.com/gobuffalo/packd/internal/takeon/github.com/markbates/errx
+# github.com/gobuffalo/packr v1.30.1
 github.com/gobuffalo/packr
-# github.com/gobuffalo/packr/v2 v2.1.0
-github.com/gobuffalo/packr/v2
-github.com/gobuffalo/packr/v2/file
-github.com/gobuffalo/packr/v2/file/resolver
-github.com/gobuffalo/packr/v2/file/resolver/encoding/hex
-github.com/gobuffalo/packr/v2/jam
-github.com/gobuffalo/packr/v2/jam/parser
-github.com/gobuffalo/packr/v2/jam/store
-github.com/gobuffalo/packr/v2/packr2
-github.com/gobuffalo/packr/v2/packr2/cmd
-github.com/gobuffalo/packr/v2/packr2/cmd/fix
-github.com/gobuffalo/packr/v2/plog
-# github.com/gobuffalo/syncx v0.0.0-20190224160051-33c29581e754
-github.com/gobuffalo/syncx
 # github.com/gobwas/glob v0.2.3
 github.com/gobwas/glob
 github.com/gobwas/glob/compiler
@@ -287,8 +264,6 @@ github.com/joho/godotenv
 github.com/jonboulle/clockwork
 # github.com/json-iterator/go v1.1.9
 github.com/json-iterator/go
-# github.com/karrick/godirwalk v1.8.0
-github.com/karrick/godirwalk
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/magiconair/properties v1.8.1
@@ -297,10 +272,6 @@ github.com/magiconair/properties
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/markbates/oncer v0.0.0-20181203154359-bf2de49a0be2
-github.com/markbates/oncer
-# github.com/markbates/safe v1.0.1
-github.com/markbates/safe
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
@@ -467,6 +438,9 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 golang.org/x/lint
 golang.org/x/lint/golint
+# golang.org/x/mod v0.2.0
+golang.org/x/mod/module
+golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -483,8 +457,6 @@ golang.org/x/net/websocket
 # golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
@@ -513,7 +485,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20191230220329-2aa90c603ae3
+# golang.org/x/tools v0.0.0-20200406213809-066fd1390ee0
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
@@ -526,11 +498,12 @@ golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/imports
+golang.org/x/tools/internal/analysisinternal
 golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/module
-golang.org/x/tools/internal/semver
+golang.org/x/tools/internal/packagesinternal
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal

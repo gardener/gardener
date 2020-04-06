@@ -15,8 +15,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2
-	github.com/gobuffalo/packr v1.25.0
-	github.com/gobuffalo/packr/v2 v2.1.0
+	github.com/gobuffalo/packr v1.30.1
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.3
 	github.com/googleapis/gnostic v0.3.1
@@ -38,7 +37,7 @@ require (
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
-	golang.org/x/tools v0.0.0-20200403190813-44a64ad78b9b // indirect
+	golang.org/x/tools v0.0.0-20200406213809-066fd1390ee0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.2.8

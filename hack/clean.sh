@@ -19,7 +19,6 @@ set -e
 echo "> Clean"
 
 for source_tree in $@; do
-  find "$(dirname "$source_tree")" -type f -name "controller-registration.yaml" -exec rm '{}' \;
   find "$(dirname "$source_tree")" -type f -name "zz_*.go" -exec rm '{}' \;
   grep -lr --include="*.go" "//go:generate packr2" . | xargs -I {} packr2 clean "{}/.."
 done

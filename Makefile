@@ -126,11 +126,11 @@ docker-push:
 
 .PHONY: install-requirements
 install-requirements:
-	@go install -mod=vendor github.com/gobuffalo/packr/v2/packr2
 	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
-	@go get github.com/golang/mock/mockgen
+	@go install -mod=vendor github.com/golang/mock/mockgen
 	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
+	@go get golang.org/x/tools/cmd/goimports
 	@./hack/install-requirements.sh
 
 .PHONY: revendor

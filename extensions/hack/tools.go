@@ -16,9 +16,3 @@
 
 // This package imports things required by build scripts, to force `go mod` to see them as dependencies
 package tools
-
-import (
-	_ "github.com/gobuffalo/packr/v2/packr2"
-	_ "github.com/golang/mock/mockgen"
-	_ "github.com/onsi/ginkgo/ginkgo"
-)
