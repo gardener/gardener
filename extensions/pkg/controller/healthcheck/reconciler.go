@@ -185,7 +185,7 @@ func (r *reconciler) updateExtensionConditionToSuccessful(ctx context.Context, e
 }
 
 func (r *reconciler) updateExtensionConditionHibernated(ctx context.Context, extensionResource extensionsv1alpha1.Object, extension *unstructured.Unstructured, condition gardencorev1beta1.Condition) error {
-	healthCondition := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthCheckSuccessful", fmt.Sprintf("Shoot is hibernated"))
+	healthCondition := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthCheckSuccessful", "Shoot is hibernated")
 	return r.updateExtensionCondition(ctx, extension, condition, extensionResource, healthCondition)
 }
 

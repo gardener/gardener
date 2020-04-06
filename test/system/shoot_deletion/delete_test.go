@@ -40,7 +40,7 @@ import (
 var shootName = flag.String("shoot-name", "", "name of the shoot")
 
 func init() {
-	framework.RegisterGardenerFrameworkFlags(nil)
+	framework.RegisterGardenerFrameworkFlags()
 }
 
 func validateFlags() {

@@ -186,7 +186,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 
 	// seed could be temporarily offline so no specified seed is a valid state
 	if shoot.Spec.SeedName != nil {
-		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName, f.Config.SeedScheme)
+		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName)
 		if err != nil {
 			return err
 		}
@@ -260,12 +260,8 @@ func mergeShootConfig(base, overwrite *ShootConfig) *ShootConfig {
 }
 
 // RegisterShootFrameworkFlags adds all flags that are needed to configure a shoot framework to the provided flagset.
-func RegisterShootFrameworkFlags(flagset *flag.FlagSet) *ShootConfig {
-	if flagset == nil {
-		flagset = flag.CommandLine
-	}
-
-	_ = RegisterGardenerFrameworkFlags(flagset)
+func RegisterShootFrameworkFlags() *ShootConfig {
+	_ = RegisterGardenerFrameworkFlags()
 
 	newCfg := &ShootConfig{}
 

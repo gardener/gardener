@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	framework.RegisterShootFrameworkFlags(nil)
+	framework.RegisterShootFrameworkFlags()
 }
 
 var _ = Describe("Shoot hibernation wake-up testing", func() {

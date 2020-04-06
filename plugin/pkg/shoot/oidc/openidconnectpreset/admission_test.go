@@ -100,7 +100,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			)
 
 			BeforeEach(func() {
-				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
+				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				expected = shoot.DeepCopy()
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
@@ -209,7 +209,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			AfterEach(func() {
-				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)
+				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -238,7 +238,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("preset with higher weight", func() {
@@ -249,7 +249,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("presets ordered lexicographically", func() {
@@ -260,7 +260,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().OpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("remove required claims for K8S < 1.11", func() {

@@ -569,7 +569,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should set the owner field", func() {
-				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
@@ -584,7 +584,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should add the owner to members", func() {
-				gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 

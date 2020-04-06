@@ -164,7 +164,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 		operation.Logger.Error(message)
 
-		c.updateShootStatus(shoot,
+		_, _ = c.updateShootStatus(shoot,
 			[]gardencorev1beta1.Condition{
 				conditionAPIServerAvailable,
 				conditionControlPlaneHealthy,

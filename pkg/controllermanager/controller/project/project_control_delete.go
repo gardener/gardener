@@ -32,13 +32,13 @@ func (c *defaultControl) delete(project *gardencorev1beta1.Project, projectLogge
 		alreadyDeleted, err := c.deleteNamespace(project, *namespace)
 		if err != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 			return false, err
 		}
 
 		if !alreadyDeleted {
 			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
+			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
 			return true, nil
 		}
 	}

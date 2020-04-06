@@ -138,12 +138,9 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 
 	// Count number of running workers.
 	go func() {
-		for {
-			select {
-			case res := <-c.workerCh:
-				c.numberOfRunningWorkers += res
-				logger.Logger.Debugf("Current number of running Shoot workers is %d", c.numberOfRunningWorkers)
-			}
+		for res := range c.workerCh {
+			c.numberOfRunningWorkers += res
+			logger.Logger.Debugf("Current number of running Shoot workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 

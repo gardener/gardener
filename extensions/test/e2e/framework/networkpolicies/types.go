@@ -187,7 +187,7 @@ func (s *SourcePod) FromPort(portName string) *TargetPod {
 // This resource is not deep copied!
 func (s *SourcePod) DummyPort() *TargetPod {
 	if len(s.Ports) > 0 {
-		panic(fmt.Sprintf("DummyPort should only be used for Pods without a Port"))
+		panic("DummyPort should only be used for Pods without a Port")
 	}
 	return &TargetPod{
 		Pod:  s.Pod,

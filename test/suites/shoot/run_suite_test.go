@@ -41,7 +41,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	framework.RegisterShootFrameworkFlags(nil)
+	framework.RegisterShootFrameworkFlags()
 	flag.Parse()
 
 	if err := config.ParseConfigForFlags(*configFilePath, flag.CommandLine); err != nil {

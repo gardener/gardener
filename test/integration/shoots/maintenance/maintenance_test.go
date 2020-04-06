@@ -162,7 +162,7 @@ var _ = Describe("Shoot Maintenance testing", func() {
 		shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, shootMaintenanceTestLogger)
 		Expect(err).To(BeNil())
 
-		shootGardenerTest.SetupShootWorker(workerZone)
+		Expect(shootGardenerTest.SetupShootWorker(workerZone)).To(Succeed())
 		Expect(err).To(BeNil())
 		Expect(len(shootGardenerTest.Shoot.Spec.Provider.Workers)).Should(BeNumerically("==", 1))
 

@@ -44,15 +44,14 @@ package plants
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/framework"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/onsi/ginkgo"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -160,12 +159,12 @@ users:
 			// modify data.kubeconfigpath to update the secret with false information
 			secret.Data[framework.KubeconfigSecretKeyName] = dummyKubeConfigContent
 
-			ginkgo.By(fmt.Sprintf("Update Plant secret with invalid kubeconfig"))
+			ginkgo.By("Update Plant secret with invalid kubeconfig")
 
 			err = framework.UpdateSecret(ctx, f.GardenClient, secret)
 			framework.ExpectNoError(err)
 
-			ginkgo.By(fmt.Sprintf("Wait for PlantController to update to status 'unknown'"))
+			ginkgo.By("Wait for PlantController to update to status 'unknown'")
 
 			err = f.WaitForPlantToBeReconciledWithUnknownStatus(ctx, plant)
 			framework.ExpectNoError(err)
@@ -180,7 +179,7 @@ users:
 			err = framework.UpdateSecret(ctx, f.GardenClient, secret)
 			framework.ExpectNoError(err)
 
-			ginkgo.By(fmt.Sprintf("Wait for PlantController to update to status 'unknown'"))
+			ginkgo.By("Wait for PlantController to update to status 'unknown'")
 			err = f.WaitForPlantToBeReconciledWithUnknownStatus(ctx, plant)
 			framework.ExpectNoError(err)
 		}, plantUpdateSecretTimeout)
@@ -200,7 +199,7 @@ users:
 		err = framework.UpdateSecret(ctx, f.GardenClient, secret)
 		framework.ExpectNoError(err)
 
-		ginkgo.By(fmt.Sprintf("Plant secret updated to contain valid kubeconfig again"))
+		ginkgo.By("Plant secret updated to contain valid kubeconfig again")
 		err = f.WaitForPlantToBeReconciledSuccessfully(ctx, plant)
 		framework.ExpectNoError(err)
 

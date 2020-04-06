@@ -97,12 +97,9 @@ func (s *SyncController) Run(ctx context.Context, shootStateSyncWorkersCount int
 
 	// Count number of running workers.
 	go func() {
-		for {
-			select {
-			case res := <-s.workerCh:
-				s.numberOfRunningWorkers += res
-				s.log.Debugf("Current number of running shoot state sync workers is %d", s.numberOfRunningWorkers)
-			}
+		for res := range s.workerCh {
+			s.numberOfRunningWorkers += res
+			s.log.Debugf("Current number of running shoot state sync workers is %d", s.numberOfRunningWorkers)
 		}
 	}()
 

@@ -36,7 +36,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	framework.RegisterGardenerFrameworkFlags(nil)
+	framework.RegisterGardenerFrameworkFlags()
 	flag.Parse()
 
 	if err := config.ParseConfigForFlags(*configFilePath, flag.CommandLine); err != nil {

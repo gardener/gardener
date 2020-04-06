@@ -157,16 +157,12 @@ type defaultControl struct {
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) error {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return err
-	}
-
 	var (
 		ctx         = context.TODO()
 		seed        = obj.DeepCopy()
 		seedJSON, _ = json.Marshal(seed)
 		seedLogger  = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
+		err         error
 	)
 
 	// The deletionTimestamp labels a Seed as intended to get deleted. Before deletion,
@@ -306,7 +302,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
 		seedLogger.Error(message)
-		c.updateSeedStatus(seed, "<unknown>", conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(seed, "<unknown>", conditionSeedBootstrapped)
 		return err
 	}
 
@@ -314,7 +310,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	seedKubernetesVersion, err := seedObj.CheckMinimumK8SVersion(ctx, c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
 		seedLogger.Error(err.Error())
 		return err
 	}
@@ -328,13 +324,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	}
 	if err := seedpkg.BootstrapCluster(c.k8sGardenClient, seedObj, c.config, c.secrets, c.imageVector, c.componentImageVectors); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
 		seedLogger.Errorf("Seed bootstrapping failed: %+v", err)
 		return err
 	}
 
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
+	_ = c.updateSeedStatus(seed, seedKubernetesVersion, conditionSeedBootstrapped)
 
 	if seed.Spec.Backup != nil {
 		// This should be post updating the seed is available. Since, scheduler will then mostly use

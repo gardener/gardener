@@ -113,7 +113,7 @@ var _ = Describe("operation", func() {
 				k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 			)
 
-			o.EnsureShootStateExists(context.TODO())
+			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
 
 			Expect(o.ShootState).ToNot(BeNil())
 		})
@@ -128,7 +128,7 @@ var _ = Describe("operation", func() {
 				k8sGardenRuntimeClient.EXPECT().Create(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 			)
 
-			o.EnsureShootStateExists(context.TODO())
+			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
 
 			Expect(o.ShootState).ToNot(BeNil())
 			Expect(len(o.ShootState.OwnerReferences)).To(Equal(1))

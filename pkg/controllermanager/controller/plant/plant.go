@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-
 	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/prometheus/client_golang/prometheus"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -118,12 +118,9 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	go func() {
-		for {
-			select {
-			case res := <-c.workerCh:
-				c.numberOfRunningWorkers += res
-				logger.Logger.Debugf("Current number of running Plant workers is %d", c.numberOfRunningWorkers)
-			}
+		for res := range c.workerCh {
+			c.numberOfRunningWorkers += res
+			logger.Logger.Debugf("Current number of running Plant workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 

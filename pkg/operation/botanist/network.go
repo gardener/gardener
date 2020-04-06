@@ -123,7 +123,7 @@ func (b *Botanist) WaitUntilNetworkIsDeleted(ctx context.Context) error {
 		b.Logger.Infof("Waiting for Network to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("network is still present"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete Network")
+		message := "Failed to delete Network"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}

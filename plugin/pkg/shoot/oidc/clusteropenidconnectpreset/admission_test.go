@@ -150,14 +150,14 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			It("preset shoot label selector doesn't match", func() {
 				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
 			It("preset preset label selector doesn't match", func() {
 				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
 			It("oidc settings already exist", func() {
@@ -237,8 +237,8 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			})
 
 			AfterEach(func() {
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)
-				coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -268,7 +268,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("preset with higher weight", func() {
@@ -279,7 +279,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("presets ordered lexicographically", func() {
@@ -290,7 +290,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("client-id-2")
 
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("presets which don't match the project selector", func() {
@@ -299,7 +299,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)
+				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
 
 			It("remove required claims for K8S < 1.11", func() {

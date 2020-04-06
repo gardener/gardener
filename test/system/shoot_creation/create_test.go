@@ -79,7 +79,7 @@ const (
 )
 
 func init() {
-	framework.RegisterGardenerFrameworkFlags(nil)
+	framework.RegisterGardenerFrameworkFlags()
 }
 
 func validateFlags() {

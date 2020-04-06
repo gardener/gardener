@@ -17,14 +17,15 @@ package reporter
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	ginkgotypes "github.com/onsi/ginkgo/types"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
+	ginkgotypes "github.com/onsi/ginkgo/types"
 )
 
 // TestSuiteMetadata describes the metadata of a whole test suite with all tests.
@@ -82,7 +83,7 @@ type GardenerESReporter struct {
 	index    []byte
 }
 
-var matchLabel, _ = regexp.Compile("\\[(.*?)\\]")
+var matchLabel, _ = regexp.Compile(`\\[(.*?)\\]`)
 
 // NewGardenerESReporter creates a new Gardener elasticsearch reporter.
 // The json bulk will be stored in the passed filename in the given es index.

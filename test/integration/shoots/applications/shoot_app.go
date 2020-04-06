@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		err := framework.DownloadKubeconfig(ctx, f.SeedClient, f.ShootSeedNamespace(), gardencorev1beta1.GardenerName, "")
 		framework.ExpectNoError(err)
 
-		ginkgo.By(fmt.Sprintf("Shoot Kubeconfig downloaded successfully from seed"))
+		ginkgo.By("Shoot Kubeconfig downloaded successfully from seed")
 	}, downloadKubeconfigTimeout)
 
 	ginkgo.Context("GuestBook", func() {

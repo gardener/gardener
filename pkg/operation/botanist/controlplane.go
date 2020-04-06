@@ -481,7 +481,7 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 		b.Logger.Infof("Waiting for control plane to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete control plane")
+		message := "Failed to delete control plane"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}

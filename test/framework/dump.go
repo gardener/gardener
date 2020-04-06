@@ -71,7 +71,7 @@ func (f *GardenerFramework) dumpControlplaneInSeed(ctx context.Context, seed *ga
 	cxtIdentifier := fmt.Sprintf("[SEED %s]", seed.GetName())
 	f.Logger.Info(cxtIdentifier)
 
-	_, seedClient, err := f.GetSeed(ctx, seed.GetName(), nil)
+	_, seedClient, err := f.GetSeed(ctx, seed.GetName())
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [INFRASTRUCTURE]", ctxIdentifier)
 	infrastructures := &v1alpha1.InfrastructureList{}
 	err := k8sClient.Client().List(ctx, infrastructures, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err != nil {
 		for _, infra := range infrastructures.Items {
 			f.dumpGardenerExtension(&infra)
@@ -131,7 +131,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [OS]", ctxIdentifier)
 	operatingSystems := &v1alpha1.OperatingSystemConfigList{}
 	err = k8sClient.Client().List(ctx, operatingSystems, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err == nil {
 		for _, os := range operatingSystems.Items {
 			f.dumpGardenerExtension(&os)
@@ -142,7 +142,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [WORKER]", ctxIdentifier)
 	workers := &v1alpha1.WorkerList{}
 	err = k8sClient.Client().List(ctx, workers, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err == nil {
 		for _, worker := range workers.Items {
 			f.dumpGardenerExtension(&worker)
@@ -153,7 +153,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [BACKUPBUCKET]", ctxIdentifier)
 	backupBuckets := &v1alpha1.BackupBucketList{}
 	err = k8sClient.Client().List(ctx, backupBuckets, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err == nil {
 		for _, bucket := range backupBuckets.Items {
 			f.dumpGardenerExtension(&bucket)
@@ -164,7 +164,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [BACKUPENTRY]", ctxIdentifier)
 	backupEntries := &v1alpha1.BackupEntryList{}
 	err = k8sClient.Client().List(ctx, backupEntries, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err == nil {
 		for _, entry := range backupEntries.Items {
 			f.dumpGardenerExtension(&entry)
@@ -175,7 +175,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 	f.Logger.Infof("%s [EXTENSIONS] [NETWORK]", ctxIdentifier)
 	networks := &v1alpha1.NetworkList{}
 	err = k8sClient.Client().List(ctx, networks, client.InNamespace(namespace))
-	result = multierror.Append(err)
+	result = multierror.Append(result, err)
 	if err == nil {
 		for _, network := range networks.Items {
 			f.dumpGardenerExtension(&network)
