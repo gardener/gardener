@@ -3,22 +3,27 @@ package framework
 import (
 	"context"
 	"fmt"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
+	"time"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 // WaitUntilDaemonSetIsRunning waits until the daemon set with <daemonSetName> is running
@@ -309,4 +314,72 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 				Scheme: kubernetes.GardenScheme,
 			}),
 	)
+}
+
+// DeployRootPod deploys a pod with root permissions for testing purposes.
+func DeployRootPod(ctx context.Context, c client.Client, namespace string, nodename *string) (*corev1.Pod, error) {
+	podPriority := int32(0)
+	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
+	id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
+	if err != nil {
+		return nil, err
+	}
+
+	rootPod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("rootpod-%s", id),
+			Namespace: namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/psp": "gardener.privileged",
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "root-container",
+					Image: "busybox",
+					Command: []string{
+						"sleep",
+						"10000000",
+					},
+					Resources:                corev1.ResourceRequirements{},
+					TerminationMessagePath:   "/dev/termination-log",
+					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+					ImagePullPolicy:          corev1.PullIfNotPresent,
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.BoolPtr(true),
+					},
+					Stdin: true,
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "root-volume",
+							MountPath: "/hostroot",
+						},
+					},
+				},
+			},
+			HostNetwork: true,
+			HostPID:     true,
+			Priority:    &podPriority,
+			Volumes: []corev1.Volume{
+				{
+					Name: "root-volume",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if nodename != nil {
+		rootPod.Spec.NodeName = *nodename
+	}
+
+	if err := c.Create(ctx, &rootPod); err != nil {
+		return nil, err
+	}
+	return &rootPod, nil
 }
