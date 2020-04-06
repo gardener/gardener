@@ -19,8 +19,9 @@ set -e
 echo "> Installing requirements"
 
 export GO111MODULE=on
-curl -sfL "https://install.goreleaser.com/github.com/golangci/golangci-lint.sh" | sh -s -- -b $(go env GOPATH)/bin v1.20.1
+curl -sfL "https://install.goreleaser.com/github.com/golangci/golangci-lint.sh" | sh -s -- -b $(go env GOPATH)/bin v1.24.0
 curl -s "https://raw.githubusercontent.com/helm/helm/v2.13.1/scripts/get" | bash -s -- --version 'v2.13.1'
+go get golang.org/x/tools/cmd/goimports
 
 if [[ "$(uname -s)" == *"Darwin"* ]]; then
   cat <<EOM
@@ -37,6 +38,5 @@ $ brew install coreutils gnu-tar
 Please allow them to be used without their "g" prefix:
 $ export PATH=/usr/local/opt/coreutils/libexec/gnubin:\$PATH
 $ export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:\$PATH
-
 EOM
 fi

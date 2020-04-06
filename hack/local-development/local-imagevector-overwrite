@@ -36,13 +36,13 @@ cleanup_imagevector_overwrite() {
 compute_imagevector_overwrite() {
   imagevector_overwrite="images: []"
 
-  VERSION="$(cat $(dirname $0)/../VERSION)"
+  VERSION="$(cat $(dirname $0)/../../VERSION)"
   if [[ "$VERSION" != *"-dev"* ]]; then
     echo "$imagevector_overwrite"
     return
   fi
 
-  gardener_images_without_tag="$(yaml2json < "$(dirname $0)/../charts/images.yaml" | jq -r '.images | map(select(.sourceRepository == "github.com/gardener/gardener" and .tag == null))')"
+  gardener_images_without_tag="$(yaml2json < "$(dirname $0)/../../charts/images.yaml" | jq -r '.images | map(select(.sourceRepository == "github.com/gardener/gardener" and .tag == null))')"
   if [[ "$(echo $gardener_images_without_tag | jq -r 'length')" == "0" ]]; then
     echo "$imagevector_overwrite"
     return

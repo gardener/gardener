@@ -15,7 +15,7 @@ PORTS="-p $PORT:$PORT -p $ETCDPORT:$ETCDPORT"
 MOUNTS="-v $ETCD_DATA_DIR:/etcd-data"
 
 
-echo "Starting gardener-dev gardener-etcd cluster..!"
+echo "Starting gardener-dev gardener-etcd cluster!"
 docker run -d --name g-etcd -l $LABEL --network gardener-dev --rm $PORTS $MOUNTS $IMAGE etcd --name $CLUSTERNAME \
  --listen-client-urls "http://0.0.0.0:${ETCDPORT}" \
  --advertise-client-urls "http://0.0.0.0:${ETCDPORT}" \

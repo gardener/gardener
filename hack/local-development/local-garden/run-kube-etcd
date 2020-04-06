@@ -21,7 +21,7 @@ PORTS="-p $PORT:$PORT -p $ETCDPORT:$ETCDPORT"
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys -v $ETCD_DATA_DIR:/etcd-data"
 
 
-echo "Starting gardener-dev kube-etcd cluster..!"
+echo "Starting gardener-dev kube-etcd cluster!"
 docker run -d --name etcd -l $LABEL --network gardener-dev --rm  $MOUNTS $IMAGE etcd --name $CLUSTERNAME  \
  --listen-client-urls "https://0.0.0.0:${HTTPS_ETCD_PORT},http://0.0.0.0:${HTTP_ETCD_PORT}" \
  --advertise-client-urls "https://0.0.0.0:${HTTPS_ETCD_PORT},http://0.0.0.0:3${HTTP_ETCD_PORT}" \

@@ -16,7 +16,7 @@ MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/key
 ETCD_PORT=12379
 LISTEN_PORT="2443"
 
-echo "Starting gardener-dev kube-apiserver..!"
+echo "Starting gardener-dev kube-apiserver!"
 docker run -d --name kube-apiserver -l $LABEL --add-host $HOSTS_LINE --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS $IMAGE /usr/local/bin/kube-apiserver \
   --etcd-servers="https://etcd:$ETCD_PORT" \
   --storage-media-type='application/json' \

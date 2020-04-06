@@ -16,10 +16,6 @@
 
 set -e
 
-echo "> Install"
+echo "> Generate"
 
-LD_FLAGS="${LD_FLAGS:-"-w -X github.com/gardener/gardener/extensions/pkg/version.Version=$(cat ../VERSION)"}"
-
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
-  go install -mod=vendor -ldflags "$LD_FLAGS" \
-  $@
+GO111MODULE=on go generate -mod=vendor $@

@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -13,15 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
-source $(dirname "${0}")/common
+echo "> Test Prometheus"
 
-kubeconfig="$(mktemp_kubeconfig)"
-trap cleanup_kubeconfig EXIT
+echo "Executing Prometheus alert tests"
+pushd "$(dirname $0)/../charts/seed-monitoring/charts/core/charts/prometheus" > /dev/null
+promtool test rules rules-tests/*test.yaml
+popd > /dev/null
 
-KUBECONFIG="${KUBECONFIG:-$kubeconfig}" GO111MODULE=on \
-    go run \
-      -mod=vendor \
-      -ldflags "$(./hack/get-build-ld-flags)" \
-      cmd/gardener-scheduler/main.go \
-      --config=dev/20-componentconfig-gardener-scheduler.yaml
+echo "Executing aggregate Prometheus alert tests"
+pushd "$(dirname $0)/../charts/seed-bootstrap/aggregate-prometheus-rules-tests" > /dev/null
+promtool test rules *test.yaml
+popd > /dev/null

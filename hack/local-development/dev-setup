@@ -16,8 +16,8 @@
 
 set -e
 
-DEV_DIR=$(dirname "${0}")/../dev
-EXAMPLE_DIR=$(dirname "${0}")/../example
+DEV_DIR=$(dirname "${0}")/../../dev
+EXAMPLE_DIR=$(dirname "${0}")/../../example
 
 source $(dirname "${0}")/common
 kubernetes_env="$(k8s_env)"

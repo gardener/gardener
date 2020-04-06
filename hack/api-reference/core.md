@@ -7435,7 +7435,3 @@ KubeletConfig
 </tbody>
 </table>
 <hr/>
-<p><em>
-Generated with <code>gen-crd-api-reference-docs</code>
-on git commit <code>5743c5d16</code>.
-</em></p>

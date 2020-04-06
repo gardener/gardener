@@ -19,9 +19,9 @@ SCHEDULER_IMAGE_REPOSITORY         := $(REGISTRY)/scheduler
 SEED_ADMISSION_IMAGE_REPOSITORY    := $(REGISTRY)/seed-admission-controller
 GARDENLET_IMAGE_REPOSITORY         := $(REGISTRY)/gardenlet
 IMAGE_TAG                          := $(shell cat VERSION)
+PUSH_LATEST_TAG                    := true
+
 WORKDIR                            := $(shell pwd)
-PUSH_LATEST                        := true
-LD_FLAGS                           := $(shell ./hack/get-build-ld-flags)
 LOCAL_GARDEN_LABEL                 := local-garden
 
 #########################################
@@ -30,25 +30,29 @@ LOCAL_GARDEN_LABEL                 := local-garden
 
 .PHONY: dev-setup
 dev-setup:
-	@./hack/dev-setup
+	@./hack/local-development/dev-setup
+
+.PHONY: dev-setup-register-gardener
+dev-setup-register-gardener:
+	@./hack/local-development/dev-setup-register-gardener
 
 .PHONY: local-garden-up
 local-garden-up:
 	# Remove old containers and create the docker user network
-	@-./hack/local-garden/cleanup
+	@-./hack/local-development/local-garden/cleanup
 	@-docker network create gardener-dev --label $(LOCAL_GARDEN_LABEL)
 
-    # Start the nodeless kubernetes environment
-	@./hack/local-garden/run-kube-etcd $(LOCAL_GARDEN_LABEL)
-	@./hack/local-garden/run-kube-apiserver $(LOCAL_GARDEN_LABEL)
-	@./hack/local-garden/run-kube-controller-manager $(LOCAL_GARDEN_LABEL)
+	# Start the nodeless kubernetes environment
+	@./hack/local-development/local-garden/run-kube-etcd $(LOCAL_GARDEN_LABEL)
+	@./hack/local-development/local-garden/run-kube-apiserver $(LOCAL_GARDEN_LABEL)
+	@./hack/local-development/local-garden/run-kube-controller-manager $(LOCAL_GARDEN_LABEL)
 
 	# This etcd will be used to storge gardener resources (e.g., seeds, shoots)
-	@./hack/local-garden/run-gardener-etcd $(LOCAL_GARDEN_LABEL)
+	@./hack/local-development/local-garden/run-gardener-etcd $(LOCAL_GARDEN_LABEL)
 
 	# Applying proxy RBAC for the extension controller
 	# After this step, you can start using the cluster at hack/local-garden/kubeconfigs/admin.conf
-	@./hack/local-garden/apply-rbac-garden-ns
+	@./hack/local-development/local-garden/apply-rbac-garden-ns
 
 	# Now you can start using the cluster at with `export KUBECONFIG=hack/local-garden/kubeconfigs/default-admin.conf`
 	# Then you need to run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
@@ -56,73 +60,35 @@ local-garden-up:
 
 .PHONY: local-garden-down
 local-garden-down:
-	@-./hack/local-garden/cleanup
+	@-./hack/local-development/local-garden/cleanup
 
 .PHONY: start-apiserver
 start-apiserver:
-	@./hack/start-apiserver
+	@./hack/local-development/start-apiserver
 
 .PHONY: start-controller-manager
 start-controller-manager:
-	@./hack/start-controller-manager
+	@./hack/local-development/start-controller-manager
 
 .PHONY: start-scheduler
 start-scheduler:
-	@./hack/start-scheduler
+	@./hack/local-development/start-scheduler
 
 .PHONY: start-seed-admission-controller
 start-seed-admission-controller:
-	@./hack/start-seed-admission-controller
+	@./hack/local-development/start-seed-admission-controller
 
 .PHONY: start-gardenlet
 start-gardenlet:
-	@./hack/start-gardenlet
+	@./hack/local-development/start-gardenlet
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################
 
-.PHONY: revendor
-revendor:
-	@GO111MODULE=on go mod vendor
-	@GO111MODULE=on go mod tidy
-
-.PHONY: build
-build:
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
-		-mod=vendor \
-		-ldflags "$(LD_FLAGS)" \
-		-o bin/gardener-apiserver \
-		cmd/gardener-apiserver/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
-		-mod=vendor \
-		-ldflags "$(LD_FLAGS)" \
-		-o bin/gardener-controller-manager \
-		cmd/gardener-controller-manager/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
-		-mod=vendor \
-		-ldflags "$(LD_FLAGS)" \
-		-o bin/gardener-scheduler \
-		cmd/gardener-scheduler/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
-		-mod=vendor \
-		-ldflags "$(LD_FLAGS)" \
-		-o bin/gardener-seed-admission-controller \
-		cmd/gardener-seed-admission-controller/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
-		-mod=vendor \
-		-ldflags "$(LD_FLAGS)" \
-		-o bin/gardenlet \
-		cmd/gardenlet/*.go
-
-.PHONY: build-local
-build-local:
-	@GOBIN=${WORKDIR}/bin go install \
-		-ldflags "$(LD_FLAGS)" \
-		./cmd/...
-
-.PHONY: release
-release: build build-local docker-images docker-login docker-push rename-binaries
+.PHONY: install
+install:
+	@./hack/install.sh ./...
 
 .PHONY: docker-images
 docker-images:
@@ -144,21 +110,15 @@ docker-push:
 	@if ! docker images $(SEED_ADMISSION_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(SEED_ADMISSION_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(GARDENLET_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(GARDENLET_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest; fi
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest; fi
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(SCHEDULER_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(SCHEDULER_IMAGE_REPOSITORY):latest; fi
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then gcloud docker -- push $(SCHEDULER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(SEED_ADMISSION_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(SEED_ADMISSION_IMAGE_REPOSITORY):latest; fi
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then gcloud docker -- push $(SEED_ADMISSION_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(GARDENLET_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(GARDENLET_IMAGE_REPOSITORY):latest; fi
-
-.PHONY: clean
-clean:
-	@rm -rf bin/
-	@rm -f *linux-amd64
-	@rm -f *darwin-amd64
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then gcloud docker -- push $(GARDENLET_IMAGE_REPOSITORY):latest; fi
 
 #####################################################################
 # Rules for verification, formatting, linting, testing and cleaning #
@@ -166,35 +126,54 @@ clean:
 
 .PHONY: install-requirements
 install-requirements:
-	@go install -mod=vendor ./vendor/github.com/gobuffalo/packr/v2/packr2
-	@go install -mod=vendor ./vendor/github.com/golang/mock/mockgen
-	@go install -mod=vendor ./vendor/github.com/onsi/ginkgo/ginkgo
+	@go install -mod=vendor github.com/gobuffalo/packr/v2/packr2
+	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
+	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
+	@go get github.com/golang/mock/mockgen
+	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
 	@./hack/install-requirements.sh
 
-.PHONY: verify
-verify: check test
+.PHONY: revendor
+revendor:
+	@GO111MODULE=on go mod vendor
+	@GO111MODULE=on go mod tidy
+
+.PHONY: clean
+clean:
+	@hack/clean.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+
+.PHONY: check-generate
+check-generate:
+	@hack/check-generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 
 .PHONY: check
 check:
-	@.ci/check
-
-.PHONY: test
-test:
-	@.ci/test
-
-.PHONY: test-cov
-test-cov:
-	@env COVERAGE=1 .ci/test
-	@echo "mode: set" > gardener.coverprofile && find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($$1 != last) {print $$0;last=$$1}}' >> gardener.coverprofile
-	@go tool cover -html=gardener.coverprofile -o=gardener.coverage.html
-	@rm gardener.coverprofile
-
-.PHONY: test-clean
-test-clean:
-	@find . -name "*.coverprofile" -type f -delete
-	@rm -f gardener.coverage.html
+	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/check-charts.sh ./charts
 
 .PHONY: generate
 generate:
-	@./hack/generate-code
-	@./hack/generate-reference-doc
+	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+
+.PHONY: format
+format:
+	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test
+
+.PHONY: test
+test:
+	@./hack/test.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
+	@./hack/test-prometheus.sh
+
+.PHONY: test-cov
+test-cov:
+	@./hack/test-cover.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
+
+.PHONY: test-clean
+test-clean:
+	@./hack/test-cover-clean.sh
+
+.PHONY: verify
+verify: check format test
+
+.PHONY: verify-extended
+verify-extended: install-requirements check-generate check format test-cov test-clean

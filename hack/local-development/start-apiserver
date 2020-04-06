@@ -27,7 +27,7 @@ apiserver_flags="
   --secure-port=8443 \
   --v 2"
 
-ld_flags="$(./hack/get-build-ld-flags)"
+ldflags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
 case $(k8s_env) in
     $KIND)
         echo "Found kind ..."
@@ -36,7 +36,7 @@ case $(k8s_env) in
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \
-          cmd/gardener-apiserver/main.go \
+          "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
           --tls-cert-file <(kind get kubeconfig | sed -n -e 's/^.*client-certificate-data: //p' | base64 -d) \
           --tls-private-key-file <(kind get kubeconfig | sed -n -e 's/^.*client-key-data: //p' | base64 -d) \
@@ -47,7 +47,7 @@ case $(k8s_env) in
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \
-          cmd/gardener-apiserver/main.go \
+          "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
           --tls-cert-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-certificate-data\"}}{{end}}{{end}}" --raw | base64 -d) \
           --tls-private-key-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-key-data\"}}{{end}}{{end}}" --raw | base64 -d) \
@@ -58,7 +58,7 @@ case $(k8s_env) in
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \
-          cmd/gardener-apiserver/main.go \
+          "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://$(minikube ip):32379 \
           --tls-cert-file ~/.minikube/apiserver.crt \
           --tls-private-key-file ~/.minikube/apiserver.key \
@@ -69,7 +69,7 @@ case $(k8s_env) in
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \
-          cmd/gardener-apiserver/main.go \
+          "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:22379 \
           --tls-cert-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-certificate-data}' --raw | base64 -d) \
           --tls-private-key-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-key-data}' --raw | base64 -d) \

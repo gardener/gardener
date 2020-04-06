@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -13,17 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
-source $(dirname "${0}")/common
+echo "> Test Cover"
 
-kubeconfig="$(mktemp_kubeconfig)"
-trap cleanup_kubeconfig EXIT
+"$(dirname $0)"/test.sh -cover $@
 
-GO111MODULE=on \
-    go run \
-      -mod=vendor \
-      -ldflags "$(./hack/get-build-ld-flags)" \
-      cmd/gardener-seed-admission-controller/main.go \
-      --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
-      --tls-cert-path="example/seed-admission-controller/tls.crt" \
-      --tls-private-key-path="example/seed-admission-controller/tls.key"
+COVERPROFILE="$(dirname $0)/../test.coverprofile"
+COVERPROFILE_TMP="$(dirname $0)/../test.coverprofile.tmp"
+COVERPROFILE_HTML="$(dirname $0)/../test.coverage.html"
+
+echo "mode: set" > "$COVERPROFILE_TMP"
+find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($$1 != last) {print $$0;last=$$1}}' >> "$COVERPROFILE_TMP"
+cat "$COVERPROFILE_TMP" | grep -vE "\.pb\.go|\/test\/|zz_generated" > "$COVERPROFILE"
+rm -rf "$COVERPROFILE_TMP"
+go tool cover -html="$COVERPROFILE" -o="$COVERPROFILE_HTML"
+
+go tool cover -func="$COVERPROFILE"

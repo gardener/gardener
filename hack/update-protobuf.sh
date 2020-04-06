@@ -18,29 +18,35 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-CURRENT_DIR=$(dirname $0)
+CURRENT_DIR="$(dirname $0)"
 PROJECT_ROOT="${CURRENT_DIR}"/..
 
+pushd "$PROJECT_ROOT" > /dev/null
 APIROOTS=${APIROOTS:-$(git grep --files-with-matches -e '// +k8s:protobuf-gen=package' cmd pkg | \
 	xargs -n 1 dirname | \
 	sed 's,^,github.com/gardener/gardener/,;' | \
 	sort | uniq
 )}
+popd > /dev/null
 
 rm -f ${GOPATH}/bin/go-to-protobuf
 rm -f ${GOPATH}/bin/protoc-gen-gogo
 
-GOFLAGS="" go build -o ${GOPATH}/bin ./vendor/k8s.io/code-generator/cmd/go-to-protobuf
-GOFLAGS="" go build -o ${GOPATH}/bin ./vendor/k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
+GOFLAGS="" go build -o ${GOPATH}/bin "$PROJECT_ROOT/vendor/k8s.io/code-generator/cmd/go-to-protobuf"
+GOFLAGS="" go build -o ${GOPATH}/bin "$PROJECT_ROOT/vendor/k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo"
 
 if [[ -z "$(which protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
-  echo "Generating protobuf requires protoc 3.0.0-beta1 or newer. Please download and"
-  echo "install the platform appropriate Protobuf package for your OS: "
-  echo
-  echo "  https://github.com/google/protobuf/releases"
-  echo
+  if [[ "$(uname -s)" == *"Darwin"* ]]; then
+    brew install protobuf
+  else
+    PROTOC_ZIP=protoc-3.7.1-linux-x86_64.zip
+    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/$PROTOC_ZIP
+    unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+    unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
+    rm -f $PROTOC_ZIP
+  fi
+
   echo "WARNING: Protobuf changes are not being validated"
-  exit 1
 fi
 
 read -ra PACKAGES <<< $(echo ${APIROOTS})

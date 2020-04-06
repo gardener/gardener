@@ -2,12 +2,17 @@
 **
 
 # Exclude folders relevant for build
-!pkg/
-!cmd/
-!vendor/
-!plugin/
-!charts/
-!VERSION
 !.git
+!charts/
+!cmd/
+!extensions/
+!hack/
+!pkg/
+!plugin/
+!test/
+!vendor/
+!.golangci.yaml
 !go.mod
 !go.sum
+!Makefile
+!VERSION

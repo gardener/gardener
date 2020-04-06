@@ -16,6 +16,8 @@
 
 set -e
 
+echo "> Generate Check"
+
 check_branch="__generate_check"
 initialized_git=false
 stashed=false
@@ -28,7 +30,7 @@ function delete-check-branch {
 
 function cleanup {
   if [[ "$generated" == true ]]; then
-    if ! clean_err="$("$(dirname $0)/clean.sh" && git reset --hard -q && git clean -qdf)"; then
+    if ! clean_err="$("$(dirname $0)/clean.sh" $@ && git reset --hard -q && git clean -qdf)"; then
       echo "Could not clean: $clean_err"
     fi
   fi
@@ -84,7 +86,7 @@ if which git &>/dev/null; then
   git commit -q --allow-empty -m 'check-generate checkpoint'
 
   old_status="$(git status -s)"
-  if ! out=$("$(dirname $0)/clean.sh" 2>&1); then
+  if ! out=$("$(dirname $0)/clean.sh" $@ 2>&1); then
     echo "Error during calling $(dirname $0)/clean.sh: $out"
     exit 1
   fi

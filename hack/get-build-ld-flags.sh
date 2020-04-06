@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat VERSION)
-      -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty)
-      -X github.com/gardener/gardener/pkg/version.gitCommit=$(git rev-parse --verify HEAD)
+echo "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat "$(dirname $0)/../VERSION") \
+      -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty) \
+      -X github.com/gardener/gardener/pkg/version.gitCommit=$(git rev-parse --verify HEAD) \
       -X github.com/gardener/gardener/pkg/version.buildDate=$(date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$/:\1/g')"
