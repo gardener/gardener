@@ -334,17 +334,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 	}
 
 	if worker.CRI != nil {
-		criConfig := map[string]interface{}{
+		workerConfig["cri"] = map[string]interface{}{
 			"name": worker.CRI.Name,
 		}
-		if len(worker.CRI.ContainerRuntimes) > 0 {
-			crWorkerLabels := make([]string, len(worker.CRI.ContainerRuntimes))
-			for i, cr := range worker.CRI.ContainerRuntimes {
-				crWorkerLabels[i] = fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type) + "=true"
-			}
-			criConfig["labels"] = crWorkerLabels
-		}
-		workerConfig["cri"] = criConfig
 	}
 
 	originalConfig["worker"] = workerConfig

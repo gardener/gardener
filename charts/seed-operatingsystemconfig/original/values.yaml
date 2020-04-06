@@ -24,8 +24,6 @@ worker:
   name: cpu-worker
 # cri:
 #   name: containerd
-#   labels:
-#   - containerruntime.worker.gardener.cloud/gvisor=true
   kubelet:
     caCert: abcd
     cpuCFSQuota: true

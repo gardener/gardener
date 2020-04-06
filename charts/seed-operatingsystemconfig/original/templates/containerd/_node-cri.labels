@@ -1,0 +1,3 @@
+{{- define "node-cri-labels" -}}
+{{- if .Values.worker.cri }}{{ .Values.osc.cri.labels.workerLabel }}={{ .Values.worker.cri.name }}{{- end -}}
+{{- end -}}

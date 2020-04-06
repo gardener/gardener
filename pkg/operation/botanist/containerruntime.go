@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -39,41 +40,37 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// DeployContainerRuntimeResources creates the `Container runtime` resource in the shoot namespace in the seed
-// cluster. Gardener waits until an external controller did reconcile the resources successfully.
+// DeployContainerRuntimeResources creates a `Container runtime` resource in the shoot namespace in the seed
+// cluster. Deploys one resource per CRI per Worker.
+// Gardener waits until an external controller has reconciled the resources successfully.
 func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 	fns := []flow.TaskFn{}
-	requiredContainerRuntimeTypes := sets.NewString()
 	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
 		if worker.CRI != nil {
 			for _, containerRuntime := range worker.CRI.ContainerRuntimes {
-				if !requiredContainerRuntimeTypes.Has(containerRuntime.Type) {
-
-					requiredContainerRuntimeTypes.Insert(containerRuntime.Type)
-
-					var (
-						cr      = containerRuntime
-						toApply = extensionsv1alpha1.ContainerRuntime{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      containerRuntime.Type,
-								Namespace: b.Shoot.SeedNamespace,
-							},
-						}
-					)
-
-					fns = append(fns, func(ctx context.Context) error {
-						_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
-							metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-							toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
-							toApply.Spec.Type = cr.Type
-							if cr.ProviderConfig != nil {
-								toApply.Spec.ProviderConfig = &cr.ProviderConfig.RawExtension
-							}
-							return nil
-						})
-						return err
-					})
+				cr := containerRuntime
+				workerName := worker.Name
+				toApply := extensionsv1alpha1.ContainerRuntime{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      getContainerRuntimeKey(cr.Type, workerName),
+						Namespace: b.Shoot.SeedNamespace,
+					},
 				}
+
+				fns = append(fns, func(ctx context.Context) error {
+					_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
+						metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+						toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
+						toApply.Spec.Type = cr.Type
+						if cr.ProviderConfig != nil {
+							toApply.Spec.ProviderConfig = &cr.ProviderConfig.RawExtension
+						}
+						toApply.Spec.WorkerPool.Name = workerName
+						toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{gardencorev1beta1constants.LabelWorkerPool: workerName, gardencorev1beta1constants.LabelWorkerPoolDeprecated: workerName}
+						return nil
+					})
+					return err
+				})
 			}
 		}
 	}
@@ -81,43 +78,41 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
+func getContainerRuntimeKey(criType, workerName string) string {
+	return fmt.Sprintf("%s-%s", criType, workerName)
+}
+
 // WaitUntilContainerRuntimeResourcesReady waits until all container runtime resources report `Succeeded` in their last operation state.
 // The state must be reported before the passed context is cancelled or a container runtime's timeout has been reached.
 // As soon as one timeout has been overstepped the function returns an error, further waits on container runtime will be aborted.
 func (b *Botanist) WaitUntilContainerRuntimeResourcesReady(ctx context.Context) error {
 	fns := []flow.TaskFn{}
-	requiredContainerRuntimeTypes := sets.NewString()
 
 	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
 		if worker.CRI != nil {
 			for _, containerRuntime := range worker.CRI.ContainerRuntimes {
-				if !requiredContainerRuntimeTypes.Has(containerRuntime.Type) {
-					requiredContainerRuntimeTypes.Insert(containerRuntime.Type)
-
-					var (
-						name      = containerRuntime.Type
-						namespace = b.Shoot.SeedNamespace
-					)
-
-					fns = append(fns, func(ctx context.Context) error {
-						if err := retry.UntilTimeout(ctx, DefaultInterval, shoot.ExtensionDefaultTimeout, func(ctx context.Context) (bool, error) {
-							req := &extensionsv1alpha1.ContainerRuntime{}
-							if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(namespace, name), req); err != nil {
-								return retry.SevereError(err)
-							}
-
-							if err := health.CheckExtensionObject(req); err != nil {
-								b.Logger.WithError(err).Errorf("Container runtime %s/%s did not get ready yet", namespace, name)
-								return retry.MinorError(err)
-							}
-
-							return retry.Ok()
-						}); err != nil {
-							return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed waiting for container runtime %s to be ready: %v", name, err))
+				var (
+					name      = getContainerRuntimeKey(containerRuntime.Type, worker.Name)
+					namespace = b.Shoot.SeedNamespace
+				)
+				fns = append(fns, func(ctx context.Context) error {
+					if err := retry.UntilTimeout(ctx, DefaultInterval, shoot.ExtensionDefaultTimeout, func(ctx context.Context) (bool, error) {
+						req := &extensionsv1alpha1.ContainerRuntime{}
+						if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(namespace, name), req); err != nil {
+							return retry.SevereError(err)
 						}
-						return nil
-					})
-				}
+
+						if err := health.CheckExtensionObject(req); err != nil {
+							b.Logger.WithError(err).Errorf("Container runtime %s/%s did not get ready yet", namespace, name)
+							return retry.MinorError(err)
+						}
+
+						return retry.Ok()
+					}); err != nil {
+						return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed waiting for container runtime %s to be ready: %v", name, err))
+					}
+					return nil
+				})
 			}
 		}
 	}
@@ -131,7 +126,8 @@ func (b *Botanist) DeleteStaleContainerRuntimeResources(ctx context.Context) err
 	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
 		if worker.CRI != nil {
 			for _, containerRuntime := range worker.CRI.ContainerRuntimes {
-				wantedContainerRuntimeTypes.Insert(containerRuntime.Type)
+				key := getContainerRuntimeKey(containerRuntime.Type, worker.Name)
+				wantedContainerRuntimeTypes.Insert(key)
 			}
 		}
 	}
@@ -151,7 +147,8 @@ func (b *Botanist) deleteContainerRuntimeResources(ctx context.Context, wantedCo
 
 	fns := make([]flow.TaskFn, 0, meta.LenList(deployedContainerRuntimes))
 	for _, deployedContainerRuntime := range deployedContainerRuntimes.Items {
-		if !wantedContainerRuntimeTypes.Has(deployedContainerRuntime.Spec.Type) {
+		key := getContainerRuntimeKey(deployedContainerRuntime.Spec.Type, deployedContainerRuntime.Spec.WorkerPool.Name)
+		if !wantedContainerRuntimeTypes.Has(key) {
 			toDelete := &extensionsv1alpha1.ContainerRuntime{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      deployedContainerRuntime.Name,
