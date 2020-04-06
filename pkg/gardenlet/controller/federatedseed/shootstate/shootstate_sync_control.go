@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -195,16 +194,10 @@ func newShootRetriever() *ShootRetriever {
 }
 
 // FromCluster retrieves the shoot resource from the Cluster resource
-func (s *ShootRetriever) FromCluster(ctx context.Context, clusterName string, seedClient kubernetes.Interface) (*gardencorev1beta1.Shoot, error) {
-	cluster := &extensionsv1alpha1.Cluster{}
-
-	if err := seedClient.Client().Get(ctx, kutil.Key(clusterName), cluster); err != nil {
-		return nil, fmt.Errorf("could not get cluster with name %s : %v", clusterName, err)
-	}
+func (s *ShootRetriever) FromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.Shoot, error) {
 	shoot := &gardencorev1beta1.Shoot{}
-
 	if cluster.Spec.Shoot.Raw == nil {
-		return nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", clusterName)
+		return nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
 	}
 	if _, _, err := s.Decode(cluster.Spec.Shoot.Raw, nil, shoot); err != nil {
 		return nil, err

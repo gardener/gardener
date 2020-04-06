@@ -23,6 +23,7 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -85,15 +86,23 @@ func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, 
 			return reconcile.Result{}, nil
 		}
 
-		name := extensionObject.GetName()
-		purpose := extensionObject.GetExtensionSpec().GetExtensionPurpose()
-		state := extensionObject.GetExtensionStatus().GetState()
-
 		clusterName := fromRequest(req)
-		shoot, err := s.shootRetriever.FromCluster(ctx, clusterName, s.seedClient)
+		cluster := &extensionsv1alpha1.Cluster{}
+		if err := s.seedClient.Client().Get(ctx, kutil.Key(clusterName), cluster); err != nil {
+			if apierrors.IsNotFound(err) {
+				return reconcile.Result{}, nil
+			}
+			return reconcile.Result{}, fmt.Errorf("could not get cluster with name %s : %v", clusterName, err)
+		}
+
+		shoot, err := s.shootRetriever.FromCluster(cluster)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+
+		name := extensionObject.GetName()
+		purpose := extensionObject.GetExtensionSpec().GetExtensionPurpose()
+		state := extensionObject.GetExtensionStatus().GetState()
 
 		shootState := &gardencorev1alpha1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
 		if _, err := controllerutil.CreateOrUpdate(ctx, s.k8sGardenClient.Client(), shootState, func() error {
