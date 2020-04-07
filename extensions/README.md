@@ -1,6 +1,6 @@
 # [Gardener Extensions Library](https://gardener.cloud)
 
-![Gardener Extensions Logo](../logo/gardener-extension-large.png)
+![Gardener Extensions Logo](../logo/gardener-extensions-large.png)
 
 Project Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service. Its main principle is to leverage Kubernetes concepts for all of its tasks.
 
@@ -15,7 +15,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 ### Infrastructure Provider
 
-- [Alicloud](https://github.com/gardenergardener-extension-provider-alicloud) - optional description goes here
+- [Alicloud](https://github.com/gardenergardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardenergardener-extension-provider-aws)
 - [Azure](https://github.com/gardenergardener-extension-provider-azure)
 - [GCP](https://github.com/gardenergardener-extension-provider-gcp)
