@@ -841,8 +841,9 @@ type ShootMachineImage struct {
 	// +optional
 	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Version is the version of the shoot's image.
-	// If version is not provided, it will be defaulted to the latest version.
-	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
+	// If version is not provided, it will be defaulted to the latest version from the CloudProfile.
+	// +optional
+	Version *string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
 }
 
 // Volume contains information about the volume type and size.

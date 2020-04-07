@@ -6618,8 +6618,9 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Version is the version of the shoot&rsquo;s image.
-If version is not provided, it will be defaulted to the latest version.</p>
+If version is not provided, it will be defaulted to the latest version from the CloudProfile.</p>
 </td>
 </tr>
 </tbody>

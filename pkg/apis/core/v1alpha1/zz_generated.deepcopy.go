@@ -2962,6 +2962,11 @@ func (in *ShootMachineImage) DeepCopyInto(out *ShootMachineImage) {
 		*out = new(ProviderConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Version != nil {
+		in, out := &in.Version, &out.Version
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

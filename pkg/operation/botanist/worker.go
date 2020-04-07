@@ -108,7 +108,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			MachineType:    worker.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
 				Name:    worker.Machine.Image.Name,
-				Version: worker.Machine.Image.Version,
+				Version: *worker.Machine.Image.Version,
 			},
 			ProviderConfig:        pConfig,
 			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),

@@ -150,7 +150,9 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 		// in the integration test we only use one worker pool
 		nameVersions := make(map[string]string)
 		for _, worker := range shoot.Spec.Provider.Workers {
-			nameVersions[worker.Machine.Image.Name] = worker.Machine.Image.Version
+			if worker.Machine.Image.Version != nil {
+				nameVersions[worker.Machine.Image.Name] = *worker.Machine.Image.Version
+			}
 			if worker.Machine.Image != nil && apiequality.Semantic.DeepEqual(*worker.Machine.Image, targetMachineImage) && imageUpdateRequired {
 				s.ShootGardenerTest.Logger.Infof("shoot maintained properly - received machine image update")
 				return true, nil
@@ -165,7 +167,7 @@ func (s *ShootMaintenanceTest) WaitForExpectedMachineImageMaintenance(ctx contex
 			s.ShootGardenerTest.Logger.Infof("shoot maintained properly - did not receive an machineImage update")
 			return true, nil
 		}
-		s.ShootGardenerTest.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, nameVersions, targetMachineImage.Name, targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
+		s.ShootGardenerTest.Logger.Infof("shoot %s has workers with machine images (name:version) '%v'. Target image: %s-%s. ImageUpdateRequired: %t. Deadline is in %v", s.ShootGardenerTest.Shoot.Name, nameVersions, targetMachineImage.Name, *targetMachineImage.Version, imageUpdateRequired, deadline.Sub(now))
 		return false, nil
 	}, ctx.Done())
 }

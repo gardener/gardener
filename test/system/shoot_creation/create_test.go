@@ -30,10 +30,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/test/framework"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/gardener/gardener/test/framework"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -159,7 +160,7 @@ var _ = Describe("Shoot Creation testing", func() {
 
 		if shootMachineImageVersion != nil && len(*shootMachineImageVersion) > 0 {
 			for i := range shoot.Spec.Provider.Workers {
-				shoot.Spec.Provider.Workers[i].Machine.Image.Version = *shootMachineImageVersion
+				shoot.Spec.Provider.Workers[i].Machine.Image.Version = shootMachineImageVersion
 			}
 		}
 

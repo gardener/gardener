@@ -21,7 +21,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Maintenance", func() {
@@ -46,7 +48,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			var (
 				shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 					Name:    "CoreOs",
-					Version: "1.0.0",
+					Version: pointer.StringPtr("1.0.0"),
 				}
 			)
 
@@ -99,7 +101,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		BeforeEach(func() {
 			shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 				Name:    "CoreOs",
-				Version: "1.0.0",
+				Version: pointer.StringPtr("1.0.0"),
 			}
 
 			machineCurrentImages = []*gardencorev1beta1.ShootMachineImage{shootCurrentImage}
@@ -149,7 +151,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
-			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version))
+			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the apiserver)", func() {
@@ -158,7 +160,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
-			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version))
+			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
 		})
 
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
@@ -188,7 +190,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(err).To(BeNil())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
-			Expect(workerImages[0].Version).To(Equal(cloudProfile.Spec.MachineImages[0].Versions[0].Version))
+			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[0].Version)))
 		})
 
 		It("should return an error - cloud profile has no matching (machineImage.name) machine image defined", func() {

@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -549,7 +550,7 @@ var _ = Describe("helper", func() {
 
 			shootMachineImage = gardencorev1alpha1.ShootMachineImage{
 				Name:    "coreos",
-				Version: "0.0.2",
+				Version: pointer.StringPtr("0.0.2"),
 			}
 		})
 
@@ -566,7 +567,7 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = "0.0.4"
+			shootMachineImage.Version = pointer.StringPtr("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(Equal(false))
 		})
@@ -612,7 +613,7 @@ var _ = Describe("helper", func() {
 			latestSemverVersion, _ := semver.NewVersion(latestVersion)
 			Expect(version).To(Equal(latestSemverVersion))
 			Expect(image.Name).To(Equal("coreos"))
-			Expect(image.Version).To(Equal(latestVersion))
+			Expect(image.Version).To(PointTo(Equal(latestVersion)))
 		})
 
 		It("should return the Machine Image", func() {
@@ -630,7 +631,7 @@ var _ = Describe("helper", func() {
 			latestSemverVersion, err := semver.NewVersion(latestVersion)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(Equal(latestSemverVersion))
-			Expect(image.Version).To(Equal(latestVersion))
+			Expect(image.Version).To(PointTo(Equal(latestVersion)))
 		})
 
 		It("should return an error for invalid semVerVersion", func() {
@@ -765,7 +766,7 @@ var _ = Describe("helper", func() {
 			latestSemverVersion, _ := semver.NewVersion(latestVersion)
 			Expect(version).To(Equal(latestSemverVersion))
 			Expect(image.Name).To(Equal("coreos"))
-			Expect(image.Version).To(Equal(latestVersion))
+			Expect(image.Version).To(PointTo(Equal(latestVersion)))
 		})
 
 		It("should return the Machine Image", func() {
@@ -785,7 +786,7 @@ var _ = Describe("helper", func() {
 			latestSemverVersion, err := semver.NewVersion(latestVersion)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(Equal(latestSemverVersion))
-			Expect(image.Version).To(Equal(latestVersion))
+			Expect(image.Version).To(PointTo(Equal(latestVersion)))
 		})
 
 		It("should return an error for invalid semVerVersion", func() {
@@ -823,7 +824,7 @@ var _ = Describe("helper", func() {
 
 			shootMachineImage = gardencorev1alpha1.ShootMachineImage{
 				Name:    "coreos",
-				Version: "0.0.2",
+				Version: pointer.StringPtr("0.0.2"),
 			}
 		})
 		It("should determine that the version exists", func() {
@@ -837,7 +838,7 @@ var _ = Describe("helper", func() {
 			Expect(exists).To(Equal(false))
 		})
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = "0.0.4"
+			shootMachineImage.Version = pointer.StringPtr("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(Equal(false))
 		})

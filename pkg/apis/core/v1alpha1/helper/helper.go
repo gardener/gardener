@@ -608,7 +608,7 @@ func ShootMachineImageVersionExists(constraint gardencorev1alpha1.MachineImage, 
 	}
 
 	for index, v := range constraint.Versions {
-		if v.Version == image.Version {
+		if image.Version != nil && v.Version == *image.Version {
 			return true, index
 		}
 	}
@@ -642,7 +642,7 @@ func GetShootMachineImageFromLatestMachineImageVersion(image gardencorev1alpha1.
 	if err != nil {
 		return nil, gardencorev1alpha1.ShootMachineImage{}, err
 	}
-	return latestSemVerVersion, gardencorev1alpha1.ShootMachineImage{Name: image.Name, Version: latestImage.Version}, nil
+	return latestSemVerVersion, gardencorev1alpha1.ShootMachineImage{Name: image.Name, Version: &latestImage.Version}, nil
 }
 
 // UpdateMachineImages updates the machine images in place.
@@ -650,7 +650,7 @@ func UpdateMachineImages(workers []gardencorev1alpha1.Worker, machineImages []*g
 	for _, machineImage := range machineImages {
 		for idx, worker := range workers {
 			if worker.Machine.Image != nil && machineImage.Name == worker.Machine.Image.Name {
-				logger.Logger.Infof("Updating worker images of worker '%s' from version %s to version %s", worker.Name, worker.Machine.Image.Version, machineImage.Version)
+				logger.Logger.Infof("Updating worker images of worker '%s' from version %s to version %s", worker.Name, *worker.Machine.Image.Version, *machineImage.Version)
 				workers[idx].Machine.Image = machineImage
 			}
 		}
