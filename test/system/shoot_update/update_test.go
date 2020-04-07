@@ -46,7 +46,7 @@ var kubernetesVersion = flag.String("version", "", "the version to update the sh
 const UpdateKubernetesVersionTimeout = 45 * time.Minute
 
 func init() {
-	framework.RegisterShootFrameworkFlags(nil)
+	framework.RegisterShootFrameworkFlags()
 }
 
 var _ = Describe("Shoot update testing", func() {

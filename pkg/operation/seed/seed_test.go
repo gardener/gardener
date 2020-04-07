@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
+	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/seed"
 

@@ -87,8 +87,9 @@ var _ = Describe("Errors", func() {
 	Describe("Error context", func() {
 		It("Should panic with duplicate error IDs", func() {
 			defer func() {
-				recover()
+				_ = recover()
 			}()
+
 			errorContext := utilerrors.NewErrorContext("Test context", nil)
 			errorContext.AddErrorID("ID1")
 			errorContext.AddErrorID("ID1")
@@ -113,13 +114,13 @@ var _ = Describe("Errors", func() {
 
 		It("Should update the error context", func() {
 			errID := "x1"
-			utilerrors.HandleErrors(errorContext,
+			Expect(utilerrors.HandleErrors(errorContext,
 				nil,
 				nil,
 				utilerrors.ToExecute(errID, func() error {
 					return nil
 				}),
-			)
+			)).To(Succeed())
 			Expect(errorContext.HasErrorWithID(errID)).To(BeTrue())
 		})
 
@@ -194,7 +195,7 @@ var _ = Describe("Errors", func() {
 		It("Should call success handler on error resolution", func() {
 			errID := "x2"
 			errorContext := utilerrors.NewErrorContext("Check success handler", []string{errID})
-			utilerrors.HandleErrors(errorContext,
+			Expect(utilerrors.HandleErrors(errorContext,
 				func(errorID string) error {
 					return nil
 				},
@@ -205,7 +206,7 @@ var _ = Describe("Errors", func() {
 				utilerrors.ToExecute(errID, func() error {
 					return nil
 				}),
-			)
+			)).To(Succeed())
 		})
 
 		It("Should execute methods sequentially in the specified order", func() {

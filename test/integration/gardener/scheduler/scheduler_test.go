@@ -93,6 +93,10 @@ const (
 	restoreCtxTimeout   = time.Minute * 2
 )
 
+type name string
+
+const nameKey name = "name"
+
 func validateFlags() {
 	if !StringSet(*kubeconfig) {
 		Fail("you need to specify a path to the Kubeconfig of the Garden cluster")
@@ -164,7 +168,7 @@ var _ = Describe("Scheduler testing", func() {
 		shootGardenerTest, err := NewShootGardenerTest(*kubeconfig, shoot, schedulerOperationsTestLogger)
 		Expect(err).To(BeNil())
 
-		shootGardenerTest.SetupShootWorker(workerZone)
+		Expect(shootGardenerTest.SetupShootWorker(workerZone)).To(Succeed())
 		Expect(len(shootGardenerTest.Shoot.Spec.Provider.Workers)).Should(BeNumerically(">=", 1))
 
 		schedulerGardenerTest, err = NewGardenSchedulerTest(ctx, shootGardenerTest, *kubeconfig)
@@ -221,7 +225,7 @@ var _ = Describe("Scheduler testing", func() {
 		schedulerGardenerTest.ShootGardenerTest.Shoot.Spec.Region = unsupportedRegion.Name
 
 		// First we create the target shoot.
-		shootCreateDeleteContext := context.WithValue(ctx, "name", "schedule shoot and delete the unschedulable shoot after")
+		shootCreateDeleteContext := context.WithValue(ctx, nameKey, "schedule shoot and delete the unschedulable shoot after")
 
 		_, err = schedulerGardenerTest.CreateShoot(shootCreateDeleteContext)
 		Expect(err).NotTo(HaveOccurred())
@@ -245,7 +249,7 @@ var _ = Describe("Scheduler testing", func() {
 		// setZones(unsupportedRegion)
 
 		// First we create the target shoot.
-		shootScheduling := context.WithValue(ctx, "name", "schedule shoot, create the shoot and delete the shoot after")
+		shootScheduling := context.WithValue(ctx, nameKey, "schedule shoot, create the shoot and delete the shoot after")
 
 		_, err = schedulerGardenerTest.CreateShoot(shootScheduling)
 		Expect(err).NotTo(HaveOccurred())

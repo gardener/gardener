@@ -159,7 +159,7 @@ func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
 		b.Logger.Infof("Waiting for infrastructure to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("infrastructure is still present"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete infrastructure")
+		message := "Failed to delete infrastructure"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}

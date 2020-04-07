@@ -20,13 +20,13 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/test/framework"
+
+	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,6 +120,7 @@ var _ = Describe("Apply", func() {
 		d       *fakeDiscovery
 		applier *kubernetes.Applier
 	)
+
 	BeforeEach(func() {
 		c = fake.NewFakeClient()
 		d = &fakeDiscovery{
@@ -139,6 +140,7 @@ var _ = Describe("Apply", func() {
 		}
 		applier = newTestApplier(c, d)
 	})
+
 	Context("ManifestTest", func() {
 		var (
 			rawConfigMap = []byte(`apiVersion: v1
@@ -169,6 +171,7 @@ metadata:
 			Expect(unstructuredObject.GetNamespace()).To(Equal("swap-ns"))
 		})
 	})
+
 	Context("Applier", func() {
 		var rawMultipleObjects = []byte(`
 apiVersion: v1
@@ -204,6 +207,7 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cm).To(DeepDerivativeEqual(actualCM))
 			})
+
 			It("should apply multiple objects", func() {
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
 				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
@@ -214,6 +218,7 @@ spec:
 				err = c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
 				Expect(err).NotTo(HaveOccurred())
 			})
+
 			It("should retain secret information for service account", func() {
 				oldServiceAccount := corev1.ServiceAccount{
 					TypeMeta: metav1.TypeMeta{
@@ -235,7 +240,7 @@ spec:
 				manifest := mkManifest(&newServiceAccount)
 				manifestReader := kubernetes.NewManifestReader(manifest)
 
-				c.Create(context.TODO(), &oldServiceAccount)
+				Expect(c.Create(context.TODO(), &oldServiceAccount)).To(Succeed())
 				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				resultingService := &corev1.ServiceAccount{}
@@ -680,7 +685,6 @@ spec:
 							expected.Spec.ClusterIP = "3.4.5.6"
 						}),
 				)
-
 			})
 
 			It("should create objects with namespace", func() {
@@ -702,9 +706,8 @@ spec:
 		})
 
 		Context("#DeleteManifest", func() {
-			var (
-				result error
-			)
+			var result error
+
 			BeforeEach(func() {
 				existingServiceAccount := &corev1.ServiceAccount{
 					TypeMeta: metav1.TypeMeta{
@@ -736,12 +739,12 @@ spec:
 						Namespace: "test-ns",
 					},
 				}
-				c.Create(context.TODO(), existingServiceAccount)
-				c.Create(context.TODO(), existingConfigMap)
-				c.Create(context.TODO(), notDeletedConfigMap)
+				Expect(c.Create(context.TODO(), existingServiceAccount)).To(Succeed())
+				Expect(c.Create(context.TODO(), existingConfigMap)).To(Succeed())
+				Expect(c.Create(context.TODO(), notDeletedConfigMap)).To(Succeed())
 				result = applier.DeleteManifest(context.TODO(), kubernetes.NewManifestReader(rawMultipleObjects))
-
 			})
+
 			It("should not return error", func() {
 				Expect(result).To(BeNil())
 			})

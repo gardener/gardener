@@ -152,9 +152,9 @@ var _ = Describe("Flow", func() {
 				cleaned bool
 			)
 
-			f.Run(flow.Opts{Context: ctx, ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
+			Expect(f.Run(flow.Opts{Context: ctx, ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
 				cleaned = true
-			}})
+			}})).To(Succeed())
 
 			Expect(cleaned).To(BeTrue())
 		})

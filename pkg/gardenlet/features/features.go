@@ -17,6 +17,7 @@ package features
 import (
 	"github.com/gardener/gardener/pkg/features"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -32,5 +33,5 @@ var (
 
 // RegisterFeatureGates registers the feature gates of the Gardenlet.
 func RegisterFeatureGates() {
-	FeatureGate.Add(featureGates)
+	utilruntime.Must(FeatureGate.Add(featureGates))
 }

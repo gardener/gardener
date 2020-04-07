@@ -521,19 +521,19 @@ func prepareRequestAndObjectWithResource(request *admissionv1beta1.AdmissionRequ
 }
 
 func prepareObjectWithLabelsAnnotations(obj runtime.Object, resource metav1.GroupVersionResource, labels, annotations map[string]string) {
-	switch obj.(type) {
+	switch obj := obj.(type) {
 	case *unstructured.Unstructured:
-		obj.(*unstructured.Unstructured).SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
-		obj.(*unstructured.Unstructured).SetKind(resource.Resource)
-		obj.(*unstructured.Unstructured).SetLabels(labels)
-		obj.(*unstructured.Unstructured).SetAnnotations(annotations)
+		obj.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
+		obj.SetKind(resource.Resource)
+		obj.SetLabels(labels)
+		obj.SetAnnotations(annotations)
 	case *unstructured.UnstructuredList:
 		o := &unstructured.Unstructured{}
 		o.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
 		o.SetKind(resource.Resource)
 		o.SetLabels(labels)
 		o.SetAnnotations(annotations)
-		obj.(*unstructured.UnstructuredList).Items = []unstructured.Unstructured{*o}
+		obj.Items = []unstructured.Unstructured{*o}
 	}
 }
 

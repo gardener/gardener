@@ -283,17 +283,8 @@ time="2019-11-06T15:24:18+02:00" level=info msg="Seed controller initialized."
 
 :warning: The Gardenlet will handle all your seeds for this development scenario, although, for productive usage it is recommended to run it once per seed, see [this document](../concepts/gardenlet.md) for more information.
 
-Run the following command to install extension controllers - make sure that you install all of them required for your local development.
+Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
-
-```bash
-make dev-setup-extensions
-
-> Found extension 'os-coreos'. Do you want to install it into your local Gardener setup? (y/n)
-...
-```
-
-Alternatively, you may also want to take a look at the [Gardener Extension Manager](https://github.com/gardener/gem).
 
 The Gardener should now be ready to operate on Shoot resources. You can use
 

@@ -95,7 +95,7 @@ func DecodeCertificate(bytes []byte) (*x509.Certificate, error) {
 // SHA1 takes a byte slice and returns the sha1-hashed byte slice.
 func SHA1(in []byte) []byte {
 	s := sha1.New()
-	s.Write(in)
+	_, _ = s.Write(in)
 	return s.Sum(nil)
 }
 

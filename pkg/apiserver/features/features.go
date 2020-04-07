@@ -15,6 +15,7 @@
 package features
 
 import (
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -27,5 +28,5 @@ var (
 
 // RegisterFeatureGates registers the feature gates of the Gardener API Server.
 func RegisterFeatureGates() {
-	FeatureGate.Add(featureGates)
+	utilruntime.Must(FeatureGate.Add(featureGates))
 }

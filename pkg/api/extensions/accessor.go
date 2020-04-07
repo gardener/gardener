@@ -226,7 +226,7 @@ func (u unstructuredStatusAccessor) GetLastOperation() extensionsv1alpha1.LastOp
 	if _, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastOperation"); err != nil || !ok {
 		return nil
 	}
-	return unstructuredLastOperationAccessor{u.Unstructured}
+	return unstructuredLastOperationAccessor(u)
 }
 
 // GetObservedGeneration implements Status.
@@ -292,15 +292,15 @@ func (u unstructuredStatusAccessor) GetLastError() extensionsv1alpha1.LastError 
 	if _, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastError"); err != nil || !ok {
 		return nil
 	}
-	return unstructuredLastErrorAccessor{u.Unstructured}
+	return unstructuredLastErrorAccessor(u)
 }
 
 // GetExtensionStatus implements Object.
 func (u unstructuredAccessor) GetExtensionStatus() extensionsv1alpha1.Status {
-	return unstructuredStatusAccessor{u.Unstructured}
+	return unstructuredStatusAccessor(u)
 }
 
 // GetExtensionSpec implements Object.
 func (u unstructuredAccessor) GetExtensionSpec() extensionsv1alpha1.Spec {
-	return unstructuredSpecAccessor{u.Unstructured}
+	return unstructuredSpecAccessor(u)
 }

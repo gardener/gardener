@@ -208,7 +208,7 @@ func (b *Botanist) WaitUntilContainerRuntimeResourcesDeleted(ctx context.Context
 
 				return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("container runtime %s is still present", name), lastError))
 			}); err != nil {
-				message := fmt.Sprintf("Failed waiting for container runtime delete")
+				message := "Failed waiting for container runtime delete"
 				if lastError != nil {
 					return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 				}

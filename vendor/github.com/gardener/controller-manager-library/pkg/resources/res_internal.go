@@ -45,7 +45,7 @@ type Internal interface {
 
 	I_getInformer(namespace string, optionsFunc TweakListOptionsFunc) (GenericInformer, error)
 	I_lookupInformer(namespace string) (GenericInformer, error)
-	I_list(namespace string) ([]Object, error)
+	I_list(namespace string, opts metav1.ListOptions) ([]Object, error)
 }
 
 // _i_resource is the implementation of the internal resource interface used by
@@ -165,9 +165,9 @@ func (this *_i_resource) I_lookupInformer(namespace string) (GenericInformer, er
 	return informer, nil
 }
 
-func (this *_i_resource) I_list(namespace string) ([]Object, error) {
+func (this *_i_resource) I_list(namespace string, options metav1.ListOptions) ([]Object, error) {
 	result := this.helper.CreateListData()
-	err := this.namespacedRequest(this.client.Get(), namespace).
+	err := this.namespacedRequest(this.client.Get(), namespace).VersionedParams(&options, this.GetParameterCodec()).
 		Do().
 		Into(result)
 	if err != nil {

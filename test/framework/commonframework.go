@@ -125,11 +125,7 @@ func mergeCommonConfigs(base, overwrite *CommonConfig) *CommonConfig {
 }
 
 // RegisterCommonFrameworkFlags adds all flags that are needed to configure a common framework to the provided flagset.
-func RegisterCommonFrameworkFlags(flagset *flag.FlagSet) *CommonConfig {
-	if flagset == nil {
-		flagset = flag.CommandLine
-	}
-
+func RegisterCommonFrameworkFlags() *CommonConfig {
 	newCfg := &CommonConfig{}
 
 	flag.StringVar(&newCfg.LogLevel, "verbose", "", "verbosity level, when set, logging level will be DEBUG")

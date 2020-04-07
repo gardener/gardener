@@ -597,10 +597,8 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 
 	imageVectorOverwrites := map[string]interface{}{}
-	if componentImageVectors != nil {
-		for name, data := range componentImageVectors {
-			imageVectorOverwrites[name] = data
-		}
+	for name, data := range componentImageVectors {
+		imageVectorOverwrites[name] = data
 	}
 
 	values := kubernetes.Values(map[string]interface{}{

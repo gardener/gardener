@@ -131,8 +131,8 @@ func digestedName(publicKey interface{}, subject *pkix.Name, usages []certificat
 	encode := base64.RawURLEncoding.EncodeToString
 
 	write := func(data []byte) {
-		hash.Write([]byte(encode(data)))
-		hash.Write([]byte{delimiter})
+		_, _ = hash.Write([]byte(encode(data)))
+		_, _ = hash.Write([]byte{delimiter})
 	}
 
 	publicKeyData, err := x509.MarshalPKIXPublicKey(publicKey)

@@ -72,7 +72,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	namespace, err := c.reconcileNamespaceForProject(project)
 	if err != nil {
 		c.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 	c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
@@ -85,7 +85,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		})
 		if err != nil {
 			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-			c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
@@ -109,13 +109,13 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 	chartRenderer, err := chartrenderer.NewForConfig(c.k8sGardenClient.RESTConfig())
 	if err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 	applier, err := kubernetes.NewApplierForConfig(c.k8sGardenClient.RESTConfig())
 	if err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
@@ -169,14 +169,14 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		},
 	})); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 
 	// Delete all remaining/stale extension clusterroles and rolebindings
 	if err := deleteStaleExtensionRoles(ctx, c.k8sGardenClient.Client(), extensionRoles, project.Name, namespace.Name); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
-		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 

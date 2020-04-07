@@ -20,5 +20,5 @@ The provider extension doesn't need to care about the same.
 
 The shoot's kube-apiserver must be allowed to talk to the provider extension.
 To achieve this you need to create a `NetworkPolicy` in the shoot namespace.
-Our [extension controller library](https://github.com/gardener/gardener-extensions) provides easy-to-use utilities and hooks to implement such a webhook.
-You may want to consider to take a look at [this example implementation](https://github.com/gardener/gardener-extensions/commit/b8986482878573d35831f86cdd7eb41160e647ad).
+Our [extension controller library](https://github.com/gardener/gardener/blob/master/extensions) provides easy-to-use utilities and hooks to implement such a webhook.
+Please find an exemplary implementation [here](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/webhook/shoot) and [here](https://github.com/gardener/gardener-extension-provider-aws/blob/566fe4dd588c93821bc9d22c452203867457c930/cmd/gardener-extension-provider-aws/app/app.go#L170-L174).

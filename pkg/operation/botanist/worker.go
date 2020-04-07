@@ -201,7 +201,7 @@ func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 		b.Logger.Infof("Waiting for worker to be deleted...")
 		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("worker is still present"), lastError))
 	}); err != nil {
-		message := fmt.Sprintf("Error while waiting for worker object to be deleted")
+		message := "Error while waiting for worker object to be deleted"
 		if lastError != nil {
 			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 		}

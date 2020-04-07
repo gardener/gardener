@@ -185,7 +185,7 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 
 				return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
 			}); err != nil {
-				message := fmt.Sprintf("Failed waiting for extension delete")
+				message := "Failed waiting for extension delete"
 				if lastError != nil {
 					return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
 				}

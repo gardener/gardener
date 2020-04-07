@@ -20,7 +20,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/kubernetes"
+	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
@@ -113,7 +113,7 @@ var _ = Describe("operation", func() {
 				k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 			)
 
-			o.EnsureShootStateExists(context.TODO())
+			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
 
 			Expect(o.ShootState).ToNot(BeNil())
 		})
@@ -128,7 +128,7 @@ var _ = Describe("operation", func() {
 				k8sGardenRuntimeClient.EXPECT().Create(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 			)
 
-			o.EnsureShootStateExists(context.TODO())
+			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
 
 			Expect(o.ShootState).ToNot(BeNil())
 			Expect(len(o.ShootState.OwnerReferences)).To(Equal(1))

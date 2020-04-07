@@ -59,6 +59,7 @@
   * [Shoot resource customization webhooks](extensions/shoot-webhooks.md)
   * [Logging and Monitoring configuration](extensions/logging-and-monitoring.md)
   * [Contributing to shoot health status conditions](extensions/shoot-health-status-conditions.md)
+    * [Health Check Library](extensions/healthcheck-library.md)
   * Blob storage providers
     * [`BackupBucket` resource](extensions/backupbucket.md)
     * [`BackupEntry` resource](extensions/backupentry.md)

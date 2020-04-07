@@ -131,12 +131,8 @@ func mergeGardenerConfig(base, overwrite *GardenerConfig) *GardenerConfig {
 }
 
 // RegisterGardenerFrameworkFlags adds all flags that are needed to configure a gardener framework to the provided flagset.
-func RegisterGardenerFrameworkFlags(flagset *flag.FlagSet) *GardenerConfig {
-	if flagset == nil {
-		flagset = flag.CommandLine
-	}
-
-	_ = RegisterCommonFrameworkFlags(flagset)
+func RegisterGardenerFrameworkFlags() *GardenerConfig {
+	_ = RegisterCommonFrameworkFlags()
 
 	newCfg := &GardenerConfig{}
 

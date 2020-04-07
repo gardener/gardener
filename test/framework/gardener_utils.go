@@ -17,33 +17,29 @@ package framework
 import (
 	"context"
 	"fmt"
+	"time"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"time"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetSeed returns the seed and its k8s client
-func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string, seedScheme *runtime.Scheme) (*gardencorev1beta1.Seed, kubernetes.Interface, error) {
+func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gardencorev1beta1.Seed, kubernetes.Interface, error) {
 	seed := &gardencorev1beta1.Seed{}
 	err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: seedName}, seed)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
-	}
-
-	if seedScheme == nil {
-		seedScheme = kubernetes.SeedScheme
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
@@ -58,17 +54,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string, seedSc
 
 // GetShoot gets the test shoot
 func (f *GardenerFramework) GetShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	newShoot := &gardencorev1beta1.Shoot{}
-	err := f.GardenClient.Client().Get(ctx, client.ObjectKey{
-		Namespace: shoot.Namespace,
-		Name:      shoot.Name,
-	}, newShoot)
-
-	if err != nil {
-		return err
-	}
-	shoot = newShoot
-	return nil
+	return f.GardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shoot)
 }
 
 // GetShootProject returns the project of a shoot

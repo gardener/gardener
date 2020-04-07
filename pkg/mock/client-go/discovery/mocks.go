@@ -6,7 +6,7 @@ package discovery
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	OpenAPIv2 "github.com/googleapis/gnostic/OpenAPIv2"
+	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	version "k8s.io/apimachinery/pkg/version"
 	rest "k8s.io/client-go/rest"
@@ -37,10 +37,10 @@ func (m *MockDiscoveryInterface) EXPECT() *MockDiscoveryInterfaceMockRecorder {
 }
 
 // OpenAPISchema mocks base method
-func (m *MockDiscoveryInterface) OpenAPISchema() (*OpenAPIv2.Document, error) {
+func (m *MockDiscoveryInterface) OpenAPISchema() (*openapi_v2.Document, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OpenAPISchema")
-	ret0, _ := ret[0].(*OpenAPIv2.Document)
+	ret0, _ := ret[0].(*openapi_v2.Document)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

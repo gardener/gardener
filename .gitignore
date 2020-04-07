@@ -27,4 +27,3 @@ config.vmdk
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*
-

@@ -233,10 +233,10 @@ var _ = Describe("quotavalidator", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
-			coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
-			coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)
-			coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBindingBase)
+			Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)).To(Succeed())
+			Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)).To(Succeed())
+			Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBindingBase)).To(Succeed())
 		})
 
 		Context("tests for Shoots, which have at least one Quota referenced", func() {
@@ -258,7 +258,7 @@ var _ = Describe("quotavalidator", func() {
 			It("should fail because other shoots exhaust quota limits", func() {
 				shoot2 := *shoot.DeepCopy()
 				shoot2.Name = "test-shoot-2"
-				coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot2)
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot2)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
@@ -277,7 +277,7 @@ var _ = Describe("quotavalidator", func() {
 			It("should pass because can update non worker property although quota is exceeded", func() {
 				oldShoot = *shoot.DeepCopy()
 				quotaProject.Spec.Metrics[core.QuotaMetricCPU] = resource.MustParse("1")
-				coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
+				Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)).To(Succeed())
 
 				shoot.Spec.Kubernetes.Version = "1.1.1"
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -330,7 +330,7 @@ var _ = Describe("quotavalidator", func() {
 
 			It("should pass because shoots secret binding has no quotas referenced", func() {
 				secretBinding.Quotas = make([]corev1.ObjectReference, 0)
-				coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -360,8 +360,8 @@ var _ = Describe("quotavalidator", func() {
 					},
 				}
 
-				coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&emptyQuota)
-				coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&emptyQuota)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -377,8 +377,8 @@ var _ = Describe("quotavalidator", func() {
 			It("should pass because no quota prescribe a clusterLifetime", func() {
 				quotaProject.Spec.ClusterLifetimeDays = nil
 				quotaSecret.Spec.ClusterLifetimeDays = nil
-				coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
-				coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)
+				Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 

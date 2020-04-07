@@ -47,7 +47,7 @@ func validateFlags() {
 }
 
 func init() {
-	framework.RegisterShootFrameworkFlags(nil)
+	framework.RegisterShootFrameworkFlags()
 }
 
 var _ = Describe("Shoot reconciliation testing", func() {

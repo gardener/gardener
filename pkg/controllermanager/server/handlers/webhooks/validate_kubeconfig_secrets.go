@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -40,8 +41,8 @@ type kubeconfigSecretValidator struct {
 // NewValidateKubeconfigSecretsHandler creates a new handler for validating namespace deletions.
 func NewValidateKubeconfigSecretsHandler() func(http.ResponseWriter, *http.Request) {
 	scheme := runtime.NewScheme()
-	corev1.AddToScheme(scheme)
-	admissionregistrationv1beta1.AddToScheme(scheme)
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
 	h := &kubeconfigSecretValidator{scheme, serializer.NewCodecFactory(scheme)}
 	return h.ValidateKubeconfigSecrets
