@@ -18,7 +18,6 @@ import (
 	"context"
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"

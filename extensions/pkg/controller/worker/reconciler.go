@@ -21,8 +21,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -84,91 +84,162 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	// Deletion flow
-	if worker.DeletionTimestamp != nil {
-		hasFinalizer, err := extensionscontroller.HasFinalizer(worker, FinalizerName)
-		if err != nil {
-			r.logger.Error(err, "Could not instantiate finalizer deletion")
-			return reconcile.Result{}, err
-		}
-		if !hasFinalizer {
-			r.logger.Info("Deleting worker causes a no-op as there is no finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-			return reconcile.Result{}, nil
-		}
-
-		operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
-		if err := r.updateStatusProcessing(r.ctx, worker, operationType, "Deleting the worker"); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		r.logger.Info("Starting the deletion of worker", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		if err := r.actuator.Delete(r.ctx, worker, cluster); err != nil {
-			msg := "Error deleting worker"
-			utilruntime.HandleError(r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, operationType, msg))
-			r.logger.Error(err, msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-			return extensionscontroller.ReconcileErr(err)
-		}
-
-		msg := "Successfully deleted worker"
-		r.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		if err := r.updateStatusSuccess(r.ctx, worker, operationType, msg); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		r.logger.Info("Removing finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
-			r.logger.Error(err, "Error removing finalizer from Worker", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-			return reconcile.Result{}, err
-		}
-
-		return reconcile.Result{}, nil
-	}
-
-	// Reconcile flow
-	if err := controller.EnsureFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
-	if err := r.updateStatusProcessing(r.ctx, worker, operationType, "Reconciling the worker"); err != nil {
-		return reconcile.Result{}, err
-	}
 
-	if err := r.actuator.Reconcile(r.ctx, worker, cluster); err != nil {
-		msg := "Error reconciling worker"
-		utilruntime.HandleError(r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, operationType, msg))
-		r.logger.Error(err, msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		return extensionscontroller.ReconcileErr(err)
+	switch {
+	case isWorkerMigrated(worker):
+		return reconcile.Result{}, nil
+	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
+		return r.migrate(worker, cluster)
+	case worker.DeletionTimestamp != nil:
+		return r.delete(worker, cluster)
+	case worker.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
+		return r.restore(worker, cluster, operationType)
+	default:
+		return r.reconcile(worker, cluster, operationType)
 	}
-
-	msg := "Successfully reconciled worker"
-	r.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-	if err := r.updateStatusSuccess(r.ctx, worker, operationType, msg); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
 }
 
 func (r *reconciler) updateStatusProcessing(ctx context.Context, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	r.logger.Info(description, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, worker, func() error {
 		worker.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
 		return nil
 	})
 }
 
-func (r *reconciler) updateStatusError(ctx context.Context, err error, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, worker, func() error {
+func (r *reconciler) updateStatusError(ctx context.Context, err error, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) {
+	r.logger.Error(err, description, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+	updateErr := extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, worker, func() error {
 		worker.Status.ObservedGeneration = worker.Generation
-		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, extensionscontroller.ReconcileErrCauseOrErr(err))), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
 		return nil
 	})
+	utilruntime.HandleError(updateErr)
 }
 
 func (r *reconciler) updateStatusSuccess(ctx context.Context, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	r.logger.Info(description, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, worker, func() error {
 		worker.Status.ObservedGeneration = worker.Generation
 		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
 		return nil
 	})
+}
+
+func (r *reconciler) removeFinalizerFromWorker(worker *extensionsv1alpha1.Worker) error {
+	r.logger.Info("Removing finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
+		r.logger.Error(err, "Error removing finalizer from Worker", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+		return err
+	}
+	return nil
+}
+
+func (r *reconciler) migrate(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+	if err := r.updateStatusProcessing(r.ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Starting Migration of the worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.actuator.Migrate(r.ctx, worker, cluster); err != nil {
+		r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating worker")
+		return extensionscontroller.ReconcileErr(err)
+	}
+
+	if err := r.updateStatusSuccess(r.ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrate worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.removeFinalizerFromWorker(worker); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// remove operation annotation 'migrate'
+	if err := removeAnnotation(r.ctx, r.client, worker, v1beta1constants.GardenerOperation); err != nil {
+		r.logger.Error(err, "Error removing annotation from Worker", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) delete(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+	hasFinalizer, err := extensionscontroller.HasFinalizer(worker, FinalizerName)
+	if err != nil {
+		r.logger.Error(err, "Could not instantiate finalizer deletion")
+		return reconcile.Result{}, err
+	}
+	if !hasFinalizer {
+		r.logger.Info("Deleting worker causes a no-op as there is no finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.updateStatusProcessing(r.ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Deleting the worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.actuator.Delete(r.ctx, worker, cluster); err != nil {
+		r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, gardencorev1beta1.LastOperationTypeDelete, "Error deleting worker")
+
+		return extensionscontroller.ReconcileErr(err)
+	}
+
+	if err := r.updateStatusSuccess(r.ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err = r.removeFinalizerFromWorker(worker)
+	return reconcile.Result{}, err
+}
+
+func (r *reconciler) reconcile(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+	if err := controller.EnsureFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := r.updateStatusProcessing(r.ctx, worker, operationType, "Reconciling the worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.actuator.Reconcile(r.ctx, worker, cluster); err != nil {
+		r.updateStatusError(r.ctx, err, worker, operationType, "Error reconciling worker")
+		return extensionscontroller.ReconcileErr(err)
+	}
+
+	if err := r.updateStatusSuccess(r.ctx, worker, operationType, "Successfully reconciled worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) restore(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+	if err := r.updateStatusProcessing(r.ctx, worker, operationType, "Restoring the worker"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.actuator.Restore(r.ctx, worker, cluster); err != nil {
+		r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, operationType, "Error restoring worker")
+		return extensionscontroller.ReconcileErr(err)
+	}
+
+	// remove operation annotation 'restore'
+	if err := removeAnnotation(r.ctx, r.client, worker, v1beta1constants.GardenerOperation); err != nil {
+		r.logger.Error(err, "Error removing annotation from Worker", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+		return reconcile.Result{}, err
+	}
+
+	// requeue to triger reconciliation
+	return reconcile.Result{Requeue: true}, nil
+}
+
+func removeAnnotation(ctx context.Context, c client.Client, worker *extensionsv1alpha1.Worker, annotation string) error {
+	withOpAnnotation := worker.DeepCopyObject()
+	delete(worker.Annotations, annotation)
+	return c.Patch(ctx, worker, client.MergeFrom(withOpAnnotation))
+}
+
+func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {
+	return worker.Status.LastOperation != nil &&
+		worker.Status.LastOperation.GetType() == gardencorev1beta1.LastOperationTypeMigrate &&
+		worker.Status.LastOperation.GetState() == gardencorev1beta1.LastOperationStateSucceeded
 }

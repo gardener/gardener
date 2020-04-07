@@ -15,9 +15,14 @@
 package predicate_test
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/predicate"
+	"encoding/json"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +66,7 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should match the type", func() {
-			predicate := predicate.HasType(extensionType)
+			predicate := extensionspredicate.HasType(extensionType)
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeTrue())
@@ -70,7 +75,7 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should not match the type", func() {
-			predicate := predicate.HasType("anotherType")
+			predicate := extensionspredicate.HasType("anotherType")
 
 			Expect(predicate.Create(createEvent)).To(BeFalse())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -108,7 +113,7 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should match the name", func() {
-			predicate := predicate.HasName(name)
+			predicate := extensionspredicate.HasName(name)
 
 			Expect(predicate.Create(createEvent)).To(BeTrue())
 			Expect(predicate.Update(updateEvent)).To(BeTrue())
@@ -117,7 +122,84 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should not match the name", func() {
-			predicate := predicate.HasName("anotherName")
+			predicate := extensionspredicate.HasName("anotherName")
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	const (
+		extensionType = "extension-type"
+		version       = "1.18"
+	)
+
+	Describe("#ClusterShootProviderType", func() {
+		var (
+			decoder runtime.Decoder
+			err     error
+		)
+
+		BeforeEach(func() {
+			decoder, err = extensionscontroller.NewGardenDecoder()
+			Expect(err).To(Succeed())
+		})
+
+		It("should match the type", func() {
+			var (
+				predicate                                           = extensionspredicate.ClusterShootProviderType(decoder, extensionType)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version)
+			)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should not match the type", func() {
+			var (
+				predicate                                           = extensionspredicate.ClusterShootProviderType(decoder, extensionType)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version)
+			)
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#ClusterShootKubernetesVersionAtLeast", func() {
+		var (
+			decoder runtime.Decoder
+			err     error
+		)
+
+		BeforeEach(func() {
+			decoder, err = extensionscontroller.NewGardenDecoder()
+			Expect(err).To(Succeed())
+		})
+
+		It("should match the minimum kubernetes version", func() {
+			var (
+				predicate                                           = extensionspredicate.ClusterShootKubernetesVersionAtLeast(decoder, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version)
+			)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should not match the minimum kubernetes version", func() {
+			var (
+				predicate                                           = extensionspredicate.ClusterShootKubernetesVersionAtLeast(decoder, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17")
+			)
 
 			Expect(predicate.Create(createEvent)).To(BeFalse())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
@@ -126,3 +208,34 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 })
+
+func computeEvents(extensionType, kubernetesVersion string) (event.CreateEvent, event.UpdateEvent, event.DeleteEvent, event.GenericEvent) {
+	shoot := &gardencorev1beta1.Shoot{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+			Kind:       "Shoot",
+		},
+		Spec: gardencorev1beta1.ShootSpec{
+			Provider: gardencorev1beta1.Provider{
+				Type: extensionType,
+			},
+			Kubernetes: gardencorev1beta1.Kubernetes{
+				Version: kubernetesVersion,
+			},
+		},
+	}
+
+	shootJSON, err := json.Marshal(shoot)
+	Expect(err).To(Succeed())
+
+	cluster := &extensionsv1alpha1.Cluster{
+		Spec: extensionsv1alpha1.ClusterSpec{
+			Shoot: runtime.RawExtension{Raw: shootJSON},
+		},
+	}
+
+	return event.CreateEvent{Object: cluster},
+		event.UpdateEvent{ObjectOld: cluster, ObjectNew: cluster},
+		event.DeleteEvent{Object: cluster},
+		event.GenericEvent{Object: cluster}
+}
