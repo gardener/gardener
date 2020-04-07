@@ -28,4 +28,15 @@ type Actuator interface {
 	Reconcile(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
 	// Delete deletes the Worker.
 	Delete(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	// Restore reads from the worker.status.state field and deploys the machines and machineSet
+	Restore(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+	// Migrate deletes the MCM, machineDeployments, machineClasses, machineClassSecrets,
+	// machineSets and the machines. The underlying VMs representing the Shoot nodes are not deleted
+	Migrate(context.Context, *extensionsv1alpha1.Worker, *extensionscontroller.Cluster) error
+}
+
+// StateActuator acts upon Worker's State resources.
+type StateActuator interface {
+	// Reconcile reconciles the Worker State.
+	Reconcile(context.Context, *extensionsv1alpha1.Worker) error
 }

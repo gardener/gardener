@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -103,6 +104,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	if acc.GetDeletionTimestamp() != nil {
 		r.logger.Info("Do not perform HealthCheck for extension resource. Extension is being deleted.", "name", acc.GetName(), "namespace", acc.GetNamespace())
+		return reconcile.Result{}, nil
+	}
+
+	if isInMigration(acc) {
+		r.logger.Info("Do not perform HealthCheck for extension resource. Extension is being migrated.", "name", acc.GetName(), "namespace", acc.GetNamespace())
 		return reconcile.Result{}, nil
 	}
 
@@ -208,4 +214,21 @@ func (r *reconciler) updateExtensionCondition(ctx context.Context, extension *un
 
 func (r *reconciler) resultWithRequeue() reconcile.Result {
 	return reconcile.Result{RequeueAfter: r.syncPeriod.Duration}
+}
+
+func isInMigration(accessor extensionsv1alpha1.Object) bool {
+	annotations := accessor.GetAnnotations()
+	if annotations != nil &&
+		annotations[gardenv1beta1constants.GardenerOperation] == gardenv1beta1constants.GardenerOperationMigrate {
+		return true
+	}
+
+	status := accessor.GetExtensionStatus()
+	if status == nil {
+		return false
+	}
+
+	lastOperation := status.GetLastOperation()
+
+	return lastOperation != nil && lastOperation.GetType() == gardencorev1beta1.LastOperationTypeMigrate
 }

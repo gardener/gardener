@@ -34,6 +34,9 @@ import (
 // McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
 const McmShootResourceName = "extension-worker-mcm-shoot"
 
+// McmDeploymentName is the name of the deployment that spawn machine-cotroll-manager pods
+const McmDeploymentName = "machine-controller-manager"
+
 // ReplicaCount determines the number of replicas.
 type ReplicaCount func() (int32, error)
 

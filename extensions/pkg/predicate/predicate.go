@@ -17,7 +17,7 @@ package predicate
 import (
 	"errors"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsevent "github.com/gardener/gardener/extensions/pkg/event"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 
@@ -25,9 +25,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -69,7 +69,7 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 		return false
 	}
 
-	cluster, err := controller.GetCluster(s.Context, s.Client, e.Meta.GetNamespace())
+	cluster, err := extensionscontroller.GetCluster(s.Context, s.Client, e.Meta.GetNamespace())
 	if err != nil {
 		s.log.Error(err, "Could not retrieve corresponding cluster")
 		return false
@@ -158,7 +158,9 @@ func HasName(name string) predicate.Predicate {
 // HasOperationAnnotation is a predicate for the operation annotation.
 func HasOperationAnnotation() predicate.Predicate {
 	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile
+		return e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
+			e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
+			e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
 }
 
@@ -237,4 +239,81 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 
 		return *controlPlane.Spec.Purpose == purpose
 	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+}
+
+// ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.
+func ClusterShootProviderType(decoder runtime.Decoder, providerType string) predicate.Predicate {
+	f := func(obj runtime.Object) bool {
+		if obj == nil {
+			return false
+		}
+
+		cluster, ok := obj.(*extensionsv1alpha1.Cluster)
+		if !ok {
+			return false
+		}
+
+		shoot, err := extensionscontroller.ShootFromCluster(decoder, cluster)
+		if err != nil {
+			return false
+		}
+
+		return shoot.Spec.Provider.Type == providerType
+	}
+
+	return predicate.Funcs{
+		CreateFunc: func(event event.CreateEvent) bool {
+			return f(event.Object)
+		},
+		UpdateFunc: func(event event.UpdateEvent) bool {
+			return f(event.ObjectNew)
+		},
+		GenericFunc: func(event event.GenericEvent) bool {
+			return f(event.Object)
+		},
+		DeleteFunc: func(event event.DeleteEvent) bool {
+			return f(event.Object)
+		},
+	}
+}
+
+// ClusterShootKubernetesVersionAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
+func ClusterShootKubernetesVersionAtLeast(decoder runtime.Decoder, kubernetesVersion string) predicate.Predicate {
+	f := func(obj runtime.Object) bool {
+		if obj == nil {
+			return false
+		}
+
+		cluster, ok := obj.(*extensionsv1alpha1.Cluster)
+		if !ok {
+			return false
+		}
+
+		shoot, err := extensionscontroller.ShootFromCluster(decoder, cluster)
+		if err != nil {
+			return false
+		}
+
+		constraint, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, ">=", kubernetesVersion)
+		if err != nil {
+			return false
+		}
+
+		return constraint
+	}
+
+	return predicate.Funcs{
+		CreateFunc: func(event event.CreateEvent) bool {
+			return f(event.Object)
+		},
+		UpdateFunc: func(event event.UpdateEvent) bool {
+			return f(event.ObjectNew)
+		},
+		GenericFunc: func(event event.GenericEvent) bool {
+			return f(event.Object)
+		},
+		DeleteFunc: func(event event.DeleteEvent) bool {
+			return f(event.Object)
+		},
+	}
 }

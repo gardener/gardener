@@ -17,10 +17,12 @@ package worker
 import (
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -31,6 +33,8 @@ const (
 	FinalizerName = "extensions.gardener.cloud/worker"
 	// ControllerName is the name of the controller.
 	ControllerName = "worker_controller"
+	// StateUpdatingControllerName is the name of the controller responsible for updating the worker's state.
+	StateUpdatingControllerName = "worker_state_controller"
 )
 
 // AddArgs are arguments for adding an worker controller to a manager.
@@ -75,7 +79,11 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	return add(mgr, args.ControllerOptions, predicates)
+	if err := add(mgr, args.ControllerOptions, predicates); err != nil {
+		return err
+	}
+
+	return addStateUpdatingController(mgr, args.ControllerOptions)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -92,4 +100,34 @@ func add(mgr manager.Manager, options controller.Options, predicates []predicate
 	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
 		ToRequests: extensionshandler.SimpleMapper(ClusterToWorkerMapper(predicates), extensionshandler.UpdateWithNew),
 	})
+}
+
+func addStateUpdatingController(mgr manager.Manager, options controller.Options) error {
+	stateActuator := NewStateActuator(log.Log.WithName("worker-state-actuator"))
+	stateReconciler := NewStateReconciler(mgr, stateActuator)
+	addStateUpdatingControllerOptions := controller.Options{
+		MaxConcurrentReconciles: options.MaxConcurrentReconciles,
+		Reconciler:              stateReconciler,
+	}
+	predicates := []predicate.Predicate{
+		extensionspredicate.Or(
+			MachineStatusHasChanged(),
+			predicate.GenerationChangedPredicate{},
+		),
+	}
+
+	ctrl, err := controller.New(StateUpdatingControllerName, mgr, addStateUpdatingControllerOptions)
+	if err != nil {
+		return err
+	}
+
+	if err := ctrl.Watch(&source.Kind{Type: &machinev1alpha1.MachineSet{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+		ToRequests: extensionshandler.SimpleMapper(MachineSetToWorkerMapper(nil), extensionshandler.UpdateWithNew),
+	}, predicates...); err != nil {
+		return err
+	}
+
+	return ctrl.Watch(&source.Kind{Type: &machinev1alpha1.Machine{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+		ToRequests: extensionshandler.SimpleMapper(MachineToWorkerMapper(nil), extensionshandler.UpdateWithNew),
+	}, predicates...)
 }

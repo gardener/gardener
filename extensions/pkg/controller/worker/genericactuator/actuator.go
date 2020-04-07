@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -52,6 +53,7 @@ type genericActuator struct {
 
 	client               client.Client
 	clientset            kubernetes.Interface
+	decoder              runtime.Decoder
 	gardenerClientset    gardenerkubernetes.Interface
 	chartApplier         gardenerkubernetes.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
@@ -79,6 +81,11 @@ func (a *genericActuator) InjectFunc(f inject.Func) error {
 
 func (a *genericActuator) InjectClient(client client.Client) error {
 	a.client = client
+	return nil
+}
+
+func (a *genericActuator) InjectScheme(scheme *runtime.Scheme) error {
+	a.decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 	return nil
 }
 
@@ -213,7 +220,29 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, namesp
 	return nil
 }
 
-// cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
+// shallowDeleteMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
+// of the provided list <usedSecrets>) without waiting for MCM to do this.
+func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
+	secretList, err := a.listMachineClassSecrets(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	// Delete the finalizers to all secrets which were used for machine classes that do not exist anymore.
+	for _, secret := range secretList.Items {
+		if !wantedMachineDeployments.HasSecret(secret.Name) {
+			if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, &secret); err != nil {
+				return errors.Wrapf(err, "Error removing finalizer from MachineClassSecret: %s/%s", secret.Namespace, secret.Name)
+			}
+			if err := a.client.Delete(ctx, &secret); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// cleanupMachineClassSecrets deletes MachineSets having number of desired and actual replicas equaling 0
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace string) error {
 	machineSetList := &machinev1alpha1.MachineSetList{}
 	if err := a.client.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
@@ -232,4 +261,21 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace stri
 		}
 	}
 	return nil
+}
+
+func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, namespace string, objectList runtime.Object) error {
+	if err := a.client.List(ctx, objectList, client.InNamespace(namespace)); err != nil {
+		return err
+	}
+
+	return meta.EachListItem(objectList, func(obj runtime.Object) error {
+		object := obj.DeepCopyObject()
+		if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, object); err != nil {
+			return err
+		}
+		if err := a.client.Delete(ctx, object); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		return nil
+	})
 }

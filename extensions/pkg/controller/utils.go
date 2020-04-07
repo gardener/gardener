@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -173,6 +174,18 @@ func DeleteFinalizer(ctx context.Context, client client.Client, finalizerName st
 	accessor.SetFinalizers(finalizers.UnsortedList())
 
 	return client.Update(ctx, obj)
+}
+
+// DeleteAllFinalizers removes all finalizers from the object and issues an  update.
+func DeleteAllFinalizers(ctx context.Context, client client.Client, obj runtime.Object) error {
+	return TryUpdate(ctx, retry.DefaultBackoff, client, obj, func() error {
+		accessor, err := meta.Accessor(obj)
+		if err != nil {
+			return err
+		}
+		accessor.SetFinalizers(nil)
+		return nil
+	})
 }
 
 // SecretReferenceToKey returns the key of the given SecretReference.
