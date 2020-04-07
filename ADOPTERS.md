@@ -35,6 +35,8 @@ infrastructure implemented from scratch for k8s workloads in mind.
 The result is k8s on top of bare metal in minutes.
 - [PTC](https://www.ptc.com) uses Gardener to provide development environments
 and CI/CD systems internally.
+- [Beez Innovation Labs Pvt Ltd](https://www.beezlabs.com/) uses Gardener to offer its 
+products across cloud providers and manage its clusters for different environments.
 
 If you’re using Gardener and aren’t on this list, feel free to
 [submit a pull request](https://github.com/gardener/gardener/pulls)!
