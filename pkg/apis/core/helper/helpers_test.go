@@ -239,11 +239,11 @@ var _ = Describe("helper", func() {
 
 			Expect(filteredVersions).To(HaveLen(2))
 			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Version": Equal("1.0.2"),
-					"Classification": Equal(&classification),
+				"Version":        Equal("1.0.2"),
+				"Classification": Equal(&classification),
 			}), MatchFields(IgnoreExtras, Fields{
-					"Version": Equal("1.0.1"),
-					"Classification": Equal(&classification),
+				"Version":        Equal("1.0.1"),
+				"Classification": Equal(&classification),
 			})))
 		})
 	})
@@ -268,7 +268,7 @@ var _ = Describe("helper", func() {
 		It("should filter version", func() {
 			currentSemVer, err := semver.NewVersion("1.1.3")
 			Expect(err).ToNot(HaveOccurred())
-			filteredVersions := FindVersionsWithSameMajorMinor(versions, *currentSemVer)
+			filteredVersions, _ := FindVersionsWithSameMajorMinor(versions, *currentSemVer)
 
 			Expect(filteredVersions).To(HaveLen(2))
 			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{

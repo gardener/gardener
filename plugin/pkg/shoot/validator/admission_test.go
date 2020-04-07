@@ -1008,7 +1008,7 @@ var _ = Describe("validator", func() {
 				Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestNonPreviewPatchVersion.Version))
 			})
 
-			It("should reject defaulting a major.minor kubernetes version if there is only preview versions available for defaulting", func() {
+			It("should reject defaulting a major.minor kubernetes version if there is no higher non-preview version available for defaulting", func() {
 				shoot.Spec.Kubernetes.Version = "1.6"
 				preview := core.ClassificationPreview
 				previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
@@ -1026,7 +1026,7 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
-			It("should be able to use preview versions", func() {
+			It("should be able to explicitly pick preview versions", func() {
 				shoot.Spec.Kubernetes.Version = "1.6.6"
 				preview := core.ClassificationPreview
 				previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}

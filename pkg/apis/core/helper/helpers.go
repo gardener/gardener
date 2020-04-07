@@ -20,10 +20,10 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -171,13 +171,13 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 
 // GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.
 // returns a map associating the version with its index in the in the old version slice.
-func GetRemovedVersions(old []core.ExpirableVersion, new []core.ExpirableVersion) map[string]int {
+func GetRemovedVersions(old, new []core.ExpirableVersion) map[string]int {
 	return getVersionDiff(old, new)
 }
 
 // GetAddedVersions finds versions that have been added in the new compared to the new version slice.
 // returns a map associating the version with its index in the in the old version slice.
-func GetAddedVersions(old []core.ExpirableVersion, new []core.ExpirableVersion) map[string]int {
+func GetAddedVersions(old, new []core.ExpirableVersion) map[string]int {
 	return getVersionDiff(new, old)
 }
 
@@ -210,15 +210,18 @@ func FilterVersionsWithClassification(versions []core.ExpirableVersion, classifi
 }
 
 // FindVersionsWithSameMajorMinor filters the given versions slice for versions other the given one, having the same major and minor version as the given version
-func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version semver.Version) []core.ExpirableVersion {
+func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version semver.Version) ([]core.ExpirableVersion, error) {
 	var result []core.ExpirableVersion
 	for _, v := range versions {
 		// semantic version already checked by validator
-		semVer, _ := semver.NewVersion(v.Version)
-		if semVer.Equal(&version) || (semVer.Minor() != version.Minor() || semVer.Major() != semVer.Major()) {
+		semVer, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return nil, err
+		}
+		if semVer.Equal(&version) || semVer.Minor() != version.Minor() || semVer.Major() != version.Major() {
 			continue
 		}
 		result = append(result, v)
 	}
-	return result
+	return result, nil
 }

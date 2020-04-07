@@ -148,7 +148,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						},
 						Kubernetes: core.KubernetesSettings{
 							Versions: []core.ExpirableVersion{{
-								Version:        "1.11.4",
+								Version: "1.11.4",
 							}},
 						},
 						MachineImages: []core.MachineImage{
@@ -156,7 +156,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 								Name: "some-machineimage",
 								Versions: []core.ExpirableVersion{
 									{
-										Version:        "1.2.3",
+										Version: "1.2.3",
 									},
 								},
 							},
@@ -292,12 +292,12 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					errorList := ValidateCloudProfile(cloudProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeForbidden),
-						"Field":    Equal("spec.kubernetes.versions[1]"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeForbidden),
-							"Field":    Equal("spec.kubernetes.versions[0]"),
-						}))))
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.versions[1]"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.versions[0]"),
+					}))))
 				})
 			})
 
@@ -709,7 +709,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Name: "some-machineimage",
 							Versions: []core.ExpirableVersion{
 								{
-									Version:        "1.2.3",
+									Version: "1.2.3",
 								},
 							},
 						},

@@ -3176,6 +3176,20 @@ Kubernetes meta/v1.Time
 <p>ExpirationDate defines the time at which this version expires.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>classification</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VersionClassification">
+VersionClassification
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Classification defines the state of a version (preview, supported, deprecated)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Extension">Extension
@@ -7046,6 +7060,15 @@ It is used to compute unique hashes.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.VersionClassification">VersionClassification
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>)
+</p>
+<p>
+<p>VersionClassification is the logical state of a version according to <a href="https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md">https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md</a></p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
 </h3>
 <p>

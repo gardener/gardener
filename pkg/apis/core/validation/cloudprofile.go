@@ -58,7 +58,7 @@ func ValidateCloudProfileCreation(cloudProfile *core.CloudProfile) field.ErrorLi
 // validateVersionExpiration validates that the version has no expiration date in the past
 func validateVersionExpiration(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if  version.ExpirationDate != nil && version.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
+	if version.ExpirationDate != nil && version.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to create version %q. Creating a version with expiration date in the past is not allowed", version.Version)))
 	}
 	return allErrs
@@ -170,7 +170,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 		} else {
 			versionsFound.Insert(version.Version)
 		}
-		allErrs = append(allErrs, validateExpirableVersion(kubernetes.Versions, version, idxPath)...)
+		allErrs = append(allErrs, validateExpirableVersion(version, kubernetes.Versions, idxPath)...)
 	}
 
 	return allErrs
@@ -178,7 +178,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 
 var supportedVersionClassifications = sets.NewString(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
 
-func validateExpirableVersion(versions []core.ExpirableVersion, version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+func validateExpirableVersion(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, supportedVersionClassifications.List()))
@@ -191,7 +191,11 @@ func validateExpirableVersion(versions []core.ExpirableVersion, version core.Exp
 			return allErrs
 		}
 
-		filteredVersions := helper.FindVersionsWithSameMajorMinor(helper.FilterVersionsWithClassification(versions, core.ClassificationSupported), *currentSemVer)
+		filteredVersions, err := helper.FindVersionsWithSameMajorMinor(helper.FilterVersionsWithClassification(allVersions, core.ClassificationSupported), *currentSemVer)
+		if err != nil {
+			// check is already performed by caller, avoid duplicate error
+			return allErrs
+		}
 
 		// do not allow adding multiple supported versions per minor version
 		if len(filteredVersions) > 0 {
@@ -286,7 +290,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			if err != nil {
 				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
-			allErrs = append(allErrs, validateExpirableVersion(image.Versions, machineVersion, versionsPath)...)
+			allErrs = append(allErrs, validateExpirableVersion(machineVersion, image.Versions, versionsPath)...)
 		}
 	}
 
