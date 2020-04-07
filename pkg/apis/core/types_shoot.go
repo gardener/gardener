@@ -692,6 +692,7 @@ type ShootMachineImage struct {
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
 	ProviderConfig *ProviderConfig
 	// Version is the version of the shoot's image.
+	// If version is not provided, it will be defaulted to the latest version.
 	Version string
 }
 

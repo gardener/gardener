@@ -305,15 +305,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	// General approach with machine image defaulting in this code: Try to keep the machine image
-	// from the old shoot object to not accidentally update it to the default machine image.
-	// This should only happen in the maintenance time window of shoots and is performed by the
-	// shoot maintenance controller.
-	image, err := getDefaultMachineImage(cloudProfile.Spec.MachineImages)
-	if err != nil {
-		return apierrors.NewBadRequest(err.Error())
-	}
-
 	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
 		if shoot.ObjectMeta.Annotations == nil {
 			shoot.ObjectMeta.Annotations = make(map[string]string)
@@ -321,9 +312,13 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
 	}
 
-	for idx, worker := range shoot.Spec.Provider.Workers {
-		if shoot.DeletionTimestamp == nil && worker.Machine.Image == nil {
-			shoot.Spec.Provider.Workers[idx].Machine.Image = getOldWorkerMachineImageOrDefault(oldShoot.Spec.Provider.Workers, worker.Name, image)
+	if shoot.DeletionTimestamp == nil {
+		for idx, worker := range shoot.Spec.Provider.Workers {
+			image, err := ensureMachineImage(oldShoot.Spec.Provider.Workers, worker, cloudProfile.Spec.MachineImages)
+			if err != nil {
+				return err
+			}
+			shoot.Spec.Provider.Workers[idx].Machine.Image = image
 		}
 	}
 
@@ -675,16 +670,32 @@ func validateZone(constraints []core.Region, region, zone string) (bool, []strin
 }
 
 // getDefaultMachineImage determines the latest machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []core.MachineImage) (*core.ShootMachineImage, error) {
+func getDefaultMachineImage(machineImages []core.MachineImage, imageName string) (*core.ShootMachineImage, error) {
 	if len(machineImages) == 0 {
 		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
-	firstMachineImageInCloudProfile := machineImages[0]
-	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(firstMachineImageInCloudProfile)
+
+	var defaultImage *core.MachineImage
+
+	if len(imageName) != 0 {
+		for _, machineImage := range machineImages {
+			if machineImage.Name == imageName {
+				defaultImage = &machineImage
+				break
+			}
+		}
+		if defaultImage == nil {
+			return nil, fmt.Errorf("image name %q is not supported", imageName)
+		}
+	} else {
+		defaultImage = &machineImages[0]
+	}
+
+	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(*defaultImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
 	}
-	return &core.ShootMachineImage{Name: firstMachineImageInCloudProfile.Name, Version: latestMachineImageVersion.Version}, nil
+	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
 func validateMachineImagesConstraints(constraints []core.MachineImage, image, oldImage *core.ShootMachineImage) (bool, []string) {
@@ -706,6 +717,10 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, image, ol
 		return false, validValues
 	}
 
+	if len(image.Version) == 0 {
+		return true, nil
+	}
+
 	for _, machineImage := range constraints {
 		if machineImage.Name == image.Name {
 			for _, machineVersion := range machineImage.Versions {
@@ -723,9 +738,24 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, image, ol
 	return false, validValues
 }
 
-func getOldWorkerMachineImageOrDefault(workers []core.Worker, name string, defaultImage *core.ShootMachineImage) *core.ShootMachineImage {
-	if oldWorker := helper.FindWorkerByName(workers, name); oldWorker != nil && oldWorker.Machine.Image != nil {
-		return oldWorker.Machine.Image
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage) (*core.ShootMachineImage, error) {
+	// General approach with machine image defaulting in this code: Try to keep the machine image
+	// from the old shoot object to not accidentally update it to the default machine image.
+	// This should only happen in the maintenance time window of shoots and is performed by the
+	// shoot maintenance controller.
+
+	name := worker.Name
+	if oldWorker := helper.FindWorkerByName(oldWorkers, name); worker.Machine.Image == nil && oldWorker != nil && oldWorker.Machine.Image != nil {
+		return oldWorker.Machine.Image, nil
 	}
-	return defaultImage
+
+	imageName := ""
+	if worker.Machine.Image != nil {
+		if len(worker.Machine.Image.Version) != 0 {
+			return worker.Machine.Image, nil
+		}
+		imageName = worker.Machine.Image.Name
+	}
+
+	return getDefaultMachineImage(images, imageName)
 }
