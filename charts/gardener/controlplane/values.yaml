@@ -93,6 +93,10 @@ global:
         memory:
           value: "5G"
           percentage: 80
+    # List of admission plugins that should be disabled although they are in the default enabled plugins list.
+  # disableAdmissionPlugins: []
+    # List of admission plugins to be enabled in addition to default enabled ones.
+  # enableAdmissionPlugins: []
 
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
