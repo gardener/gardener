@@ -12,7 +12,7 @@ if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
   images="$(yaml2json < "$repo_root_dir/charts/images.yaml")"
   eval "$(jq -r ".images |
     map(select(.sourceRepository != \"$repo_name\") |
-    if (.name == \"hyperkube\" or .name == \"kube-apiserver\" or .name == \"kube-controller-manager\" or .name == \"kube-scheduler\" or .name == \"kube-proxy\") then
+    if (.name == \"hyperkube\" or .name == \"kube-apiserver\" or .name == \"kube-controller-manager\" or .name == \"kube-scheduler\" or .name == \"kube-proxy\" or .repository == \"k8s.gcr.io/hyperkube\") then
       \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
     elif (.repository | startswith(\"eu.gcr.io/gardener-project/gardener\")) then
       \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
