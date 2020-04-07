@@ -21,7 +21,7 @@ GARDENLET_IMAGE_REPOSITORY         := $(REGISTRY)/gardenlet
 IMAGE_TAG                          := $(shell cat VERSION)
 PUSH_LATEST_TAG                    := true
 
-WORKDIR                            := $(shell pwd)
+REPO_ROOT                          := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCAL_GARDEN_LABEL                 := local-garden
 
 #########################################
@@ -144,7 +144,7 @@ clean:
 
 .PHONY: check-generate
 check-generate:
-	@hack/check-generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
 check:
