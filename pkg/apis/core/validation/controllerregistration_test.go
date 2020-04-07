@@ -57,6 +57,9 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.resources"),
 			}))))
 		})
 
@@ -82,12 +85,15 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should allow specifying no resources", func() {
+		It("should forbid specifying no resources", func() {
 			controllerRegistration.Spec.Resources = nil
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
-			Expect(errorList).To(BeEmpty())
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.resources"),
+			}))))
 		})
 
 		It("should allow valid ControllerRegistration resources", func() {

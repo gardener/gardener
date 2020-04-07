@@ -43,6 +43,10 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		resourcesPath = fldPath.Child("resources")
 	)
 
+	if len(spec.Resources) == 0 {
+		allErrs = append(allErrs, field.Required(resourcesPath, "field is required"))
+	}
+
 	for i, resource := range spec.Resources {
 		idxPath := resourcesPath.Index(i)
 
