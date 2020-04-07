@@ -15,3 +15,7 @@ issues:
   - linters:
     - staticcheck
     text: "SA1019:" # Excludes messages where deprecated variables are used
+
+linters:
+  disable:
+  - unused

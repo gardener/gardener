@@ -2186,7 +2186,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("validate that container runtime has a type", func() {
 			worker := core.Worker{
-				Name:    "worker",
+				Name: "worker",
 				CRI: &core.CRI{Name: core.CRINameContainerD,
 					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: ""}}},
 			}
@@ -2202,7 +2202,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("validate duplicate container runtime types", func() {
 			worker := core.Worker{
-				Name:    "worker",
+				Name: "worker",
 				CRI: &core.CRI{Name: core.CRINameContainerD,
 					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: "gVisor"}}},
 			}

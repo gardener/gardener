@@ -1,6 +1,6 @@
 # [Gardener Extensions Library](https://gardener.cloud)
 
-![Gardener Extensions Logo](../logo/gardener-extension-large.png)
+![Gardener Extensions Logo](../logo/gardener-extensions-large.png)
 
 Project Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service. Its main principle is to leverage Kubernetes concepts for all of its tasks.
 
