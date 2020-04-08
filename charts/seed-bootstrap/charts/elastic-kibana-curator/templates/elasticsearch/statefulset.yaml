@@ -133,6 +133,7 @@ spec:
           {{- toYaml .Values.elasticsearch.metricsExporter.livenessProbe | nindent 10 }}
         readinessProbe:
           {{- toYaml .Values.elasticsearch.metricsExporter.readinessProbe | nindent 10 }}
+      serviceAccountName: elasticsearch-logging
       volumes:
       - name: config
         configMap:
