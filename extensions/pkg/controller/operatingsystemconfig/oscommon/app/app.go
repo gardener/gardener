@@ -31,12 +31,12 @@ import (
 )
 
 // NewControllerCommand creates a new command for running an OS controller.
-func NewControllerCommand(ctx context.Context, osName string, generator generator.Generator) *cobra.Command {
+func NewControllerCommand(ctx context.Context, ctrlName string, osTypes []string, generator generator.Generator) *cobra.Command {
 	var (
 		restOpts = &controllercmd.RESTOptions{}
 		mgrOpts  = &controllercmd.ManagerOptions{
 			LeaderElection:          true,
-			LeaderElectionID:        controllercmd.LeaderElectionNameID(osName),
+			LeaderElectionID:        controllercmd.LeaderElectionNameID(ctrlName),
 			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 		ctrlOpts = &controllercmd.ControllerOptions{
@@ -45,7 +45,7 @@ func NewControllerCommand(ctx context.Context, osName string, generator generato
 
 		reconcileOpts = &controllercmd.ReconcilerOptions{}
 
-		controllerSwitches = oscommoncmd.SwitchOptions(osName, generator)
+		controllerSwitches = oscommoncmd.SwitchOptions(ctrlName, osTypes, generator)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			restOpts,
@@ -57,7 +57,7 @@ func NewControllerCommand(ctx context.Context, osName string, generator generato
 	)
 
 	cmd := &cobra.Command{
-		Use: "os-" + osName + "-controller-manager",
+		Use: "os-" + ctrlName + "-controller-manager",
 
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := aggOption.Complete(); err != nil {

@@ -36,16 +36,16 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, os string, generator generator.Generator, opts AddOptions) error {
+func AddToManagerWithOptions(mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
-		Actuator:          actuator.NewActuator(os, generator),
+		Actuator:          actuator.NewActuator(ctrlName, generator),
 		Predicates:        operatingsystemconfig.DefaultPredicates(opts.IgnoreOperationAnnotation),
-		Types:             []string{os},
+		Types:             osTypes,
 		ControllerOptions: opts.Controller,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager, os string, generator generator.Generator) error {
-	return AddToManagerWithOptions(mgr, os, generator, DefaultAddOptions)
+func AddToManager(mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator) error {
+	return AddToManagerWithOptions(mgr, ctrlName, osTypes, generator, DefaultAddOptions)
 }

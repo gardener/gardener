@@ -24,10 +24,10 @@ import (
 )
 
 // SwitchOptions are the cmd.SwitchOptions for the provider controllers.
-func SwitchOptions(os string, generator generator.Generator) *cmd.SwitchOptions {
+func SwitchOptions(ctrlName string, osTypes []string, generator generator.Generator) *cmd.SwitchOptions {
 	return cmd.NewSwitchOptions(
 		cmd.Switch(operatingsystemconfig.ControllerName, func(mgr manager.Manager) error {
-			return oscommon.AddToManager(mgr, os, generator)
+			return oscommon.AddToManager(mgr, ctrlName, osTypes, generator)
 		}),
 	)
 }
