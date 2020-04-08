@@ -165,6 +165,12 @@ spec:
         - --audit-webhook-version={{ .Values.global.apiserver.audit.webhook.version }}
         {{- end }}
         - --authorization-always-allow-paths=/healthz
+        {{- if .Values.global.apiserver.disableAdmissionPlugins }}
+        - --disable-admission-plugins={{ .Values.global.apiserver.disableAdmissionPlugins | join "," }}
+        {{- end }}
+        {{- if .Values.global.apiserver.enableAdmissionPlugins }}
+        - --enable-admission-plugins={{ .Values.global.apiserver.enableAdmissionPlugins | join "," }}
+        {{- end }}
         {{- if .Values.global.apiserver.encryption.config }}
         - --encryption-provider-config=/etc/gardener-apiserver/encryption/encryption-config.yaml
         {{- end }}
