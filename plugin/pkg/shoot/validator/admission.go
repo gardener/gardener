@@ -380,9 +380,13 @@ func validateProvider(c *validationContext) field.ErrorList {
 		)...)
 	}
 
-	ok, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
+	ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+		err := field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions)
+		if isDefaulted {
+			err.Detail = fmt.Sprintf("unable to default version - couldn't find a suitable patch version for %s. Suitable patch versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly -  %s", c.shoot.Spec.Kubernetes.Version, err.Detail)
+		}
+		allErrs = append(allErrs, err)
 	} else if versionDefault != nil {
 		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
 	}
@@ -479,44 +483,51 @@ func hasDomainIntersection(domainA, domainB string) bool {
 	return strings.HasSuffix(long, short)
 }
 
-func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, shootVersion, oldShootVersion string) (bool, []string, *semver.Version) {
+func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, shootVersion, oldShootVersion string) (bool, bool, []string, *semver.Version) {
 	if shootVersion == oldShootVersion {
-		return true, nil, nil
+		return true, false, nil, nil
 	}
 
 	shootVersionSplit := strings.Split(shootVersion, ".")
 	var (
 		shootVersionMajor, shootVersionMinor int64
-		getLatestPatchVersion                bool
+		defaultToLatestPatchVersion          bool
 	)
 	if len(shootVersionSplit) == 2 {
 		// add a fake patch version to avoid manual parsing
 		fakeShootVersion := shootVersion + ".0"
 		version, err := semver.NewVersion(fakeShootVersion)
 		if err == nil {
-			getLatestPatchVersion = true
+			defaultToLatestPatchVersion = true
 			shootVersionMajor = version.Major()
 			shootVersionMinor = version.Minor()
 		}
 	}
 
-	validValues := []string{}
+	var validValues []string
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
-		if versionConstraint.ExpirationDate != nil && versionConstraint.ExpirationDate.Time.Before(time.Now()) {
+		if versionConstraint.ExpirationDate != nil && versionConstraint.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
+			continue
+		}
+
+		// filter preview versions for defaulting
+		if defaultToLatestPatchVersion && versionConstraint.Classification != nil && *versionConstraint.Classification == core.ClassificationPreview {
+			validValues = append(validValues, fmt.Sprintf("%s (preview)", versionConstraint.Version))
 			continue
 		}
 
 		validValues = append(validValues, versionConstraint.Version)
 
 		if versionConstraint.Version == shootVersion {
-			return true, nil, nil
+			return true, false, nil, nil
 		}
 
-		if getLatestPatchVersion {
+		if defaultToLatestPatchVersion {
 			// CloudProfile cannot contain invalid semVer shootVersion
 			cpVersion, _ := semver.NewVersion(versionConstraint.Version)
 
+			// defaulting on patch level: version has to have the the same major and minor kubernetes version
 			if cpVersion.Major() != shootVersionMajor || cpVersion.Minor() != shootVersionMinor {
 				continue
 			}
@@ -528,10 +539,10 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 	}
 
 	if latestVersion != nil {
-		return true, nil, latestVersion
+		return true, defaultToLatestPatchVersion, nil, latestVersion
 	}
 
-	return false, validValues, nil
+	return false, defaultToLatestPatchVersion, validValues, nil
 }
 
 func validateMachineTypes(constraints []core.MachineType, machineType, oldMachineType string, regions []core.Region, region string, zones []string) (bool, []string) {

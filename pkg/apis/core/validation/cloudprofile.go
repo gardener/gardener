@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -28,6 +29,40 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
+
+// ValidateCloudProfile validates a CloudProfile object when it is initially created.
+func ValidateCloudProfileCreation(cloudProfile *core.CloudProfile) field.ErrorList {
+	allErrs := field.ErrorList{}
+	fldPath := field.NewPath("spec")
+
+	// check that during creation no version can have an expiration date in the past
+	fldPathKubernetes := fldPath.Child("kubernetes", "versions")
+	for index, version := range cloudProfile.Spec.Kubernetes.Versions {
+		allErrs = append(allErrs, validateVersionExpiration(version, fldPathKubernetes.Index(index))...)
+	}
+
+	fldPathMachineImage := fldPath.Child("machineImages")
+	for index, image := range cloudProfile.Spec.MachineImages {
+		fldPathImage := fldPathMachineImage.Index(index)
+		for index, version := range image.Versions {
+			fldPathImageVersion := fldPathImage.Child("versions")
+			allErrs = append(allErrs, validateVersionExpiration(version, fldPathImageVersion.Index(index))...)
+		}
+	}
+
+	allErrs = append(allErrs, ValidateCloudProfile(cloudProfile)...)
+
+	return allErrs
+}
+
+// validateVersionExpiration validates that the version has no expiration date in the past
+func validateVersionExpiration(version core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if version.ExpirationDate != nil && version.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to create version %q. Creating a version with expiration date in the past is not allowed", version.Version)))
+	}
+	return allErrs
+}
 
 // ValidateCloudProfile validates a CloudProfile object.
 func ValidateCloudProfile(cloudProfile *core.CloudProfile) field.ErrorList {
@@ -44,8 +79,43 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateCloudProfileSpecUpdate(&newProfile.Spec, &oldProfile.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateCloudProfile(newProfile)...)
 
+	return allErrs
+}
+
+// ValidateCloudProfileSpecUpdate validates the spec update of a CloudProfile
+func ValidateCloudProfileSpecUpdate(new, old *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validateCloudProfileVersionsUpdate(new.Kubernetes.Versions, old.Kubernetes.Versions, fldPath.Child("kubernetes", "versions"))...)
+
+	for _, oldImage := range old.MachineImages {
+		for index, newImage := range new.MachineImages {
+			if oldImage.Name == newImage.Name {
+				allErrs = append(allErrs, validateCloudProfileVersionsUpdate(newImage.Versions, oldImage.Versions, fldPath.Child("machineImages").Index(index).Child("versions"))...)
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateCloudProfileAddedVersions validates versions added to the CloudProfile
+func ValidateCloudProfileAddedVersions(versions []core.ExpirableVersion, addedVersions map[string]int, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for _, index := range addedVersions {
+		version := versions[index]
+		allErrs = append(allErrs, validateVersionExpiration(version, fldPath.Index(index))...)
+	}
+	return allErrs
+}
+
+// validateCloudProfileVersionsUpdate validates versions added to the CloudProfile
+func validateCloudProfileVersionsUpdate(new, old []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	versions := helper.GetAddedVersions(old, new)
+	allErrs = append(allErrs, ValidateCloudProfileAddedVersions(new, versions, fldPath)...)
 	return allErrs
 }
 
@@ -99,6 +169,37 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
 		} else {
 			versionsFound.Insert(version.Version)
+		}
+		allErrs = append(allErrs, validateExpirableVersion(version, kubernetes.Versions, idxPath)...)
+	}
+
+	return allErrs
+}
+
+var supportedVersionClassifications = sets.NewString(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
+
+func validateExpirableVersion(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, supportedVersionClassifications.List()))
+	}
+
+	if version.Classification != nil && *version.Classification == core.ClassificationSupported {
+		currentSemVer, err := semver.NewVersion(version.Version)
+		if err != nil {
+			// check is already performed by caller, avoid duplicate error
+			return allErrs
+		}
+
+		filteredVersions, err := helper.FindVersionsWithSameMajorMinor(helper.FilterVersionsWithClassification(allVersions, core.ClassificationSupported), *currentSemVer)
+		if err != nil {
+			// check is already performed by caller, avoid duplicate error
+			return allErrs
+		}
+
+		// do not allow adding multiple supported versions per minor version
+		if len(filteredVersions) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("unable to add version %q with classification %q. Only one %q version is allowed per minor version", version.Version, core.ClassificationSupported, core.ClassificationSupported)))
 		}
 	}
 
@@ -187,8 +288,9 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 
 			_, err := semver.NewVersion(machineVersion.Version)
 			if err != nil {
-				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use SemanticVersioning. In case there is no semVer version for this image use the extensibility provider (define mapping in the ControllerRegistration) to map to the actual non-semVer version"))
+				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
+			allErrs = append(allErrs, validateExpirableVersion(machineVersion, image.Versions, versionsPath)...)
 		}
 	}
 

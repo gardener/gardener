@@ -18,9 +18,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -158,4 +160,122 @@ var _ = Describe("helper", func() {
 			},
 		}, Equal(&core.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
 	)
+
+	Describe("#GetRemovedVersions", func() {
+		var (
+			versions = []core.ExpirableVersion{
+				{
+					Version: "1.0.2",
+				},
+				{
+					Version: "1.0.1",
+				},
+				{
+					Version: "1.0.0",
+				},
+			}
+		)
+		It("should detect removed version", func() {
+			diff := GetRemovedVersions(versions, versions[0:2])
+
+			Expect(diff).To(HaveLen(1))
+			Expect(diff["1.0.0"]).To(Equal(2))
+		})
+
+		It("should do nothing", func() {
+			diff := GetRemovedVersions(versions, versions)
+
+			Expect(diff).To(HaveLen(0))
+		})
+	})
+
+	Describe("#GetAddedVersions", func() {
+		var (
+			versions = []core.ExpirableVersion{
+				{
+					Version: "1.0.2",
+				},
+				{
+					Version: "1.0.1",
+				},
+				{
+					Version: "1.0.0",
+				},
+			}
+		)
+		It("should detected added versions", func() {
+			diff := GetAddedVersions(versions[0:2], versions)
+
+			Expect(diff).To(HaveLen(1))
+			Expect(diff["1.0.0"]).To(Equal(2))
+		})
+
+		It("should do nothing", func() {
+			diff := GetAddedVersions(versions, versions)
+
+			Expect(diff).To(HaveLen(0))
+		})
+	})
+
+	Describe("#FilterVersionsWithClassification", func() {
+		classification := core.ClassificationDeprecated
+		var (
+			versions = []core.ExpirableVersion{
+				{
+					Version:        "1.0.2",
+					Classification: &classification,
+				},
+				{
+					Version:        "1.0.1",
+					Classification: &classification,
+				},
+				{
+					Version: "1.0.0",
+				},
+			}
+		)
+		It("should filter version", func() {
+			filteredVersions := FilterVersionsWithClassification(versions, classification)
+
+			Expect(filteredVersions).To(HaveLen(2))
+			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"Version":        Equal("1.0.2"),
+				"Classification": Equal(&classification),
+			}), MatchFields(IgnoreExtras, Fields{
+				"Version":        Equal("1.0.1"),
+				"Classification": Equal(&classification),
+			})))
+		})
+	})
+
+	Describe("#FindVersionsWithSameMajorMinor", func() {
+		var (
+			versions = []core.ExpirableVersion{
+				{
+					Version: "1.1.3",
+				},
+				{
+					Version: "1.1.2",
+				},
+				{
+					Version: "1.1.1",
+				},
+				{
+					Version: "1.0.0",
+				},
+			}
+		)
+		It("should filter version", func() {
+			currentSemVer, err := semver.NewVersion("1.1.3")
+			Expect(err).ToNot(HaveOccurred())
+			filteredVersions, _ := FindVersionsWithSameMajorMinor(versions, *currentSemVer)
+
+			Expect(filteredVersions).To(HaveLen(2))
+			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"Version": Equal("1.1.2"),
+			}), MatchFields(IgnoreExtras, Fields{
+				"Version": Equal("1.1.1"),
+			})))
+		})
+	})
 })

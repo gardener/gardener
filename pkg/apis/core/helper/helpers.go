@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -166,4 +167,61 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 		}
 	}
 	return nil
+}
+
+// GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.
+// returns a map associating the version with its index in the in the old version slice.
+func GetRemovedVersions(old, new []core.ExpirableVersion) map[string]int {
+	return getVersionDiff(old, new)
+}
+
+// GetAddedVersions finds versions that have been added in the new compared to the new version slice.
+// returns a map associating the version with its index in the in the old version slice.
+func GetAddedVersions(old, new []core.ExpirableVersion) map[string]int {
+	return getVersionDiff(new, old)
+}
+
+// getVersionDiff gets versions that are in v1 but not in v2.
+// Returns versions mapped to their index in v1.
+func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
+	v2Versions := sets.String{}
+	for _, x := range v2 {
+		v2Versions.Insert(x.Version)
+	}
+	diff := map[string]int{}
+	for index, x := range v1 {
+		if !v2Versions.Has(x.Version) {
+			diff[x.Version] = index
+		}
+	}
+	return diff
+}
+
+// FilterVersionsWithClassification filters versions for a classification
+func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
+	var result []core.ExpirableVersion
+	for _, version := range versions {
+		if version.Classification == nil || *version.Classification != classification {
+			continue
+		}
+		result = append(result, version)
+	}
+	return result
+}
+
+// FindVersionsWithSameMajorMinor filters the given versions slice for versions other the given one, having the same major and minor version as the given version
+func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version semver.Version) ([]core.ExpirableVersion, error) {
+	var result []core.ExpirableVersion
+	for _, v := range versions {
+		// semantic version already checked by validator
+		semVer, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return nil, err
+		}
+		if semVer.Equal(&version) || semVer.Minor() != version.Minor() || semVer.Major() != version.Major() {
+			continue
+		}
+		result = append(result, v)
+	}
+	return result, nil
 }
