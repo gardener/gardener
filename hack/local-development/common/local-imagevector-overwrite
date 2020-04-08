@@ -16,13 +16,21 @@
 
 __tmp_imagevector_overwrite=""
 mktemp_imagevector_overwrite() {
+  if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
+  then
+    echo "requiring source repository as first, repository root as second, and the charts directory containing the images.yaml as the third argument."
+    return
+  fi
+  IMAGE_SOURCE_REPOSITORY="$1"
+  REPO_ROOT="$2"
+  CHARTS_DIRECTORY="$3"
+
   if [[ "$__tmp_imagevector_overwrite" != "" ]]; then
     echo "$__tmp_imagevector_overwrite"
     return
   fi
-
   __tmp_imagevector_overwrite="$(mktemp)"
-  compute_imagevector_overwrite > "$__tmp_imagevector_overwrite"
+  compute_imagevector_overwrite "$IMAGE_SOURCE_REPOSITORY" "$REPO_ROOT" "$CHARTS_DIRECTORY" > "$__tmp_imagevector_overwrite"
   echo "$__tmp_imagevector_overwrite"
 }
 
@@ -34,16 +42,20 @@ cleanup_imagevector_overwrite() {
 }
 
 compute_imagevector_overwrite() {
-  imagevector_overwrite="images: []"
+  IMAGE_SOURCE_REPOSITORY="$1"
+  REPO_ROOT="$2"
+  CHARTS_DIRECTORY="$3"
 
-  VERSION="$(cat $(dirname $0)/../../VERSION)"
+  imagevector_overwrite="images: []"
+  # expect VERSION file in repository root
+  VERSION="$(cat "$REPO_ROOT/VERSION")"
   if [[ "$VERSION" != *"-dev"* ]]; then
     echo "$imagevector_overwrite"
     return
   fi
+  imagevector_images_without_tag="$(yaml2json < "$CHARTS_DIRECTORY/images.yaml" | jq -r --arg IMAGE_SOURCE_REPOSITORY "$IMAGE_SOURCE_REPOSITORY" '.images | map(select(.sourceRepository == $IMAGE_SOURCE_REPOSITORY and .tag == null))')"
 
-  gardener_images_without_tag="$(yaml2json < "$(dirname $0)/../../charts/images.yaml" | jq -r '.images | map(select(.sourceRepository == "github.com/gardener/gardener" and .tag == null))')"
-  if [[ "$(echo $gardener_images_without_tag | jq -r 'length')" == "0" ]]; then
+  if [[ "$(echo "$imagevector_images_without_tag" | jq -r 'length')" == "0" ]]; then
     echo "$imagevector_overwrite"
     return
   fi
@@ -69,11 +81,11 @@ compute_imagevector_overwrite() {
     fi
 
     imagevector_overwrite="$(echo "$imagevector_overwrite" | yaml2json | jq ".images += [{\"name\": \"$image_name\", \"repository\": \"$image_repo\", \"tag\": \"$image_tag\"}]")"
-  done < <(echo "$gardener_images_without_tag" | jq -r '.[] | "\(.name) \(.repository)"')
+  done < <(echo "$imagevector_images_without_tag" | jq -r '.[] | "\(.name) \(.repository)"')
 
   echo "$imagevector_overwrite"
 }
 
 get_cache_file_name() {
-  echo "/tmp/start-gardenlet-$1-$2-$(date +"%Y-%d-%m-%H")"
+  echo "/tmp/start-$1-$2-$(date +"%Y-%d-%m-%H")"
 }
