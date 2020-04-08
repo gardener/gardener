@@ -8,6 +8,8 @@ spec:
   provider:
     type: <provider-name> # e.g., aws, azure, gcp, ...
     region: europe-1
+  # providerConfig:
+  #   <some-provider-specific-config-for-the-seed>
 # Optional, only needed if controlled by a Gardenlet running outside
 # secretRef:
 #   name: seed-secret
