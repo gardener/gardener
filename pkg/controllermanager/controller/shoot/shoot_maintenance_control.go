@@ -298,7 +298,7 @@ func updateToLatestMachineImageVersion(machineImage gardencorev1beta1.MachineIma
 // ForceMachineImageUpdateRequired checks if the shoots current machine image has to be forcefully updated
 func ForceMachineImageUpdateRequired(shootCurrentImage *gardencorev1beta1.ShootMachineImage, imageCloudProvider gardencorev1beta1.MachineImage) bool {
 	for _, image := range imageCloudProvider.Versions {
-		if shootCurrentImage.Version != image.Version {
+		if shootCurrentImage.Version != nil && *shootCurrentImage.Version != image.Version {
 			continue
 		}
 		return ExpirationDateExpired(image.ExpirationDate)

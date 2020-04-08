@@ -34,9 +34,10 @@ package operations
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/gardener/gardener/test/framework"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -100,7 +101,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 			if worker.Minimum == 0 {
 				continue
 			}
-			imageName := fmt.Sprintf("%s/%s", worker.Machine.Image.Name, worker.Machine.Image.Version)
+			imageName := fmt.Sprintf("%s/%s", worker.Machine.Image.Name, *worker.Machine.Image.Version)
 			if _, ok := workerImages[imageName]; !ok {
 				workerImages[imageName] = true
 			}

@@ -107,7 +107,7 @@ var (
 	testHighestPatchKubernetesVersion = gardencorev1beta1.ExpirableVersion{Version: "0.0.5"}
 	expirationDateInTheFuture         = metav1.Time{Time: time.Now().Add(time.Second * 20)}
 	testMachineImage                  = gardencorev1beta1.ShootMachineImage{
-		Version: testMachineImageVersion,
+		Version: &testMachineImageVersion,
 	}
 	shootYamlPath = "/example/90-shoot.yaml"
 

@@ -4980,13 +4980,13 @@ func schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref common.ReferenceCallbac
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version.",
+							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version from the CloudProfile.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"name", "version"},
+				Required: []string{"name"},
 			},
 		},
 		Dependencies: []string{
@@ -10019,13 +10019,13 @@ func schema_pkg_apis_core_v1beta1_ShootMachineImage(ref common.ReferenceCallback
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version.",
+							Description: "Version is the version of the shoot's image. If version is not provided, it will be defaulted to the latest version from the CloudProfile.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"name", "version"},
+				Required: []string{"name"},
 			},
 		},
 		Dependencies: []string{
