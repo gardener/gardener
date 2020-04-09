@@ -87,6 +87,38 @@ type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// KubernetesVersionManagement configures the version policy that applies to
+	// Kubernetes versions in the CloudProfile
+	// +optional
+	KubernetesVersionManagement *VersionManagement `json:"kubernetesVersionManagement,omitempty"`
+	// MachineImageVersionManagement configures the version policy that applies to
+	// MachineImage versions in the CloudProfile
+	// +optional
+	MachineImageVersionManagement *VersionManagement `json:"machineImageVersionManagement,omitempty"`
+}
+
+// VersionManagement configures the version policy that applies to versions in the CloudProfile
+// You can read more about it here: https://github.com/gardener/gardener/blob/master/docs/proposals/05-versioning-policy.md
+type VersionManagement struct {
+	// ExpirationDuration is the time until a deprecated patch version expires
+	// defaults to 4 months
+	// +optional
+	ExpirationDuration *metav1.Duration `json:"expirationDuration,omitempty"`
+	// VersionMaintenance can be configured to define a range of maintained minor versions.
+	// This allows the configuration of a different expiration time for versions with unmaintained minors.
+	// Typically unmaintained versions are being expired quicker than maintained versions.
+	// +optional
+	VersionMaintenance *VersionMaintenance `json:"versionMaintenance,omitempty"`
+}
+
+type VersionMaintenance struct {
+	// MaintainedVersions defines the amount of minor versions (semVer) that are considered to be "maintained"
+	// refers to existing versions in the CloudProfile
+	// e.g Versions in CloudProfile: 1.17, 1.15, 1.14, 1.13 -> Maintained: 1.17 & 1.15 & 1.14, Unmaintained: 1.13
+	MaintainedVersions int `json:"maintainedVersions"`
+	// ExpirationDurationUnmaintainedVersion is the time until a deprecated Kubernetes patch version
+	// of an unsupported minor version expires.
+	ExpirationDurationUnmaintainedVersion metav1.Duration `json:"expirationDurationUnmaintainedVersion"`
 }
 
 // ControllerRegistrationControllerConfiguration defines the configuration of the

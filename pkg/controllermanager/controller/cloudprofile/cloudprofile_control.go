@@ -18,12 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/equality"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermgrconfig "github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -32,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) cloudProfileAdd(obj interface{}) {
@@ -57,26 +60,26 @@ func (c *Controller) cloudProfileDelete(obj interface{}) {
 	c.cloudProfileQueue.Add(key)
 }
 
-func (c *Controller) reconcileCloudProfileKey(key string) error {
-	_, cloudProfileName, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
-	}
+func (c *Controller) reconcileCloudProfileKey(ctx context.Context) reconcile.Func {
+	return func(req reconcile.Request) (reconcile.Result, error) {
+		cloudProfile, err := c.cloudProfileLister.Get(req.Name)
+		if apierrors.IsNotFound(err) {
+			logger.Logger.Debugf("[CLOUDPROFILE RECONCILE] %s - skipping because CloudProfile has been deleted", req.Name)
+			return reconcile.Result{}, nil
+		}
 
-	cloudProfile, err := c.cloudProfileLister.Get(cloudProfileName)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[CLOUDPROFILE RECONCILE] %s - skipping because CloudProfile has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CLOUDPROFILE RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
+		var cloudProfileLogger = logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
 
-	if err := c.control.ReconcileCloudProfile(cloudProfile, key); err != nil {
-		c.cloudProfileQueue.AddAfter(key, 15*time.Second)
+		if err != nil {
+			cloudProfileLogger.Infof("[CLOUDPROFILE RECONCILE] - unable to retrieve object from store: %v", err)
+			return reconcile.Result{}, err
+		}
+
+		if err := c.control.ReconcileCloudProfile(ctx, cloudProfile, cloudProfileLogger); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
 	}
-	return nil
 }
 
 // ControlInterface implements the control logic for reconciling CloudProfiles. It is implemented as an interface to allow
@@ -86,31 +89,29 @@ type ControlInterface interface {
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileCloudProfile(cloudprofile *gardencorev1beta1.CloudProfile, key string) error
+	ReconcileCloudProfile(ctx context.Context, cloudprofile *gardencorev1beta1.CloudProfile, logger *logrus.Entry) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for CloudProfiles.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) ControlInterface {
-	return &defaultControl{k8sGardenClient, shootLister, recorder}
+func NewDefaultControl(config *controllermgrconfig.CloudProfileControllerConfiguration, k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{config, k8sGardenClient, shootLister, recorder}
 }
 
 type defaultControl struct {
+	config          *controllermgrconfig.CloudProfileControllerConfiguration
 	k8sGardenClient kubernetes.Interface
 	shootLister     gardencorelisters.ShootLister
 	recorder        record.EventRecorder
 }
 
-func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfile, key string) error {
+func (c *defaultControl) ReconcileCloudProfile(ctx context.Context, obj *gardencorev1beta1.CloudProfile, cloudProfileLogger *logrus.Entry) error {
 	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
 	}
 
-	var (
-		cloudProfile       = obj.DeepCopy()
-		cloudProfileLogger = logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
-	)
+	var cloudProfile = obj.DeepCopy()
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
@@ -129,11 +130,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		if len(associatedShoots) == 0 {
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
-			finalizers := sets.NewString(cloudProfile.Finalizers...)
-			finalizers.Delete(gardencorev1beta1.GardenerName)
-			cloudProfile.Finalizers = finalizers.UnsortedList()
-
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().CloudProfiles().Update(cloudProfile); client.IgnoreNotFound(err) != nil {
+			if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 				logger.Logger.Error(err)
 				return err
 			}
@@ -148,8 +145,28 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 	}
 
 	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
+		cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return err
+	}
+
+	profile := cloudProfile.DeepCopy()
+	if c.config.KubernetesVersionManagement != nil {
+		if profile, err = ReconcileKubernetesVersions(cloudProfileLogger, c.config.KubernetesVersionManagement, profile); err != nil {
+			return err
+		}
+	}
+
+	if c.config.MachineImageVersionManagement != nil {
+		if profile, err = ReconcileMachineImageVersions(c.config.MachineImageVersionManagement, profile); err != nil {
+			return err
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(cloudProfile, profile) {
+		if err := c.k8sGardenClient.Client().Update(ctx, profile); err != nil {
+			cloudProfileLogger.Errorf("failed to reconcile CloudProfile '%s': %v", obj.Name, err)
+			return err
+		}
 	}
 
 	return nil

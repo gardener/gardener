@@ -20,13 +20,15 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	errors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -781,4 +783,59 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 		return &providers[0]
 	}
 	return nil
+}
+
+// GetUnmaintainedMinorVersions returns the unmaintained minor versions out of a slice of patch versions
+// given an integer of the amount of support minor versions
+// e.g maintainedVersions = 3 & Versions in CloudProfile: 1.17, 1.15, 1.14, 1.13 -> Unmaintained: 1.13
+func GetUnmaintainedMinorVersions(versions []gardencorev1beta1.ExpirableVersion, maintainedVersions int) (sets.String, error) {
+	if maintainedVersions >= len(versions) {
+		return sets.String{}, nil
+	}
+
+	minorVersions := sets.String{}
+	for _, v := range versions {
+		version, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return nil, err
+		}
+		minorVersions = minorVersions.Insert(fmt.Sprintf("%d.%d", version.Major(), version.Minor()))
+	}
+	sorted := minorVersions.List()
+	sort.Strings(sorted)
+
+	if maintainedVersions >= len(sorted) {
+		return sets.String{}, nil
+	}
+
+	minorVersions = sets.String{}.Insert(sorted[:len(sorted)-maintainedVersions]...)
+	return minorVersions, nil
+}
+
+// GetLatestVersionsPerMinor finds the latest version for each minor version and
+// the overall latest version from a set of expirable versions. Does not consider preview versions
+func GetLatestVersionsPerMinor(versions []gardencorev1beta1.ExpirableVersion) (map[string]*semver.Version, string, error) {
+	minorVersions := make(map[string]*semver.Version, len(versions))
+	availableVersions := sets.String{}
+	for _, v := range versions {
+		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
+			continue
+		}
+
+		version, err := semver.NewVersion(v.Version)
+		if err != nil {
+			return nil, "", err
+		}
+		key := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+		if value, found := minorVersions[key]; !found || (found && version.GreaterThan(value)) {
+			minorVersions[key] = version
+		}
+		availableVersions.Insert(v.Version)
+	}
+
+	if availableVersions.Len() == 0 {
+		return minorVersions, "", nil
+	}
+
+	return minorVersions, availableVersions.List()[len(availableVersions)-1], nil
 }

@@ -72,6 +72,22 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{
 			ConcurrentSyncs: 5,
 		}
+	} else {
+		obj.Controllers.CloudProfile.ConcurrentSyncs = 5
+
+		if obj.Controllers.CloudProfile.KubernetesVersionManagement != nil {
+			if obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDuration == nil {
+				// defaults to 4 months (with each 30 days)
+				obj.Controllers.CloudProfile.KubernetesVersionManagement.ExpirationDuration = &metav1.Duration{Duration: 24 * 30 * 4 * time.Hour}
+			}
+		}
+
+		if obj.Controllers.CloudProfile.MachineImageVersionManagement != nil {
+			if obj.Controllers.CloudProfile.MachineImageVersionManagement.ExpirationDuration == nil {
+				// defaults to 4 months (with each 30 days)
+				obj.Controllers.CloudProfile.MachineImageVersionManagement.ExpirationDuration = &metav1.Duration{Duration: 24 * 30 * 4 * time.Hour}
+			}
+		}
 	}
 	if obj.Controllers.ControllerRegistration == nil {
 		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{

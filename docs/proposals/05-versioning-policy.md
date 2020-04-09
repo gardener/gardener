@@ -3,7 +3,7 @@
 ## Goal
 
 - As a Garden operator I would like to define a clear Kubernetes version policy, which informs my users about deprecated or expired Kubernetes versions.
-- As an user of Gardener, I would like to get information which Kubernetes version is supported for how long. I want to be able to get this information via API (cloudprofile) and also in the Dashboard.
+- As an user of Gardener, I would like to get information which Kubernetes version is supported or in preview. I want to be able to get this information via API (cloudprofile) and also in the Dashboard.
 
 ## Motivation
 

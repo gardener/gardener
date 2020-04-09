@@ -15,6 +15,18 @@ controllers:
     syncPeriod: 30s
   # monitorPeriod: 40s
   # shootMonitorPeriod: 300s
+  cloudProfile:
+    concurrentSyncs: 5
+  # kubernetesVersionManagement:
+  #   expirationDuration: 2880h # defaults to 120 days / 4 months
+  #   versionMaintenance:
+  #     maintainedVersions: 3
+  #     expirationDurationUnmaintainedVersion: 720h
+  # machineImageVersionManagement:
+  #   expirationDuration: 2880h # defaults to 120 days / 4 months
+  #   versionMaintenance:
+  #     maintainedVersions: 3
+  #     expirationDurationUnmaintainedVersion: 720h
   shootMaintenance:
     concurrentSyncs: 5
   # enableShootControlPlaneRestarter: true

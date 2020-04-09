@@ -17,6 +17,8 @@ package helper_test
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -33,8 +35,9 @@ import (
 
 var _ = Describe("helper", func() {
 	var (
-		trueVar  = true
-		falseVar = false
+		trueVar               = true
+		falseVar              = false
+		previewClassification = gardencorev1beta1.ClassificationPreview
 	)
 
 	Describe("errors", func() {
@@ -956,4 +959,179 @@ var _ = Describe("helper", func() {
 			},
 		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider1"), Primary: pointer.BoolPtr(true)})),
 	)
+
+	Describe("Version helper", func() {
+		DescribeTable("#GetUnmaintainedMinorVersions",
+			func(original []gardencorev1beta1.ExpirableVersion, expected sets.String, maintainedVersions int) {
+				versions, err := GetUnmaintainedMinorVersions(original, maintainedVersions)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(versions).To(Equal(expected))
+			},
+			Entry("get unmaintained versions",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				sets.String{}.Insert("1.13"),
+				3,
+			),
+			Entry("all versions are unmaintained",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				sets.String{}.Insert("1.17", "1.15", "1.14", "1.13"),
+				0,
+			),
+			Entry("no version is unmaintained",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.17.0",
+					},
+					{
+						Version: "1.15.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				sets.String{},
+				4,
+			),
+			Entry("no version is unmaintained",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				sets.String{},
+				5,
+			),
+		)
+		DescribeTable("#GetLatestVersionsPerMinor",
+			func(original []gardencorev1beta1.ExpirableVersion, expected map[string]*semver.Version, expectedLatestVersion string, expectError bool) {
+				minorVersions, latest, err := GetLatestVersionsPerMinor(original)
+				if expectError {
+					Expect(err).To(HaveOccurred())
+					return
+				}
+				Expect(err).ToNot(HaveOccurred())
+				Expect(minorVersions).To(Equal(expected))
+				Expect(latest).To(Equal(expectedLatestVersion))
+			},
+			Entry("get latest versions per minor",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				map[string]*semver.Version{
+					"1.17": semver.MustParse("1.17.1"),
+					"1.15": semver.MustParse("1.15.0"),
+					"1.14": semver.MustParse("1.14.3"),
+					"1.13": semver.MustParse("1.13.1"),
+				},
+				"1.17.1",
+				false,
+			),
+			Entry("get latest versions per minor (do not include preview versions)",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.17.1",
+						Classification: &previewClassification,
+					},
+					{
+						Version: "1.17.0",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				map[string]*semver.Version{
+					"1.17": semver.MustParse("1.17.0"),
+					"1.15": semver.MustParse("1.15.0"),
+					"1.14": semver.MustParse("1.14.3"),
+					"1.13": semver.MustParse("1.13.1"),
+				},
+				"1.17.0",
+				false,
+			),
+			Entry("no latest versions",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.17.1",
+						Classification: &previewClassification,
+					},
+				},
+				map[string]*semver.Version{},
+				"",
+				false,
+			),
+			Entry("only one version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+				},
+				map[string]*semver.Version{
+					"1.17": semver.MustParse("1.17.1"),
+				},
+				"1.17.1",
+				false,
+			),
+		)
+	})
 })
