@@ -19,7 +19,7 @@ set -e
 DEV_DIR=$(dirname "${0}")/../../dev
 EXAMPLE_DIR=$(dirname "${0}")/../../example
 
-source $(dirname "${0}")/common
+source $(dirname "${0}")/common/helpers
 kubernetes_env="$(k8s_env)"
 
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
