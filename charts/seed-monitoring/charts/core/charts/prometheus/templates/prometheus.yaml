@@ -217,10 +217,10 @@ spec:
         resources:
           requests:
             cpu: 5m
-            memory: 10Mi
+            memory: 25Mi
           limits:
             cpu: 10m
-            memory: 20Mi
+            memory: 25Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
