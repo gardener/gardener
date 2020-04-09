@@ -70,11 +70,14 @@ func getLatestShootMachineImagePossible(shootMachineImageName *string, profile g
 	}
 
 	// Determine the latest version of the shoots image.
-	_, latestMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImageFromCloudProfile)
+	qualifyingVersionFound, latestMachineImage, err := helper.GetLatestQualifyingShootMachineImage(machineImageFromCloudProfile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
 	}
-	return &latestMachineImage, nil
+	if !qualifyingVersionFound {
+		return nil, fmt.Errorf("could not get latest version of the shoot's machine image. No latest qualifying Shoot machine image could be determined for machine image %q. Make sure the machine image in the CloudProfile has at least one version that is not expired and not in preview", machineImageFromCloudProfile.Name)
+	}
+	return latestMachineImage, nil
 }
 
 // CreateShoot creates a Shoot Resource

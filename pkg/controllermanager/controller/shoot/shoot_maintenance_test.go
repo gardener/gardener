@@ -18,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -92,10 +93,12 @@ var _ = Describe("Shoot Maintenance", func() {
 
 	Describe("MaintainMachineImages", func() {
 		var (
-			shootCurrentImage    *gardencorev1beta1.ShootMachineImage
-			cloudProfile         *gardencorev1beta1.CloudProfile
-			shoot                *gardencorev1beta1.Shoot
-			machineCurrentImages []*gardencorev1beta1.ShootMachineImage
+			shootCurrentImage        *gardencorev1beta1.ShootMachineImage
+			cloudProfile             *gardencorev1beta1.CloudProfile
+			shoot                    *gardencorev1beta1.Shoot
+			testlogger               = logger.NewFieldLogger(logger.NewLogger("info"), "cloudprofile", "test")
+			previewClassification    = gardencorev1beta1.ClassificationPreview
+			deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 		)
 
 		BeforeEach(func() {
@@ -103,8 +106,6 @@ var _ = Describe("Shoot Maintenance", func() {
 				Name:    "CoreOs",
 				Version: pointer.StringPtr("1.0.0"),
 			}
-
-			machineCurrentImages = []*gardencorev1beta1.ShootMachineImage{shootCurrentImage}
 
 			cloudProfile = &gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
@@ -138,37 +139,80 @@ var _ = Describe("Shoot Maintenance", func() {
 							MachineImageVersion: true,
 						},
 					},
+					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "cpu-worker",
+							Machine: gardencorev1beta1.Machine{Image: shootCurrentImage},
+						},
+					},
+					},
 				},
 			}
 		})
 
-		It("should determine that the shoot worker machine images must be maintained - ForceUpdate", func() {
+		It("should determine that the shoot worker machine images must be maintained - ForceUpdate (expiration in the past & expired status)", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
 			cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
 			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
 		})
 
-		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the apiserver)", func() {
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
+		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the API server)", func() {
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
 			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
+		})
+
+		It("should update to latest non-preview version - MaintenanceAutoUpdate set to true", func() {
+			highestPreviewVersion := gardencorev1beta1.ExpirableVersion{
+				Version:        "1.1.2",
+				Classification: &previewClassification,
+			}
+			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestPreviewVersion)
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
+			Expect(*workerImages[0].Version).To(Equal("1.1.1"))
 		})
 
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(workerImages)).To(Equal(0))
+		})
+
+		It("should determine that the shoot worker machine images must NOT to be maintained - already on latest qualifying machine image version.", func() {
+			highestVersion := "1.1.1"
+			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name: "CoreOs",
+					Versions: []gardencorev1beta1.ExpirableVersion{
+						{
+							Version: "1.0.1",
+						},
+						{
+							Version: highestVersion,
+						},
+					},
+				},
+			}
+			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestVersion
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(workerImages)).To(Equal(0))
 		})
 
@@ -185,33 +229,70 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 
-			workerImages, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(len(workerImages)).NotTo(Equal(0))
 			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
 			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[0].Version)))
 		})
 
+		It("should determine that the Shoot is already using the latest qualifying version - Shoot is using a preview version (and there is no higher non-preview version).", func() {
+			highestExpiredVersion := gardencorev1beta1.ExpirableVersion{
+				Version:        "1.1.2",
+				Classification: &previewClassification,
+			}
+			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
+			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(workerImages)).To(Equal(0))
+		})
+
 		It("should return an error - cloud profile has no matching (machineImage.name) machine image defined", func() {
 			cloudProfile.Spec.MachineImages = cloudProfile.Spec.MachineImages[1:]
 
-			_, err := MaintainMachineImages(shoot, cloudProfile, machineCurrentImages)
+			_, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
 			Expect(err).NotTo(BeNil())
+		})
+
+		It("should return an error - edge case: qualifying version from CloudProfile for machine image is lower than the Shoot's version. Should not downgrade shoot machine image version.", func() {
+			highestExpiredVersion := gardencorev1beta1.ExpirableVersion{
+				Version:        "1.1.2",
+				Classification: &deprecatedClassification,
+				ExpirationDate: &expirationDateInThePast,
+			}
+			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
+			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
+			_, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Describe("Maintain Kubernetes Version", func() {
 		var (
-			cloudProfile       *gardencorev1beta1.CloudProfile
-			shoot              *gardencorev1beta1.Shoot
-			kubernetesSettings gardencorev1beta1.KubernetesSettings
+			cloudProfile          *gardencorev1beta1.CloudProfile
+			shoot                 *gardencorev1beta1.Shoot
+			kubernetesSettings    gardencorev1beta1.KubernetesSettings
+			previewClassification = gardencorev1beta1.ClassificationPreview
+			shootLogger           = logger.NewShootLogger(logger.NewLogger(""), "mock", "mockspace")
 		)
 
 		BeforeEach(func() {
 			kubernetesSettings = gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.1.2",
+					},
+					{
+						Version: "1.1.1",
+					},
+					{
+						Version: "1.1.0",
+					},
 					{
 						Version: "1.0.2",
 					},
@@ -221,6 +302,9 @@ var _ = Describe("Shoot Maintenance", func() {
 					{
 						Version:        "1.0.0",
 						ExpirationDate: &expirationDateInTheFuture,
+					},
+					{
+						Version: "2.0.0",
 					},
 				},
 			}
@@ -247,61 +331,133 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 		})
-		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate", func() {
+		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest patch version", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
-			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).NotTo(BeNil())
 			Expect(*version).To(Equal("1.0.2"))
 		})
 
+		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest non-preview patch version", func() {
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+			// expire shoots kubernetes version 1.0.0
+			cloudProfile.Spec.Kubernetes.Versions[5].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
+
+			// mark latest version 1.02 as preview
+			cloudProfile.Spec.Kubernetes.Versions[3].Classification = &previewClassification
+
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(version).NotTo(BeNil())
+			Expect(*version).To(Equal("1.0.1"))
+		})
+
+		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version of next minor version", func() {
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
+
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).NotTo(BeNil())
+			Expect(*version).To(Equal("1.1.2"))
+		})
+
+		// special case when all the patch versions of the consecutive minor versions are expired
+		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version (is expired) of next minor version.", func() {
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+			// expire version 1.0.2
+			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
+
+			// expire all the version of the consecutive minor version
+			cloudProfile.Spec.Kubernetes.Versions[0].ExpirationDate = &expirationDateInThePast
+			cloudProfile.Spec.Kubernetes.Versions[1].ExpirationDate = &expirationDateInThePast
+			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
+
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).NotTo(BeNil())
+			Expect(*version).To(Equal("1.1.2"))
+		})
+
+		It("should determine that the shoot kubernetes version must be maintained - however the ForceUpdate is impossible (only preview version available)", func() {
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+			cloudProfile.Spec.Kubernetes.Versions[0].Classification = &previewClassification
+			cloudProfile.Spec.Kubernetes.Versions[1].Classification = &previewClassification
+			cloudProfile.Spec.Kubernetes.Versions[2].Classification = &previewClassification
+
+			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
+
+			_, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should determine that the shoot kubernetes version must be maintained - MaintenanceAutoUpdate set to true", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
-			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).NotTo(BeNil())
 			Expect(*version).To(Equal("1.0.2"))
 		})
 
 		It("should determine that the kubernetes version must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInTheFuture
-			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: cloudProfile.Spec.Kubernetes.Versions[2].Version}
+			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInTheFuture
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(BeNil())
 		})
 
 		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) -> update to latest kubernetes patch version with same minor", func() {
-			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:2]
+			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:4]
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
-			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).NotTo(BeNil())
 			Expect(*version).To(Equal("1.0.2"))
 		})
 
-		It("should determine that the shootKubernetes version must NOT be maintained - cloud profile has no matching kubernetes version defined & autoUpdate == false", func() {
+		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) && isLatest patch version for minor-> update to latest kubernetes patch version for next minor", func() {
 			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:2]
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
+
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).NotTo(BeNil())
+			Expect(*version).To(Equal("1.1.2"))
+		})
+
+		It("do not update major Kubernetes version", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
-			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
+			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.1.2"}
 
-			version, err := MaintainKubernetesVersion(shoot, cloudProfile)
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(version).To(BeNil())
 		})
 	})

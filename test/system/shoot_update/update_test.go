@@ -32,10 +32,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/test/framework"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,13 +60,15 @@ var _ = Describe("Shoot update testing", func() {
 		}
 		if newVersion == "" {
 			var (
-				err error
-				ok  bool
+				err                       error
+				ok                        bool
+				consecutiveMinorAvailable bool
 			)
 			cloudprofile, err := f.GetCloudProfile(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			ok, newVersion, err = helper.DetermineNextKubernetesMinorVersion(cloudprofile, currentVersion)
+			consecutiveMinorAvailable, newVersion, err = gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(cloudprofile, currentVersion)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(consecutiveMinorAvailable).To(BeTrue())
 			if !ok {
 				Skip("no new version found")
 			}
