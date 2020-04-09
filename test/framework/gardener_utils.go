@@ -90,6 +90,9 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 
 	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = f.GardenClient.Client().Create(ctx, shoot)
+		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) {
+			return retry.SevereError(err)
+		}
 		if err != nil {
 			f.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
 			return retry.MinorError(err)
