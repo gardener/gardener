@@ -74,6 +74,10 @@ func (o *operationAnnotationWrapper) Reconcile(request reconcile.Request) (recon
 	}
 
 	annotations := acc.GetAnnotations()
+	if annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationWaitForState {
+		return reconcile.Result{}, nil
+	}
+
 	if annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile {
 		withOpAnnotation := obj.DeepCopyObject()
 		delete(annotations, v1beta1constants.GardenerOperation)

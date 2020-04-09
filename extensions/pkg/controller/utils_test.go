@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
@@ -196,6 +197,77 @@ var _ = Describe("Utils", func() {
 			Expect(controller.DeleteAllFinalizers(ctx, c, worker)).To(Succeed())
 			Expect(len(worker.Finalizers)).To(Equal(0))
 		})
+	})
 
+	Describe("#RemoveAnnotation", func() {
+		It("should delete specific annotation", func() {
+			annotation := "test-delete-annotation-key"
+			annotations := make(map[string]string)
+			annotations[annotation] = "test-delete-annotation-value"
+			annotations["test-no-delete-annotation-key"] = "test-no-delete-annotation-value"
+			worker := &extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Worker",
+					APIVersion: "TestApi",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-worker",
+					Namespace:   "test-namespace",
+					Annotations: annotations,
+				},
+			}
+			workerWithAnnotation := worker.DeepCopyObject()
+			ctx := context.TODO()
+
+			c.EXPECT().Patch(ctx, worker, client.MergeFrom(workerWithAnnotation))
+
+			Expect(controller.RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
+			Expect(len(worker.Annotations)).To(Equal(1))
+			notdeletedAnnotation, ok := worker.Annotations["test-no-delete-annotation-key"]
+			Expect(ok).To(BeTrue())
+			Expect(notdeletedAnnotation).To(BeEquivalentTo("test-no-delete-annotation-value"))
+		})
+	})
+
+	Describe("#IsMigrated", func() {
+		var (
+			worker *extensionsv1alpha1.Worker
+		)
+
+		JustBeforeEach(func() {
+			worker = &extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Worker",
+					APIVersion: "TestApi",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-worker",
+					Namespace: "test-namespace",
+				},
+			}
+		})
+		It("should return false when lastOperation is missing", func() {
+			Expect(controller.IsMigrated(worker)).To(BeFalse())
+		})
+		It("should return false when lastOperation type is not Migrated", func() {
+			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type: gardencorev1beta1.LastOperationTypeReconcile,
+			}
+			Expect(controller.IsMigrated(worker)).To(BeFalse())
+		})
+		It("should return false when lastOperation type is Migrated but state is not succeeded", func() {
+			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			}
+			Expect(controller.IsMigrated(worker)).To(BeFalse())
+		})
+		It("should return true when lastOperation type is Migrated and state is succeeded", func() {
+			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(controller.IsMigrated(worker)).To(BeTrue())
+		})
 	})
 })

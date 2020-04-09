@@ -113,5 +113,19 @@ type Initializer interface {
 type Factory interface {
 	NewForConfig(logger logrus.FieldLogger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
 	New(logger logrus.FieldLogger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
-	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, state string) Initializer
+	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer) Initializer
+}
+
+// StateConfigMapInitializer initialize terraformer state ConfigMap
+type StateConfigMapInitializer interface {
+	Initialize(ctx context.Context, c client.Client, namespace, name string) error
+}
+
+// StateConfigMapInitializerFunc implements StateConfigMapInitializer
+type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string) error
+
+// CreateOrUpdateState implements StateConfigMapInitializer.
+// It use it field state for creating or updating the state ConfigMap
+type CreateOrUpdateState struct {
+	State *string
 }
