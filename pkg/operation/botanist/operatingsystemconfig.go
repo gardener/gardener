@@ -170,14 +170,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		"containerd": extensionsv1alpha1.CRINameContainerD,
 	}
 
-	workerNameLabel := map[string]interface{}{
-		"workerLabel": extensionsv1alpha1.CRINameWorkerLabel,
-	}
-
 	criConfig := map[string]interface{}{
 		"containerRuntimesBinaryPath": extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
 		"names":                       criNamesConfig,
-		"labels":                      workerNameLabel,
 	}
 
 	originalConfig["osc"] = map[string]interface{}{

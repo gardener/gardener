@@ -19,11 +19,6 @@
 --pod-infra-container-image={{ index .Values.images "pause-container" }}
 --kubeconfig=/var/lib/kubelet/kubeconfig-real
 --network-plugin=cni
-{{- if semverCompare "< 1.15" .Values.kubernetes.version }}
---node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "worker.name is required" .Values.worker.name }},worker.gardener.cloud/pool={{ required "worker.name is required" .Values.worker.name }},{{ include "node-cri-labels" . }}"
-{{- else }}
---node-labels="node.kubernetes.io/role=node,worker.garden.sapcloud.io/group={{ required "worker.name is required" .Values.worker.name }},worker.gardener.cloud/pool={{ required "worker.name is required" .Values.worker.name }},{{ include "node-cri-labels" . }}"
-{{- end }}
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
 --rotate-certificates=true
 {{- end }}

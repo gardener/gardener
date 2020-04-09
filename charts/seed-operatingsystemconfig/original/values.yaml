@@ -6,8 +6,6 @@ osc:
   sshKey: "ssh-rsa"
   cri:
     containerRuntimesBinaryPath: /var/bin/containerruntimes
-    labels:
-      workerLabel: worker.gardener.cloud/cri-name
     names:
       containerd: containerd
 

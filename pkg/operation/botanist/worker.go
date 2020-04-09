@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,20 +56,25 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		pools []extensionsv1alpha1.WorkerPool
 	)
 
-	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
+	k8sVersionLessThan115, err := versionutils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.15")
+	if err != nil {
+		return err
+	}
+
+	for _, workerPool := range b.Shoot.Info.Spec.Provider.Workers {
 		var volume *extensionsv1alpha1.Volume
-		if worker.Volume != nil {
+		if workerPool.Volume != nil {
 			volume = &extensionsv1alpha1.Volume{
-				Name:      worker.Volume.Name,
-				Type:      worker.Volume.Type,
-				Size:      worker.Volume.VolumeSize,
-				Encrypted: worker.Volume.Encrypted,
+				Name:      workerPool.Volume.Name,
+				Type:      workerPool.Volume.Type,
+				Size:      workerPool.Volume.VolumeSize,
+				Encrypted: workerPool.Volume.Encrypted,
 			}
 		}
 
 		var dataVolumes []extensionsv1alpha1.Volume
-		if len(worker.DataVolumes) > 0 {
-			for _, dataVolume := range worker.DataVolumes {
+		if len(workerPool.DataVolumes) > 0 {
+			for _, dataVolume := range workerPool.DataVolumes {
 				dataVolumes = append(dataVolumes, extensionsv1alpha1.Volume{
 					Name:      dataVolume.Name,
 					Type:      dataVolume.Type,
@@ -78,53 +84,67 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
+		if workerPool.Labels == nil {
+			workerPool.Labels = map[string]string{}
+		}
+
+		// k8s node role labels
+		if k8sVersionLessThan115 {
+			workerPool.Labels["kubernetes.io/role"] = "node"
+			workerPool.Labels["node-role.kubernetes.io/node"] = ""
+		} else {
+			workerPool.Labels["node.kubernetes.io/role"] = "node"
+		}
+
+		// worker pool name labels
+		workerPool.Labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
+		workerPool.Labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
+
 		// add CRI labels selected by the RuntimeClass
-		if worker.CRI != nil && len(worker.CRI.ContainerRuntimes) > 0 {
-			for _, cr := range worker.CRI.ContainerRuntimes {
+		if workerPool.CRI != nil && len(workerPool.CRI.ContainerRuntimes) > 0 {
+			workerPool.Labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
+			for _, cr := range workerPool.CRI.ContainerRuntimes {
 				key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
-				if worker.Labels == nil {
-					worker.Labels = make(map[string]string, 1)
-				}
-				worker.Labels[key] = "true"
+				workerPool.Labels[key] = "true"
 			}
 		}
 
 		var pConfig *runtime.RawExtension
-		if worker.ProviderConfig != nil {
+		if workerPool.ProviderConfig != nil {
 			pConfig = &runtime.RawExtension{
-				Raw: worker.ProviderConfig.Raw,
+				Raw: workerPool.ProviderConfig.Raw,
 			}
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
-			Name:           worker.Name,
-			Minimum:        worker.Minimum,
-			Maximum:        worker.Maximum,
-			MaxSurge:       *worker.MaxSurge,
-			MaxUnavailable: *worker.MaxUnavailable,
-			Annotations:    worker.Annotations,
-			Labels:         worker.Labels,
-			Taints:         worker.Taints,
-			MachineType:    worker.Machine.Type,
+			Name:           workerPool.Name,
+			Minimum:        workerPool.Minimum,
+			Maximum:        workerPool.Maximum,
+			MaxSurge:       *workerPool.MaxSurge,
+			MaxUnavailable: *workerPool.MaxUnavailable,
+			Annotations:    workerPool.Annotations,
+			Labels:         workerPool.Labels,
+			Taints:         workerPool.Taints,
+			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
-				Name:    worker.Machine.Image.Name,
-				Version: *worker.Machine.Image.Version,
+				Name:    workerPool.Machine.Image.Name,
+				Version: *workerPool.Machine.Image.Version,
 			},
 			ProviderConfig:        pConfig,
-			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[worker.Name].Downloader.Data.Content),
+			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[workerPool.Name].Downloader.Data.Content),
 			Volume:                volume,
 			DataVolumes:           dataVolumes,
-			KubeletDataVolumeName: worker.KubeletDataVolumeName,
-			Zones:                 worker.Zones,
+			KubeletDataVolumeName: workerPool.KubeletDataVolumeName,
+			Zones:                 workerPool.Zones,
 		})
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
 		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.Info.Spec.Provider.Type),
+				Type: b.Shoot.Info.Spec.Provider.Type,
 			},
 			Region: b.Shoot.Info.Spec.Region,
 			SecretRef: corev1.SecretReference{
