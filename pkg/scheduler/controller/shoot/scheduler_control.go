@@ -19,6 +19,10 @@ import (
 	"fmt"
 	"strings"
 
+	// "github.com/texttheater/golang-levenshtein/levenshtein"
+
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -184,6 +188,11 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 		return nil, err
 	}
 
+	filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
+	if err != nil {
+		return nil, err
+	}
+
 	candidates, err := getCandidates(cloudProfile, shoot, filteredSeeds, strategy)
 	if err != nil {
 		return nil, err
@@ -223,23 +232,35 @@ func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, seedSel
 	return matchingSeeds, nil
 }
 
-func getCandidates(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]*gardencorev1beta1.Seed, error) {
-	var candidates []*gardencorev1beta1.Seed
+func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
 	var providers []string
-
 	if cloudProfile.Spec.SeedSelector != nil {
 		providers = cloudProfile.Spec.SeedSelector.Providers
 	}
+
+	var matchingSeeds []*gardencorev1beta1.Seed
+	for _, seed := range seedList {
+		if seed.DeletionTimestamp == nil && matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
+			matchingSeeds = append(matchingSeeds, seed)
+		}
+	}
+	return matchingSeeds, nil
+}
+
+func getCandidates(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]*gardencorev1beta1.Seed, error) {
+	var candidates []*gardencorev1beta1.Seed
+
 	switch {
 	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
 		candidates = determineCandidatesOfSameProvider(seedList, shoot)
-	case strategy == config.Selector:
-		if matchProvider(cloudProfile.Spec.Type, shoot.Spec.Provider.Type, providers) {
-			candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
-		}
-		candidates = addCanditatesWithMatchingProviders(providers, seedList, shoot, candidates)
 	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
+	case strategy == config.BestRegion:
+		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
+		if len(candidates) > 0 {
+			return candidates, nil
+		}
+		fallthrough
 	case strategy == config.MinimalDistance:
 		candidates = determineCandidatesWithMinimalDistanceStrategy(seedList, shoot)
 	default:
@@ -343,7 +364,7 @@ func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot
 func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Seed {
 	var candidates []*gardencorev1beta1.Seed
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Region == shoot.Spec.Region && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			candidates = append(candidates, seed)
 		}
 	}
@@ -356,36 +377,87 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 	}
 
 	var (
-		maxMatchingCharacters int
-		shootRegion           = shoot.Spec.Region
-		candidates            []*gardencorev1beta1.Seed
+		// maxMatchingCharacters int
+		minDistance = 1000
+		shootRegion = shoot.Spec.Region
+		candidates  []*gardencorev1beta1.Seed
 	)
 
 	for _, seed := range seeds {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			seedRegion := seed.Spec.Provider.Region
-			var matchingCharacters int
-			for i := 0; i <= len(shootRegion); i++ {
-				prefix := shootRegion[:i]
-				if strings.HasPrefix(seedRegion, prefix) {
+			/*
+				var matchingCharacters int
+				for i := 0; i <= len(shootRegion); i++ {
+					prefix := shootRegion[:i]
+					if !strings.HasPrefix(seedRegion, prefix) {
+						break
+					}
 					matchingCharacters = len(prefix)
-					continue
 				}
-			}
+				// append
+				if matchingCharacters == maxMatchingCharacters {
+					//candidates = append(candidates, seed)
+				}
+				// replace
+				if matchingCharacters > maxMatchingCharacters {
+					maxMatchingCharacters = matchingCharacters
+					//candidates = []*gardencorev1beta1.Seed{seed}
+				}
+			*/
+
+			dist, _ := distance(seedRegion, shootRegion)
 
 			// append
-			if matchingCharacters == maxMatchingCharacters {
+			if dist == minDistance {
 				candidates = append(candidates, seed)
 				continue
 			}
 			// replace
-			if matchingCharacters > maxMatchingCharacters {
-				maxMatchingCharacters = matchingCharacters
+			if dist < minDistance {
+				minDistance = dist
 				candidates = []*gardencorev1beta1.Seed{seed}
 			}
 		}
 	}
 	return candidates
+}
+
+var orientations = []string{"north", "south", "east", "west", "central"}
+
+// distance extracts an orientation relative to a base from a region name
+func orientation(name string) (normalized string, orientation string) {
+	for _, o := range orientations {
+		if i := strings.Index(name, o); i >= 0 {
+			orientation = o
+			normalized = name[:i] + ":" + name[i+len(o):]
+			return
+		}
+	}
+	return name, ""
+}
+
+// distance calculates a formal distance between two region names observing
+// some usual orientation keywords. It is based on the levenshtein distance
+// of the regions base names plus the difference based on the orientation.
+// regions with the same base but different orientations are basically nearer
+// to each other than two completely diffrent regions.
+func distance(seed, shoot string) (int, int) {
+
+	seed_base, seed_orient := orientation(seed)
+	shoot_base, shoot_orient := orientation(shoot)
+	dist := levenshtein.DistanceForStrings([]rune(seed_base), []rune(shoot_base), levenshtein.DefaultOptionsWithSub)
+
+	if seed_orient != "" || shoot_orient != "" {
+		if seed_orient == "" || shoot_orient == "" {
+			return dist*2 + 1, dist
+		}
+		if seed_orient == shoot_orient {
+			return dist * 2, dist
+		}
+		return dist*2 + 2, dist
+	}
+	return dist * 2, dist
 }
 
 func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {

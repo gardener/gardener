@@ -88,10 +88,10 @@ type CloudProfileSpec struct {
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
 	// +optional
-	*metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,2,opt,name=labelSelector"`
+	*metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
 	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
 	// +optional
-	Providers []string `json:"providers,omitempty" protobuf:"bytes,1,rep,name=providers"`
+	Providers []string `json:"providers,omitempty" protobuf:"bytes,2,rep,name=providers"`
 }
 
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
