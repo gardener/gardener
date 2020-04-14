@@ -375,3 +375,14 @@ func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) e
 		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
 	})
 }
+
+// WaitUntilRequiredExtensionsReady waits until all the extensions required for a shoot reconciliation are ready
+func (b *Botanist) WaitUntilRequiredExtensionsReady(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
+		if err := b.RequiredExtensionsReady(ctx); err != nil {
+			b.Logger.Infof("Waiting until all the required extension controllers are ready (%+v)", err)
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+}

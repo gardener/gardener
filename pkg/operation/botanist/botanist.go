@@ -60,8 +60,8 @@ func New(o *operation.Operation) (*Botanist, error) {
 	return b, nil
 }
 
-// RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
-func (b *Botanist) RequiredExtensionsExist(ctx context.Context) error {
+// RequiredExtensionsReady checks whether all required extensions needed for a shoot operation exist and are ready.
+func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
 		return err
