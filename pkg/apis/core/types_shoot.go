@@ -723,6 +723,13 @@ const (
 	CRINameContainerD CRIName = "containerd"
 )
 
+// ContainerRuntimeName is a type alias for the ContainerRuntime name string.
+type ContainerRuntimeName string
+
+const (
+	ContainerRuntimeGVisor ContainerRuntimeName = "gvisor"
+)
+
 // ContainerRuntime contains information about worker's available container runtime
 type ContainerRuntime struct {
 	// Type is the type of the Container Runtime.

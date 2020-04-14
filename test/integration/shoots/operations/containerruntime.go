@@ -47,17 +47,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 
 		containerdWorker := worker.DeepCopy()
 
-		allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
-		id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
-		framework.ExpectNoError(err)
-
-		containerdWorker.Name = fmt.Sprintf("test-%s", id)
-		containerdWorker.Maximum = 1
-		containerdWorker.Minimum = 1
-		containerdWorker.CRI = &gardencorev1beta1.CRI{
-			Name:              extensionsv1alpha1.CRINameContainerD,
-			ContainerRuntimes: nil,
-		}
+		containerdWorker = configureWorkerForTesting(containerdWorker, false)
 
 		shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *containerdWorker)
 
@@ -65,36 +55,18 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 
 		defer func(ctx context.Context, workerPoolName string) {
 			ginkgo.By("removing containerd worker pool after test execution")
-			err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
-				var workers []gardencorev1beta1.Worker
-				for _, current := range s.Spec.Provider.Workers {
-					if current.Name == workerPoolName {
-						continue
-					}
-					workers = append(workers, current)
-				}
-				s.Spec.Provider.Workers = workers
-				return nil
-			})
-			framework.ExpectNoError(err)
+			removeWorkerPoolWithName(ctx, f, workerPoolName)
 		}(ctx, containerdWorker.Name)
 
-		err = f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 			s.Spec.Provider.Workers = shoot.Spec.Provider.Workers
 			return nil
 		})
 		framework.ExpectNoError(err)
 
-		// check the node labels of the worker pool to contain containerd label
-		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &containerdWorker.Name)
-		framework.ExpectNoError(err)
-		g.Expect(len(nodeList.Items)).To(g.Equal(int(containerdWorker.Minimum)))
-
-		for _, node := range nodeList.Items {
-			value, found := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]
-			g.Expect(found).To(g.BeTrue())
-			g.Expect(value).To(g.Equal(extensionsv1alpha1.CRINameContainerD))
-		}
+		// get the nodes of the worker pool and check if the node
+		// labels of the worker pool contain the expected containerd label
+		nodeList := getContainerdNodes(ctx, f, containerdWorker)
 
 		// deploy root pod
 		rootPodExecutor := framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodeList.Items[0].Name, "kube-system")
@@ -107,7 +79,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
 
 		// check that config.toml is configured
-		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' |  echo $?"
+		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' ;  echo $?"
 		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "0")
 
 		// check that config.toml exists
@@ -115,6 +87,131 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
 	}, scaleWorkerTimeout)
 })
+
+f.Beta().Serial().CIt("should add, remove and upgrade worker pool with gVisor", func(ctx context.Context) {
+	shoot := f.Shoot
+
+	if len(shoot.Spec.Provider.Workers) == 0 {
+		ginkgo.Skip("at least one worker pool is required in the test shoot.")
+	}
+
+	testWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
+
+	testWorker = configureWorkerForTesting(testWorker, true)
+
+	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *testWorker)
+
+	ginkgo.By("adding gVisor worker pool")
+
+	defer func(ctx context.Context, workerPoolName string) {
+		ginkgo.By("removing gVisor worker pool after test execution")
+		removeWorkerPoolWithName(ctx, f, workerPoolName)
+	}(ctx, testWorker.Name)
+
+	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+		s.Spec.Provider.Workers = shoot.Spec.Provider.Workers
+		return nil
+	})
+	framework.ExpectNoError(err)
+
+	// get the nodes of the worker pool and check if the node
+	// labels of the worker pool contain the expected gVisor label
+	nodeList := getGVisorNodes(ctx, f, testWorker)
+
+	// deploy root pod
+	rootPod := deployRootPod(ctx, f, nodeList)
+
+	// gVisor requires containerd, so check that first
+	containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
+	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, containerdServiceCommand, "active")
+
+	// check that the binaries are available
+	checkRunscShimBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "containerd-shim-runsc-v1")
+	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkRunscShimBinary, "found")
+
+	checkRunscBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "runsc")
+	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkRunscBinary, "found")
+
+	// check that containerd config.toml is configured for gVisor
+	checkConfigurationCommand := "cat /etc/containerd/config.toml | grep 'containerd.runtimes.runsc' ;  echo $?"
+	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkConfigurationCommand, "0")
+
+	// deploy pod using gVisor RuntimeClass
+
+
+	// wait for it to run
+
+
+
+	ginkgo.By("removing gVisor from worker pool")
+
+
+	// check that gVisor pod cannot be scheduled any more
+
+
+	ginkgo.By("upgrading pool to use gVisor")
+
+
+}, scaleWorkerTimeout)
+
+func getGVisorNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *v1.NodeList{
+	return getNodeListWithLabel(ctx, f, worker, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, gardencorev1beta1.ContainerRuntimeGVisor), "true")
+}
+
+func getContainerdNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *v1.NodeList{
+	return getNodeListWithLabel(ctx, f, worker, extensionsv1alpha1.CRINameWorkerLabel, extensionsv1alpha1.CRINameContainerD)
+}
+
+func getNodeListWithLabel(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker, nodeLabelKey, nodeLabelValue string) *v1.NodeList{
+	nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &worker.Name)
+	framework.ExpectNoError(err)
+	g.Expect(len(nodeList.Items)).To(g.Equal(int(worker.Minimum)))
+
+	for _, node := range nodeList.Items {
+		value, found := node.Labels[nodeLabelKey]
+		g.Expect(found).To(g.BeTrue())
+		g.Expect(value).To(g.Equal(nodeLabelValue))
+	}
+	return nodeList
+}
+
+func removeWorkerPoolWithName(ctx context.Context, f *framework.ShootFramework, workerPoolName string) {
+	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+		var workers []gardencorev1beta1.Worker
+		for _, worker := range s.Spec.Provider.Workers {
+			if worker.Name == workerPoolName {
+				continue
+			}
+			workers = append(workers, worker)
+		}
+		s.Spec.Provider.Workers = workers
+		return nil
+	})
+	framework.ExpectNoError(err)
+}
+
+// configureWorkerForTesting configures the worker pool with test specific configuration such as a unique name and the CRI settings
+func configureWorkerForTesting(worker *gardencorev1beta1.Worker, useGVisor bool) *gardencorev1beta1.Worker {
+	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
+	id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
+	framework.ExpectNoError(err)
+
+	worker.Name = fmt.Sprintf("test-%s", id)
+	worker.Maximum = 1
+	worker.Minimum = 1
+	worker.CRI = &gardencorev1beta1.CRI{
+		Name:              extensionsv1alpha1.CRINameContainerD,
+	}
+
+	if useGVisor {
+		worker.CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{
+			{
+				Type: string(gardencorev1beta1.ContainerRuntimeGVisor),
+			},
+		}
+	}
+	return worker
+}
 
 // executeCommand executes a command on the host and checks the returned result
 func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecutor, command, expected string) {
