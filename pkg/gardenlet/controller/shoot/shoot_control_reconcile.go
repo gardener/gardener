@@ -71,7 +71,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			})
 		}),
 		errors.ToExecute("Check required extensions", func() error {
-			return botanist.RequiredExtensionsExist(context.TODO())
+			return botanist.WaitUntilRequiredExtensionsReady(context.TODO())
 		}),
 		errors.ToExecute("Check version constraint", func() error {
 			enableEtcdEncryption, err = versionutils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
