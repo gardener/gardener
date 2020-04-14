@@ -71,7 +71,7 @@ func (e *NoopEnsurer) EnsureKubernetesGeneralConfiguration(ctx context.Context, 
 }
 
 // ShouldProvisionKubeletCloudProviderConfig returns if the cloud provider config file should be added to the kubelet configuration.
-func (e *NoopEnsurer) ShouldProvisionKubeletCloudProviderConfig() bool {
+func (e *NoopEnsurer) ShouldProvisionKubeletCloudProviderConfig(context.Context, EnsurerContext) bool {
 	return false
 }
 

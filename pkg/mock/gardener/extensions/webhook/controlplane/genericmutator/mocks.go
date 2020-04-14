@@ -196,15 +196,15 @@ func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(arg0, ar
 }
 
 // ShouldProvisionKubeletCloudProviderConfig mocks base method
-func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig() bool {
+func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 genericmutator.EnsurerContext) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldProvisionKubeletCloudProviderConfig")
+	ret := m.ctrl.Call(m, "ShouldProvisionKubeletCloudProviderConfig", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // ShouldProvisionKubeletCloudProviderConfig indicates an expected call of ShouldProvisionKubeletCloudProviderConfig
-func (mr *MockEnsurerMockRecorder) ShouldProvisionKubeletCloudProviderConfig() *gomock.Call {
+func (mr *MockEnsurerMockRecorder) ShouldProvisionKubeletCloudProviderConfig(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldProvisionKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).ShouldProvisionKubeletCloudProviderConfig))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldProvisionKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).ShouldProvisionKubeletCloudProviderConfig), arg0, arg1)
 }
