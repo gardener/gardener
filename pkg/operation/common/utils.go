@@ -328,6 +328,8 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		&batchv1beta1.CronJobList{},
 		&rbacv1.ClusterRoleList{},
 		&rbacv1.ClusterRoleBindingList{},
+		&rbacv1.RoleList{},
+		&rbacv1.RoleBindingList{},
 		&appsv1.DaemonSetList{},
 		&appsv1.DeploymentList{},
 		&autoscalingv2beta1.HorizontalPodAutoscalerList{},
