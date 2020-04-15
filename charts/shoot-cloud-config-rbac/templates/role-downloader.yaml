@@ -12,6 +12,6 @@ rules:
   verbs:
   - get
   resourceNames:
-{{- range $key, $value := .Values.workers }}
-  - {{ $value.secretName }}
+{{- range $key, $value := .Values.secretNames }}
+  - {{ $value }}
 {{- end }}

@@ -1,26 +1,16 @@
-# images:
-#   hyperkube: image-repository
-# bootstrapToken: hugo
-# kubernetesVersion: v1.17.0
-# configFilePath: /var/lib/cloud-config-downloader/downloads/cloud_config
-# workers:
-# - name: cpu-worker
-#   secretName: cloud-config-cpu-worker-ab234
-#   cloudConfig: generated-original-cloud-config-data
-#   command: /usr/bin/reload --path=<path>
-#   units:
-#   - kubelet.service
-#   kubeletDataVolume:
-#     name: vol1
-#     size: 6262500000
-#     type: gp2
-# - name: cpu-worker2
-#   secretName: cloud-config-cpu-worker2-4av4a
-#   cloudConfig: generated-original-cloud-config-data
-#   command: /usr/bin/reload --path=<path>
-#   units:
-#   - kubelet.service
-#   kubeletDataVolume:
-#     name: vol2
-#     size: 9375000000
-#     type: io1
+images:
+  hyperkube: image-repository
+bootstrapToken: hugo
+kubernetesVersion: v1.17.0
+configFilePath: /var/lib/cloud-config-downloader/downloads/cloud_config
+worker:
+  name: cpu-worker
+  secretName: cloud-config-cpu-worker-ab234
+  cloudConfig: generated-original-cloud-config-data
+  command: /usr/bin/reload --path=<path>
+  units:
+  - kubelet.service
+#  kubeletDataVolume:
+#    name: vol1
+#    size: 6262500000
+#    type: gp2
