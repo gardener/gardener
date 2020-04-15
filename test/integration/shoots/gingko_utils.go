@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/test/integration/framework"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/onsi/ginkgo"
 )
 

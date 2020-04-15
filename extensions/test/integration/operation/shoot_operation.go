@@ -17,6 +17,7 @@ package operation
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/test/framework"
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
@@ -24,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	gardenertest "github.com/gardener/gardener/test/integration/framework"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -70,7 +70,7 @@ func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, de
 	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
 	defer cancelCtxSetup()
 
-	replicas, err := gardenertest.GetDeploymentReplicas(ctxSetup, client, namespace, name)
+	replicas, err := framework.GetDeploymentReplicas(ctxSetup, client, namespace, name)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -86,7 +86,7 @@ func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, de
 	}
 
 	// wait until scaled
-	if err := gardenertest.WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
+	if err := framework.WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
 	}
 	return replicas, nil
