@@ -5841,6 +5841,7 @@ definition in the documentation of your provider extension.</p>
 <a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
 <a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>, 
 <a href="#core.gardener.cloud/v1beta1.SeedBackup">SeedBackup</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedProvider">SeedProvider</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage</a>, 
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
@@ -6197,6 +6198,20 @@ string
 </td>
 <td>
 <p>Type is the name of the provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
+ProviderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to Seed resource.</p>
 </td>
 </tr>
 <tr>

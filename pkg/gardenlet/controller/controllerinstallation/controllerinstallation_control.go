@@ -213,6 +213,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
 	)
+
 	if seed.Spec.Volume != nil {
 		volumeProviders = seed.Spec.Volume.Providers
 		if len(seed.Spec.Volume.Providers) > 0 {
@@ -220,8 +221,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		}
 	}
 
-	// Mix-in some standard values for seed.
-	seedValues := map[string]interface{}{
+	// Mix-in some standard values for garden and seed.
+	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
 			"garden": map[string]interface{}{
 				"identity": c.gardenNamespace.UID,
@@ -229,20 +230,21 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 			"seed": map[string]interface{}{
 				"identity":        seed.Name,
 				"provider":        seed.Spec.Provider.Type,
+				"region":          seed.Spec.Provider.Region,
 				"volumeProvider":  volumeProvider,
 				"volumeProviders": volumeProviders,
-				"region":          seed.Spec.Provider.Region,
 				"ingressDomain":   seed.Spec.DNS.IngressDomain,
 				"protected":       gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
 				"visible":         !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible),
 				"taints":          seed.Spec.Taints,
 				"networks":        seed.Spec.Networks,
 				"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,
+				"spec":            seed.Spec,
 			},
 		},
 	}
 
-	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, seedValues))
+	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err

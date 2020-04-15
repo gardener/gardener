@@ -3573,6 +3573,7 @@ func Convert_core_SeedNetworks_To_v1beta1_SeedNetworks(in *core.SeedNetworks, ou
 
 func autoConvert_v1beta1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *core.SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
 	return nil
 }
@@ -3584,6 +3585,7 @@ func Convert_v1beta1_SeedProvider_To_core_SeedProvider(in *SeedProvider, out *co
 
 func autoConvert_core_SeedProvider_To_v1beta1_SeedProvider(in *core.SeedProvider, out *SeedProvider, s conversion.Scope) error {
 	out.Type = in.Type
+	out.ProviderConfig = (*ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = in.Region
 	return nil
 }

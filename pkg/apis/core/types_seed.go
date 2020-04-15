@@ -129,6 +129,8 @@ type ShootNetworks struct {
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string
+	// ProviderConfig is the configuration passed to Seed resource.
+	ProviderConfig *ProviderConfig
 	// Region is a name of a region.
 	Region string
 }

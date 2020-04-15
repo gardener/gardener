@@ -4599,6 +4599,12 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to Seed resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a name of a region.",
@@ -4610,6 +4616,8 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 				Required: []string{"type", "region"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
 	}
 }
 
@@ -9659,6 +9667,12 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to Seed resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Region is a name of a region.",
@@ -9670,6 +9684,8 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 				Required: []string{"type", "region"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
 	}
 }
 

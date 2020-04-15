@@ -78,6 +78,7 @@ gardener:
   seed:
     identifier: <seed-name>
     region: europe
+    spec: <complete-seed-spec>
 ```
 
 Extensions can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.

@@ -147,8 +147,11 @@ type ShootNetworks struct {
 type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// ProviderConfig is the configuration passed to Seed resource.
+	// +optional
+	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a name of a region.
-	Region string `json:"region" protobuf:"bytes,2,opt,name=region"`
+	Region string `json:"region" protobuf:"bytes,3,opt,name=region"`
 }
 
 // SeedTaint describes a taint on a seed.
