@@ -84,7 +84,8 @@ func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 	return f
 }
 
-// NewShootFrameworkFromConfig creates a new Shoot framework from a shoot configuration
+// NewShootFrameworkFromConfig creates a new Shoot framework from a shoot configuration without registering ginkgo
+// specific functions
 func NewShootFrameworkFromConfig(cfg *ShootConfig) (*ShootFramework, error) {
 	var gardenerConfig *GardenerConfig
 	if cfg != nil {
@@ -109,7 +110,7 @@ func (f *ShootFramework) BeforeEach() {
 	ctx := context.Background()
 	defer ctx.Done()
 	f.Config = mergeShootConfig(f.Config, shootCfg)
-	validateFlags(f.Config)
+	validateShootConfig(f.Config)
 	err := f.AddShoot(ctx, f.Config.ShootName, f.ProjectNamespace)
 	ExpectNoError(err)
 
@@ -226,7 +227,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 	return nil
 }
 
-func validateFlags(cfg *ShootConfig) {
+func validateShootConfig(cfg *ShootConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no shoot framework configuration provided")
 	}
