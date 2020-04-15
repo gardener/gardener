@@ -13,7 +13,7 @@ data:
       1:
         action: index_settings
         description: >-
-          Remove the selected indices from read only
+          Remove read only from indices  younger than 2 days
         options:
           index_settings:
             index:
@@ -31,6 +31,22 @@ data:
           unit: days
           unit_count: 2
           exclude: True
+      2:
+        action: index_settings
+        description: >-
+          Remove read only from kibana index
+        options:
+          index_settings:
+            index:
+              blocks:
+                read_only_allow_delete: null
+          ignore_unavailable: False
+          preserve_existing: False
+          continue_if_exception: True
+          ignore_empty_list: True
+        filters:
+        - filtertype: kibana
+          exclude: False
   config.yml: |-
     client:
       hosts:
