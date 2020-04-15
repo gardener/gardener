@@ -71,7 +71,7 @@ type Ensurer interface {
 	// "old" might be "nil" and must always be checked.
 	EnsureKubernetesGeneralConfiguration(ctx context.Context, etcx EnsurerContext, new, old *string) error
 	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-	ShouldProvisionKubeletCloudProviderConfig() bool
+	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, etcx EnsurerContext) bool
 	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
 	EnsureKubeletCloudProviderConfig(context.Context, EnsurerContext, *string, string) error
 	// EnsureAdditionalUnits ensures additional systemd units
@@ -285,7 +285,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, ectx EnsurerC
 	}
 
 	// Check if cloud provider config needs to be ensured
-	if m.ensurer.ShouldProvisionKubeletCloudProviderConfig() {
+	if m.ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, ectx) {
 		if err := m.ensureKubeletCloudProviderConfig(ctx, ectx, osc); err != nil {
 			return err
 		}

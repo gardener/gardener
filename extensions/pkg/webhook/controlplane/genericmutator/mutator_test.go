@@ -368,7 +368,7 @@ var _ = Describe("Mutator", func() {
 					return nil
 				})
 
-			ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig().Return(true)
+			ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any()).Return(true)
 			ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), gomock.Any(), newOSC.Namespace).DoAndReturn(
 				func(ctx context.Context, ectx genericmutator.EnsurerContext, data *string, _ string) error {
 					*data = cloudproviderconf
