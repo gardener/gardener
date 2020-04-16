@@ -82,6 +82,10 @@ type ShootSpec struct {
 	SeedName *string
 }
 
+func (s *Shoot) GetProviderType() string {
+	return s.Spec.Provider.Type
+}
+
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.

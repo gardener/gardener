@@ -21,6 +21,7 @@ import (
 	extensionsevent "github.com/gardener/gardener/extensions/pkg/event"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 
+	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -259,6 +260,37 @@ func ClusterShootProviderType(decoder runtime.Decoder, providerType string) pred
 		}
 
 		return shoot.Spec.Provider.Type == providerType
+	}
+
+	return predicate.Funcs{
+		CreateFunc: func(event event.CreateEvent) bool {
+			return f(event.Object)
+		},
+		UpdateFunc: func(event event.UpdateEvent) bool {
+			return f(event.ObjectNew)
+		},
+		GenericFunc: func(event event.GenericEvent) bool {
+			return f(event.Object)
+		},
+		DeleteFunc: func(event event.DeleteEvent) bool {
+			return f(event.Object)
+		},
+	}
+}
+
+// GardenCoreProviderType is a predicate for the provider type of a `gardencore.Object` implementation.
+func GardenCoreProviderType(providerType string) predicate.Predicate {
+	f := func(obj runtime.Object) bool {
+		if obj == nil {
+			return false
+		}
+
+		accessor, err := gardencore.Accessor(obj)
+		if err != nil {
+			return false
+		}
+
+		return accessor.GetProviderType() == providerType
 	}
 
 	return predicate.Funcs{
