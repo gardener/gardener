@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/gardener/test/framework"
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
@@ -525,7 +526,7 @@ func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels la
 		return nil, err
 	}
 
-	return kubernetes.NewPodExecutor(client.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
+	return framework.NewPodExecutor(client).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
 }
 
 // GetDashboardPodIP gets the dashboard IP

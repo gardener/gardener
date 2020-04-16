@@ -36,6 +36,7 @@ import (
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +49,6 @@ import (
 )
 
 const (
-	reserveCapacityTemplateName        = "reserve-capacity.yaml.tpl"
 	reserveCapacityDeploymentName      = "reserve-capacity"
 	reserveCapacityDeploymentNamespace = metav1.NamespaceDefault
 
@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 			},
 			WorkerPool: workerPoolName,
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, reserveCapacityTemplateName, values)
+		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
 		framework.ExpectNoError(err)
 
 		defer func() {
@@ -258,7 +258,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 			WorkerPool:    testWorkerPoolName,
 			TolerationKey: testWorkerPoolName,
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, reserveCapacityTemplateName, values)
+		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
 		framework.ExpectNoError(err)
 
 		defer func() {

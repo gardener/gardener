@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -208,7 +209,7 @@ func PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer
 		return nil, err
 	}
 
-	return kubernetes.NewPodExecutor(client.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
+	return NewPodExecutor(client).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
 }
 
 // DeleteResource deletes a kubernetes resource
@@ -218,6 +219,28 @@ func DeleteResource(ctx context.Context, k8sClient kubernetes.Interface, resourc
 		return nil
 	}
 	return err
+}
+
+// DeleteAndWaitForResource deletes a kubernetes resource and waits for its deletion
+func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interface, resource runtime.Object, timeout time.Duration) error {
+	if err := DeleteResource(ctx, k8sClient, resource); err != nil {
+		return err
+	}
+	return retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
+		newResource := resource.DeepCopyObject()
+		key, err := client.ObjectKeyFromObject(resource)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		if err := k8sClient.Client().Get(ctx, key, newResource); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
+			return retry.MinorError(err)
+		}
+		return retry.MinorError(errors.New("Object still exists"))
+	})
 }
 
 // ScaleDeployment scales a deployment and waits until it is scaled
@@ -239,6 +262,7 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 	if replicas == nil || *replicas == *desiredReplicas {
 		return replicas, nil
 	}
+
 	// scale the deployment
 	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
@@ -378,14 +402,15 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 }
 
 // WaitUntilPodIsRunning waits until the pod with <podName> is running
-func (f *CommonFramework) WaitUntilPodIsRunning(ctx context.Context, podName, podNamespace string, c kubernetes.Interface) error {
+func WaitUntilPodIsRunning(ctx context.Context, log *logrus.Logger, podName, podNamespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		pod := &corev1.Pod{}
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: podNamespace, Name: podName}, pod); err != nil {
 			return retry.SevereError(err)
 		}
 		if !health.IsPodReady(pod) {
-			f.Logger.Infof("Waiting for %s to be ready!!", podName)
+			log.Infof("Waiting for %s to be ready!!", podName)
+			log.Infof("Waiting for %s to be ready!!", podName)
 			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, podNamespace, podName, err))
 		}
 

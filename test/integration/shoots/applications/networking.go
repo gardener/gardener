@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"io/ioutil"
@@ -51,10 +52,6 @@ const (
 	networkTestTimeout = 1800 * time.Second
 )
 
-const (
-	nginxTemplateName = "network-nginx-deamonset.yaml.tpl"
-)
-
 var _ = ginkgo.Describe("Shoot network testing", func() {
 
 	f := framework.NewShootFramework(&framework.ShootConfig{
@@ -66,7 +63,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 	)
 
 	f.Beta().CIt("should reach all webservers on all nodes", func(ctx context.Context) {
-		templateFilepath := filepath.Join(f.TemplatesDir, nginxTemplateName)
+		templateFilepath := filepath.Join(f.TemplatesDir, templates.NginxDaemonSetName)
 		nettestTmpl, err := template.ParseFiles(templateFilepath)
 		framework.ExpectNoError(err)
 
@@ -99,14 +96,15 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		err = f.ShootClient.Client().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "net-nginx"})
 		framework.ExpectNoError(err)
 
+		podExecutor := framework.NewPodExecutor(f.ShootClient)
+
 		// check if all webservers can be reached from all nodes
 		ginkgo.By("test connectivity to webservers")
-		shootRESTConfig := f.ShootClient.RESTConfig()
 		var res error
 		for _, from := range pods.Items {
 			for _, to := range pods.Items {
 				ginkgo.By(fmt.Sprintf("Testing %s to %s", from.GetName(), to.GetName()))
-				reader, err := kubernetes.NewPodExecutor(shootRESTConfig).Execute(ctx, from.Namespace, from.Name, "net-curl", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
+				reader, err := podExecutor.Execute(ctx, from.Namespace, from.Name, "net-curl", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
 				if err != nil {
 					res = multierror.Append(res, errors.Wrapf(err, "%s to %s", from.GetName(), to.GetName()))
 					continue
