@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"io"
 	"io/ioutil"
 	"time"
@@ -11,6 +10,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -221,12 +221,12 @@ func DeleteResource(ctx context.Context, k8sClient kubernetes.Interface, resourc
 }
 
 // ScaleDeployment scales a deployment and waits until it is scaled
-func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
+func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
 	if desiredReplicas == nil {
 		return nil, nil
 	}
 
-	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
+	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), timeout)
 	defer cancelCtxSetup()
 
 	replicas, err := GetDeploymentReplicas(ctxSetup, client, namespace, name)
@@ -239,7 +239,7 @@ func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, de
 	if replicas == nil || *replicas == *desiredReplicas {
 		return replicas, nil
 	}
-	// scale the scheduler deployment
+	// scale the deployment
 	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
 	}
@@ -390,7 +390,6 @@ func (f *CommonFramework) WaitUntilPodIsRunning(ctx context.Context, podName, po
 		}
 
 		return retry.Ok()
-
 	})
 }
 

@@ -101,7 +101,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		if f.ShootClient != nil {
 			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
 			f.Logger.Info(ctxIdentifier)
-			if err := f.dumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
+			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
 				f.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", f.Shoot.Name, err.Error())
 			}
 			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {

@@ -36,7 +36,8 @@ const (
 	unhealthy = "unhealthy"
 )
 
-func (f *CommonFramework) dumpDefaultResourcesInAllNamespaces(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface) error {
+// DumpDefaultResourcesInAllNamespaces dumps all default k8s resources of a namespace
+func (f *CommonFramework) DumpDefaultResourcesInAllNamespaces(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface) error {
 	namespaces := &corev1.NamespaceList{}
 	if err := k8sClient.Client().List(ctx, namespaces); err != nil {
 		return err
@@ -45,24 +46,33 @@ func (f *CommonFramework) dumpDefaultResourcesInAllNamespaces(ctx context.Contex
 	var result error
 
 	for _, ns := range namespaces.Items {
-		if err := f.dumpEventsInNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch Events from namespace %s: %s", ns.Name, err.Error()))
+		if err := f.DumpDefaultResourcesInNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
+			result = multierror.Append(result, err)
 		}
-		if err := f.dumpPodInfoForNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch information of Pods from namespace %s: %s", ns.Name, err.Error()))
-		}
-		if err := f.dumpDeploymentInfoForNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch information of Deployments from namespace %s: %s", ns.Name, err.Error()))
-		}
-		if err := f.dumpStatefulSetInfoForNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch information of StatefulSets from namespace %s: %s", ns.Name, err.Error()))
-		}
-		if err := f.dumpDaemonSetInfoForNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch information of DaemonSets from namespace %s: %s", ns.Name, err.Error()))
-		}
-		if err := f.dumpServiceInfoForNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, fmt.Errorf("unable to fetch information of Services from namespace %s: %s", ns.Name, err.Error()))
-		}
+	}
+	return result
+}
+
+// DumpDefaultResourcesInNamespace dumps all default K8s resources of a namespace.
+func (f *CommonFramework) DumpDefaultResourcesInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
+	var result error
+	if err := f.dumpEventsInNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch Events from namespace %s: %s", namespace, err.Error()))
+	}
+	if err := f.dumpPodInfoForNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch information of Pods from namespace %s: %s", namespace, err.Error()))
+	}
+	if err := f.dumpDeploymentInfoForNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch information of Deployments from namespace %s: %s", namespace, err.Error()))
+	}
+	if err := f.dumpStatefulSetInfoForNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch information of StatefulSets from namespace %s: %s", namespace, err.Error()))
+	}
+	if err := f.dumpDaemonSetInfoForNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch information of DaemonSets from namespace %s: %s", namespace, err.Error()))
+	}
+	if err := f.dumpServiceInfoForNamespace(ctx, ctxIdentifier, k8sClient, namespace); err != nil {
+		result = multierror.Append(result, fmt.Errorf("unable to fetch information of Services from namespace %s: %s", namespace, err.Error()))
 	}
 	return result
 }
