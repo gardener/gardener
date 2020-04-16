@@ -792,11 +792,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			// cloud profile
-			testCloudProfile := cloudProfile
-			testCloudProfile.Spec.Type = "some-type"
-
-			candidates, err := getCandidates(&testCloudProfile, &testShoot, []*gardencorev1beta1.Seed{&newSeedEnvironment2, &oldSeedEnvironment1, &otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := getCandidates(&testShoot, []*gardencorev1beta1.Seed{&newSeedEnvironment2, &oldSeedEnvironment1, &otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(2))
@@ -826,11 +822,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			// cloud profile
-			testCloudProfile := cloudProfile
-			testCloudProfile.Spec.Type = "some-type"
-
-			candidates, err := getCandidates(&testCloudProfile, &testShoot, []*gardencorev1beta1.Seed{&newSeedEnvironment2, &oldSeedEnvironment1, &otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := getCandidates(&testShoot, []*gardencorev1beta1.Seed{&newSeedEnvironment2, &oldSeedEnvironment1, &otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(1))
