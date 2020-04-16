@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	// "github.com/texttheater/golang-levenshtein/levenshtein"
-
 	"github.com/texttheater/golang-levenshtein/levenshtein"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -233,14 +231,14 @@ func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, seedSel
 }
 
 func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
-	var providers []string
+	var possibleProviders []string
 	if cloudProfile.Spec.SeedSelector != nil {
-		providers = cloudProfile.Spec.SeedSelector.Providers
+		possibleProviders = cloudProfile.Spec.SeedSelector.Providers
 	}
 
 	var matchingSeeds []*gardencorev1beta1.Seed
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, possibleProviders) && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			matchingSeeds = append(matchingSeeds, seed)
 		}
 	}
@@ -386,26 +384,6 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 	for _, seed := range seeds {
 		if seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			seedRegion := seed.Spec.Provider.Region
-			/*
-				var matchingCharacters int
-				for i := 0; i <= len(shootRegion); i++ {
-					prefix := shootRegion[:i]
-					if !strings.HasPrefix(seedRegion, prefix) {
-						break
-					}
-					matchingCharacters = len(prefix)
-				}
-				// append
-				if matchingCharacters == maxMatchingCharacters {
-					//candidates = append(candidates, seed)
-				}
-				// replace
-				if matchingCharacters > maxMatchingCharacters {
-					maxMatchingCharacters = matchingCharacters
-					//candidates = []*gardencorev1beta1.Seed{seed}
-				}
-			*/
-
 			dist, _ := distance(seedRegion, shootRegion)
 
 			// append

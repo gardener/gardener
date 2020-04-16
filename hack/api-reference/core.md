@@ -406,8 +406,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -1544,8 +1544,8 @@ string
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -2374,8 +2374,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -6790,6 +6790,55 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSelector">SeedSelector
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>SeedSelector contains constraints for selecting seed to be usable for shoots using a profile</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>LabelSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>LabelSelector</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>LabelSelector is optional and can be used to select seeds by their label settings</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providers</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Providers is optional and can be used by restricting seeds by their provider type. &lsquo;*&rsquo; can be used to enable seeds regardless of their provider type.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation
 </h3>
 <p>
@@ -7750,8 +7799,8 @@ string
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>

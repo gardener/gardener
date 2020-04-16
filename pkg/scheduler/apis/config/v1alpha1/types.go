@@ -19,13 +19,17 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 )
 
 const (
 	// SameRegion Strategy determines a seed candidate for a shoot only if the cloud profile and region are identical
-	SameRegion CandidateDeterminationStrategy = "SameRegion"
+	SameRegion CandidateDeterminationStrategy = CandidateDeterminationStrategy(config.SameRegion)
+	// BestRegion Strategy prefers a matching region, only if no such seed exsists it tries to find the nearest one.
+	BestRegion CandidateDeterminationStrategy =  CandidateDeterminationStrategy(config.BestRegion)
 	// MinimalDistance Strategy determines a seed candidate for a shoot if the cloud profile are identical. Then chooses the seed with the minimal distance to the shoot.
-	MinimalDistance CandidateDeterminationStrategy = "MinimalDistance"
+	MinimalDistance CandidateDeterminationStrategy = CandidateDeterminationStrategy(config.MinimalDistance)
 	// Default Strategy is the default strategy to use when there is no configuration provided
 	Default CandidateDeterminationStrategy = SameRegion
 	// SchedulerDefaultLockObjectNamespace is the default lock namespace for leader election.
