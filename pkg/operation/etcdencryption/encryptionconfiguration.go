@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration
+package etcdencryption
 
 import (
 	"encoding/base64"
@@ -47,7 +47,7 @@ func init() {
 }
 
 // NewEncryptionConfiguration creates an EncryptionConfiguration from the key and state
-func NewEncryptionConfiguration(encryptionConfig *ETCDEncryptionConfig) *apiserverconfigv1.EncryptionConfiguration {
+func NewEncryptionConfiguration(encryptionConfig *EncryptionConfig) *apiserverconfigv1.EncryptionConfiguration {
 	encryptionKeys := make([]apiserverconfigv1.Key, len(encryptionConfig.EncryptionKeys))
 	for i, keyData := range encryptionConfig.EncryptionKeys {
 		encryptionKeys[i].Name = keyData.Name
@@ -70,11 +70,9 @@ func NewEncryptionConfiguration(encryptionConfig *ETCDEncryptionConfig) *apiserv
 		Providers: providerConfigs,
 	}
 
-	conf := &apiserverconfigv1.EncryptionConfiguration{
+	return &apiserverconfigv1.EncryptionConfiguration{
 		Resources: []apiserverconfigv1.ResourceConfiguration{resourceConfig},
 	}
-
-	return conf
 }
 
 // NewEncryptionKey creates a new random encryption key with a name containing the timestamp.

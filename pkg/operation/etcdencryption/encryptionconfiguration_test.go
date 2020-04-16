@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration_test
+package etcdencryption_test
 
 import (
 	"bytes"
@@ -133,11 +133,11 @@ resources:
 	})
 
 	Describe("#NewEncryptionConfiguration", func() {
-		var etcdEncryption *ETCDEncryptionConfig
+		var etcdEncryption *EncryptionConfig
 
 		BeforeEach(func() {
-			etcdEncryption = &ETCDEncryptionConfig{
-				EncryptionKeys: []ETCDEncryptionKey{
+			etcdEncryption = &EncryptionConfig{
+				EncryptionKeys: []EncryptionKey{
 					{
 						Name: keyName,
 						Key:  randomBase64,

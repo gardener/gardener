@@ -131,8 +131,8 @@ const (
 	// is accepted.
 	GardenerDeletionProtected = "gardener.cloud/deletion-protected"
 
-	// ETCDSecretsEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot secrets
-	ETCDSecretsEncryptionConfigDataName = "etcdSecretsEncryptionConfiguration"
+	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
+	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"
 
 	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
 	GardenRoleDefaultDomain = "default-domain"

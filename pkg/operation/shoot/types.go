@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	etcdencryptionconfig "github.com/gardener/gardener/pkg/operation/etcdencryption"
+	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	corev1 "k8s.io/api/core/v1"
@@ -53,7 +53,7 @@ type Shoot struct {
 	ControlPlaneStatus        []byte
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 
-	ETCDEncryption *etcdencryptionconfig.ETCDEncryptionConfig
+	ETCDEncryption *etcdencryption.EncryptionConfig
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

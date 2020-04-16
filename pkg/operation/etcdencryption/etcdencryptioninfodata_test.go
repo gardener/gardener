@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration_test
+package etcdencryption_test
 
 import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -41,16 +41,16 @@ resources:
 const jsonData = "{\"encryptionKeys\":[{\"key\":\"foo\",\"name\":\"bar\"}],\"forcePlainTextResources\":false,\"rewriteResources\":false}"
 
 var _ = Describe("ETCD Encryption InfoData", func() {
-	Describe("ETCDEncryptionConfig", func() {
+	Describe("EncryptionConfig", func() {
 		var (
 			etcdEncryptionDataJson []byte
-			etcdEncryptionConfig   *ETCDEncryptionConfig
+			etcdEncryptionConfig   *EncryptionConfig
 		)
 
 		BeforeEach(func() {
 			etcdEncryptionDataJson = []byte(jsonData)
-			etcdEncryptionConfig = &ETCDEncryptionConfig{
-				EncryptionKeys: []ETCDEncryptionKey{
+			etcdEncryptionConfig = &EncryptionConfig{
+				EncryptionKeys: []EncryptionKey{
 					{
 						Key:  "foo",
 						Name: "bar",
@@ -61,7 +61,7 @@ var _ = Describe("ETCD Encryption InfoData", func() {
 			}
 		})
 		Describe("#Marshal", func() {
-			It("should marshal ETCDEncryptionConfig InfoData into correct json format", func() {
+			It("should marshal EncryptionConfig InfoData into correct json format", func() {
 				data, err := etcdEncryptionConfig.Marshal()
 
 				Expect(err).NotTo(HaveOccurred())
@@ -79,16 +79,16 @@ var _ = Describe("ETCD Encryption InfoData", func() {
 
 	Context("ETCD Encryptyion InfoData Utility functions", func() {
 		var (
-			gardenerResourceDataList     gardencorev1alpha1helper.GardenerResourceDataList
-			secret                       *corev1.Secret
-			expectedETCDEncryptionConfig *ETCDEncryptionConfig
-			expectedEncryptionKey        ETCDEncryptionKey
+			gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList
+			secret                   *corev1.Secret
+			expectedEncryptionConfig *EncryptionConfig
+			expectedEncryptionKey    EncryptionKey
 		)
 
 		BeforeEach(func() {
 			gardenerResourceDataList = gardencorev1alpha1helper.GardenerResourceDataList{
 				{
-					Name: common.ETCDSecretsEncryptionConfigDataName,
+					Name: common.ETCDEncryptionConfigDataName,
 					Type: string(ETCDEncryptionDataType),
 					Data: runtime.RawExtension{Raw: []byte(jsonData)},
 				},
@@ -105,13 +105,13 @@ var _ = Describe("ETCD Encryption InfoData", func() {
 				},
 			}
 
-			expectedEncryptionKey = ETCDEncryptionKey{
+			expectedEncryptionKey = EncryptionKey{
 				Key:  "foo",
 				Name: "bar",
 			}
 
-			expectedETCDEncryptionConfig = &ETCDEncryptionConfig{
-				EncryptionKeys: []ETCDEncryptionKey{
+			expectedEncryptionConfig = &EncryptionConfig{
+				EncryptionKeys: []EncryptionKey{
 					expectedEncryptionKey,
 				},
 				ForcePlainTextResources: false,
@@ -120,29 +120,29 @@ var _ = Describe("ETCD Encryption InfoData", func() {
 		})
 
 		Describe("#GetETCDEncryption", func() {
-			It("should retrieve ETCDEncryptionConfig when it exists in the gardener resource data list", func() {
-				etcdEncryption, err := GetETCDEncryptionConfig(gardenerResourceDataList)
+			It("should retrieve EncryptionConfig when it exists in the gardener resource data list", func() {
+				etcdEncryption, err := GetEncryptionConfig(gardenerResourceDataList)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(etcdEncryption).To(Equal(expectedETCDEncryptionConfig))
+				Expect(etcdEncryption).To(Equal(expectedEncryptionConfig))
 			})
-			It("should return nil when ETCDEncryptionConfig does not exists in the gardener resource data list", func() {
-				etcdEncryption, err := GetETCDEncryptionConfig(gardencorev1alpha1helper.GardenerResourceDataList{})
+			It("should return nil when EncryptionConfig does not exists in the gardener resource data list", func() {
+				etcdEncryption, err := GetEncryptionConfig(gardencorev1alpha1helper.GardenerResourceDataList{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(etcdEncryption).To(BeNil())
 			})
 		})
 		Describe("Generate Encryption Key", func() {
-			var etcdEncryptionConfig *ETCDEncryptionConfig
+			var etcdEncryptionConfig *EncryptionConfig
 
 			BeforeEach(func() {
-				etcdEncryptionConfig = &ETCDEncryptionConfig{}
+				etcdEncryptionConfig = &EncryptionConfig{}
 			})
 			It("should sync the encryption key from an already existing secret", func() {
 				err := etcdEncryptionConfig.AddEncryptionKeyFromSecret(secret)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(etcdEncryptionConfig.EncryptionKeys[0]).To(Equal(expectedEncryptionKey))
 			})
-			It("should generate a new etcd encryption key", func() {
+			It("should generate a new encryption key", func() {
 				err := etcdEncryptionConfig.AddNewEncryptionKey()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(etcdEncryptionConfig.EncryptionKeys[0]).ToNot(BeNil())

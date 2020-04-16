@@ -16,7 +16,7 @@
  *
  */
 
-package encryptionconfiguration
+package etcdencryption
 
 import (
 	"crypto/rand"
@@ -30,41 +30,42 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// ETCDEncryptionKey holds the the key and its name used to encrypt resources in ETCD.
-type ETCDEncryptionKey struct {
+// EncryptionKey holds the the key and its name used to encrypt resources in ETCD.
+type EncryptionKey struct {
 	Key  string
 	Name string
 }
 
-// ETCDEncryptionConfig holds information whether a key is active or not and whether resources should be forcefully kept in plain text
-type ETCDEncryptionConfig struct {
-	EncryptionKeys          []ETCDEncryptionKey
+// EncryptionConfig holds a list of keys and information whether resources should be forcefully persisted in plain text and rewritten if the configuration changes.
+type EncryptionConfig struct {
+	EncryptionKeys          []EncryptionKey
 	ForcePlainTextResources bool
 	RewriteResources        bool
 }
 
 // TypeVersion implements InfoData
-func (e *ETCDEncryptionConfig) TypeVersion() infodata.TypeVersion {
+func (e *EncryptionConfig) TypeVersion() infodata.TypeVersion {
 	return ETCDEncryptionDataType
 }
 
 // Marshal ETCDEncryption InfoData
-func (e *ETCDEncryptionConfig) Marshal() ([]byte, error) {
-	encryptionKeysData := make([]ETCDEncryptionKeyData, len(e.EncryptionKeys))
+func (e *EncryptionConfig) Marshal() ([]byte, error) {
+	encryptionKeysData := make([]EncryptionKeyData, len(e.EncryptionKeys))
 	for i, encryptionKey := range e.EncryptionKeys {
 		encryptionKeysData[i].Key = encryptionKey.Key
 		encryptionKeysData[i].Name = encryptionKey.Name
 	}
-	return json.Marshal(&ETCDEncryptionConfigData{EncryptionKeys: encryptionKeysData, ForcePlainTextResources: e.ForcePlainTextResources, RewriteResources: e.RewriteResources})
+	return json.Marshal(&EncryptionConfigData{EncryptionKeys: encryptionKeysData, ForcePlainTextResources: e.ForcePlainTextResources, RewriteResources: e.RewriteResources})
 }
 
-// NewETCDEncryption creates a new ETCDEncryptionKey from a given key and name
-func NewETCDEncryption(keys []ETCDEncryptionKey, forcePlainTextResources, rewriteResources bool) (*ETCDEncryptionConfig, error) {
-	return &ETCDEncryptionConfig{keys, forcePlainTextResources, rewriteResources}, nil
+// NewEncryptionConfig creates a new ETCDEncryptionKey from a given key and name
+func NewEncryptionConfig(keys []EncryptionKey, forcePlainTextResources, rewriteResources bool) (*EncryptionConfig, error) {
+	return &EncryptionConfig{keys, forcePlainTextResources, rewriteResources}, nil
 }
 
 // AddEncryptionKeyFromSecret gets the active etcd encryption key from the secret object and adds it to the ETCDEncryptionConfig.
-func (e *ETCDEncryptionConfig) AddEncryptionKeyFromSecret(secret *corev1.Secret) error {
+// TODO: this function can be removed in a future version when all the encryption configurations have been synced to the ShootState.
+func (e *EncryptionConfig) AddEncryptionKeyFromSecret(secret *corev1.Secret) error {
 	conf, err := ReadSecret(secret)
 	if err != nil {
 		return err
@@ -74,7 +75,7 @@ func (e *ETCDEncryptionConfig) AddEncryptionKeyFromSecret(secret *corev1.Secret)
 		return err
 	}
 
-	etcdKey := ETCDEncryptionKey{
+	etcdKey := EncryptionKey{
 		Key:  key,
 		Name: name,
 	}
@@ -83,12 +84,12 @@ func (e *ETCDEncryptionConfig) AddEncryptionKeyFromSecret(secret *corev1.Secret)
 }
 
 // AddNewEncryptionKey generates a new etcd encryption key and adds it to the ETCDEncryptionConfig.
-func (e *ETCDEncryptionConfig) AddNewEncryptionKey() error {
+func (e *EncryptionConfig) AddNewEncryptionKey() error {
 	key, err := NewEncryptionKey(time.Now(), rand.Reader)
 	if err != nil {
 		return err
 	}
-	etcdKey := ETCDEncryptionKey{
+	etcdKey := EncryptionKey{
 		Key:  key.Secret,
 		Name: key.Name,
 	}
@@ -98,16 +99,16 @@ func (e *ETCDEncryptionConfig) AddNewEncryptionKey() error {
 
 // SetForcePlainTextResources sets whether resources should be encrypted or not.
 // If the configuration changes RewriteResource is set to true.
-func (e *ETCDEncryptionConfig) SetForcePlainTextResources(forcePlainTextResources bool) {
+func (e *EncryptionConfig) SetForcePlainTextResources(forcePlainTextResources bool) {
 	if e.ForcePlainTextResources != forcePlainTextResources {
 		e.RewriteResources = true
 	}
 	e.ForcePlainTextResources = forcePlainTextResources
 }
 
-// GetETCDEncryptionConfig retrieves the ETCDEncryptionConfig from the gardenerResourceDataList.
-func GetETCDEncryptionConfig(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList) (*ETCDEncryptionConfig, error) {
-	infoData, err := infodata.GetInfoData(gardenerResourceDataList, common.ETCDSecretsEncryptionConfigDataName)
+// GetEncryptionConfig retrieves the ETCDEncryptionConfig from the gardenerResourceDataList.
+func GetEncryptionConfig(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList) (*EncryptionConfig, error) {
+	infoData, err := infodata.GetInfoData(gardenerResourceDataList, common.ETCDEncryptionConfigDataName)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +116,9 @@ func GetETCDEncryptionConfig(gardenerResourceDataList gardencorev1alpha1helper.G
 		return nil, nil
 	}
 
-	encryptionConfig, ok := infoData.(*ETCDEncryptionConfig)
+	encryptionConfig, ok := infoData.(*EncryptionConfig)
 	if !ok {
-		return nil, fmt.Errorf("could not convert GardenerResourceData entry %s to ETCDEncryptionConfig", common.ETCDSecretsEncryptionConfigDataName)
+		return nil, fmt.Errorf("could not convert GardenerResourceData entry %s to ETCDEncryptionConfig", common.ETCDEncryptionConfigDataName)
 	}
 	return encryptionConfig, nil
 }

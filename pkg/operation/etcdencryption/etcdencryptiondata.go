@@ -16,7 +16,7 @@
  *
  */
 
-package encryptionconfiguration
+package etcdencryption
 
 import (
 	"encoding/json"
@@ -32,38 +32,38 @@ const ETCDEncryptionDataType = infodata.TypeVersion("etcdEncryption")
 //const ETCDEncryptionStateDataType = infodata.TypeVersion("etcdEncryptionStateData")
 
 func init() {
-	infodata.Register(ETCDEncryptionDataType, ETCDEncryptionUnmarshal)
+	infodata.Register(ETCDEncryptionDataType, Unmarshal)
 }
 
-// ETCDEncryptionKeyData holds the key and its name used to encrypt resources in ETCD
-type ETCDEncryptionKeyData struct {
+// EncryptionKeyData holds the key and its name used to encrypt resources in ETCD
+type EncryptionKeyData struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 }
 
-// ETCDEncryptionConfigData holds information whether a key is active or not and whether resources should be forcefully kept in plain text
-type ETCDEncryptionConfigData struct {
-	EncryptionKeys          []ETCDEncryptionKeyData `json:"encryptionKeys"`
-	ForcePlainTextResources bool                    `json:"forcePlainTextResources"`
-	RewriteResources        bool                    `json:"rewriteResources"`
+// EncryptionConfigData holds a list of keys and information whether resources should be forcefully persisted in plain text and rewritten if the configuration changes.
+type EncryptionConfigData struct {
+	EncryptionKeys          []EncryptionKeyData `json:"encryptionKeys"`
+	ForcePlainTextResources bool                `json:"forcePlainTextResources"`
+	RewriteResources        bool                `json:"rewriteResources"`
 }
 
-// ETCDEncryptionUnmarshal unmarshals an ETCDKeyData json.
-func ETCDEncryptionUnmarshal(bytes []byte) (infodata.InfoData, error) {
+// Unmarshal unmarshals an ETCDKeyData json.
+func Unmarshal(bytes []byte) (infodata.InfoData, error) {
 	if bytes == nil {
 		return nil, fmt.Errorf("no data given")
 	}
-	data := &ETCDEncryptionConfigData{}
+	data := &EncryptionConfigData{}
 	err := json.Unmarshal(bytes, data)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptionKeys := make([]ETCDEncryptionKey, len(data.EncryptionKeys))
+	encryptionKeys := make([]EncryptionKey, len(data.EncryptionKeys))
 	for i, encryptionKey := range data.EncryptionKeys {
 		encryptionKeys[i].Key = encryptionKey.Key
 		encryptionKeys[i].Name = encryptionKey.Name
 	}
 
-	return NewETCDEncryption(encryptionKeys, data.ForcePlainTextResources, data.RewriteResources)
+	return NewEncryptionConfig(encryptionKeys, data.ForcePlainTextResources, data.RewriteResources)
 }

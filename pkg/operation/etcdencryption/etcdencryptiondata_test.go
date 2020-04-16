@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration_test
+package etcdencryption_test
 
 import (
 	. "github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -24,8 +24,8 @@ import (
 var _ = Describe("ETCD Encryption Data", func() {
 	var (
 		etcdEncryptionDataJson = []byte("{\"encryptionKeys\":[{\"key\":\"foo\",\"name\":\"bar\"}],\"forcePlainTextResources\":true,\"rewriteResources\":true}")
-		etcdEncryptionConfig   = &ETCDEncryptionConfig{
-			EncryptionKeys: []ETCDEncryptionKey{
+		etcdEncryptionConfig   = &EncryptionConfig{
+			EncryptionKeys: []EncryptionKey{
 				{
 					Key:  "foo",
 					Name: "bar",
@@ -35,11 +35,11 @@ var _ = Describe("ETCD Encryption Data", func() {
 			RewriteResources:        true,
 		}
 	)
-	It("should correctly unmarshal ETCDEncryptionConfigData struct into ETCDEncryptionConfig", func() {
-		data, err := ETCDEncryptionUnmarshal([]byte(etcdEncryptionDataJson))
+	It("should correctly unmarshal EncryptionConfigData struct into EncryptionConfig", func() {
+		data, err := Unmarshal([]byte(etcdEncryptionDataJson))
 		Expect(err).NotTo(HaveOccurred())
 
-		etcdKey, ok := data.(*ETCDEncryptionConfig)
+		etcdKey, ok := data.(*EncryptionConfig)
 		Expect(ok).To(BeTrue())
 		Expect(etcdKey).To(Equal(etcdEncryptionConfig))
 	})
