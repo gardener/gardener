@@ -9,6 +9,7 @@
 |KubeControllerManagerDown|critical|seed|`Deployments and replication controllers are not making progress.`|
 |KubeEtcdMainDown|blocker|seed|`Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down the cluster is unreachable.`|
 |KubeEtcdEventsDown|critical|seed|`Etcd3 cluster events is unavailable or cannot be scraped. Cluster events cannot be collected.`|
+|KubeEtcdBackupMetricsDown|warning|seed|`Backup sidecar for Etcd3 cluster main is unavailable or cannot be scraped.`|
 |KubeEtcd3MainNoLeader|critical|seed|`Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.`|
 |KubeEtcd3EventsNoLeader|critical|seed|`Etcd3 events has no leader. No communication with etcd events possible. New cluster events cannot be collected. Events can only be read.`|
 |KubeEtcd3HighNumberOfFailedProposals|warning|seed|`Etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.`|
