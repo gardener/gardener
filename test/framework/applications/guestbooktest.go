@@ -191,8 +191,25 @@ func (t *GuestBookTest) Test(ctx context.Context) {
 	gomega.Expect(bodyString).To(gomega.ContainSubstring(fmt.Sprintf("foobar-%s", shoot.Name)))
 }
 
+// Dump logs the current state of all components of the guestbook test
+// if the test has failed
+func (t *GuestBookTest) dump(ctx context.Context) {
+	if !ginkgo.CurrentGinkgoTestDescription().Failed {
+		return
+	}
+
+	identifier := "[GUESTBOOK]"
+	err := t.framework.DumpDefaultResourcesInNamespace(ctx, identifier, t.framework.ShootClient, t.framework.Namespace)
+	if err != nil {
+		t.framework.Logger.Errorf("unable to dump guestbook resources in namespace %s: %s", t.framework.Namespace, err.Error())
+	}
+}
+
 // Cleanup cleans up all resources depoyed by the guestbook test
 func (t *GuestBookTest) Cleanup(ctx context.Context) {
+	// First dump all resources if the test has failed
+	t.dump(ctx)
+
 	// Clean up shoot
 	ginkgo.By("Cleaning up guestbook app resources")
 	deleteResource := func(ctx context.Context, resource runtime.Object) error {

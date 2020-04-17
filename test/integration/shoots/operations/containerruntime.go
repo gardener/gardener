@@ -24,8 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
-	integration "github.com/gardener/gardener/test/integration/framework"
-
 	"github.com/onsi/ginkgo"
 	g "github.com/onsi/gomega"
 )
@@ -97,9 +95,8 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		framework.ExpectNoError(err)
 
 		// wait until pod is running
-		gardenerTestOperation, err := integration.NewGardenTestOperation(f.GardenClient, f.Logger)
 		framework.ExpectNoError(err)
-		err = gardenerTestOperation.WaitUntilPodIsRunning(ctx, rootPod.Name, rootPod.Namespace, f.ShootClient)
+		err = f.WaitUntilPodIsRunning(ctx, rootPod.Name, rootPod.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
 		// check the configuration on the host

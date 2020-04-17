@@ -27,8 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/integration/framework"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -49,7 +47,7 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 
 // GetLoggingPassword returns the passwort to access the elasticseerach logging instance
 func (f *ShootFramework) GetLoggingPassword(ctx context.Context) (string, error) {
-	return framework.GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), loggingIngressCredentials, "password")
+	return GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), loggingIngressCredentials, "password")
 }
 
 // GetElasticsearchLogs gets logs for <podName> from the elasticsearch instance in <elasticsearchNamespace>
@@ -103,7 +101,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		if f.ShootClient != nil {
 			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
 			f.Logger.Info(ctxIdentifier)
-			if err := f.dumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
+			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
 				f.Logger.Errorf("unable to dump resources from all namespaces in shoot %s: %s", f.Shoot.Name, err.Error())
 			}
 			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {

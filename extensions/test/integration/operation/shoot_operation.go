@@ -21,12 +21,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	gardenertest "github.com/gardener/gardener/test/integration/framework"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,38 +58,7 @@ func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedC
 	})
 }
 
-// ScaleDeployment scales a deployment
-func ScaleDeployment(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
-	if desiredReplicas == nil {
-		return nil, nil
-	}
-
-	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), setupContextTimeout)
-	defer cancelCtxSetup()
-
-	replicas, err := gardenertest.GetDeploymentReplicas(ctxSetup, client, namespace, name)
-	if apierrors.IsNotFound(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve the replica count of the %s deployment: '%v'", name, err)
-	}
-	if replicas == nil || *replicas == *desiredReplicas {
-		return nil, nil
-	}
-	// scale the deployment
-	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
-	}
-
-	// wait until scaled
-	if err := gardenertest.WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
-	}
-	return replicas, nil
-}
-
 // ScaleGardenerResourceManager scales the gardener-resource-manager to the desired replicas
 func ScaleGardenerResourceManager(setupContextTimeout time.Duration, namespace string, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-resource-manager", namespace)
+	return framework.ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-resource-manager", namespace)
 }

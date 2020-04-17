@@ -10,6 +10,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -219,6 +220,66 @@ func DeleteResource(ctx context.Context, k8sClient kubernetes.Interface, resourc
 	return err
 }
 
+// ScaleDeployment scales a deployment and waits until it is scaled
+func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
+	if desiredReplicas == nil {
+		return nil, nil
+	}
+
+	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), timeout)
+	defer cancelCtxSetup()
+
+	replicas, err := GetDeploymentReplicas(ctxSetup, client, namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve the replica count of the %s deployment: '%v'", name, err)
+	}
+	if replicas == nil || *replicas == *desiredReplicas {
+		return replicas, nil
+	}
+	// scale the deployment
+	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
+		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
+	}
+
+	// wait until scaled
+	if err := WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
+		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
+	}
+	return replicas, nil
+}
+
+// WaitUntilDeploymentScaled waits until the deployment has the desired replica count in the status
+func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+		deployment := &appsv1.Deployment{}
+		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+			return retry.SevereError(err)
+		}
+		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
+			return retry.SevereError(fmt.Errorf("waiting for deployment scale failed. spec.replicas does not match the desired replicas"))
+		}
+
+		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("deployment currently has '%d' replicas. Desired: %d", deployment.Status.AvailableReplicas, desiredReplicas))
+	})
+}
+
+// GetDeploymentReplicas gets the spec.Replicas count from a deployment
+func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace, name string) (*int32, error) {
+	deployment := &appsv1.Deployment{}
+	if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+		return nil, err
+	}
+	replicas := deployment.Spec.Replicas
+	return replicas, nil
+}
+
 // ShootCreationCompleted checks if a shoot is successfully reconciled.
 func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) bool {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
@@ -314,6 +375,22 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 				Scheme: kubernetes.GardenScheme,
 			}),
 	)
+}
+
+// WaitUntilPodIsRunning waits until the pod with <podName> is running
+func (f *CommonFramework) WaitUntilPodIsRunning(ctx context.Context, podName, podNamespace string, c kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		pod := &corev1.Pod{}
+		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: podNamespace, Name: podName}, pod); err != nil {
+			return retry.SevereError(err)
+		}
+		if !health.IsPodReady(pod) {
+			f.Logger.Infof("Waiting for %s to be ready!!", podName)
+			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, podNamespace, podName, err))
+		}
+
+		return retry.Ok()
+	})
 }
 
 // DeployRootPod deploys a pod with root permissions for testing purposes.

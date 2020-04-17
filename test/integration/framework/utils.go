@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 
+// Deprecated: this is the deprecated gardener testframework.
+// Use gardener/test/framework instead
 package framework
 
 import (
