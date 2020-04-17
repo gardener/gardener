@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,8 +30,6 @@ import (
 
 const (
 	logsCount uint64 = 10000
-
-	loggingAppTemplateName = "logger-app.yaml.tpl"
 
 	initializationTimeout           = 15 * time.Minute
 	kibanaAvailableTimeout          = 10 * time.Second
@@ -75,7 +74,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			logsCount,
 		}
 
-		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, loggingAppTemplateName, loggerParams)
+		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.LoggerAppName, loggerParams)
 		framework.ExpectNoError(err)
 
 		defer func() {

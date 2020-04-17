@@ -17,13 +17,12 @@ package operations
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
+
 	"github.com/onsi/ginkgo"
 	g "github.com/onsi/gomega"
 )
@@ -91,37 +90,28 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		}
 
 		// deploy root pod
-		rootPod, err := framework.DeployRootPod(ctx, f.ShootClient.Client(), "kube-system", &nodeList.Items[0].Name)
-		framework.ExpectNoError(err)
-
-		// wait until pod is running
-		framework.ExpectNoError(err)
-		err = f.WaitUntilPodIsRunning(ctx, rootPod.Name, rootPod.Namespace, f.ShootClient)
-		framework.ExpectNoError(err)
+		rootPodExecutor := framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodeList.Items[0].Name, "kube-system")
 
 		// check the configuration on the host
 		initializerServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd-initializer")
-		executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, initializerServiceCommand, "active")
+		executeCommand(ctx, rootPodExecutor, initializerServiceCommand, "active")
 
 		containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
-		executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, containerdServiceCommand, "active")
+		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
 
 		// check that config.toml is configured
 		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' |  echo $?"
-		executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkConfigurationCommand, "0")
+		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "0")
 
 		// check that config.toml exists
 		checkConfigCommand := "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"
-		executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkConfigCommand, "found")
+		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
 	}, scaleWorkerTimeout)
 })
 
 // executeCommand executes a command on the host and checks the returned result
-func executeCommand(ctx context.Context, c kubernetes.Interface, namespace, name, containerName, command, expected string) {
-	command = fmt.Sprintf("chroot /hostroot %s", command)
-	reader, err := kubernetes.NewPodExecutor(c.RESTConfig()).Execute(ctx, namespace, name, containerName, command)
-	framework.ExpectNoError(err)
-	response, err := ioutil.ReadAll(reader)
+func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecutor, command, expected string) {
+	response, err := rootPodExecutor.Execute(ctx, command)
 	framework.ExpectNoError(err)
 	g.Expect(response).ToNot(g.BeNil())
 	g.Expect(string(response)).To(g.Equal(fmt.Sprintf("%s\n", expected)))

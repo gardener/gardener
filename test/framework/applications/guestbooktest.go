@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	framework "github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -43,9 +44,8 @@ const (
 	// RedisMaster is the name of the redis master deployed by the helm chart
 	RedisMaster = "redis-master"
 
-	guestBookTemplateName = "guestbook-app.yaml.tpl"
-	redisChart            = "stable/redis"
-	redisChartVersion     = "10.2.1"
+	redisChart        = "stable/redis"
+	redisChartVersion = "10.2.1"
 )
 
 // GuestBookTest is simple application tests.
@@ -155,7 +155,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		t.framework.Namespace,
 		t.guestBookAppHost,
 	}
-	err = t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, guestBookTemplateName, guestBookParams)
+	err = t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, templates.GuestbookAppName, guestBookParams)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	ginkgo.By("Guestbook app was deployed successfully!")

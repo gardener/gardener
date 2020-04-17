@@ -17,10 +17,10 @@ package shoot_suite_test
 import (
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/test/framework/config"
 	"os"
 
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/config"
 	"github.com/gardener/gardener/test/framework/reporter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,6 +31,7 @@ import (
 	_ "github.com/gardener/gardener/test/integration/shoots/applications"
 	_ "github.com/gardener/gardener/test/integration/shoots/care"
 	_ "github.com/gardener/gardener/test/integration/shoots/logging"
+	_ "github.com/gardener/gardener/test/integration/shoots/operatingsystem"
 	_ "github.com/gardener/gardener/test/integration/shoots/operations"
 )
 
