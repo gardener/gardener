@@ -619,7 +619,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsCondition []extensionCondition) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsCondition {
 		if cond.condition.Status == gardencorev1beta1.ConditionFalse || cond.condition.Status == gardencorev1beta1.ConditionUnknown {
-			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), cond.condition.Message)
+			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), fmt.Sprintf("%q CRD (%s/%s) reports failing healthcheck: %s", cond.extensionType, cond.extensionNamespace, cond.extensionName, cond.condition.Message))
 			return &c
 		}
 	}
@@ -1002,9 +1002,10 @@ func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts
 }
 
 type extensionCondition struct {
-	condition     gardencorev1beta1.Condition
-	extensionType string
-	extensionName string
+	condition          gardencorev1beta1.Condition
+	extensionType      string
+	extensionName      string
+	extensionNamespace string
 }
 
 func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]extensionCondition, []extensionCondition, []extensionCondition, error) {
@@ -1036,15 +1037,16 @@ func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]extensionCo
 
 			kind := obj.GetObjectKind().GroupVersionKind().Kind
 			name := acc.GetName()
+			namespace := acc.GetNamespace()
 
 			for _, condition := range acc.GetExtensionStatus().GetConditions() {
 				switch condition.Type {
 				case gardencorev1beta1.ShootControlPlaneHealthy:
-					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, extensionCondition{condition, kind, name})
+					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, extensionCondition{condition, kind, name, namespace})
 				case gardencorev1beta1.ShootEveryNodeReady:
-					conditionsEveryNodeReady = append(conditionsEveryNodeReady, extensionCondition{condition, kind, name})
+					conditionsEveryNodeReady = append(conditionsEveryNodeReady, extensionCondition{condition, kind, name, namespace})
 				case gardencorev1beta1.ShootSystemComponentsHealthy:
-					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, extensionCondition{condition, kind, name})
+					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, extensionCondition{condition, kind, name, namespace})
 				}
 			}
 

@@ -96,7 +96,7 @@ type checkResultForConditionType struct {
 func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
 	_, shootClient, err := util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
 	if err != nil {
-		msg := fmt.Errorf("failed to create shoot client in namespace '%s'", request.Namespace)
+		msg := fmt.Errorf("failed to create shoot client in namespace '%s': %s", request.Namespace, err)
 		a.logger.Error(err, msg.Error())
 		return nil, msg
 	}
