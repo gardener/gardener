@@ -15,6 +15,7 @@
       "dashes": false,
       "description": "Shows the CPU usage of selected extension controllers.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -35,6 +36,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -45,10 +49,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
+          "expr": "sum(seed:container_cpu_usage_seconds_total:sum_by_container{container=~\"(gardener-extension)(.+)\"}) by (container)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ pod }}",
+          "legendFormat": "{{ container }}",
           "refId": "A"
         }
       ],
@@ -100,6 +104,7 @@
       "dashes": false,
       "description": "Shows the memory usage of selected extension controllers.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -120,6 +125,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -130,10 +138,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "seed:container_memory_working_set_bytes:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
+          "expr": "sum(seed:container_memory_working_set_bytes:sum_by_container{container=~\"(gardener-extension)(.+)\"}) by (container)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ pod }}",
+          "legendFormat": "{{ container }}",
           "refId": "A"
         }
       ],
@@ -177,152 +185,17 @@
         "align": false,
         "alignLevel": null
       }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Shows the network I/O of the selected extension controllers.",
-      "fill": 1,
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 5,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "- seed:container_network_receive_bytes_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}(receive)",
-          "refId": "A"
-        },
-        {
-          "expr": "seed:container_network_transmit_bytes_total:sum_by_pod{namespace=~\"extension-$Extension\", pod=~\"$Pod\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}(transmit)",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Network I/O",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [
     "extensions",
     "resources"
   ],
   "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "datasource": "prometheus",
-        "definition": "label_values(namespace)",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "Extension",
-        "options": [],
-        "query": "label_values(namespace)",
-        "refresh": 1,
-        "regex": "extension-(.+)",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "datasource": "prometheus",
-        "definition": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": true,
-        "name": "Pod",
-        "options": [],
-        "query": "label_values(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"extension-$Extension\"}, pod)",
-        "refresh": 0,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-6h",
