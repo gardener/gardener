@@ -228,7 +228,7 @@ spec:
         - mountPath: /etc/prometheus/rules
           name: rules
           readOnly: true
-      terminationGracePeriodSeconds: 300
+      terminationGracePeriodSeconds: 60
       volumes:
       - name: config
         configMap:
