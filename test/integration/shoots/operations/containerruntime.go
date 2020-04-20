@@ -35,10 +35,17 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		shoot := f.Shoot
 
 		if len(shoot.Spec.Provider.Workers) == 0 {
-			ginkgo.Skip("at least one worker pool is required in the test shoot.")
+			ginkgo.Skip("at least one worker pool is required in the test shoot")
 		}
 
-		containerdWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
+		worker := shoot.Spec.Provider.Workers[0]
+		// containerD is supported only with Ubuntu OS for now.
+		// TODO: adapt/remove this when containerD is available on other OS.
+		if worker.Machine.Image.Name != "ubuntu" {
+			ginkgo.Skip("worker with machine image 'ubuntu' is required")
+		}
+
+		containerdWorker := worker.DeepCopy()
 
 		allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
 		id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
@@ -60,11 +67,11 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 			ginkgo.By("removing containerd worker pool after test execution")
 			err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 				var workers []gardencorev1beta1.Worker
-				for _, worker := range s.Spec.Provider.Workers {
-					if worker.Name == workerPoolName {
+				for _, current := range s.Spec.Provider.Workers {
+					if current.Name == workerPoolName {
 						continue
 					}
-					workers = append(workers, worker)
+					workers = append(workers, current)
 				}
 				s.Spec.Provider.Workers = workers
 				return nil
