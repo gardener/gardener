@@ -200,6 +200,15 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - "druid.gardener.cloud"
+  resources:
+  - etcds
+  - etcds/scale
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
