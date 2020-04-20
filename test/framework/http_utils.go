@@ -18,14 +18,20 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // HTTPGet performs an HTTP GET request with context
 func HTTPGet(ctx context.Context, url string) (*http.Response, error) {
-	httpClient := http.Client{}
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+	}
+	httpClient := http.Client{
+		Transport: transport,
+	}
 	httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -53,6 +59,7 @@ func TestHTTPEndpointWithToken(ctx context.Context, url, token string) error {
 func testHTTPEndpointWith(ctx context.Context, url string, mutator func(*http.Request)) error {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Proxy:           http.ProxyFromEnvironment,
 	}
 
 	httpClient := http.Client{
