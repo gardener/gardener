@@ -16,17 +16,18 @@ package framework
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"regexp"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	apimachineryRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"os"
-	"reflect"
-	"regexp"
 	"sigs.k8s.io/yaml"
 )
 
