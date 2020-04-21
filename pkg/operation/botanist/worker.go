@@ -69,6 +69,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Type:      workerPool.Volume.Type,
 				Size:      workerPool.Volume.VolumeSize,
 				Encrypted: workerPool.Volume.Encrypted,
+				Interface: workerPool.Volume.Interface,
 			}
 		}
 
@@ -80,6 +81,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 					Type:      dataVolume.Type,
 					Size:      dataVolume.VolumeSize,
 					Encrypted: dataVolume.Encrypted,
+					Interface: dataVolume.Interface,
 				})
 			}
 		}

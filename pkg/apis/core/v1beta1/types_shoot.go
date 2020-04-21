@@ -859,6 +859,9 @@ type Volume struct {
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
 	Encrypted *bool `json:"encrypted,omitempty" protobuf:"varint,4,opt,name=encrypted"`
+	// Interface is the interface of the local ssd disk.
+	// +optional
+	Interface *string `json:"interface,omitempty" protobuf:"bytes,5,opt,name=interface"`
 }
 
 // CRI contains information about the Container Runtimes.

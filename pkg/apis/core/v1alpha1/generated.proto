@@ -1797,6 +1797,10 @@ message Volume {
   // Encrypted determines if the volume should be encrypted.
   // +optional
   optional bool primary = 4;
+
+  // Interface is the interface of the local ssd disk.
+  // +optional
+  optional string interface = 5;
 }
 
 // VolumeType contains certain properties of a volume type.

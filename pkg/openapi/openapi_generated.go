@@ -5446,6 +5446,13 @@ func schema_pkg_apis_core_v1alpha1_Volume(ref common.ReferenceCallback) common.O
 							Format:      "",
 						},
 					},
+					"interface": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Interface is the interface of the local ssd disk.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"size"},
 			},
@@ -10354,6 +10361,13 @@ func schema_pkg_apis_core_v1beta1_Volume(ref common.ReferenceCallback) common.Op
 						SchemaProps: spec.SchemaProps{
 							Description: "Encrypted determines if the volume should be encrypted.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"interface": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Interface is the interface of the local ssd disk.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},

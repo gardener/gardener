@@ -706,6 +706,8 @@ type Volume struct {
 	VolumeSize string
 	// Encrypted determines if the volume should be encrypted.
 	Encrypted *bool
+	// Interface is the interface of local ssd disk.
+	Interface *string
 }
 
 // CRI contains information about the Container Runtimes.

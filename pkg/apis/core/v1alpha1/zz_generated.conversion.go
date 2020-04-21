@@ -4215,6 +4215,7 @@ func autoConvert_v1alpha1_Volume_To_core_Volume(in *Volume, out *core.Volume, s 
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.VolumeSize = in.VolumeSize
 	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
+	out.Interface = (*string)(unsafe.Pointer(in.Interface))
 	return nil
 }
 
@@ -4228,6 +4229,7 @@ func autoConvert_core_Volume_To_v1alpha1_Volume(in *core.Volume, out *Volume, s 
 	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.VolumeSize = in.VolumeSize
 	out.Encrypted = (*bool)(unsafe.Pointer(in.Encrypted))
+	out.Interface = (*string)(unsafe.Pointer(in.Interface))
 	return nil
 }
 

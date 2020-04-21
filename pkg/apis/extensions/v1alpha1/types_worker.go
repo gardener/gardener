@@ -153,6 +153,9 @@ type Volume struct {
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
 	Encrypted *bool `json:"encrypted,omitempty"`
+	// Interface is the interface of local ssd disk.
+	// +optional
+	Interface  *string `json:"interface,omitempty"`
 }
 
 // WorkerStatus is the status for a Worker resource.

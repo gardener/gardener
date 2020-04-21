@@ -1235,6 +1235,11 @@ func (in *Volume) DeepCopyInto(out *Volume) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Interface != nil {
+		in, out := &in.Interface, &out.Interface
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
