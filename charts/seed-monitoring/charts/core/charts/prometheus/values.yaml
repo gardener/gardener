@@ -84,7 +84,6 @@ allowedMetrics:
   - process_max_fds
   - process_open_fds
   kubeETCD3:
-  - etcd_debugging_mvcc_current_revision
   - etcd_disk_backend_commit_duration_seconds_bucket
   - etcd_disk_wal_fsync_duration_seconds_bucket
   - etcd_mvcc_db_total_size_in_bytes
