@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -30,10 +31,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
+	"github.com/hashicorp/go-multierror"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
@@ -317,6 +320,94 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 						core.ProjectMemberOwner,
 					},
 				})
+			}
+		}
+	case core.Kind("CloudProfile"):
+		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into CloudProfile object")
+		}
+		if utils.SkipVerification(operation, cloudProfile.ObjectMeta) {
+			return nil
+		}
+		if a.GetOperation() == admission.Update {
+			oldCloudProfile, ok := a.GetOldObject().(*core.CloudProfile)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into CloudProfile object")
+			}
+
+			// getting Kubernetes versions that have been removed from the CloudProfile
+			removedKubernetesVersions := sets.StringKeySet(helper.GetRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions))
+
+			// getting Machine image versions that have been removed from the CloudProfile
+			removedMachineImageVersions := map[string]sets.String{}
+			for _, oldImage := range oldCloudProfile.Spec.MachineImages {
+				imageFound := false
+				for _, newImage := range cloudProfile.Spec.MachineImages {
+					if oldImage.Name == newImage.Name {
+						imageFound = true
+						removedMachineImageVersions[oldImage.Name] = sets.StringKeySet(helper.GetRemovedVersions(oldImage.Versions, newImage.Versions))
+					}
+				}
+				if !imageFound {
+					for _, version := range oldImage.Versions {
+						if removedMachineImageVersions[oldImage.Name] == nil {
+							removedMachineImageVersions[oldImage.Name] = sets.NewString()
+						}
+						removedMachineImageVersions[oldImage.Name] = removedMachineImageVersions[oldImage.Name].Insert(version.Version)
+					}
+				}
+			}
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
+				shootList, err1 := r.shootLister.List(labels.Everything())
+				if err1 != nil {
+					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
+				}
+
+				var (
+					channel = make(chan error)
+					wg      sync.WaitGroup
+				)
+				wg.Add(len(shootList))
+
+				for _, s := range shootList {
+					if s.Spec.CloudProfileName != cloudProfile.Name {
+						wg.Done()
+						continue
+					}
+
+					go func(shoot *core.Shoot) {
+						defer wg.Done()
+
+						if removedKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
+							channel <- fmt.Errorf("unable to delete Kubernetes version %q from CloudProfile %q - version is still in use by shoot '%s/%s'", shoot.Spec.Kubernetes.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name)
+						}
+						for _, worker := range shoot.Spec.Provider.Workers {
+							if worker.Machine.Image == nil {
+								continue
+							}
+							// happens if Shoot runs an image that does not exist in the old CloudProfile - in this case: ignore
+							if _, ok := removedMachineImageVersions[worker.Machine.Image.Name]; !ok {
+								continue
+							}
+
+							if removedMachineImageVersions[worker.Machine.Image.Name].Has(worker.Machine.Image.Version) {
+								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, worker.Machine.Image.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name, worker.Name)
+							}
+						}
+					}(s)
+				}
+
+				// close channel when wait group has 0 counter
+				go func() {
+					wg.Wait()
+					close(channel)
+				}()
+
+				for channelResult := range channel {
+					err = multierror.Append(err, channelResult)
+				}
 			}
 		}
 	}
