@@ -228,10 +228,6 @@ type ShootControllerConfiguration struct {
 	// in case of errors.
 	// +optional
 	RetryDuration *metav1.Duration `json:"retryDuration,omitempty"`
-	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
-	RetrySyncPeriod *metav1.Duration `json:"retrySyncPeriod,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -249,6 +245,12 @@ type ShootCareControllerConfiguration struct {
 	// already running on them).
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// StaleExtensionHealthCheckThreshold configures the threshold when Gardener considers a Health check report of an
+	// Extension CRD as outdated.
+	// The StaleExtensionHealthCheckThreshold should have some leeway in case a Gardener extension is temporarily unavailable.
+	// Defaults to 5 minutes.
+	// +optional
+	StaleExtensionHealthCheckThreshold *metav1.Duration `json:"staleExtensionHealthCheckThreshold,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`

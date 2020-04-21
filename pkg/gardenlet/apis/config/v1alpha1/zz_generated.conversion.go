@@ -647,6 +647,7 @@ func Convert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfig
 func autoConvert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(in *ShootCareControllerConfiguration, out *config.ShootCareControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
 	if in.ConditionThresholds != nil {
 		in, out := &in.ConditionThresholds, &out.ConditionThresholds
 		*out = make([]config.ConditionThreshold, len(*in))
@@ -669,6 +670,7 @@ func Convert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareContro
 func autoConvert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration(in *config.ShootCareControllerConfiguration, out *ShootCareControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
 	if in.ConditionThresholds != nil {
 		in, out := &in.ConditionThresholds, &out.ConditionThresholds
 		*out = make([]ConditionThreshold, len(*in))
@@ -717,7 +719,6 @@ func autoConvert_v1alpha1_ShootControllerConfiguration_To_config_ShootController
 	out.ReconcileInMaintenanceOnly = (*bool)(unsafe.Pointer(in.ReconcileInMaintenanceOnly))
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = (*v1.Duration)(unsafe.Pointer(in.RetryDuration))
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
@@ -732,7 +733,6 @@ func autoConvert_config_ShootControllerConfiguration_To_v1alpha1_ShootController
 	out.ReconcileInMaintenanceOnly = (*bool)(unsafe.Pointer(in.ReconcileInMaintenanceOnly))
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = (*v1.Duration)(unsafe.Pointer(in.RetryDuration))
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }

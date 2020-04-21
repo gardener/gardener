@@ -311,7 +311,7 @@ var _ = Describe("health check", func() {
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				etcdLister        = constEtcdLister(etcds)
 				workerLister      = constWorkerLister(workers)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 			versionsToCheck := []string{
 				"v1.0.4",
@@ -439,7 +439,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
@@ -487,7 +487,7 @@ var _ = Describe("health check", func() {
 		func(nodes []*corev1.Node, workerPools []gardencorev1beta1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
 				nodeLister = constNodeLister(nodes)
-				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckClusterNodes(workerPools, condition, nodeLister)
@@ -563,7 +563,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckMonitoringSystemComponents(shootNamespace, isTestingShoot, condition, deploymentLister, daemonSetLister)
@@ -607,7 +607,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
@@ -670,7 +670,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckOptionalAddonsSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
@@ -696,7 +696,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{})
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, deploymentLister, statefulSetLister)
@@ -739,7 +739,7 @@ var _ = Describe("health check", func() {
 
 	DescribeTable("#FailedCondition",
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
-			checker := botanist.NewHealthChecker(thresholds)
+			checker := botanist.NewHealthChecker(thresholds, metav1.Duration{Duration: time.Minute})
 			tmp1, tmp2 := botanist.Now, gardencorev1beta1helper.Now
 			defer func() {
 				botanist.Now, gardencorev1beta1helper.Now = tmp1, tmp2
@@ -812,6 +812,57 @@ var _ = Describe("health check", func() {
 			},
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
+			})),
+	)
+
+	// CheckExtensionCondition
+	DescribeTable("#CheckExtensionCondition - HealthCheckReport",
+		func(healthCheckOutdatedThreshold metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []botanist.ExtensionCondition, expected types.GomegaMatcher) {
+			checker := botanist.NewHealthChecker(nil, healthCheckOutdatedThreshold)
+			updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
+			if expected == nil {
+				Expect(updatedCondition).To(BeNil())
+				return
+			}
+			Expect(*updatedCondition).To(expected)
+		},
+		Entry("health check report outdated",
+			// 2 minute threshold for outdated health check reports
+			metav1.Duration{Duration: time.Minute * 2},
+			gardencorev1beta1.Condition{},
+			[]botanist.ExtensionCondition{
+				{
+					Condition: gardencorev1beta1.Condition{
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+						// health check result is only 30 seconds old so < than the staleExtensionHealthCheckThreshold
+						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Second * -30)},
+					},
+				},
+			},
+			nil),
+		Entry("should determine that health check report is outdated",
+			// 2 minute threshold for outdated health check reports
+			metav1.Duration{Duration: time.Minute * 2},
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			[]botanist.ExtensionCondition{
+				{
+					Condition: gardencorev1beta1.Condition{
+						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+						// health check result is already 3 minutes old
+						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Minute * -3)},
+					},
+					ExtensionType:      "Worker",
+					ExtensionName:      "worker-ubuntu",
+					ExtensionNamespace: "shoot-namespace-in-seed",
+				},
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardencorev1beta1.ConditionUnknown),
 			})),
 	)
 })

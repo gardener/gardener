@@ -449,6 +449,11 @@ func (in *ShootCareControllerConfiguration) DeepCopyInto(out *ShootCareControlle
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.StaleExtensionHealthCheckThreshold != nil {
+		in, out := &in.StaleExtensionHealthCheckThreshold, &out.StaleExtensionHealthCheckThreshold
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.ConditionThresholds != nil {
 		in, out := &in.ConditionThresholds, &out.ConditionThresholds
 		*out = make([]ConditionThreshold, len(*in))
@@ -504,11 +509,6 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 	}
 	if in.RetryDuration != nil {
 		in, out := &in.RetryDuration, &out.RetryDuration
-		*out = new(v1.Duration)
-		**out = **in
-	}
-	if in.RetrySyncPeriod != nil {
-		in, out := &in.RetrySyncPeriod, &out.RetrySyncPeriod
 		*out = new(v1.Duration)
 		**out = **in
 	}

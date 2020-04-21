@@ -190,6 +190,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 			conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
 				initializeShootClients,
 				c.conditionThresholdsToProgressingMapping(),
+				c.config.Controllers.ShootCare.StaleExtensionHealthCheckThreshold,
 				conditionAPIServerAvailable,
 				conditionControlPlaneHealthy,
 				conditionEveryNodeReady,
