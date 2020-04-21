@@ -98,7 +98,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name: "Syncing shoot cluster information to seed",
 			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-		_ = g.Add(flow.Task{
+		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
@@ -192,15 +192,31 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
-		createOrUpdateEtcdEncryptionConfiguration = g.Add(flow.Task{
+		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
+			Name:         "Generating etcd encryption configuration",
+			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration).DoIf(enableEtcdEncryption),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
+		})
+		persistETCDEncryptionConfiguration = g.Add(flow.Task{
+			Name:         "Persisting etcd encryption configuration in ShootState",
+			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration).DoIf(enableEtcdEncryption),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData),
+		})
+		// TODO: This can be removed in a future version once all etcd encryption configuration secrets have been cleaned up.
+		_ = g.Add(flow.Task{
+			Name:         "Removing old etcd encryption configuration secret from garden cluster",
+			Fn:           flow.TaskFn(botanist.RemoveOldETCDEncryptionSecretFromGardener),
+			Dependencies: flow.NewTaskIDs(persistETCDEncryptionConfiguration),
+		})
+		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Applying etcd encryption configuration",
 			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).DoIf(enableEtcdEncryption),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, persistETCDEncryptionConfiguration),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateETCDEncryptionConfiguration).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -225,7 +241,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		_ = g.Add(flow.Task{
 			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
 			Fn:           flow.TaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged).DoIf(enableEtcdEncryption && !o.Shoot.HibernationEnabled).RetryUntilTimeout(defaultInterval, 15*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, createOrUpdateEtcdEncryptionConfiguration),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, ensureShootStateExists, createOrUpdateETCDEncryptionConfiguration),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",

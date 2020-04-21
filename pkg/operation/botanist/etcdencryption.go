@@ -16,14 +16,15 @@ package botanist
 
 import (
 	"context"
-	"crypto/rand"
+	"errors"
 	"fmt"
-	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
-	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
+	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -36,117 +37,88 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// ApplyEncryptionConfiguration creates or updates a secret on the Seed
-// which contains the encryption configuration that is necessary to encrypt the
-// Kubernetes secrets in etcd.
-//
-// To mitigate data loss to a certain degree, the secret is also synced to the Garden cluster.
-func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
-	if err := b.syncEncryptionConfigurationFromGardenCluster(ctx); err != nil {
-		return err
-	}
-	secret, err := b.createOrUpdateEncryptionConfiguration(ctx)
-	if err != nil {
-		return err
-	}
-
-	return b.syncEncryptionConfigurationToGarden(ctx, secret)
-}
-
-func (b *Botanist) syncEncryptionConfigurationFromGardenCluster(ctx context.Context) error {
-	gardenSecret := &corev1.Secret{}
-	if err := b.K8sGardenClient.Client().Get(ctx, common.GardenEtcdEncryptionSecretKey(b.Shoot.Info.Namespace, b.Shoot.Info.Name), gardenSecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
+// GenerateEncryptionConfiguration generates new encryption configuration data or syncs it from the etcd encryption configuration secret if it already exists.
+func (b *Botanist) GenerateEncryptionConfiguration(ctx context.Context) error {
+	secret := &corev1.Secret{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.EtcdEncryptionSecretName), secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
-		return err
+		secret = nil
 	}
 
-	// Create the secret in the Shoot's seed namespace from the garden secret only if it doesn't exist to prevent overwriting.
-	secret := encryptionSecretFromGardenSecret(gardenSecret, b.Shoot.SeedNamespace)
-	if err := b.K8sSeedClient.Client().Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
+	if b.Shoot.ETCDEncryption == nil {
+		var err error
+		b.Shoot.ETCDEncryption, err = generateETCDEncryption(secret)
+		if err != nil {
+			return err
+		}
 	}
+
+	if secret != nil {
+		forcePlainTextSecrets := kutil.HasMetaDataAnnotation(secret, common.EtcdEncryptionForcePlaintextAnnotationName, "true")
+		b.Shoot.ETCDEncryption.SetForcePlainTextResources(forcePlainTextSecrets)
+	}
+
 	return nil
 }
 
-func (b *Botanist) createOrUpdateEncryptionConfiguration(ctx context.Context) (*corev1.Secret, error) {
+// PersistEncryptionConfiguration adds the encryption configuration to the ShootState.
+func (b *Botanist) PersistEncryptionConfiguration(ctx context.Context) error {
+	return b.persistEncryptionConfigInShootState(ctx)
+}
+
+// ApplyEncryptionConfiguration creates or updates a secret on the Seed
+// which contains the encryption configuration that is necessary to encrypt the
+// Kubernetes secrets in etcd.
+func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 	var (
 		secret = &corev1.Secret{ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, common.EtcdEncryptionSecretName)}
 		conf   *apiserverconfigv1.EncryptionConfiguration
 	)
-
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
-		var err error
-		conf, err = encryptionconfiguration.ReadSecret(secret)
-		if err != nil {
-			if !encryptionconfiguration.IsConfigurationNotFoundError(err) {
-				return err
-			}
-
-			b.Logger.Info("Creating new etcd encryption configuration for Shoot")
-			conf, err = encryptionconfiguration.NewPassiveConfiguration(time.Now(), rand.Reader)
-			if err != nil {
-				return err
-			}
-		}
-
-		// When firstly created, the encryption configuration secret does not have a checksum annotation yet. This annotation will
-		// only be added after all shoot secrets have been rewritten. In order to allow a smooth transition from un-encrypted to encrypted
-		// etcd data we first make the configuration inactive, i.e., put the `identity` provider as first list in the entry. In the next
-		// reconciliation we will detect that the annotation is set and then we can make it active, i.e., moving the `identity` provider
-		// to the second list item. The reason for this is that new API servers would otherwise start with an active configuration and would
-		// try to decrypt secrets in the etcd store (which would fail because they are not yet encrypted). Be aware that this will only happen
-		// once during the first introduction of the encryption configuration.
-		firstCreationOfEncryptionConfiguration := !metav1.HasAnnotation(secret.ObjectMeta, common.EtcdEncryptionChecksumAnnotationName)
-
-		// We allow to force the API servers to not encrypt the secrets in etcd store. This is possible by annotating the etcd-encryption-secret
-		// with 'shoot.gardener.cloud/etcd-encryption-force-plaintext-secrets=true'.
-		forcePlaintextSecrets := kutil.HasMetaDataAnnotation(secret, common.EtcdEncryptionForcePlaintextAnnotationName, "true")
-
-		encrypt := !firstCreationOfEncryptionConfiguration && !forcePlaintextSecrets
-		b.Logger.Infof("Setting encryption of %s to %t", common.EtcdEncryptionEncryptedResourceSecrets, encrypt)
-		if err := encryptionconfiguration.SetResourceEncryption(conf, common.EtcdEncryptionEncryptedResourceSecrets, encrypt); err != nil {
-			return err
-		}
-
-		checksum, err := confChecksum(conf)
-		if err != nil {
-			return err
-		}
-
-		func() {
-			b.mutex.Lock()
-			defer b.mutex.Unlock()
-			b.CheckSums[common.EtcdEncryptionSecretName] = checksum
-		}()
-
-		return encryptionconfiguration.UpdateSecret(secret, conf)
-	})
-	if err != nil {
-		return nil, err
+	if b.Shoot.ETCDEncryption == nil {
+		return errors.New("Could not find etcd encryption configuration in ShootState")
 	}
 
-	return secret, err
+	conf = etcdencryption.NewEncryptionConfiguration(b.Shoot.ETCDEncryption)
+	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+		if b.Shoot.ETCDEncryption.ForcePlainTextResources {
+			kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionForcePlaintextAnnotationName, "true")
+		}
+		return etcdencryption.UpdateSecret(secret, conf)
+	})
+	if err != nil {
+		return err
+	}
+
+	checksum, err := confChecksum(conf)
+	if err != nil {
+		return err
+	}
+
+	func() {
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+		b.CheckSums[common.EtcdEncryptionSecretName] = checksum
+	}()
+
+	return nil
 }
 
-func (b *Botanist) syncEncryptionConfigurationToGarden(ctx context.Context, controlPlaneSecret *corev1.Secret) error {
-	gardenSecret := &corev1.Secret{ObjectMeta: kutil.ObjectMetaFromKey(common.GardenEtcdEncryptionSecretKey(b.Shoot.Info.Namespace, b.Shoot.Info.Name))}
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
-		gardenSecret.OwnerReferences = []metav1.OwnerReference{
-			*metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
-		}
-		if forcePlainTextSecrets, ok := controlPlaneSecret.Annotations[common.EtcdEncryptionForcePlaintextAnnotationName]; ok {
-			kutil.SetMetaDataAnnotation(gardenSecret, common.EtcdEncryptionForcePlaintextAnnotationName, forcePlainTextSecrets)
-		}
-		gardenSecret.Data = controlPlaneSecret.Data
-		return nil
-	})
-	return err
+// RemoveOldETCDEncryptionSecretFromGardener removes the etcd encryption configuration secret from the Shoot's namespace in the garden cluster as it is no longer necessary.
+// This step can be removed in the future after all secrets have been cleaned up.
+func (b *Botanist) RemoveOldETCDEncryptionSecretFromGardener(ctx context.Context) error {
+	etcdSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.GardenEtcdEncryptionSecretName(b.Shoot.Info.Name),
+			Namespace: b.Shoot.Info.Namespace,
+		},
+	}
+	return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(ctx, etcdSecret))
 }
 
 func confChecksum(conf *apiserverconfigv1.EncryptionConfiguration) (string, error) {
-	data, err := encryptionconfiguration.Write(conf)
+	data, err := etcdencryption.Write(conf)
 	if err != nil {
 		return "", err
 	}
@@ -158,36 +130,15 @@ func confChecksum(conf *apiserverconfigv1.EncryptionConfiguration) (string, erro
 // encryption configuration changed. Rewriting here means that a patch request is sent that forces
 // the etcd to encrypt them with the new configuration.
 func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx context.Context) error {
+	if !b.Shoot.ETCDEncryption.RewriteResources {
+		return nil
+	}
+
 	checksum := func() string {
 		b.mutex.RLock()
 		defer b.mutex.RUnlock()
 		return b.CheckSums[common.EtcdEncryptionSecretName]
 	}()
-
-	if err := b.rewriteShootSecretsIfChecksumChanged(ctx, checksum); err != nil {
-		return err
-	}
-
-	gardenSecret := &corev1.Secret{ObjectMeta: kutil.ObjectMetaFromKey(common.GardenEtcdEncryptionSecretKey(b.Shoot.Info.Namespace, b.Shoot.Info.Name))}
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
-		kutil.SetMetaDataAnnotation(gardenSecret, common.EtcdEncryptionChecksumAnnotationName, checksum)
-		return nil
-	})
-	return err
-}
-
-func (b *Botanist) rewriteShootSecretsIfChecksumChanged(ctx context.Context, checksum string) error {
-	secret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.EtcdEncryptionSecretName), secret); err != nil {
-		return err
-	}
-
-	// If the etcd encryption secret in the seed already has the correct checksum annotation then we don't have to do anything.
-	if secret.Annotations[common.EtcdEncryptionChecksumAnnotationName] == checksum {
-		b.Logger.Infof("etcd encryption is up to date (checksum %s), no need to rewrite secrets", checksum)
-		return nil
-	}
-
 	shortChecksum := kutil.TruncateLabelValue(checksum)
 
 	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in
@@ -215,10 +166,8 @@ func (b *Botanist) rewriteShootSecretsIfChecksumChanged(ctx context.Context, che
 	}
 	b.Logger.Info("Successfully removed all added secret labels in the shoot after etcd encryption config changed")
 
-	// Update etcd encryption secret in seed to have the correct checksum annotation.
-	oldSecret := secret.DeepCopy()
-	kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionChecksumAnnotationName, checksum)
-	return b.K8sSeedClient.Client().Patch(ctx, secret, client.MergeFrom(oldSecret))
+	b.Shoot.ETCDEncryption.RewriteResources = false
+	return b.persistEncryptionConfigInShootState(ctx)
 }
 
 func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, labelRequirement *labels.Requirement, mutateLabelsFunc func(m metav1.Object)) []error {
@@ -226,7 +175,6 @@ func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, label
 	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*labelRequirement)}); err != nil {
 		return []error{err}
 	}
-
 	var errorList []error
 	for _, s := range secretList.Items {
 		secretCopy := s.DeepCopy()
@@ -241,17 +189,34 @@ func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, label
 	return errorList
 }
 
-func encryptionSecretFromGardenSecret(gardenSecret *corev1.Secret, seedNamespace string) *corev1.Secret {
-	secret := &corev1.Secret{ObjectMeta: kutil.ObjectMeta(seedNamespace, common.EtcdEncryptionSecretName)}
-	if gardenSecret.Data != nil {
-		secret.Data = make(map[string][]byte)
-		secret.Data[common.EtcdEncryptionSecretFileName] = gardenSecret.Data[common.EtcdEncryptionSecretFileName]
+func (b *Botanist) persistEncryptionConfigInShootState(ctx context.Context) error {
+	shootState := &gardencorev1alpha1.ShootState{ObjectMeta: kutil.ObjectMeta(b.Shoot.Info.Namespace, b.Shoot.Info.Name)}
+	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootState, func() error {
+		gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
+		if err := infodata.UpsertInfoData(&gardenerResourceList, common.ETCDEncryptionConfigDataName, b.Shoot.ETCDEncryption); err != nil {
+			return err
+		}
+		shootState.Spec.Gardener = gardenerResourceList
+		return nil
+	}); err != nil {
+		return err
 	}
-	if checksum, ok := gardenSecret.Annotations[common.EtcdEncryptionChecksumAnnotationName]; ok {
-		kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionChecksumAnnotationName, checksum)
+
+	b.ShootState = shootState
+	return nil
+}
+
+func generateETCDEncryption(secret *corev1.Secret) (*etcdencryption.EncryptionConfig, error) {
+	encryptionConfig := &etcdencryption.EncryptionConfig{}
+	if secret != nil {
+		if err := encryptionConfig.AddEncryptionKeyFromSecret(secret); err != nil {
+			return nil, err
+		}
+		return encryptionConfig, nil
 	}
-	if forcePlainTextSecrets, ok := gardenSecret.Annotations[common.EtcdEncryptionForcePlaintextAnnotationName]; ok {
-		kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionForcePlaintextAnnotationName, forcePlainTextSecrets)
+
+	if err := encryptionConfig.AddNewEncryptionKey(); err != nil {
+		return nil, err
 	}
-	return secret
+	return encryptionConfig, nil
 }

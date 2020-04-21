@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration
+package etcdencryption
 
 import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -48,6 +46,35 @@ func init() {
 		apiserverconfigv1.SchemeGroupVersion)
 }
 
+// NewEncryptionConfiguration creates an EncryptionConfiguration from the key and state
+func NewEncryptionConfiguration(encryptionConfig *EncryptionConfig) *apiserverconfigv1.EncryptionConfiguration {
+	encryptionKeys := make([]apiserverconfigv1.Key, len(encryptionConfig.EncryptionKeys))
+	for i, keyData := range encryptionConfig.EncryptionKeys {
+		encryptionKeys[i].Name = keyData.Name
+		encryptionKeys[i].Secret = keyData.Key
+	}
+	aesConfiguration := &apiserverconfigv1.AESConfiguration{Keys: encryptionKeys}
+
+	aescbcProviderConfiguration := apiserverconfigv1.ProviderConfiguration{AESCBC: aesConfiguration}
+	identityProviderConfiguration := apiserverconfigv1.ProviderConfiguration{Identity: &apiserverconfigv1.IdentityConfiguration{}}
+
+	providerConfigs := []apiserverconfigv1.ProviderConfiguration{}
+	if !encryptionConfig.ForcePlainTextResources {
+		providerConfigs = append(providerConfigs, aescbcProviderConfiguration, identityProviderConfiguration)
+	} else {
+		providerConfigs = append(providerConfigs, identityProviderConfiguration, aescbcProviderConfiguration)
+	}
+
+	resourceConfig := apiserverconfigv1.ResourceConfiguration{
+		Resources: []string{common.EtcdEncryptionEncryptedResourceSecrets},
+		Providers: providerConfigs,
+	}
+
+	return &apiserverconfigv1.EncryptionConfiguration{
+		Resources: []apiserverconfigv1.ResourceConfiguration{resourceConfig},
+	}
+}
+
 // NewEncryptionKey creates a new random encryption key with a name containing the timestamp.
 // The reader should return random data suitable for cryptographic use, otherwise the security
 // of encryption might be compromised.
@@ -69,20 +96,6 @@ func NewEncryptionKeyName(t time.Time) string {
 	return fmt.Sprintf("%s%d", common.EtcdEncryptionKeyPrefix, t.Unix())
 }
 
-// ParseEncryptionKeyName parses the key name.
-func ParseEncryptionKeyName(keyName string) (time.Time, error) {
-	if strings.HasPrefix(common.EtcdEncryptionKeyPrefix, keyName) {
-		return time.Time{}, fmt.Errorf("key does not start with prefix %s", common.EtcdEncryptionKeyPrefix)
-	}
-
-	n, err := strconv.ParseInt(strings.TrimPrefix(keyName, common.EtcdEncryptionKeyPrefix), 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return time.Unix(n, 0), nil
-}
-
 // NewEncryptionKeySecret reads common.EtcdEncryptionSecretLen bytes from the given reader
 // and base-64 encodes the data.
 // The reader should return random data suitable for cryptographic use, otherwise the security
@@ -95,49 +108,6 @@ func NewEncryptionKeySecret(r io.Reader) (string, error) {
 
 	sEnc := base64.StdEncoding.EncodeToString(buf)
 	return sEnc, nil
-}
-
-// NewPassiveConfiguration creates an initial configuration for etcd encryption
-// The list of encryption providers contains identity as first provider, which has
-// the effect, that this configuration does not yet encrypt written secrets. The
-// configuration has to be activated to actually encrypt written secrets.
-// Nevertheless, an encryption provider aescbc is already contained in the configuration
-// at the second position in the list of providers. A key is created for aescbc with
-// the key's name containing the given time.
-//
-// apiVersion: apiserver.config.k8s.io/v1
-// kind: EncryptionConfiguration
-// resources:
-// - providers:
-//   - identity: {}
-//   - aescbc:
-//       keys:
-//       - name: key1559747207815249000
-//         secret: Y8LEzbtK/2mdXrw6W/faAxNLu+mTCmcQeWojShAJGEg=
-//   resources:
-//     metadata:
-//   - secrets
-func NewPassiveConfiguration(t time.Time, r io.Reader) (*apiserverconfigv1.EncryptionConfiguration, error) {
-	key, err := NewEncryptionKey(t, r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &apiserverconfigv1.EncryptionConfiguration{
-		Resources: []apiserverconfigv1.ResourceConfiguration{
-			{
-				Resources: []string{common.EtcdEncryptionEncryptedResourceSecrets},
-				Providers: []apiserverconfigv1.ProviderConfiguration{
-					{Identity: &apiserverconfigv1.IdentityConfiguration{}},
-					{AESCBC: &apiserverconfigv1.AESConfiguration{
-						Keys: []apiserverconfigv1.Key{
-							*key,
-						},
-					}},
-				},
-			},
-		},
-	}, nil
 }
 
 // Load decodes an EncryptionConfiguration from the given data.
@@ -155,10 +125,6 @@ func Write(ec *apiserverconfigv1.EncryptionConfiguration) ([]byte, error) {
 	return runtime.Encode(codec, ec)
 }
 
-func isEncryptingProviderConfiguration(conf *apiserverconfigv1.ProviderConfiguration) bool {
-	return conf.Identity == nil
-}
-
 func findResourceConfigurationForResource(configs []apiserverconfigv1.ResourceConfiguration, resource string) (*apiserverconfigv1.ResourceConfiguration, error) {
 	for _, config := range configs {
 		for _, r := range config.Resources {
@@ -168,30 +134,6 @@ func findResourceConfigurationForResource(configs []apiserverconfigv1.ResourceCo
 		}
 	}
 	return nil, fmt.Errorf("no resource configuration found for resource %q", resource)
-}
-
-// SetResourceEncryption sets the EncryptionConfiguration to active or non-active (passive) state.
-// State active means that provider aescbc is the first in the list of providers.
-// State non-active (passive) means that provider identity is the first in the list of providers.
-func SetResourceEncryption(c *apiserverconfigv1.EncryptionConfiguration, resource string, encrypted bool) error {
-	conf, err := findResourceConfigurationForResource(c.Resources, resource)
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < len(conf.Providers); i++ {
-		if isEncryptingProviderConfiguration(&conf.Providers[i]) == encrypted {
-			if i == 0 {
-				return nil
-			}
-
-			tmp := conf.Providers[0]
-			conf.Providers[0] = conf.Providers[i]
-			conf.Providers[i] = tmp
-			return nil
-		}
-	}
-	return fmt.Errorf("no encryption provider configuration found for to set encryption of resource %q to %t", resource, encrypted)
 }
 
 var errConfigurationNotFound = fmt.Errorf("no encryption configuration at %s", common.EtcdEncryptionSecretFileName)
@@ -232,4 +174,20 @@ func UpdateSecret(secret *corev1.Secret, conf *apiserverconfigv1.EncryptionConfi
 
 	secret.Data[common.EtcdEncryptionSecretFileName] = confData
 	return nil
+}
+
+// GetSecretKeyForResources returns the AESCBC key name and AESCBC key secret which is used to encrypt the resource.
+// If the AESCBC is not found then it returns empty strings.
+func GetSecretKeyForResources(config *apiserverconfigv1.EncryptionConfiguration, resources string) (string, string, error) {
+	conf, err := findResourceConfigurationForResource(config.Resources, resources)
+	if err != nil {
+		return "", "", err
+	}
+
+	for _, providerConfig := range conf.Providers {
+		if providerConfig.AESCBC != nil {
+			return providerConfig.AESCBC.Keys[0].Name, providerConfig.AESCBC.Keys[0].Secret, nil
+		}
+	}
+	return "", "", nil
 }

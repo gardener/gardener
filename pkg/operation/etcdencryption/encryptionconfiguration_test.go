@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encryptionconfiguration_test
+package etcdencryption_test
 
 import (
 	"bytes"
@@ -43,6 +43,7 @@ var _ = Describe("Encryption Configuration", func() {
 		r                     io.Reader
 		randomBase64          string
 		t                     time.Time
+		keyName               string
 		yamlString            string
 		yamlData              []byte
 		identityConfiguration apiserverconfigv1.ProviderConfiguration
@@ -56,6 +57,7 @@ var _ = Describe("Encryption Configuration", func() {
 		randomBytes = bytes.Repeat([]byte{1}, common.EtcdEncryptionKeySecretLen)
 		r = bytes.NewReader(randomBytes)
 		randomBase64 = base64.StdEncoding.EncodeToString(randomBytes)
+		keyName = NewEncryptionKeyName(t)
 		yamlString = fmt.Sprintf(
 			`apiVersion: %s
 kind: %s
@@ -74,7 +76,7 @@ resources:
 		aescbcConfiguration = apiserverconfigv1.ProviderConfiguration{AESCBC: &apiserverconfigv1.AESConfiguration{
 			Keys: []apiserverconfigv1.Key{
 				{
-					Name:   NewEncryptionKeyName(t),
+					Name:   keyName,
 					Secret: randomBase64,
 				},
 			},
@@ -130,23 +132,40 @@ resources:
 		})
 	})
 
-	Describe("#ParseEncryptionKeyName", func() {
-		It("should parse the creation time of the encryption key", func() {
-			keyName := NewEncryptionKeyName(t)
+	Describe("#NewEncryptionConfiguration", func() {
+		var etcdEncryption *EncryptionConfig
 
-			t, err := ParseEncryptionKeyName(keyName)
+		BeforeEach(func() {
+			etcdEncryption = &EncryptionConfig{
+				EncryptionKeys: []EncryptionKey{
+					{
+						Name: keyName,
+						Key:  randomBase64,
+					},
+				},
+			}
+		})
+		It("should create a new active encryption configuration with AESCBC and identity providers", func() {
+			actual := NewEncryptionConfiguration(etcdEncryption)
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(t).To(Equal(t))
+			Expect(actual).To(Equal(activeConf))
+		})
+
+		It("should create a new passive configuration with identity and AESCBC providers", func() {
+			etcdEncryption.ForcePlainTextResources = true
+			actual := NewEncryptionConfiguration(etcdEncryption)
+
+			Expect(actual).To(Equal(passiveConf))
 		})
 	})
 
-	Describe("#NewPassiveConfiguration", func() {
-		It("should create a new encryption configuration with identity and AESCBC", func() {
-			actual, err := NewPassiveConfiguration(t, r)
+	Describe("#GetSecretKeyForResources", func() {
+		It("should get the secret key and name for the provided list of resources", func() {
+			name, key, err := GetSecretKeyForResources(activeConf, common.EtcdEncryptionEncryptedResourceSecrets)
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actual).To(Equal(passiveConf))
+			Expect(err).To(BeNil())
+			Expect(name).To(Equal(keyName))
+			Expect(key).To(Equal(randomBase64))
 		})
 	})
 
@@ -166,38 +185,6 @@ resources:
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(yamlData))
-		})
-	})
-
-	Describe("#SetResourceEncryption", func() {
-		It("should enable the resource encryption for secrets", func() {
-			conf := passiveConf.DeepCopy()
-			Expect(SetResourceEncryption(conf, common.EtcdEncryptionEncryptedResourceSecrets, true)).
-				To(Succeed())
-			Expect(conf).To(Equal(activeConf))
-		})
-
-		It("should disable the resource encryption for secrets", func() {
-			conf := activeConf.DeepCopy()
-			Expect(SetResourceEncryption(conf, common.EtcdEncryptionEncryptedResourceSecrets, false)).
-				To(Succeed())
-			Expect(conf).To(Equal(passiveConf))
-		})
-
-		It("should error if there is no configuration for a resource", func() {
-			Expect(SetResourceEncryption(passiveConf, "configmaps", true)).To(HaveOccurred())
-		})
-
-		It("should error if there is no encrypting provider and encrypted is true", func() {
-			conf := passiveConf.DeepCopy()
-			conf.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{identityConfiguration}
-			Expect(SetResourceEncryption(conf, common.EtcdEncryptionEncryptedResourceSecrets, true)).To(HaveOccurred())
-		})
-
-		It("should error if there is no identity provider and encrypted is false", func() {
-			conf := passiveConf.DeepCopy()
-			conf.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{aescbcConfiguration}
-			Expect(SetResourceEncryption(conf, common.EtcdEncryptionEncryptedResourceSecrets, false)).To(HaveOccurred())
 		})
 	})
 
