@@ -29,18 +29,20 @@ spec:
       {{- if gt (int .Values.fluentd.replicaCount ) 1 }}
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - fluentd-es
-              - key: role
-                operator: In
-                values:
-                - logging
-            topologyKey: "kubernetes.io/hostname"
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                    - fluentd-es
+                  - key: role
+                    operator: In
+                    values:
+                    - logging
+              topologyKey: "kubernetes.io/hostname"
       {{- end }}
       containers:
       - name: fluentd-es
