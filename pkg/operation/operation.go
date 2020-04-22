@@ -433,7 +433,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 
 // CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastError is also removed.
-func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
+func (o *Operation) CleanShootTaskError(_ context.Context, taskID string) {
 	var remainingErrors []gardencorev1beta1.LastError
 	for _, lastErr := range o.Shoot.Info.Status.LastErrors {
 		if lastErr.TaskID == nil || taskID != *lastErr.TaskID {
@@ -478,48 +478,6 @@ func (o *Operation) InjectShootShootImages(values map[string]interface{}, names 
 	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
-// SyncClusterResourceToSeed creates or updates the `Cluster` extension resource for the shoot in the seed cluster.
-// It contains the shoot, seed, and cloudprofile specification.
-func (o *Operation) SyncClusterResourceToSeed(ctx context.Context) error {
-	if err := o.InitializeSeedClients(); err != nil {
-		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
-		return err
-	}
-
-	var (
-		cluster = &extensionsv1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: o.Shoot.SeedNamespace,
-			},
-		}
-
-		cloudProfileObj = o.Shoot.CloudProfile.DeepCopy()
-		seedObj         = o.Seed.Info.DeepCopy()
-		shootObj        = o.Shoot.Info.DeepCopy()
-	)
-
-	cloudProfileObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "CloudProfile",
-	}
-	seedObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "Seed",
-	}
-	shootObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "Shoot",
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sSeedClient.Client(), cluster, func() error {
-		cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
-		cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
-		cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
-		return nil
-	})
-	return err
-}
-
 // EnsureShootStateExists creates the ShootState resource for the corresponding shoot and sets its ownerReferences to the Shoot.
 func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{
@@ -544,20 +502,6 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
 	return err
-}
-
-// DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
-func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
-	if err := o.InitializeSeedClients(); err != nil {
-		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
-		return err
-	}
-
-	if err := o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	return nil
 }
 
 // ComputeGrafanaHosts computes the host for both grafanas.
