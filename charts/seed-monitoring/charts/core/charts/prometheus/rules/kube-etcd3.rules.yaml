@@ -25,17 +25,6 @@ groups:
     annotations:
       description: Etcd3 cluster events is unavailable or cannot be scraped. Cluster events cannot be collected.
       summary: Etcd3 events cluster down.
-  - alert: KubeEtcdBackupMetricsDown
-    expr: (absent(etcdbr_snapshot_required{job="kube-etcd3-backup-restore",kind="Incr",role="main"}) == bool 1) + (changes(etcd_debugging_mvcc_current_revision{job="kube-etcd3",role="main"}) >= bool 1) == 2
-    for: 15m
-    labels:
-      service: etcd
-      severity: warning
-      type: seed
-      visibility: operator
-    annotations:
-      description: Backup sidecar for Etcd3 cluster main is unavailable or cannot be scraped.
-      summary: Etcd3 main backup sidecar cannot be scrapped.
   # etcd leader alerts
   - alert: KubeEtcd3MainNoLeader
     expr: sum(etcd_server_has_leader{job="kube-etcd3",role="main"}) < count(etcd_server_has_leader{job="kube-etcd3",role="main"})
@@ -138,3 +127,4 @@ groups:
     annotations:
       description: Etcd data restoration was triggered, but has failed.
       summary: Etcd data restoration failure.
+
