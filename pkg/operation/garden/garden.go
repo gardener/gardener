@@ -39,28 +39,75 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// New creates a new Garden object (based on a Shoot object).
-func New(projectLister gardencorelisters.ProjectLister, namespace string, secrets map[string]*corev1.Secret) (*Garden, error) {
-	project, err := common.ProjectForNamespace(projectLister, namespace)
+// NewBuilder returns a new Builder.
+func NewBuilder() *Builder {
+	return &Builder{
+		projectFunc:        func() (*gardencorev1beta1.Project, error) { return nil, fmt.Errorf("project is required but not set") },
+		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
+	}
+}
+
+// WithProject sets the projectFunc attribute at the Builder.
+func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
+	b.projectFunc = func() (*gardencorev1beta1.Project, error) { return project, nil }
+	return b
+}
+
+// WithProjectFromLister sets the projectFunc attribute after fetching it from the lister.
+func (b *Builder) WithProjectFromLister(projectLister gardencorelisters.ProjectLister, namespace string) *Builder {
+	b.projectFunc = func() (*gardencorev1beta1.Project, error) {
+		return common.ProjectForNamespace(projectLister, namespace)
+	}
+	return b
+}
+
+// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
+func (b *Builder) WithInternalDomain(internalDomain *Domain) *Builder {
+	b.internalDomainFunc = func() (*Domain, error) { return internalDomain, nil }
+	return b
+}
+
+// WithInternalDomainFromSecrets sets the internalDomainFunc attribute at the Builder based on the given secrets map.
+func (b *Builder) WithInternalDomainFromSecrets(secrets map[string]*corev1.Secret) *Builder {
+	b.internalDomainFunc = func() (*Domain, error) { return GetInternalDomain(secrets) }
+	return b
+}
+
+// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder.
+func (b *Builder) WithDefaultDomains(defaultDomains []*Domain) *Builder {
+	b.defaultDomainsFunc = func() ([]*Domain, error) { return defaultDomains, nil }
+	return b
+}
+
+// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
+func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secret) *Builder {
+	b.defaultDomainsFunc = func() ([]*Domain, error) { return GetDefaultDomains(secrets) }
+	return b
+}
+
+// Build initializes a new Garden object.
+func (b *Builder) Build() (*Garden, error) {
+	garden := &Garden{}
+
+	project, err := b.projectFunc()
 	if err != nil {
 		return nil, err
 	}
+	garden.Project = project
 
-	internalDomain, err := GetInternalDomain(secrets)
+	internalDomain, err := b.internalDomainFunc()
 	if err != nil {
 		return nil, err
 	}
+	garden.InternalDomain = internalDomain
 
-	defaultDomains, err := GetDefaultDomains(secrets)
+	defaultDomains, err := b.defaultDomainsFunc()
 	if err != nil {
 		return nil, err
 	}
+	garden.DefaultDomains = defaultDomains
 
-	return &Garden{
-		Project:        project,
-		InternalDomain: internalDomain,
-		DefaultDomains: defaultDomains,
-	}, nil
+	return garden, nil
 }
 
 // GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
@@ -199,7 +246,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 	}
 
 	for _, secret := range secretsGardenRole {
-
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleAlerting {

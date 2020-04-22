@@ -201,7 +201,17 @@ func (c *Controller) deleteShoot(shoot *gardencorev1beta1.Shoot, logger *logrus.
 		return reconcile.Result{}, c.updateShootStatusDeleteSuccess(shoot)
 	}
 
-	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
+	o, err := operation.
+		NewBuilder().
+		WithLogger(logger).
+		WithConfig(c.config).
+		WithGardenerInfo(c.identity).
+		WithSecrets(c.secrets).
+		WithImageVector(c.imageVector).
+		WithGardenFrom(c.k8sGardenCoreInformers.Core().V1beta1(), shoot.Namespace).
+		WithSeedFrom(c.k8sGardenCoreInformers.Core().V1beta1(), *shoot.Spec.SeedName).
+		WithShootFrom(c.k8sGardenCoreInformers.Core().V1beta1(), shoot).
+		Build(context.TODO(), c.k8sGardenClient)
 	if err != nil {
 		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", err.Error())))
 	}
@@ -303,7 +313,17 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 	// make sure that the latest version of the shoot object is used as the basis for next operations
 	shoot = updatedShoot
 
-	o, err := operation.New(shoot, c.config, logger, c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), c.identity, c.secrets, c.imageVector)
+	o, err := operation.
+		NewBuilder().
+		WithLogger(logger).
+		WithConfig(c.config).
+		WithGardenerInfo(c.identity).
+		WithSecrets(c.secrets).
+		WithImageVector(c.imageVector).
+		WithGardenFrom(c.k8sGardenCoreInformers.Core().V1beta1(), shoot.Namespace).
+		WithSeedFrom(c.k8sGardenCoreInformers.Core().V1beta1(), *shoot.Spec.SeedName).
+		WithShootFrom(c.k8sGardenCoreInformers.Core().V1beta1(), shoot).
+		Build(context.TODO(), c.k8sGardenClient)
 	if err != nil {
 		if failedOrIgnored {
 			// do not set error from operation initialization in Shoot status if Shoot would not be reconciled anyways

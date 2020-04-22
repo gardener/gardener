@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -50,100 +49,200 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// New creates a new operation object with a Shoot resource object.
-func New(shoot *gardencorev1beta1.Shoot, config *config.GardenletConfiguration, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, gardenerInfo *gardencorev1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
-	return newOperation(config, logger, k8sGardenClient, k8sGardenCoreInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.SeedName, shoot)
+// NewBuilder returns a new Builder.
+func NewBuilder() *Builder {
+	return &Builder{
+		configFunc: func() (*config.GardenletConfiguration, error) {
+			return nil, fmt.Errorf("config is required but not set")
+		},
+		gardenFunc: func(map[string]*corev1.Secret) (*garden.Garden, error) {
+			return nil, fmt.Errorf("garden object is required but not set")
+		},
+		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
+			return nil, fmt.Errorf("gardener info is required but not set")
+		},
+		imageVectorFunc: func() (imagevector.ImageVector, error) {
+			return nil, fmt.Errorf("image vector is required but not set")
+		},
+		loggerFunc: func() (*logrus.Entry, error) {
+			return nil, fmt.Errorf("logger is required but not set")
+		},
+		secretsFunc: func() (map[string]*corev1.Secret, error) {
+			return nil, fmt.Errorf("secrets map is required but not set")
+		},
+		seedFunc: func(context.Context, client.Client) (*seed.Seed, error) {
+			return nil, fmt.Errorf("seed object is required but not set")
+		},
+		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error) {
+			return nil, fmt.Errorf("shoot object is required but not set")
+		},
+	}
 }
 
-func newOperation(
-	config *config.GardenletConfiguration,
-	logger *logrus.Entry,
-	k8sGardenClient kubernetes.Interface,
-	k8sGardenCoreInformers gardencoreinformers.Interface,
-	gardenerInfo *gardencorev1beta1.Gardener,
-	secretsMap map[string]*corev1.Secret,
-	imageVector imagevector.ImageVector,
-	namespace string,
-	seedName *string,
-	shoot *gardencorev1beta1.Shoot,
-) (*Operation, error) {
+// WithConfig sets the configFunc attribute at the Builder.
+func (b *Builder) WithConfig(cfg *config.GardenletConfiguration) *Builder {
+	b.configFunc = func() (*config.GardenletConfiguration, error) { return cfg, nil }
+	return b
+}
 
+// WithGarden sets the gardenFunc attribute at the Builder.
+func (b *Builder) WithGarden(g *garden.Garden) *Builder {
+	b.gardenFunc = func(_ map[string]*corev1.Secret) (*garden.Garden, error) { return g, nil }
+	return b
+}
+
+// WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
+func (b *Builder) WithGardenFrom(k8sGardenCoreInformers gardencoreinformers.Interface, namespace string) *Builder {
+	b.gardenFunc = func(secrets map[string]*corev1.Secret) (*garden.Garden, error) {
+		return garden.
+			NewBuilder().
+			WithProjectFromLister(k8sGardenCoreInformers.Projects().Lister(), namespace).
+			WithInternalDomainFromSecrets(secrets).
+			WithDefaultDomainsFromSecrets(secrets).
+			Build()
+	}
+	return b
+}
+
+// WithGardenerInfo sets the gardenerInfoFunc attribute at the Builder.
+func (b *Builder) WithGardenerInfo(gardenerInfo *gardencorev1beta1.Gardener) *Builder {
+	b.gardenerInfoFunc = func() (*gardencorev1beta1.Gardener, error) { return gardenerInfo, nil }
+	return b
+}
+
+// WithImageVector sets the imageVectorFunc attribute at the Builder.
+func (b *Builder) WithImageVector(imageVector imagevector.ImageVector) *Builder {
+	b.imageVectorFunc = func() (imagevector.ImageVector, error) { return imageVector, nil }
+	return b
+}
+
+// WithLogger sets the loggerFunc attribute at the Builder.
+func (b *Builder) WithLogger(logger *logrus.Entry) *Builder {
+	b.loggerFunc = func() (*logrus.Entry, error) { return logger, nil }
+	return b
+}
+
+// WithSecrets sets the secretsFunc attribute at the Builder.
+func (b *Builder) WithSecrets(secrets map[string]*corev1.Secret) *Builder {
+	b.secretsFunc = func() (map[string]*corev1.Secret, error) { return secrets, nil }
+	return b
+}
+
+// WithSeed sets the seedFunc attribute at the Builder.
+func (b *Builder) WithSeed(s *seed.Seed) *Builder {
+	b.seedFunc = func(_ context.Context, _ client.Client) (*seed.Seed, error) { return s, nil }
+	return b
+}
+
+// WithSeedFrom sets the seedFunc attribute at the Builder which will build a new Seed object.
+func (b *Builder) WithSeedFrom(k8sGardenCoreInformers gardencoreinformers.Interface, seedName string) *Builder {
+	b.seedFunc = func(ctx context.Context, c client.Client) (*seed.Seed, error) {
+		return seed.
+			NewBuilder().
+			WithSeedObjectFromLister(k8sGardenCoreInformers.Seeds().Lister(), seedName).
+			WithSeedSecretFromClient(context.TODO(), c).
+			Build()
+	}
+	return b
+}
+
+// WithShoot sets the shootFunc attribute at the Builder.
+func (b *Builder) WithShoot(s *shoot.Shoot) *Builder {
+	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shoot.Shoot, error) {
+		return s, nil
+	}
+	return b
+}
+
+// WithShoot sets the shootFunc attribute at the Builder which will build a new Shoot object.
+func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, s *gardencorev1beta1.Shoot) *Builder {
+	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
+		return shootpkg.
+			NewBuilder().
+			WithShootObject(s).
+			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
+			WithProjectName(gardenObj.Project.Name).
+			WithDisableDNS(gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)).
+			WithInternalDomain(gardenObj.InternalDomain).
+			WithDefaultDomains(gardenObj.DefaultDomains).
+			Build(ctx, c)
+	}
+	return b
+}
+
+// Build initializes a new Operation object.
+func (b *Builder) Build(ctx context.Context, k8sGardenClient kubernetes.Interface) (*Operation, error) {
+	operation := &Operation{
+		K8sGardenClient: k8sGardenClient,
+		CheckSums:       make(map[string]string),
+	}
+
+	config, err := b.configFunc()
+	if err != nil {
+		return nil, err
+	}
+	operation.Config = config
+
+	secretsMap, err := b.secretsFunc()
+	if err != nil {
+		return nil, err
+	}
 	secrets := make(map[string]*corev1.Secret)
 	for k, v := range secretsMap {
 		secrets[k] = v
 	}
+	operation.Secrets = secrets
 
-	gardenObj, err := garden.New(k8sGardenCoreInformers.Projects().Lister(), namespace, secrets)
+	garden, err := b.gardenFunc(secrets)
 	if err != nil {
 		return nil, err
 	}
+	operation.Garden = garden
 
-	var (
-		seedObj    *seed.Seed
-		disableDNS bool
-	)
-	if seedName != nil {
-		seedObj, err = seed.NewFromName(k8sGardenClient, k8sGardenCoreInformers, *seedName)
-		if err != nil {
-			return nil, err
-		}
-		disableDNS = gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)
-	}
-
-	renderer, err := chartrenderer.NewForConfig(k8sGardenClient.RESTConfig())
+	gardenerInfo, err := b.gardenerInfoFunc()
 	if err != nil {
 		return nil, err
 	}
-	applier, err := kubernetes.NewApplierForConfig(k8sGardenClient.RESTConfig())
+	operation.GardenerInfo = gardenerInfo
+
+	imageVector, err := b.imageVectorFunc()
 	if err != nil {
 		return nil, err
 	}
+	operation.ImageVector = imageVector
 
-	operation := &Operation{
-		Config:                 config,
-		Logger:                 logger,
-		GardenerInfo:           gardenerInfo,
-		Secrets:                secrets,
-		ImageVector:            imageVector,
-		CheckSums:              make(map[string]string),
-		Garden:                 gardenObj,
-		Seed:                   seedObj,
-		K8sGardenClient:        k8sGardenClient,
-		K8sGardenCoreInformers: k8sGardenCoreInformers,
-		ChartApplierGarden:     kubernetes.NewChartApplier(renderer, applier),
+	logger, err := b.loggerFunc()
+	if err != nil {
+		return nil, err
 	}
+	operation.Logger = logger
 
-	if shoot != nil {
-		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenCoreInformers, shoot, gardenObj.Project.Name, disableDNS, gardenObj.InternalDomain, gardenObj.DefaultDomains)
-		if err != nil {
-			return nil, err
-		}
-		operation.Shoot = shootObj
-		operation.Shoot.IgnoreAlerts = gardencorev1beta1helper.ShootIgnoresAlerts(shoot)
-		operation.Shoot.WantsAlertmanager = shootWantsAlertmanager(shoot, secrets) && !operation.Shoot.IgnoreAlerts
+	seed, err := b.seedFunc(ctx, k8sGardenClient.Client())
+	if err != nil {
+		return nil, err
+	}
+	operation.Seed = seed
 
-		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
-		if err != nil {
-			logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Namespace, shoot.Name, err)
-		} else {
-			operation.ShootedSeed = shootedSeed
-		}
+	shoot, err := b.shootFunc(ctx, k8sGardenClient.Client(), garden, seed)
+	if err != nil {
+		return nil, err
+	}
+	operation.Shoot = shoot
+
+	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+	if err != nil {
+		logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+	} else {
+		operation.ShootedSeed = shootedSeed
 	}
 
 	return operation, nil
-}
-
-func shootWantsAlertmanager(shoot *gardencorev1beta1.Shoot, secrets map[string]*corev1.Secret) bool {
-	if shoot.Spec.Monitoring != nil && shoot.Spec.Monitoring.Alerting != nil && len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0 {
-		return true
-	}
-	return false
 }
 
 // InitializeSeedClients will use the Garden Kubernetes client to read the Seed Secret in the Garden

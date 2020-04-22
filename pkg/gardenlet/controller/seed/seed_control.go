@@ -297,7 +297,11 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	// Initialize conditions based on the current status.
 	conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 
-	seedObj, err := seedpkg.New(c.k8sGardenClient, c.k8sGardenCoreInformers.Core().V1beta1(), seed)
+	seedObj, err := seedpkg.
+		NewBuilder().
+		WithSeedObject(seed).
+		WithSeedSecretFromClient(ctx, c.k8sGardenClient.Client()).
+		Build()
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
