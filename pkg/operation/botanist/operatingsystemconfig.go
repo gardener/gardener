@@ -29,19 +29,15 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
@@ -366,32 +362,39 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 		return nil, err
 	}
 
-	var oscStatus extensionsv1alpha1.OperatingSystemConfigStatus
-	if err := retry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		osc := &extensionsv1alpha1.OperatingSystemConfig{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, osc); err != nil {
-			return retry.SevereError(err)
-		}
+	var osc *extensionsv1alpha1.OperatingSystemConfig
 
-		if err := health.CheckExtensionObject(osc); err != nil {
-			b.Logger.WithError(err).Error("Operating system config did not become ready yet")
-			return retry.MinorError(err)
-		}
-		oscStatus = osc.Status
-		return retry.Ok()
-	}); err != nil {
+	if err := common.WaitUntilExtensionCRReady(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
+		"OperatingSystemConfig",
+		b.Shoot.SeedNamespace,
+		name,
+		DefaultInterval,
+		30*time.Second,
+		func(obj runtime.Object) error {
+			o, ok := obj.(*extensionsv1alpha1.OperatingSystemConfig)
+			if !ok {
+				return fmt.Errorf("expected extensionsv1alpha1.OperatingSystemConfig but got %T", obj)
+			}
+			osc = o
+			return nil
+		},
+	); err != nil {
 		return nil, err
 	}
 
 	secret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: oscStatus.CloudConfig.SecretRef.Name, Namespace: oscStatus.CloudConfig.SecretRef.Namespace}, secret); err != nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(osc.Status.CloudConfig.SecretRef.Namespace, osc.Status.CloudConfig.SecretRef.Name), secret); err != nil {
 		return nil, err
 	}
 
 	return &shoot.OperatingSystemConfigData{
 		Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
-		Command: oscStatus.Command,
-		Units:   oscStatus.Units,
+		Command: osc.Status.Command,
+		Units:   osc.Status.Units,
 	}, nil
 }
 
@@ -473,30 +476,14 @@ func (b *Botanist) DeleteAllOperatingSystemConfigs(ctx context.Context) error {
 }
 
 func (b *Botanist) deleteOperatingSystemConfigs(ctx context.Context, wantedOSCNames sets.String) error {
-	c := b.K8sSeedClient.Client()
-
-	oscList := &extensionsv1alpha1.OperatingSystemConfigList{}
-	if err := c.List(ctx, oscList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-		return err
-	}
-
-	fns := make([]flow.TaskFn, 0, meta.LenList(oscList))
-	for _, osc := range oscList.Items {
-		if !wantedOSCNames.Has(osc.Name) {
-			toDelete := &extensionsv1alpha1.OperatingSystemConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      osc.Name,
-					Namespace: osc.Namespace,
-				},
-			}
-			fns = append(fns, func(ctx context.Context) error {
-				if err := common.ConfirmDeletion(ctx, c, toDelete); err != nil {
-					return err
-				}
-				return client.IgnoreNotFound(c.Delete(ctx, toDelete, kubernetes.DefaultDeleteOptions...))
-			})
-		}
-	}
-
-	return flow.Parallel(fns...)(ctx)
+	return common.DeleteExtensionCRs(
+		ctx,
+		b.K8sSeedClient.Client(),
+		&extensionsv1alpha1.OperatingSystemConfigList{},
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
+		b.Shoot.SeedNamespace,
+		func(obj extensionsv1alpha1.Object) bool {
+			return !wantedOSCNames.Has(obj.GetName())
+		},
+	)
 }
