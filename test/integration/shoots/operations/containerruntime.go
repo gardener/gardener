@@ -17,6 +17,8 @@ package operations
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -25,13 +27,18 @@ import (
 
 	"github.com/onsi/ginkgo"
 	g "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = ginkgo.Describe("Shoot container runtime testing", func() {
+	var containerdTimeout = 15 * time.Minute
+	var gVisorTimeout = 30 * time.Minute
 
 	f := framework.NewShootFramework(nil)
 
-	f.Beta().Serial().CIt("should add worker pool with containerd", func(ctx context.Context) {
+	f.Beta().CIt("should add worker pool with containerd", func(ctx context.Context) {
 		shoot := f.Shoot
 
 		if len(shoot.Spec.Provider.Workers) == 0 {
@@ -55,7 +62,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 
 		defer func(ctx context.Context, workerPoolName string) {
 			ginkgo.By("removing containerd worker pool after test execution")
-			removeWorkerPoolWithName(ctx, f, workerPoolName)
+			removeWorkerPool(ctx, f, workerPoolName)
 		}(ctx, containerdWorker.Name)
 
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
@@ -85,84 +92,103 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		// check that config.toml exists
 		checkConfigCommand := "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"
 		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
-	}, scaleWorkerTimeout)
+	}, containerdTimeout)
+
+	f.Beta().CIt("should add, remove and upgrade worker pool with gVisor", func(ctx context.Context) {
+		ginkgo.By("test adding new worker pool with containerd and gVisor")
+		shoot := f.Shoot
+
+		if len(shoot.Spec.Provider.Workers) == 0 {
+			ginkgo.Skip("at least one worker pool is required in the test shoot.")
+		}
+
+		testWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
+
+		if testWorker.Machine.Image.Name != "ubuntu" {
+			ginkgo.Skip("worker with machine image 'ubuntu' is required")
+		}
+
+		testWorker = configureWorkerForTesting(testWorker, true)
+
+		shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *testWorker)
+
+		ginkgo.By("adding gVisor worker pool")
+
+		defer func(ctx context.Context, workerPoolName string) {
+			ginkgo.By("removing gVisor worker pool after test execution")
+			removeWorkerPool(ctx, f, workerPoolName)
+		}(ctx, testWorker.Name)
+
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+			s.Spec.Provider.Workers = shoot.Spec.Provider.Workers
+			return nil
+		})
+		framework.ExpectNoError(err)
+
+		// get the nodes of the worker pool and check if the node
+		// labels of the worker pool contain the expected gVisor label
+		nodeList := getGVisorNodes(ctx, f, testWorker)
+
+		// deploy root pod
+		rootPodExecutor := framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodeList.Items[0].Name, "kube-system")
+
+		// gVisor requires containerd, so check that first
+		containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
+		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
+
+		// check that the binaries are available
+		checkRunscShimBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "containerd-shim-runsc-v1")
+		executeCommand(ctx, rootPodExecutor, checkRunscShimBinary, "found")
+
+		checkRunscBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "runsc")
+		executeCommand(ctx, rootPodExecutor, checkRunscBinary, "found")
+
+		// check that containerd config.toml is configured for gVisor
+		checkConfigurationCommand := "cat /etc/containerd/config.toml | grep -c 'containerd.runtimes.runsc'"
+		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "1")
+
+		// deploy pod using gVisor RuntimeClass
+		gVisorPod, err := deployGVisorPod(ctx, f.ShootClient.Client())
+		g.Expect(err).ToNot(g.HaveOccurred())
+
+		defer func(ctx context.Context, pod *corev1.Pod) {
+			ginkgo.By("removing gVisor pod after test execution")
+			err := f.ShootClient.Client().Delete(ctx, pod)
+			g.Expect(err).ToNot(g.HaveOccurred())
+		}(ctx, gVisorPod)
+
+		// wait for it to run - implicitly checks that the pod has been scheduled to a node with gVisor enabled (would not start otherwise)
+		err = framework.WaitUntilPodIsRunning(ctx, f.Logger, gVisorPod.Name, gVisorPod.Namespace, f.ShootClient)
+		g.Expect(err).ToNot(g.HaveOccurred())
+
+		// check kernel startup logs
+		reader, err := framework.NewPodExecutor(f.ShootClient).Execute(ctx, gVisorPod.Namespace, gVisorPod.Name, gVisorPod.Spec.Containers[0].Name, "dmesg | grep -i -c gVisor")
+		g.Expect(err).ToNot(g.HaveOccurred())
+
+		response, err := ioutil.ReadAll(reader)
+		g.Expect(err).ToNot(g.HaveOccurred())
+		g.Expect(response).ToNot(g.BeNil())
+		g.Expect(string(response)).To(g.Equal(fmt.Sprintf("%s\n", "1")))
+
+		ginkgo.By("test removal of gVisor from worker pool")
+		// remove gVisor from the worker pool and wait for the Shoot to be successfully reconciled.
+		// That implies that gVisor has been removed successfully.
+		removeGVisorFromWorker(ctx, f, testWorker.Name)
+
+		ginkgo.By("test upgrading containerd pool to use gVisor")
+		addGVisorToWorker(ctx, f, testWorker.Name)
+	}, gVisorTimeout)
 })
 
-f.Beta().Serial().CIt("should add, remove and upgrade worker pool with gVisor", func(ctx context.Context) {
-	shoot := f.Shoot
-
-	if len(shoot.Spec.Provider.Workers) == 0 {
-		ginkgo.Skip("at least one worker pool is required in the test shoot.")
-	}
-
-	testWorker := shoot.Spec.Provider.Workers[0].DeepCopy()
-
-	testWorker = configureWorkerForTesting(testWorker, true)
-
-	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *testWorker)
-
-	ginkgo.By("adding gVisor worker pool")
-
-	defer func(ctx context.Context, workerPoolName string) {
-		ginkgo.By("removing gVisor worker pool after test execution")
-		removeWorkerPoolWithName(ctx, f, workerPoolName)
-	}(ctx, testWorker.Name)
-
-	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
-		s.Spec.Provider.Workers = shoot.Spec.Provider.Workers
-		return nil
-	})
-	framework.ExpectNoError(err)
-
-	// get the nodes of the worker pool and check if the node
-	// labels of the worker pool contain the expected gVisor label
-	nodeList := getGVisorNodes(ctx, f, testWorker)
-
-	// deploy root pod
-	rootPod := deployRootPod(ctx, f, nodeList)
-
-	// gVisor requires containerd, so check that first
-	containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
-	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, containerdServiceCommand, "active")
-
-	// check that the binaries are available
-	checkRunscShimBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "containerd-shim-runsc-v1")
-	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkRunscShimBinary, "found")
-
-	checkRunscBinary := fmt.Sprintf("[ -f %s/%s ] && echo 'found' || echo 'Not found'", string(extensionsv1alpha1.ContainerDRuntimeContainersBinFolder), "runsc")
-	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkRunscBinary, "found")
-
-	// check that containerd config.toml is configured for gVisor
-	checkConfigurationCommand := "cat /etc/containerd/config.toml | grep 'containerd.runtimes.runsc' ;  echo $?"
-	executeCommand(ctx, f.ShootClient, rootPod.Namespace, rootPod.Name, rootPod.Spec.Containers[0].Name, checkConfigurationCommand, "0")
-
-	// deploy pod using gVisor RuntimeClass
-
-
-	// wait for it to run
-
-
-
-	ginkgo.By("removing gVisor from worker pool")
-
-
-	// check that gVisor pod cannot be scheduled any more
-
-
-	ginkgo.By("upgrading pool to use gVisor")
-
-
-}, scaleWorkerTimeout)
-
-func getGVisorNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *v1.NodeList{
+func getGVisorNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *corev1.NodeList {
 	return getNodeListWithLabel(ctx, f, worker, fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, gardencorev1beta1.ContainerRuntimeGVisor), "true")
 }
 
-func getContainerdNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *v1.NodeList{
+func getContainerdNodes(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker) *corev1.NodeList {
 	return getNodeListWithLabel(ctx, f, worker, extensionsv1alpha1.CRINameWorkerLabel, extensionsv1alpha1.CRINameContainerD)
 }
 
-func getNodeListWithLabel(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker, nodeLabelKey, nodeLabelValue string) *v1.NodeList{
+func getNodeListWithLabel(ctx context.Context, f *framework.ShootFramework, worker *gardencorev1beta1.Worker, nodeLabelKey, nodeLabelValue string) *corev1.NodeList {
 	nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &worker.Name)
 	framework.ExpectNoError(err)
 	g.Expect(len(nodeList.Items)).To(g.Equal(int(worker.Minimum)))
@@ -175,7 +201,7 @@ func getNodeListWithLabel(ctx context.Context, f *framework.ShootFramework, work
 	return nodeList
 }
 
-func removeWorkerPoolWithName(ctx context.Context, f *framework.ShootFramework, workerPoolName string) {
+func removeWorkerPool(ctx context.Context, f *framework.ShootFramework, workerPoolName string) {
 	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
 		var workers []gardencorev1beta1.Worker
 		for _, worker := range s.Spec.Provider.Workers {
@@ -190,6 +216,48 @@ func removeWorkerPoolWithName(ctx context.Context, f *framework.ShootFramework, 
 	framework.ExpectNoError(err)
 }
 
+func removeGVisorFromWorker(ctx context.Context, f *framework.ShootFramework, workerPoolName string) {
+	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+		var workers []gardencorev1beta1.Worker
+		for _, worker := range s.Spec.Provider.Workers {
+			if worker.Name == workerPoolName {
+				worker.CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{}
+			}
+			workers = append(workers, worker)
+		}
+		s.Spec.Provider.Workers = workers
+		return nil
+	})
+	framework.ExpectNoError(err)
+}
+
+func addGVisorToWorker(ctx context.Context, f *framework.ShootFramework, workerPoolName string) {
+	err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+		var workers []gardencorev1beta1.Worker
+		for _, worker := range s.Spec.Provider.Workers {
+			if worker.Name == workerPoolName {
+				worker.CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{
+					{
+						Type: string(gardencorev1beta1.ContainerRuntimeGVisor),
+					},
+				}
+			}
+			workers = append(workers, worker)
+		}
+		s.Spec.Provider.Workers = workers
+		return nil
+	})
+	framework.ExpectNoError(err)
+}
+
+func addGVisor(worker *gardencorev1beta1.Worker) {
+	worker.CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{
+		{
+			Type: string(gardencorev1beta1.ContainerRuntimeGVisor),
+		},
+	}
+}
+
 // configureWorkerForTesting configures the worker pool with test specific configuration such as a unique name and the CRI settings
 func configureWorkerForTesting(worker *gardencorev1beta1.Worker, useGVisor bool) *gardencorev1beta1.Worker {
 	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -200,15 +268,11 @@ func configureWorkerForTesting(worker *gardencorev1beta1.Worker, useGVisor bool)
 	worker.Maximum = 1
 	worker.Minimum = 1
 	worker.CRI = &gardencorev1beta1.CRI{
-		Name:              extensionsv1alpha1.CRINameContainerD,
+		Name: extensionsv1alpha1.CRINameContainerD,
 	}
 
 	if useGVisor {
-		worker.CRI.ContainerRuntimes = []gardencorev1beta1.ContainerRuntime{
-			{
-				Type: string(gardencorev1beta1.ContainerRuntimeGVisor),
-			},
-		}
+		addGVisor(worker)
 	}
 	return worker
 }
@@ -219,4 +283,43 @@ func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecut
 	framework.ExpectNoError(err)
 	g.Expect(response).ToNot(g.BeNil())
 	g.Expect(string(response)).To(g.Equal(fmt.Sprintf("%s\n", expected)))
+}
+
+// deployGVisorPod deploys a pod using the gVisor RuntimeClass.
+func deployGVisorPod(ctx context.Context, c client.Client) (*corev1.Pod, error) {
+	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
+	id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
+	if err != nil {
+		return nil, err
+	}
+
+	gVisorRuntimeClass := string(gardencorev1beta1.ContainerRuntimeGVisor)
+	pod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("gvisor-%s", id),
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{
+			RuntimeClassName: &gVisorRuntimeClass,
+			Containers: []corev1.Container{
+				{
+					Name:  "gvisor-container",
+					Image: "busybox",
+					Command: []string{
+						"sleep",
+						"10000000",
+					},
+					Resources:                corev1.ResourceRequirements{},
+					TerminationMessagePath:   "/dev/termination-log",
+					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+					ImagePullPolicy:          corev1.PullIfNotPresent,
+					Stdin:                    true,
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, &pod); err != nil {
+		return nil, err
+	}
+	return &pod, nil
 }
