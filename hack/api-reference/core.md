@@ -2582,6 +2582,20 @@ string
 <p>A human readable message indicating details about the transition.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>codes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ErrorCode">
+[]ErrorCode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Well-defined error codes in case the condition reports a problem.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ConditionStatus">ConditionStatus
@@ -3128,6 +3142,7 @@ string
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Condition">Condition</a>, 
 <a href="#core.gardener.cloud/v1beta1.LastError">LastError</a>)
 </p>
 <p>

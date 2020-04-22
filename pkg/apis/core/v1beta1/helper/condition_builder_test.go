@@ -17,20 +17,20 @@ package helper_test
 import (
 	"time"
 
-	api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Builder", func() {
-
 	const (
-		conditionType = api.ConditionType("Test")
+		conditionType = gardencorev1beta1.ConditionType("Test")
 		// re-decalared so the underlying constant is not changed
-		unknowStatus       = api.ConditionStatus("Unknown")
-		fooStatus          = api.ConditionStatus("Foo")
+		unknowStatus       = gardencorev1beta1.ConditionStatus("Unknown")
+		fooStatus          = gardencorev1beta1.ConditionStatus("Foo")
 		bazReason          = "Baz"
 		fubarMessage       = "FuBar"
 		unitializedMessage = `The condition has been initialized but its semantic check has not been performed yet.`
@@ -40,6 +40,9 @@ var _ = Describe("Builder", func() {
 	var (
 		defaultTime     metav1.Time
 		defaultTimeFunc func() metav1.Time
+		codes           = []gardencorev1beta1.ErrorCode{
+			gardencorev1beta1.ErrorInfraDependencies,
+		}
 	)
 
 	BeforeEach(func() {
@@ -50,7 +53,6 @@ var _ = Describe("Builder", func() {
 	})
 
 	Describe("#NewConditionBuilder", func() {
-
 		It("should return error if condition type is empty", func() {
 			bldr, err := NewConditionBuilder("")
 
@@ -67,9 +69,8 @@ var _ = Describe("Builder", func() {
 	})
 
 	Describe("#Build", func() {
-
 		var (
-			result  api.Condition
+			result  gardencorev1beta1.Condition
 			updated bool
 			bldr    ConditionBuilder
 		)
@@ -79,7 +80,6 @@ var _ = Describe("Builder", func() {
 		})
 
 		Context("empty condition", func() {
-
 			JustBeforeEach(func() {
 				result, updated = bldr.WithNowFunc(defaultTimeFunc).Build()
 			})
@@ -89,7 +89,7 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             unknowStatus,
 					LastTransitionTime: defaultTime,
@@ -113,7 +113,7 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             fooStatus,
 					LastTransitionTime: defaultTime,
@@ -137,7 +137,7 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             unknowStatus,
 					LastTransitionTime: defaultTime,
@@ -161,7 +161,7 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             unknowStatus,
 					LastTransitionTime: defaultTime,
@@ -172,17 +172,43 @@ var _ = Describe("Builder", func() {
 			})
 		})
 
+		Context("#WithCodes", func() {
+			JustBeforeEach(func() {
+				result, updated = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithCodes(codes...).
+					Build()
+			})
+
+			It("should mark the result as updated", func() {
+				Expect(updated).To(BeTrue())
+			})
+
+			It("should return correct result", func() {
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
+					Type:               conditionType,
+					Status:             unknowStatus,
+					LastTransitionTime: defaultTime,
+					LastUpdateTime:     defaultTime,
+					Reason:             initializedReason,
+					Message:            unitializedMessage,
+					Codes:              codes,
+				}))
+			})
+		})
+
 		Context("#WithOldCondition", func() {
 			JustBeforeEach(func() {
 				result, updated = bldr.
 					WithNowFunc(defaultTimeFunc).
-					WithOldCondition(api.Condition{
+					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
 						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
 						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
 						Reason:             bazReason,
 						Message:            fubarMessage,
+						Codes:              codes,
 					}).
 					Build()
 			})
@@ -192,13 +218,14 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             fooStatus,
 					LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
 					LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
 					Reason:             bazReason,
 					Message:            fubarMessage,
+					Codes:              codes,
 				}))
 			})
 		})
@@ -210,13 +237,15 @@ var _ = Describe("Builder", func() {
 					WithStatus("SomeNewStatus").
 					WithMessage("Some message").
 					WithReason("SomeNewReason").
-					WithOldCondition(api.Condition{
+					WithCodes(codes...).
+					WithOldCondition(gardencorev1beta1.Condition{
 						Type:               conditionType,
 						Status:             fooStatus,
 						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
 						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
 						Reason:             bazReason,
 						Message:            fubarMessage,
+						Codes:              []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
 					}).
 					Build()
 			})
@@ -226,13 +255,14 @@ var _ = Describe("Builder", func() {
 			})
 
 			It("should return correct result", func() {
-				Expect(result).To(Equal(api.Condition{
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             api.ConditionStatus("SomeNewStatus"),
+					Status:             gardencorev1beta1.ConditionStatus("SomeNewStatus"),
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             "SomeNewReason",
 					Message:            "Some message",
+					Codes:              codes,
 				}))
 			})
 		})

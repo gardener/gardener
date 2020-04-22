@@ -357,6 +357,10 @@ message Condition {
 
   // A human readable message indicating details about the transition.
   optional string message = 6;
+
+  // Well-defined error codes in case the condition reports a problem.
+  // +optional
+  repeated string codes = 7;
 }
 
 // ContainerRuntime contains information about worker's available container runtime

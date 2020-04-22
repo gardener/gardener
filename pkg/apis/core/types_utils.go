@@ -40,6 +40,8 @@ type Condition struct {
 	Reason string
 	// A human readable message indicating details about the transition.
 	Message string
+	// Well-defined error codes in case the condition reports a problem.
+	Codes []ErrorCode
 }
 
 // ConditionStatus is the status of a condition.

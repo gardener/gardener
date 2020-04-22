@@ -26,7 +26,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	errors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -87,7 +87,7 @@ func GetOrInitCondition(conditions []gardencorev1alpha1.Condition, conditionType
 }
 
 // UpdatedCondition updates the properties of one specific condition.
-func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string) gardencorev1alpha1.Condition {
+func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string, codes ...gardencorev1alpha1.ErrorCode) gardencorev1alpha1.Condition {
 	newCondition := gardencorev1alpha1.Condition{
 		Type:               condition.Type,
 		Status:             status,
@@ -95,6 +95,7 @@ func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev
 		Message:            message,
 		LastTransitionTime: condition.LastTransitionTime,
 		LastUpdateTime:     Now(),
+		Codes:              codes,
 	}
 
 	if condition.Status != status {
@@ -103,12 +104,14 @@ func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev
 	return newCondition
 }
 
-func UpdatedConditionUnknownError(condition gardencorev1alpha1.Condition, err error) gardencorev1alpha1.Condition {
-	return UpdatedConditionUnknownErrorMessage(condition, err.Error())
+// UpdatedConditionUnknownError updates the condition to 'Unknown' status and the message of the given error.
+func UpdatedConditionUnknownError(condition gardencorev1alpha1.Condition, err error, codes ...gardencorev1alpha1.ErrorCode) gardencorev1alpha1.Condition {
+	return UpdatedConditionUnknownErrorMessage(condition, err.Error(), codes...)
 }
 
-func UpdatedConditionUnknownErrorMessage(condition gardencorev1alpha1.Condition, message string) gardencorev1alpha1.Condition {
-	return UpdatedCondition(condition, gardencorev1alpha1.ConditionUnknown, gardencorev1alpha1.ConditionCheckError, message)
+// UpdatedConditionUnknownErrorMessage updates the condition with 'Unknown' status and the given message.
+func UpdatedConditionUnknownErrorMessage(condition gardencorev1alpha1.Condition, message string, codes ...gardencorev1alpha1.ErrorCode) gardencorev1alpha1.Condition {
+	return UpdatedCondition(condition, gardencorev1alpha1.ConditionUnknown, gardencorev1alpha1.ConditionCheckError, message, codes...)
 }
 
 // MergeConditions merges the given <oldConditions> with the <newConditions>. Existing conditions are superseded by

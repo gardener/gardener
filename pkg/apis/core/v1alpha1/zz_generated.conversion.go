@@ -1875,6 +1875,7 @@ func autoConvert_v1alpha1_Condition_To_core_Condition(in *Condition, out *core.C
 	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
+	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
 	return nil
 }
 
@@ -1890,6 +1891,7 @@ func autoConvert_core_Condition_To_v1alpha1_Condition(in *core.Condition, out *C
 	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
+	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
 	return nil
 }
 

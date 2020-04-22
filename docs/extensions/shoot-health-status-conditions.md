@@ -83,3 +83,23 @@ status:
 
 Hence, the only duty extensions have is to maintain the health status of their components in the extension resource they are managing.
 This can be accomplished using the [health check library for extensions](https://github.com/gardener/gardener/blob/master/docs/extensions/healthcheck-library.md).
+
+## Error Codes
+
+The Gardener API includes some well-defined error codes, e.g., `ERR_INFRA_UNAUTHORIZED`, `ERR_INFRA_DEPENDENCIES`, etc.
+Extension may set these error codes in the `.status.conditions[].codes[]` list in case it makes sense.
+Gardener will pick them up and will similarly merge them into the `.status.conditions[].codes[]` list in the `Shoot`:
+
+```yaml
+status:
+  conditions:
+  - type: ControlPlaneHealthy
+    status: "False"
+    reason: DeploymentUnhealthy
+    message: 'Deployment cloud-controller-manager is unhealthy: condition "Available" has
+      invalid status False (expected True) due to MinimumReplicasUnavailable: Deployment
+      does not have minimum availability.'
+    lastUpdateTime: "2014-05-25T12:44:27Z"
+    codes:
+    - ERR_INFRA_UNAUTHORIZED 
+``` 

@@ -86,7 +86,7 @@ func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType 
 }
 
 // UpdatedCondition updates the properties of one specific condition.
-func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string) gardencorev1beta1.Condition {
+func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	newCondition := gardencorev1beta1.Condition{
 		Type:               condition.Type,
 		Status:             status,
@@ -94,6 +94,7 @@ func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1
 		Message:            message,
 		LastTransitionTime: condition.LastTransitionTime,
 		LastUpdateTime:     Now(),
+		Codes:              codes,
 	}
 
 	if condition.Status != status {
@@ -102,12 +103,14 @@ func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1
 	return newCondition
 }
 
-func UpdatedConditionUnknownError(condition gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
-	return UpdatedConditionUnknownErrorMessage(condition, err.Error())
+// UpdatedConditionUnknownError updates the condition to 'Unknown' status and the message of the given error.
+func UpdatedConditionUnknownError(condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
+	return UpdatedConditionUnknownErrorMessage(condition, err.Error(), codes...)
 }
 
-func UpdatedConditionUnknownErrorMessage(condition gardencorev1beta1.Condition, message string) gardencorev1beta1.Condition {
-	return UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
+// UpdatedConditionUnknownErrorMessage updates the condition with 'Unknown' status and the given message.
+func UpdatedConditionUnknownErrorMessage(condition gardencorev1beta1.Condition, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
+	return UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message, codes...)
 }
 
 // MergeConditions merges the given <oldConditions> with the <newConditions>. Existing conditions are superseded by

@@ -6,55 +6,45 @@ package event
 
 import (
 	"fmt"
+	"io"
+	"reflect"
+	"unsafe"
 )
 
 // Tag holds a key and value pair.
 // It is normally used when passing around lists of tags.
 type Tag struct {
-	Key     Key
+	key     Key
 	packed  uint64
-	str     string
 	untyped interface{}
 }
 
 // TagMap is the interface to a collection of Tags indexed by key.
 type TagMap interface {
 	// Find returns the tag that matches the supplied key.
-	Find(key interface{}) Tag
+	Find(key Key) Tag
 }
 
-// TagPointer is the interface to something that provides an iterable
+// TagList is the interface to something that provides an iterable
 // list of tags.
-type TagPointer interface {
-	// Next advances to the next entry in the list and return a TagIterator for it.
-	// It will return nil if there are no more entries.
-	Next() TagPointer
-	// Tag returns the tag the pointer is for.
-	Tag() Tag
+// Iteration should start from 0 and continue until Valid returns false.
+type TagList interface {
+	// Valid returns true if the index is within range for the list.
+	// It does not imply the tag at that index will itself be valid.
+	Valid(index int) bool
+	// Tag returns the tag at the given index.
+	Tag(index int) Tag
 }
 
-// TagIterator is used to iterate through tags using TagPointer.
-// It is a small helper that will normally fully inline to make it easier to
-// manage the fact that pointer advance returns a new pointer rather than
-// moving the existing one.
-type TagIterator struct {
-	ptr TagPointer
-}
-
-// tagPointer implements TagPointer over a simple list of tags.
-type tagPointer struct {
+// tagList implements TagList for a list of Tags.
+type tagList struct {
 	tags []Tag
 }
 
-// tagPointer wraps a TagPointer filtering out specific tags.
+// tagFilter wraps a TagList filtering out specific tags.
 type tagFilter struct {
-	filter     []Key
-	underlying TagPointer
-}
-
-// tagPointerChain implements TagMap for a list of underlying TagMap.
-type tagPointerChain struct {
-	ptrs []TagPointer
+	keys       []Key
+	underlying TagList
 }
 
 // tagMap implements TagMap for a simple list of tags.
@@ -67,138 +57,103 @@ type tagMapChain struct {
 	maps []TagMap
 }
 
+// TagOfValue creates a new tag from the key and value.
+// This method is for implementing new key types, tag creation should
+// normally be done with the Of method of the key.
+func TagOfValue(k Key, value interface{}) Tag { return Tag{key: k, untyped: value} }
+
+// UnpackValue assumes the tag was built using TagOfValue and returns the value
+// that was passed to that constructor.
+// This method is for implementing new key types, for type safety normal
+// access should be done with the From method of the key.
+func (t Tag) UnpackValue() interface{} { return t.untyped }
+
+// TagOf64 creates a new tag from a key and a uint64. This is often
+// used for non uint64 values that can be packed into a uint64.
+// This method is for implementing new key types, tag creation should
+// normally be done with the Of method of the key.
+func TagOf64(k Key, v uint64) Tag { return Tag{key: k, packed: v} }
+
+// Unpack64 assumes the tag was built using TagOf64 and returns the value that
+// was passed to that constructor.
+// This method is for implementing new key types, for type safety normal
+// access should be done with the From method of the key.
+func (t Tag) Unpack64() uint64 { return t.packed }
+
+// TagOfString creates a new tag from a key and a string.
+// This method is for implementing new key types, tag creation should
+// normally be done with the Of method of the key.
+func TagOfString(k Key, v string) Tag {
+	hdr := (*reflect.StringHeader)(unsafe.Pointer(&v))
+	return Tag{
+		key:     k,
+		packed:  uint64(hdr.Len),
+		untyped: unsafe.Pointer(hdr.Data),
+	}
+}
+
+// UnpackString assumes the tag was built using TagOfString and returns the
+// value that was passed to that constructor.
+// This method is for implementing new key types, for type safety normal
+// access should be done with the From method of the key.
+func (t Tag) UnpackString() string {
+	var v string
+	hdr := (*reflect.StringHeader)(unsafe.Pointer(&v))
+	hdr.Data = uintptr(t.untyped.(unsafe.Pointer))
+	hdr.Len = int(t.packed)
+	return *(*string)(unsafe.Pointer(hdr))
+}
+
 // Valid returns true if the Tag is a valid one (it has a key).
-func (t Tag) Valid() bool { return t.Key != nil }
+func (t Tag) Valid() bool { return t.key != nil }
+
+// Key returns the key of this Tag.
+func (t Tag) Key() Key { return t.key }
 
 // Format is used for debug printing of tags.
 func (t Tag) Format(f fmt.State, r rune) {
 	if !t.Valid() {
-		fmt.Fprintf(f, `nil`)
+		io.WriteString(f, `nil`)
 		return
 	}
-	switch key := t.Key.(type) {
-	case *IntKey:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *Int8Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *Int16Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *Int32Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *Int64Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *UIntKey:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *UInt8Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *UInt16Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *UInt32Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *UInt64Key:
-		fmt.Fprintf(f, "%s=%d", key.Name(), key.From(t))
-	case *Float32Key:
-		fmt.Fprintf(f, "%s=%g", key.Name(), key.From(t))
-	case *Float64Key:
-		fmt.Fprintf(f, "%s=%g", key.Name(), key.From(t))
-	case *BooleanKey:
-		fmt.Fprintf(f, "%s=%t", key.Name(), key.From(t))
-	case *StringKey:
-		fmt.Fprintf(f, "%s=%q", key.Name(), key.From(t))
-	case *ErrorKey:
-		fmt.Fprintf(f, "%s=%v", key.Name(), key.From(t))
-	case *ValueKey:
-		fmt.Fprintf(f, "%s=%v", key.Name(), key.From(t))
-	default:
-		fmt.Fprintf(f, `%s="invalid type %T"`, key.Name(), key)
-	}
+	io.WriteString(f, t.Key().Name())
+	io.WriteString(f, "=")
+	var buf [128]byte
+	t.Key().Format(f, buf[:0], t)
 }
 
-func (i *TagIterator) Valid() bool {
-	return i.ptr != nil
+func (l *tagList) Valid(index int) bool {
+	return index >= 0 && index < len(l.tags)
 }
 
-func (i *TagIterator) Advance() {
-	i.ptr = i.ptr.Next()
+func (l *tagList) Tag(index int) Tag {
+	return l.tags[index]
 }
 
-func (i *TagIterator) Tag() Tag {
-	return i.ptr.Tag()
+func (f *tagFilter) Valid(index int) bool {
+	return f.underlying.Valid(index)
 }
 
-func (i tagPointer) Next() TagPointer {
-	// loop until we are on a valid tag
-	for {
-		// move on one tag
-		i.tags = i.tags[1:]
-		// check if we have exhausted the current list
-		if len(i.tags) == 0 {
-			// no more tags, so no more iterator
-			return nil
-		}
-		// if the tag is valid, we are done
-		if i.tags[0].Valid() {
-			return i
+func (f *tagFilter) Tag(index int) Tag {
+	tag := f.underlying.Tag(index)
+	for _, f := range f.keys {
+		if tag.Key() == f {
+			return Tag{}
 		}
 	}
+	return tag
 }
 
-func (i tagPointer) Tag() Tag {
-	return i.tags[0]
-}
-
-func (i tagFilter) Next() TagPointer {
-	// loop until we are on a valid tag
-	for {
-		i.underlying = i.underlying.Next()
-		if i.underlying == nil {
-			return nil
-		}
-		if !i.filtered() {
-			return i
-		}
-	}
-}
-
-func (i tagFilter) filtered() bool {
-	tag := i.underlying.Tag()
-	for _, f := range i.filter {
-		if tag.Key == f {
-			return true
-		}
-	}
-	return false
-}
-
-func (i tagFilter) Tag() Tag {
-	return i.underlying.Tag()
-}
-
-func (i tagPointerChain) Next() TagPointer {
-	i.ptrs[0] = i.ptrs[0].Next()
-	if i.ptrs[0] == nil {
-		i.ptrs = i.ptrs[1:]
-	}
-	if len(i.ptrs) == 0 {
-		return nil
-	}
-	return i
-}
-
-func (i tagPointerChain) Tag() Tag {
-	return i.ptrs[0].Tag()
-}
-
-func (l tagMap) Find(key interface{}) Tag {
+func (l tagMap) Find(key Key) Tag {
 	for _, tag := range l.tags {
-		if tag.Key == key {
+		if tag.Key() == key {
 			return tag
 		}
 	}
 	return Tag{}
 }
 
-func (c tagMapChain) Find(key interface{}) Tag {
+func (c tagMapChain) Find(key Key) Tag {
 	for _, src := range c.maps {
 		tag := src.Find(key)
 		if tag.Valid() {
@@ -208,43 +163,20 @@ func (c tagMapChain) Find(key interface{}) Tag {
 	return Tag{}
 }
 
-func NewTagIterator(tags ...Tag) TagIterator {
+var emptyList = &tagList{}
+
+func NewTagList(tags ...Tag) TagList {
 	if len(tags) == 0 {
-		return TagIterator{}
+		return emptyList
 	}
-	result := TagIterator{ptr: tagPointer{tags: tags}}
-	if !result.Tag().Valid() {
-		result.Advance()
-	}
-	return result
+	return &tagList{tags: tags}
 }
 
-func Filter(it TagIterator, keys ...Key) TagIterator {
-	if !it.Valid() || len(keys) == 0 {
-		return it
+func Filter(l TagList, keys ...Key) TagList {
+	if len(keys) == 0 {
+		return l
 	}
-	ptr := tagFilter{filter: keys, underlying: it.ptr}
-	result := TagIterator{ptr: ptr}
-	if ptr.filtered() {
-		result.Advance()
-	}
-	return result
-}
-
-func ChainTagIterators(iterators ...TagIterator) TagIterator {
-	if len(iterators) == 0 {
-		return TagIterator{}
-	}
-	ptrs := make([]TagPointer, 0, len(iterators))
-	for _, it := range iterators {
-		if it.Valid() {
-			ptrs = append(ptrs, it.ptr)
-		}
-	}
-	if len(ptrs) == 0 {
-		return TagIterator{}
-	}
-	return TagIterator{ptr: tagPointerChain{ptrs: ptrs}}
+	return &tagFilter{keys: keys, underlying: l}
 }
 
 func NewTagMap(tags ...Tag) TagMap {
@@ -252,5 +184,14 @@ func NewTagMap(tags ...Tag) TagMap {
 }
 
 func MergeTagMaps(srcs ...TagMap) TagMap {
-	return tagMapChain{maps: srcs}
+	var nonNil []TagMap
+	for _, src := range srcs {
+		if src != nil {
+			nonNil = append(nonNil, src)
+		}
+	}
+	if len(nonNil) == 1 {
+		return nonNil[0]
+	}
+	return tagMapChain{maps: nonNil}
 }

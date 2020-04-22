@@ -68,31 +68,36 @@ func (ev Event) Format(f fmt.State, r rune) {
 			fmt.Fprintf(f, ": %v", err)
 		}
 	}
-	for it := ev.Tags(); it.Valid(); it.Advance() {
-		tag := it.Tag()
+	for index := 0; ev.Valid(index); index++ {
+		tag := ev.Tag(index)
 		// msg and err were both already printed above, so we skip them to avoid
 		// double printing
-		if tag.Key == Msg || tag.Key == Err {
+		if !tag.Valid() || tag.Key() == Msg || tag.Key() == Err {
 			continue
 		}
 		fmt.Fprintf(f, "\n\t%v", tag)
 	}
 }
 
-func (ev Event) Tags() TagIterator {
-	return ChainTagIterators(
-		NewTagIterator(ev.static[:]...),
-		NewTagIterator(ev.dynamic...))
+func (ev Event) Valid(index int) bool {
+	return index >= 0 && index < len(ev.static)+len(ev.dynamic)
 }
 
-func (ev Event) Find(key interface{}) Tag {
+func (ev Event) Tag(index int) Tag {
+	if index < len(ev.static) {
+		return ev.static[index]
+	}
+	return ev.dynamic[index-len(ev.static)]
+}
+
+func (ev Event) Find(key Key) Tag {
 	for _, tag := range ev.static {
-		if tag.Key == key {
+		if tag.Key() == key {
 			return tag
 		}
 	}
 	for _, tag := range ev.dynamic {
-		if tag.Key == key {
+		if tag.Key() == key {
 			return tag
 		}
 	}
