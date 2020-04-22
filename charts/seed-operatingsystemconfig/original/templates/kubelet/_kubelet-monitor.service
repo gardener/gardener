@@ -11,5 +11,10 @@
     [Service]
     Restart=always
     EnvironmentFile=/etc/environment
+    {{- if semverCompare "< 1.17" .Values.kubernetes.version }}
+    ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubectl /opt/bin"
+    {{- else }}
+    ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .Values.images.hyperkube }} -c "cp /usr/local/bin/kubectl /opt/bin"
+    {{- end }}
     ExecStart=/opt/bin/health-monitor kubelet
 {{- end -}}
