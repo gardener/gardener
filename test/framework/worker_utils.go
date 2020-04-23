@@ -88,15 +88,19 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.
 func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImage gardencorev1beta1.MachineImage, workerZone string) error {
-	_, shootMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
-	if err != nil {
-		return err
-	}
-
 	if len(cloudProfile.Spec.MachineTypes) == 0 {
 		return fmt.Errorf("no MachineTypes configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 	machineType := cloudProfile.Spec.MachineTypes[0]
+
+	qualifyingVersionFound, shootMachineImage, err := helper.GetLatestQualifyingShootMachineImage(machineImage)
+	if err != nil {
+		return err
+	}
+
+	if !qualifyingVersionFound {
+		return fmt.Errorf("could not add worker. No latest qualifying Shoot machine image could be determined for machine image %q. Make sure the machine image in the CloudProfile has at least one version that is not expired and not in preview", machineImage.Name)
+	}
 
 	workerName, err := generateRandomWorkerName(fmt.Sprintf("%s-", shootMachineImage.Name))
 	if err != nil {
@@ -109,7 +113,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		Minimum: 2,
 		Machine: gardencorev1beta1.Machine{
 			Type:  machineType.Name,
-			Image: &shootMachineImage,
+			Image: shootMachineImage,
 		},
 	})
 
