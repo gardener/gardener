@@ -41,8 +41,8 @@ var _ = Describe("helper", func() {
 		var zeroTime metav1.Time
 
 		DescribeTable("#UpdatedCondition",
-			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
-				updated := UpdatedCondition(condition, status, reason, message)
+			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher types.GomegaMatcher) {
+				updated := UpdatedCondition(condition, status, reason, message, codes...)
 
 				Expect(updated).To(matcher)
 			},
@@ -55,6 +55,7 @@ var _ = Describe("helper", func() {
 				gardencorev1beta1.ConditionTrue,
 				"reason",
 				"message",
+				nil,
 				MatchFields(IgnoreExtras, Fields{
 					"Status":             Equal(gardencorev1beta1.ConditionTrue),
 					"Reason":             Equal("reason"),
@@ -72,10 +73,30 @@ var _ = Describe("helper", func() {
 				gardencorev1beta1.ConditionTrue,
 				"OtherReason",
 				"message",
+				nil,
 				MatchFields(IgnoreExtras, Fields{
 					"Status":             Equal(gardencorev1beta1.ConditionTrue),
 					"Reason":             Equal("OtherReason"),
 					"Message":            Equal("message"),
+					"LastTransitionTime": Equal(zeroTime),
+					"LastUpdateTime":     Not(Equal(zeroTime)),
+				}),
+			),
+			Entry("update codes",
+				gardencorev1beta1.Condition{
+					Status:  gardencorev1beta1.ConditionTrue,
+					Reason:  "reason",
+					Message: "message",
+				},
+				gardencorev1beta1.ConditionTrue,
+				"OtherReason",
+				"message",
+				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources},
+				MatchFields(IgnoreExtras, Fields{
+					"Status":             Equal(gardencorev1beta1.ConditionTrue),
+					"Reason":             Equal("OtherReason"),
+					"Message":            Equal("message"),
+					"Codes":              Equal([]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources}),
 					"LastTransitionTime": Equal(zeroTime),
 					"LastUpdateTime":     Not(Equal(zeroTime)),
 				}),
@@ -89,6 +110,7 @@ var _ = Describe("helper", func() {
 				gardencorev1beta1.ConditionFalse,
 				"OtherReason",
 				"message",
+				nil,
 				MatchFields(IgnoreExtras, Fields{
 					"Status":             Equal(gardencorev1beta1.ConditionFalse),
 					"Reason":             Equal("OtherReason"),

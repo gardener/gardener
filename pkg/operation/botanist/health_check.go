@@ -335,28 +335,28 @@ func (b *HealthChecker) CheckSystemComponents(
 }
 
 // FailedCondition returns a progressing or false condition depending on the progressing threshold.
-func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, reason, message string) gardencorev1beta1.Condition {
+func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	switch condition.Status {
 	case gardencorev1beta1.ConditionTrue:
 		_, ok := b.conditionThresholds[condition.Type]
 		if !ok {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message)
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
 
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message)
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 	case gardencorev1beta1.ConditionProgressing:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if !ok {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message)
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
 
 		delta := Now().Sub(condition.LastTransitionTime.Time)
 		if delta > threshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message)
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message)
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 	}
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message)
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
@@ -619,7 +619,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsCondition []extensionCondition) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsCondition {
 		if cond.condition.Status == gardencorev1beta1.ConditionFalse || cond.condition.Status == gardencorev1beta1.ConditionUnknown {
-			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), fmt.Sprintf("%q CRD (%s/%s) reports failing healthcheck: %s", cond.extensionType, cond.extensionNamespace, cond.extensionName, cond.condition.Message))
+			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.extensionType), fmt.Sprintf("%q CRD (%s/%s) reports failing health check: %s", cond.extensionType, cond.extensionNamespace, cond.extensionName, cond.condition.Message), cond.condition.Codes...)
 			return &c
 		}
 	}
@@ -914,6 +914,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	if err != nil {
 		b.Logger.Errorf("error getting extension conditions: %+v", err)
 	}
+
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
@@ -977,7 +978,7 @@ func (b *Botanist) pardonCondition(condition gardencorev1beta1.Condition) garden
 		return condition
 	}
 	if lastOp := shoot.Status.LastOperation; (lastOp == nil || (lastOp != nil && isUnstableOperationType(lastOp.Type))) && condition.Status == gardencorev1beta1.ConditionFalse {
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message)
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message, condition.Codes...)
 	}
 	return condition
 }

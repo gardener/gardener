@@ -657,6 +657,11 @@ func (in *Condition) DeepCopyInto(out *Condition) {
 	*out = *in
 	in.LastTransitionTime.DeepCopyInto(&out.LastTransitionTime)
 	in.LastUpdateTime.DeepCopyInto(&out.LastUpdateTime)
+	if in.Codes != nil {
+		in, out := &in.Codes, &out.Codes
+		*out = make([]ErrorCode, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

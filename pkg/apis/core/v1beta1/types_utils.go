@@ -62,6 +62,9 @@ type Condition struct {
 	Reason string `json:"reason" protobuf:"bytes,5,opt,name=reason"`
 	// A human readable message indicating details about the transition.
 	Message string `json:"message" protobuf:"bytes,6,opt,name=message"`
+	// Well-defined error codes in case the condition reports a problem.
+	// +optional
+	Codes []ErrorCode `json:"codes,omitempty" protobuf:"bytes,7,rep,name=codes,casttype=ErrorCode"`
 }
 
 const (

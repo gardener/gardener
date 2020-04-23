@@ -17,33 +17,36 @@ package helper
 import (
 	"fmt"
 
-	api "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ConditionBuilder build a Condition.
 type ConditionBuilder interface {
-	WithOldCondition(old api.Condition) ConditionBuilder
-	WithStatus(status api.ConditionStatus) ConditionBuilder
+	WithOldCondition(old gardencorev1beta1.Condition) ConditionBuilder
+	WithStatus(status gardencorev1beta1.ConditionStatus) ConditionBuilder
 	WithReason(reason string) ConditionBuilder
 	WithMessage(message string) ConditionBuilder
+	WithCodes(codes ...gardencorev1beta1.ErrorCode) ConditionBuilder
 	WithNowFunc(now func() metav1.Time) ConditionBuilder
-	Build() (new api.Condition, updated bool)
+	Build() (new gardencorev1beta1.Condition, updated bool)
 }
 
 // defaultConditionBuilder build a Condition.
 type defaultConditionBuilder struct {
-	old           api.Condition
-	status        api.ConditionStatus
-	conditionType api.ConditionType
+	old           gardencorev1beta1.Condition
+	status        gardencorev1beta1.ConditionStatus
+	conditionType gardencorev1beta1.ConditionType
 	reason        string
 	message       string
+	codes         []gardencorev1beta1.ErrorCode
 	nowFunc       func() metav1.Time
 }
 
 // NewConditionBuilder returns a ConditionBuilder for a specific condition.
-func NewConditionBuilder(conditionType api.ConditionType) (ConditionBuilder, error) {
+func NewConditionBuilder(conditionType gardencorev1beta1.ConditionType) (ConditionBuilder, error) {
 	if conditionType == "" {
 		return nil, fmt.Errorf("conditionType cannot be empty")
 	}
@@ -56,7 +59,7 @@ func NewConditionBuilder(conditionType api.ConditionType) (ConditionBuilder, err
 
 // WithOldCondition sets the old condition. It can be used to prodive default values.
 // The old's condition type is overridden to the one specified in the builder.
-func (b *defaultConditionBuilder) WithOldCondition(old api.Condition) ConditionBuilder {
+func (b *defaultConditionBuilder) WithOldCondition(old gardencorev1beta1.Condition) ConditionBuilder {
 	old.Type = b.conditionType
 	b.old = old
 
@@ -64,7 +67,7 @@ func (b *defaultConditionBuilder) WithOldCondition(old api.Condition) ConditionB
 }
 
 // WithStatus sets the status of the condition.
-func (b *defaultConditionBuilder) WithStatus(status api.ConditionStatus) ConditionBuilder {
+func (b *defaultConditionBuilder) WithStatus(status gardencorev1beta1.ConditionStatus) ConditionBuilder {
 	b.status = status
 	return b
 }
@@ -81,6 +84,12 @@ func (b *defaultConditionBuilder) WithMessage(message string) ConditionBuilder {
 	return b
 }
 
+// WithCodes sets the codes of the condition.
+func (b *defaultConditionBuilder) WithCodes(codes ...gardencorev1beta1.ErrorCode) ConditionBuilder {
+	b.codes = codes
+	return b
+}
+
 // WithNowFunc sets the function used for getting the current time.
 // Should only be used for tests.
 func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionBuilder {
@@ -92,7 +101,7 @@ func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionB
 // If OldCondition is provided:
 // - Any changes to status set the `LastTransitionTime`
 // - Any updates to the message or the reason cause set `LastUpdateTime` to the current time.
-func (b *defaultConditionBuilder) Build() (new api.Condition, updated bool) {
+func (b *defaultConditionBuilder) Build() (new gardencorev1beta1.Condition, updated bool) {
 	var (
 		now       = b.nowFunc()
 		emptyTime = metav1.Time{}
@@ -113,7 +122,7 @@ func (b *defaultConditionBuilder) Build() (new api.Condition, updated bool) {
 	if b.status != "" {
 		new.Status = b.status
 	} else if b.status == "" && b.old.Status == "" {
-		new.Status = api.ConditionUnknown
+		new.Status = gardencorev1beta1.ConditionUnknown
 	}
 
 	if b.reason != "" {
@@ -126,6 +135,12 @@ func (b *defaultConditionBuilder) Build() (new api.Condition, updated bool) {
 		new.Message = b.message
 	} else if b.message == "" && b.old.Message == "" {
 		new.Message = "The condition has been initialized but its semantic check has not been performed yet."
+	}
+
+	if b.codes != nil {
+		new.Codes = b.codes
+	} else if b.codes == nil && b.old.Codes == nil {
+		new.Codes = nil
 	}
 
 	if new.Status != b.old.Status {

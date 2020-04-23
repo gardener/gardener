@@ -1510,6 +1510,20 @@ func schema_pkg_apis_core_v1alpha1_Condition(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"codes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Well-defined error codes in case the condition reports a problem.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"type", "status", "lastTransitionTime", "lastUpdateTime", "reason", "message"},
 			},
@@ -6641,6 +6655,20 @@ func schema_pkg_apis_core_v1beta1_Condition(ref common.ReferenceCallback) common
 							Description: "A human readable message indicating details about the transition.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"codes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Well-defined error codes in case the condition reports a problem.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},
