@@ -27,20 +27,21 @@ import (
 
 var _ = Describe("utils", func() {
 	var (
-		k8s118 = "1.18.0"
+		k8s118 = "1.18"
 
-		clusterBrokenVersion        = &extensionscontroller.Cluster{Shoot: shootWithVersion("foo")}
-		clusterK8sLessThan118       = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.17.0")}
-		clusterK8sMoreThan118       = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.19.0")}
-		clusterK8s118               = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.18.0")}
-		clusterK8s118WithAnnotation = &extensionscontroller.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					AnnotationKeyNeedsComplete: "true",
-				},
+		objectMetaWithNeedsCompleteAnnotation = metav1.ObjectMeta{
+			Annotations: map[string]string{
+				AnnotationKeyNeedsComplete: "true",
 			},
-			Shoot: shootWithVersion("1.18.0"),
 		}
+
+		clusterBrokenVersion         = &extensionscontroller.Cluster{Shoot: shootWithVersion("foo")}
+		clusterK8sLessThan118        = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.17.0")}
+		clusterK8s1180               = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.18.0")}
+		clusterK8s1180WithAnnotation = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.18.0"), ObjectMeta: objectMetaWithNeedsCompleteAnnotation}
+		clusterK8s1185               = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.18.5")}
+		clusterK8s1185WithAnnotation = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.18.5"), ObjectMeta: objectMetaWithNeedsCompleteAnnotation}
+		clusterK8sMoreThan118        = &extensionscontroller.Cluster{Shoot: shootWithVersion("1.19.0")}
 	)
 
 	DescribeTable("#CheckCSIConditions",
@@ -56,10 +57,12 @@ var _ = Describe("utils", func() {
 		},
 
 		Entry("unparseable version", clusterBrokenVersion, k8s118, false, false, true),
-		Entry("shoot version higher than minimum", clusterK8sMoreThan118, k8s118, true, true, false),
-		Entry("shoot version lower than minimum", clusterK8sLessThan118, k8s118, false, false, false),
-		Entry("shoot version exactly minimum (w/o annotation)", clusterK8s118, k8s118, true, false, false),
-		Entry("shoot version exactly minimum (w/ annotation)", clusterK8s118WithAnnotation, k8s118, true, true, false),
+		Entry("shoot version with higher major minor", clusterK8sMoreThan118, k8s118, true, true, false),
+		Entry("shoot version with lower major minor", clusterK8sLessThan118, k8s118, false, false, false),
+		Entry("shoot version exactly minimum (w/o annotation)", clusterK8s1180, k8s118, true, false, false),
+		Entry("shoot version exactly minimum (w/ annotation)", clusterK8s1180WithAnnotation, k8s118, true, true, false),
+		Entry("shoot version with same major minor (w/o annotation)", clusterK8s1185, k8s118, true, false, false),
+		Entry("shoot version with same major minor (w/ annotation)", clusterK8s1185WithAnnotation, k8s118, true, true, false),
 	)
 })
 
