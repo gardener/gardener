@@ -30,6 +30,15 @@ import (
 // the exact CSI migration (minor) version then it returns true for the first value (CSI migration shall be enabled),
 // and true or false based on whether the "needs-complete-feature-gates" annotation is set on the Cluster object.
 func CheckCSIConditions(cluster *extensionscontroller.Cluster, csiMigrationVersion string) (useCSI bool, csiMigrationComplete bool, err error) {
+	isCSIMigrationVersion, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "~", csiMigrationVersion)
+	if err != nil {
+		return false, false, err
+	}
+
+	if isCSIMigrationVersion {
+		return true, metav1.HasAnnotation(cluster.ObjectMeta, AnnotationKeyNeedsComplete), nil
+	}
+
 	isHigherThanCSIMigrationVersion, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, ">", csiMigrationVersion)
 	if err != nil {
 		return false, false, err
@@ -39,14 +48,5 @@ func CheckCSIConditions(cluster *extensionscontroller.Cluster, csiMigrationVersi
 		return true, true, nil
 	}
 
-	isCSIMigrationVersion, err := version.CompareVersions(cluster.Shoot.Spec.Kubernetes.Version, "~", csiMigrationVersion)
-	if err != nil {
-		return false, false, err
-	}
-
-	if !isCSIMigrationVersion {
-		return false, false, nil
-	}
-
-	return true, metav1.HasAnnotation(cluster.ObjectMeta, AnnotationKeyNeedsComplete), nil
+	return false, false, nil
 }
