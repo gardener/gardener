@@ -23,35 +23,63 @@ import (
 
 const separator = ","
 
-// AddTasks adds a task to the ShootTasks annotation of the passed map.
-func AddTasks(existingAnnotations map[string]string, tasksToAdd ...string) {
+// GetTasks returns the list of tasks in the ShootTasks annotation.
+func GetTasks(annotations map[string]string) []string {
 	var tasks []string
-	existingTasks, _ := common.GetTasksAnnotation(existingAnnotations)
-	if len(existingTasks) > 0 {
-		tasks = strings.Split(existingTasks, separator)
+	if val, _ := common.GetTasksAnnotation(annotations); len(val) > 0 {
+		tasks = strings.Split(val, separator)
 	}
-	for _, taskToAdd := range tasksToAdd {
-		if utils.ValueExists(taskToAdd, tasks) {
-			continue
-		}
-		tasks = append(tasks, taskToAdd)
-	}
-	existingAnnotations[common.ShootTasks] = strings.Join(tasks, separator)
-	existingAnnotations[common.ShootTasksDeprecated] = strings.Join(tasks, separator)
+	return tasks
 }
 
 // HasTask checks if the passed task is part of the ShootTasks annotation.
-func HasTask(existingAnnotations map[string]string, taskToCheck string) bool {
-	existingTasks, ok := common.GetTasksAnnotation(existingAnnotations)
-	if !ok {
+func HasTask(annotations map[string]string, task string) bool {
+	tasks := GetTasks(annotations)
+	if len(tasks) == 0 {
 		return false
 	}
-	tasks := strings.Split(existingTasks, separator)
-	return utils.ValueExists(taskToCheck, tasks)
+	return utils.ValueExists(task, tasks)
+}
+
+// AddTasks adds tasks to the ShootTasks annotation of the passed map.
+func AddTasks(annotations map[string]string, tasksToAdd ...string) {
+	tasks := GetTasks(annotations)
+
+	for _, taskToAdd := range tasksToAdd {
+		if !utils.ValueExists(taskToAdd, tasks) {
+			tasks = append(tasks, taskToAdd)
+		}
+	}
+
+	setTaskAnnotations(annotations, tasks)
+}
+
+// RemoveTasks removes tasks from the ShootTasks annotation of the passed map.
+func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
+	tasks := GetTasks(annotations)
+
+	for i := 0; i < len(tasks); i++ {
+		if utils.ValueExists(tasks[i], tasksToRemove) {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			i--
+		}
+	}
+
+	setTaskAnnotations(annotations, tasks)
 }
 
 // RemoveAllTasks removes the ShootTasks annotation from the passed map.
-func RemoveAllTasks(existingAnnotations map[string]string) {
-	delete(existingAnnotations, common.ShootTasks)
-	delete(existingAnnotations, common.ShootTasksDeprecated)
+func RemoveAllTasks(annotations map[string]string) {
+	delete(annotations, common.ShootTasks)
+	delete(annotations, common.ShootTasksDeprecated)
+}
+
+func setTaskAnnotations(annotations map[string]string, tasks []string) {
+	if len(tasks) == 0 {
+		RemoveAllTasks(annotations)
+		return
+	}
+
+	annotations[common.ShootTasks] = strings.Join(tasks, separator)
+	annotations[common.ShootTasksDeprecated] = strings.Join(tasks, separator)
 }

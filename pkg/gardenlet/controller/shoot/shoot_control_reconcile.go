@@ -84,14 +84,16 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	}
 
 	var (
-		defaultTimeout                 = 30 * time.Second
-		defaultInterval                = 5 * time.Second
-		dnsEnabled                     = !o.Shoot.DisableDNS
-		managedExternalDNS             = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
-		managedInternalDNS             = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
-		allowBackup                    = o.Seed.Info.Spec.Backup != nil
-		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
-		restartControlPlaneControllers = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
+		defaultTimeout     = 30 * time.Second
+		defaultInterval    = 5 * time.Second
+		dnsEnabled         = !o.Shoot.DisableDNS
+		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
+		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
+		allowBackup        = o.Seed.Info.Spec.Backup != nil
+		staticNodesCIDR    = o.Shoot.Info.Spec.Networking.Nodes != nil
+
+		allTasks                       = controllerutils.GetTasks(o.Shoot.Info.Annotations)
+		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -370,7 +372,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Restart control plane pods",
-			Fn:           flow.TaskFn(botanist.RestartControlPlanePods).DoIf(restartControlPlaneControllers),
+			Fn:           flow.TaskFn(botanist.RestartControlPlanePods).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
 		f = g.Compile()
@@ -380,6 +382,18 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
+
+	// Remove completed tasks from Shoot if they were executed.
+	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+			controllerutils.RemoveTasks(shoot.Annotations, allTasks...)
+			return shoot, nil
+		},
+	)
+	if err != nil {
+		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
+	}
+	o.Shoot.Info = newShoot
 
 	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.Info.Name)
 	return nil
@@ -434,18 +448,7 @@ func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, ope
 }
 
 func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardencorev1beta1.LastOperationType) error {
-	// Remove task list from Shoot annotations since reconciliation was successful.
-	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			controllerutils.RemoveAllTasks(shoot.Annotations)
-			return shoot, nil
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, newShoot.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.SeedName = &o.Seed.Info.Name
