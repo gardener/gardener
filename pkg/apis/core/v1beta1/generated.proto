@@ -1012,6 +1012,12 @@ message Maintenance {
   // TimeWindow contains information about the time window for maintenance operations.
   // +optional
   optional MaintenanceTimeWindow timeWindow = 2;
+
+  // ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately.
+  // Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
+  // an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
+  // +optional
+  optional bool confineSpecUpdateRollout = 3;
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.

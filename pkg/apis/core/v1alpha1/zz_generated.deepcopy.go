@@ -1867,6 +1867,11 @@ func (in *Maintenance) DeepCopyInto(out *Maintenance) {
 		*out = new(MaintenanceTimeWindow)
 		**out = **in
 	}
+	if in.ConfineSpecUpdateRollout != nil {
+		in, out := &in.ConfineSpecUpdateRollout, &out.ConfineSpecUpdateRollout
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

@@ -4,6 +4,8 @@ You can trigger a few explicit operations by annotating the `Shoot` with an oper
 This might allow you to induct certain behavior without the need to change the `Shoot` specification.
 Some of the operations can also not be caused by changing something in the shoot specification because they can't properly be reflected here.
 
+Please note: If `.spec.maintenance.confineSpecUpdateRollout=true` then the only way to trigger a shoot reconciliation is by setting the `reconcile` operation, see below.
+
 ## Immediate reconciliation
 
 Annotate the shoot with `gardener.cloud/operation=reconcile` to make the `gardenlet` start a reconciliation operation without changing the shoot spec and possibly without being in its maintenance time window:

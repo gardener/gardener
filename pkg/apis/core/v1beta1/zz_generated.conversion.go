@@ -2789,6 +2789,7 @@ func Convert_core_MachineTypeStorage_To_v1beta1_MachineTypeStorage(in *core.Mach
 func autoConvert_v1beta1_Maintenance_To_core_Maintenance(in *Maintenance, out *core.Maintenance, s conversion.Scope) error {
 	out.AutoUpdate = (*core.MaintenanceAutoUpdate)(unsafe.Pointer(in.AutoUpdate))
 	out.TimeWindow = (*core.MaintenanceTimeWindow)(unsafe.Pointer(in.TimeWindow))
+	out.ConfineSpecUpdateRollout = (*bool)(unsafe.Pointer(in.ConfineSpecUpdateRollout))
 	return nil
 }
 
@@ -2800,6 +2801,7 @@ func Convert_v1beta1_Maintenance_To_core_Maintenance(in *Maintenance, out *core.
 func autoConvert_core_Maintenance_To_v1beta1_Maintenance(in *core.Maintenance, out *Maintenance, s conversion.Scope) error {
 	out.AutoUpdate = (*MaintenanceAutoUpdate)(unsafe.Pointer(in.AutoUpdate))
 	out.TimeWindow = (*MaintenanceTimeWindow)(unsafe.Pointer(in.TimeWindow))
+	out.ConfineSpecUpdateRollout = (*bool)(unsafe.Pointer(in.ConfineSpecUpdateRollout))
 	return nil
 }
 

@@ -278,4 +278,21 @@ var _ = Describe("helper", func() {
 			})))
 		})
 	})
+
+	DescribeTable("#HibernationIsEnabled",
+		func(shoot *core.Shoot, hibernated bool) {
+			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))
+		},
+		Entry("no hibernation section", &core.Shoot{}, false),
+		Entry("hibernation.enabled = false", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+		}, false),
+		Entry("hibernation.enabled = true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &trueVar},
+			},
+		}, true),
+	)
 })

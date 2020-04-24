@@ -225,3 +225,8 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 	}
 	return result, nil
 }
+
+// HibernationIsEnabled checks if the given shoot's desired state is hibernated.
+func HibernationIsEnabled(shoot *core.Shoot) bool {
+	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
+}
