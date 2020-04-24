@@ -24,6 +24,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -332,4 +334,32 @@ func GetVerticalPodAutoscalerObject() *unstructured.Unstructured {
 	obj.SetAPIVersion(autoscalingv1beta2.SchemeGroupVersion.String())
 	obj.SetKind("VerticalPodAutoscaler")
 	return obj
+}
+
+// RemoveAnnotation removes an annotation key passed as annotation
+func RemoveAnnotation(ctx context.Context, c client.Client, obj runtime.Object, annotation string) error {
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		return err
+	}
+	withAnnotation := obj.DeepCopyObject()
+
+	annotations := accessor.GetAnnotations()
+	delete(annotations, annotation)
+	accessor.SetAnnotations(annotations)
+
+	return c.Patch(ctx, obj, client.MergeFrom(withAnnotation))
+}
+
+// IsMigrated checks if an extension object has been migrated
+func IsMigrated(obj runtime.Object) bool {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
+		return false
+	}
+
+	lastOp := acc.GetExtensionStatus().GetLastOperation()
+	return lastOp != nil &&
+		lastOp.GetType() == gardencorev1beta1.LastOperationTypeMigrate &&
+		lastOp.GetState() == gardencorev1beta1.LastOperationStateSucceeded
 }

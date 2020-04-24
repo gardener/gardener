@@ -125,18 +125,6 @@ func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, 
 	})
 }
 
-// CreateStateConfigMap creates the Terraformer state ConfigMap with the given state.
-func CreateStateConfigMap(ctx context.Context, c client.Client, namespace, name, state string) error {
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
-		Data: map[string]string{
-			StateKey: state,
-		},
-	}
-
-	return c.Create(ctx, configMap)
-}
-
 // CreateOrUpdateTFVarsSecret creates or updates the Terraformer variables Secret with the given tfvars.
 func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace, name string, tfvars []byte) (*corev1.Secret, error) {
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
@@ -159,8 +147,8 @@ func (f initializerFunc) Initialize(config *InitializerConfig) error {
 }
 
 // DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
-// based on the given main, variables, tfvars and state content and on the given InitializerConfig.
-func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, state string) Initializer {
+// based on the given main, variables and tfvars content and on the given InitializerConfig.
+func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, stateInitializer StateConfigMapInitializer) Initializer {
 	return initializerFunc(func(config *InitializerConfig) error {
 		ctx := context.TODO()
 		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables); err != nil {
@@ -172,10 +160,11 @@ func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, 
 		}
 
 		if config.InitializeState {
-			if err := CreateStateConfigMap(ctx, c, config.Namespace, config.StateName, state); err != nil && !apierrors.IsAlreadyExists(err) {
+			if err := stateInitializer.Initialize(ctx, c, config.Namespace, config.StateName); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }
