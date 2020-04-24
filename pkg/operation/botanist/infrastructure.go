@@ -16,25 +16,19 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -90,81 +84,63 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 // DestroyInfrastructure deletes the `Infrastructure` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) DestroyInfrastructure(ctx context.Context) error {
-	obj := &extensionsv1alpha1.Infrastructure{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: b.Shoot.SeedNamespace,
-			Name:      b.Shoot.Info.Name,
-		},
-	}
-
-	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
+	return common.DeleteExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+	)
 }
 
 // WaitUntilInfrastructureReady waits until the infrastructure resource has been reconciled successfully.
 func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
-	if err := retry.UntilTimeout(ctx, DefaultInterval, InfrastructureDefaultTimeout, func(ctx context.Context) (bool, error) {
-		infrastructure := &extensionsv1alpha1.Infrastructure{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, infrastructure); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckExtensionObject(infrastructure); err != nil {
-			b.Logger.WithError(err).Error("Infrastructure did not get ready yet")
-			return retry.MinorError(err)
-		}
-
-		if infrastructure.Status.ProviderStatus != nil {
-			b.Shoot.InfrastructureStatus = infrastructure.Status.ProviderStatus.Raw
-		}
-		if infrastructure.Status.NodesCIDR != nil {
-			shootCopy := b.Shoot.Info.DeepCopy()
-			if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootCopy, func() error {
-				shootCopy.Spec.Networking.Nodes = infrastructure.Status.NodesCIDR
-				return nil
-			}); err != nil {
-				return retry.SevereError(err)
+	return common.WaitUntilExtensionCRReady(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
+		"Infrastructure",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		InfrastructureDefaultTimeout,
+		func(obj runtime.Object) error {
+			infrastructure, ok := obj.(*extensionsv1alpha1.Infrastructure)
+			if !ok {
+				return fmt.Errorf("expected extensionsv1alpha1.Infrastructure but got %T", infrastructure)
 			}
-			b.Shoot.Info = shootCopy
-		}
 
-		return retry.Ok()
-	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed to create infrastructure: %v", err))
-	}
-	return nil
+			if infrastructure.Status.ProviderStatus != nil {
+				b.Shoot.InfrastructureStatus = infrastructure.Status.ProviderStatus.Raw
+			}
+
+			if infrastructure.Status.NodesCIDR != nil {
+				shootCopy := b.Shoot.Info.DeepCopy()
+				if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootCopy, func() error {
+					shootCopy.Spec.Networking.Nodes = infrastructure.Status.NodesCIDR
+					return nil
+				}); err != nil {
+					return err
+				}
+				b.Shoot.Info = shootCopy
+			}
+			return nil
+		},
+	)
 }
 
 // WaitUntilInfrastructureDeleted waits until the infrastructure resource has been deleted.
 func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
-	var lastError *gardencorev1beta1.LastError
-
-	if err := retry.UntilTimeout(ctx, DefaultInterval, InfrastructureDefaultTimeout, func(ctx context.Context) (bool, error) {
-		infrastructure := &extensionsv1alpha1.Infrastructure{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, infrastructure); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-
-		if lastErr := infrastructure.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Infrastructure did not get deleted yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
-		}
-
-		b.Logger.Infof("Waiting for infrastructure to be deleted...")
-		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("infrastructure is still present"), lastError))
-	}); err != nil {
-		message := "Failed to delete infrastructure"
-		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
-	}
-
-	return nil
+	return common.WaitUntilExtensionCRDeleted(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+		"Infrastructure",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		InfrastructureDefaultTimeout,
+	)
 }

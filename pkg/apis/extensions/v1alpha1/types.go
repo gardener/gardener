@@ -43,6 +43,7 @@ type Status interface {
 
 // LastOperation is the last operation on an object.
 type LastOperation interface {
+	Get() *gardencorev1beta1.LastOperation
 	// GetDescription returns the description of the last operation.
 	GetDescription() string
 	// GetLastUpdateTime returns the last update time of the last operation.
@@ -57,6 +58,7 @@ type LastOperation interface {
 
 // LastError is the last error on an object.
 type LastError interface {
+	Get() *gardencorev1beta1.LastError
 	// GetDescription gets the description of the last occurred error.
 	GetDescription() string
 	// GetTaskID gets the task ID of the last error.
@@ -80,6 +82,8 @@ type Spec interface {
 // Object is an extension object resource.
 type Object interface {
 	metav1.Object
+	runtime.Object
+
 	// GetExtensionStatus retrieves the object's status.
 	GetExtensionStatus() Status
 	// GetExtensionSpec retrieves the object's spec.

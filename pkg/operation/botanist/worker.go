@@ -16,25 +16,18 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -165,68 +158,50 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 // DestroyWorker deletes the `Worker` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 5m until it is deleted.
 func (b *Botanist) DestroyWorker(ctx context.Context) error {
-	obj := &extensionsv1alpha1.Worker{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: b.Shoot.SeedNamespace,
-			Name:      b.Shoot.Info.Name,
-		},
-	}
-
-	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
+	return common.DeleteExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+	)
 }
 
 // WaitUntilWorkerReady waits until the worker extension resource has been successfully reconciled.
 func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
-	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
-		worker := &extensionsv1alpha1.Worker{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, worker); err != nil {
-			return retry.SevereError(err)
-		}
+	return common.WaitUntilExtensionCRReady(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
+		"Worker",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		WorkerDefaultTimeout,
+		func(obj runtime.Object) error {
+			worker, ok := obj.(*extensionsv1alpha1.Worker)
+			if !ok {
+				return fmt.Errorf("expected extensionsv1alpha1.Worker but got %T", obj)
+			}
 
-		if err := health.CheckExtensionObject(worker); err != nil {
-			b.Logger.WithError(err).Error("Worker did not get ready yet")
-			return retry.MinorError(err)
-		}
-
-		b.Shoot.MachineDeployments = worker.Status.MachineDeployments
-		return retry.Ok()
-	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
-	}
-	return nil
+			b.Shoot.MachineDeployments = worker.Status.MachineDeployments
+			return nil
+		},
+	)
 }
 
 // WaitUntilWorkerDeleted waits until the worker extension resource has been deleted.
 func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
-	var lastError *gardencorev1beta1.LastError
-
-	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
-		worker := &extensionsv1alpha1.Worker{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, worker); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-
-		if lastErr := worker.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Worker did not get deleted yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
-		}
-
-		b.Logger.Infof("Waiting for worker to be deleted...")
-		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("worker is still present"), lastError))
-	}); err != nil {
-		message := "Error while waiting for worker object to be deleted"
-		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
-	}
-
-	return nil
+	return common.WaitUntilExtensionCRDeleted(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
+		"Worker",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		WorkerDefaultTimeout,
+	)
 }

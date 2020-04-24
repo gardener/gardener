@@ -16,21 +16,14 @@ package botanist
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -70,65 +63,42 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 // DestroyNetwork deletes the `Network` extension resource in the shoot namespace in the seed cluster,
 // and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) DestroyNetwork(ctx context.Context) error {
-	obj := &extensionsv1alpha1.Network{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: b.Shoot.SeedNamespace,
-			Name:      b.Shoot.Info.Name,
-		},
-	}
-
-	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
+	return common.DeleteExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+	)
 }
 
 // WaitUntilNetworkIsReady waits until the network resource has been reconciled successfully.
 func (b *Botanist) WaitUntilNetworkIsReady(ctx context.Context) error {
-	if err := retry.UntilTimeout(ctx, DefaultInterval, NetworkDefaultTimeout, func(ctx context.Context) (bool, error) {
-		network := &extensionsv1alpha1.Network{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, network); err != nil {
-			return retry.SevereError(err)
-		}
-		if err := health.CheckExtensionObject(network); err != nil {
-			b.Logger.WithError(err).Error("Network did not get ready yet")
-			return retry.MinorError(err)
-		}
-		return retry.Ok()
-	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed to create network: %v", err))
-	}
-	return nil
+	return common.WaitUntilExtensionCRReady(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() runtime.Object { return &extensionsv1alpha1.Network{} },
+		"Network",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		NetworkDefaultTimeout,
+		nil,
+	)
 }
 
 // WaitUntilNetworkIsDeleted waits until the Network resource has been deleted.
 func (b *Botanist) WaitUntilNetworkIsDeleted(ctx context.Context) error {
-	var lastError *gardencorev1beta1.LastError
-
-	if err := retry.UntilTimeout(ctx, DefaultInterval, NetworkDefaultTimeout, func(ctx context.Context) (bool, error) {
-		network := &extensionsv1alpha1.Network{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, network); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-
-		if lastErr := network.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Network did not get deleted yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
-		}
-
-		b.Logger.Infof("Waiting for Network to be deleted...")
-		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("network is still present"), lastError))
-	}); err != nil {
-		message := "Failed to delete Network"
-		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
-	}
-
-	return nil
+	return common.WaitUntilExtensionCRDeleted(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		"Network",
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Name,
+		DefaultInterval,
+		NetworkDefaultTimeout,
+	)
 }

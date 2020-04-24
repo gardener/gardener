@@ -47,6 +47,11 @@ type LastError struct {
 	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty" protobuf:"bytes,4,opt,name=lastUpdateTime"`
 }
 
+// Get implements LastError.
+func (l *LastError) Get() *LastError {
+	return l
+}
+
 // GetDescription implements LastError.
 func (l *LastError) GetDescription() string {
 	return l.Description
@@ -112,6 +117,11 @@ type LastOperation struct {
 	State LastOperationState `json:"state" protobuf:"bytes,4,opt,name=state,casttype=LastOperationState"`
 	// Type of the last operation, one of Create, Reconcile, Delete.
 	Type LastOperationType `json:"type" protobuf:"bytes,5,opt,name=type,casttype=LastOperationType"`
+}
+
+// Get implements LastOperation.
+func (l *LastOperation) Get() *LastOperation {
+	return l
 }
 
 // GetDescription implements LastOperation.

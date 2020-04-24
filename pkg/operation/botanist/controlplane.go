@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"path/filepath"
@@ -33,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -404,17 +402,13 @@ func (b *Botanist) DestroyControlPlaneExposure(ctx context.Context) error {
 // destroyControlPlane deletes the `ControlPlane` extension resource with the following name in the shoot namespace
 // in the seed cluster, and it waits for a maximum of 10m until it is deleted.
 func (b *Botanist) destroyControlPlane(ctx context.Context, name string) error {
-	obj := &extensionsv1alpha1.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: b.Shoot.SeedNamespace,
-			Name:      name},
-	}
-
-	if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj))
+	return common.DeleteExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
+		b.Shoot.SeedNamespace,
+		name,
+	)
 }
 
 // WaitUntilControlPlaneExposureReady waits until the control plane resource with purpose `exposure` has been reconciled successfully.
@@ -429,25 +423,27 @@ func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 
 // waitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
 func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) error {
-	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
-		cp := &extensionsv1alpha1.ControlPlane{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckExtensionObject(cp); err != nil {
-			b.Logger.WithError(err).Error("Control plane did not get ready yet")
-			return retry.MinorError(err)
-		}
-
-		if cp.Status.ProviderStatus != nil {
-			b.Shoot.ControlPlaneStatus = cp.Status.ProviderStatus.Raw
-		}
-		return retry.Ok()
-	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("failed to create control plane: %v", err))
-	}
-	return nil
+	return common.WaitUntilExtensionCRReady(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
+		"ControlPlane",
+		b.Shoot.SeedNamespace,
+		name,
+		DefaultInterval,
+		ControlPlaneDefaultTimeout,
+		func(o runtime.Object) error {
+			obj, ok := o.(extensionsv1alpha1.Object)
+			if !ok {
+				return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
+			}
+			if providerStatus := obj.GetExtensionStatus().GetProviderStatus(); providerStatus != nil {
+				b.Shoot.ControlPlaneStatus = providerStatus.Raw
+			}
+			return nil
+		},
+	)
 }
 
 // WaitUntilControlPlaneExposureDeleted waits until the control plane resource with purpose `exposure` has been deleted.
@@ -462,32 +458,17 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 
 // waitUntilControlPlaneDeleted waits until the control plane resource with the following name has been deleted.
 func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
-	var lastError *gardencorev1beta1.LastError
-
-	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
-		cp := &extensionsv1alpha1.ControlPlane{}
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-
-		if lastErr := cp.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Control plane did not get deleted yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
-		}
-
-		b.Logger.Infof("Waiting for control plane to be deleted...")
-		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
-	}); err != nil {
-		message := "Failed to delete control plane"
-		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
-	}
-	return nil
+	return common.WaitUntilExtensionCRDeleted(
+		ctx,
+		b.K8sSeedClient.Client(),
+		b.Logger,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
+		"ControlPlane",
+		b.Shoot.SeedNamespace,
+		name,
+		DefaultInterval,
+		ControlPlaneDefaultTimeout,
+	)
 }
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order

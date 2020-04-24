@@ -139,6 +139,20 @@ func nestedRawExtension(obj map[string]interface{}, fields ...string) *runtime.R
 	return rawExtension
 }
 
+// Get implements LastOperation.
+func (u unstructuredLastOperationAccessor) Get() *gardencorev1beta1.LastOperation {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastOperation")
+	if err != nil || !ok {
+		return nil
+	}
+
+	lastOperation := &gardencorev1beta1.LastOperation{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(val.(map[string]interface{}), lastOperation); err != nil {
+		return nil
+	}
+	return lastOperation
+}
+
 // GetDescription implements LastOperation.
 func (u unstructuredLastOperationAccessor) GetDescription() string {
 	return nestedString(u.UnstructuredContent(), "status", "lastOperation", "description")
@@ -246,6 +260,20 @@ func (u unstructuredStatusAccessor) GetState() *runtime.RawExtension {
 		return nil
 	}
 	return raw
+}
+
+// Get implements LastError.
+func (u unstructuredLastErrorAccessor) Get() *gardencorev1beta1.LastError {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastError")
+	if err != nil || !ok {
+		return nil
+	}
+
+	lastError := &gardencorev1beta1.LastError{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(val.(map[string]interface{}), lastError); err != nil {
+		return nil
+	}
+	return lastError
 }
 
 // GetDescription implements LastError.
