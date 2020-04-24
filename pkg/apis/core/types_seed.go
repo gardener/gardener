@@ -68,6 +68,10 @@ type SeedSpec struct {
 	Volume *SeedVolume
 }
 
+func (s *Seed) GetProviderType() string {
+	return s.Spec.Provider.Type
+}
+
 // SeedStatus is the status of a Seed.
 type SeedStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.

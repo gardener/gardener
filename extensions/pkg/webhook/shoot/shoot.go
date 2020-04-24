@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -36,8 +37,8 @@ const (
 
 var logger = log.Log.WithName("shoot-webhook")
 
-// AddArgs are arguments for adding a shoot webhook to a manager.
-type AddArgs struct {
+// Args are arguments for creating a webhook targeting a shoot.
+type Args struct {
 	// Types is a list of resource types.
 	Types []runtime.Object
 	// Mutator is a mutator to be used by the admission handler. It doesn't need the shoot client.
@@ -46,8 +47,8 @@ type AddArgs struct {
 	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
 }
 
-// Add creates a new shoot webhook and adds it to the given Manager.
-func Add(mgr manager.Manager, args AddArgs) (*extensionswebhook.Webhook, error) {
+// Add creates a new webhook with the shoot as target cluster.
+func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", WebhookName)
 
 	// Build namespace selector from the webhook kind and provider
@@ -66,7 +67,7 @@ func Add(mgr manager.Manager, args AddArgs) (*extensionswebhook.Webhook, error) 
 
 	switch {
 	case args.Mutator != nil:
-		handler, err := extensionswebhook.NewHandler(mgr, args.Types, args.Mutator, logger)
+		handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
 		if err != nil {
 			return nil, err
 		}
@@ -80,11 +81,7 @@ func Add(mgr manager.Manager, args AddArgs) (*extensionswebhook.Webhook, error) 
 			return nil, err
 		}
 
-		decoder, err := admission.NewDecoder(mgr.GetScheme())
-		if err != nil {
-			return nil, err
-		}
-		if _, err := admission.InjectDecoderInto(decoder, handler); err != nil {
+		if _, err := inject.SchemeInto(mgr.GetScheme(), handler); err != nil {
 			return nil, err
 		}
 

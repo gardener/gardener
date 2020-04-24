@@ -45,10 +45,8 @@ var _ = Describe("Handler", func() {
 	)
 
 	var (
-		ctrl    *gomock.Controller
-		mgr     *mockmanager.MockManager
-		decoder *admission.Decoder
-		err     error
+		ctrl *gomock.Controller
+		mgr  *mockmanager.MockManager
 
 		objTypes = []runtime.Object{&corev1.Service{}}
 		svc      = &corev1.Service{
@@ -68,9 +66,6 @@ var _ = Describe("Handler", func() {
 		// Create mock manager
 		mgr = mockmanager.NewMockManager(ctrl)
 		mgr.EXPECT().GetScheme().Return(scheme)
-
-		decoder, err = admission.NewDecoder(scheme)
-		Expect(err).NotTo(HaveOccurred())
 
 		req = admission.Request{
 			AdmissionRequest: admissionv1beta1.AdmissionRequest{
@@ -95,9 +90,8 @@ var _ = Describe("Handler", func() {
 			mutator.EXPECT().Mutate(context.TODO(), svc, nil).Return(nil)
 
 			// Create handler
-			h, err := NewHandler(mgr, objTypes, mutator, logger)
+			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			err = h.InjectDecoder(decoder)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
@@ -122,9 +116,8 @@ var _ = Describe("Handler", func() {
 			mutator.EXPECT().Mutate(context.TODO(), svc, oldSvc).Return(nil)
 
 			// Create handler
-			h, err := NewHandler(mgr, objTypes, mutator, logger)
+			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			err = h.InjectDecoder(decoder)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.AdmissionRequest.Operation = admissionv1beta1.Update
@@ -152,9 +145,8 @@ var _ = Describe("Handler", func() {
 			})
 
 			// Create handler
-			h, err := NewHandler(mgr, objTypes, mutator, logger)
+			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			err = h.InjectDecoder(decoder)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
@@ -181,9 +173,8 @@ var _ = Describe("Handler", func() {
 			mutator.EXPECT().Mutate(context.TODO(), svc, nil).Return(errors.New("test error"))
 
 			// Create handler
-			h, err := NewHandler(mgr, objTypes, mutator, logger)
+			h, err := NewBuilder(mgr, logger).WithMutator(mutator, objTypes...).Build()
 			Expect(err).NotTo(HaveOccurred())
-			err = h.InjectDecoder(decoder)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Call Handle and check response
@@ -192,8 +183,8 @@ var _ = Describe("Handler", func() {
 				AdmissionResponse: admissionv1beta1.AdmissionResponse{
 					Allowed: false,
 					Result: &metav1.Status{
-						Code:    http.StatusInternalServerError,
-						Message: "could not mutate Service default/foo: test error",
+						Code:    http.StatusBadRequest,
+						Message: "test error",
 					},
 				},
 			}))

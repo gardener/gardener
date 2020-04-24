@@ -68,6 +68,10 @@ type CloudProfileSpec struct {
 	VolumeTypes []VolumeType
 }
 
+func (c *CloudProfile) GetProviderType() string {
+	return c.Spec.Type
+}
+
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 type KubernetesSettings struct {
 	// Versions is the list of allowed Kubernetes versions with optional expiration dates for Shoot clusters.

@@ -99,7 +99,7 @@ type SwitchOptions struct {
 	Disabled []string
 
 	nameToWebhookFactory     map[string]func(manager.Manager) (*extensionswebhook.Webhook, error)
-	webhookFactoryAggregator extensionswebhook.FactoryAggregator
+	webhookFactoryAggregator FactoryAggregator
 }
 
 // Register registers the given NameToWebhookFuncs in the options.
@@ -152,7 +152,7 @@ func Switch(name string, f func(manager.Manager) (*extensionswebhook.Webhook, er
 
 // NewSwitchOptions creates new SwitchOptions with the given initial pairs.
 func NewSwitchOptions(pairs ...NameToFactory) *SwitchOptions {
-	opts := SwitchOptions{nameToWebhookFactory: map[string]func(manager.Manager) (*extensionswebhook.Webhook, error){}, webhookFactoryAggregator: extensionswebhook.FactoryAggregator{}}
+	opts := SwitchOptions{nameToWebhookFactory: map[string]func(manager.Manager) (*extensionswebhook.Webhook, error){}, webhookFactoryAggregator: FactoryAggregator{}}
 	opts.Register(pairs...)
 	return &opts
 }
@@ -165,6 +165,7 @@ type AddToManagerOptions struct {
 }
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
+// It is supposed to be used for webhooks which should be automatically registered in the cluster via a Mutatingwebhookconfiguration.
 func NewAddToManagerOptions(serverName string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
 	return &AddToManagerOptions{
 		serverName: serverName,
@@ -206,6 +207,7 @@ type AddToManagerConfig struct {
 
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
+// It generates and registers the seed targeted webhooks via a Mutatingwebhookconfiguration.
 func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregistrationv1beta1.MutatingWebhook, []admissionregistrationv1beta1.MutatingWebhook, error) {
 	ctx := context.Background()
 
@@ -235,4 +237,61 @@ func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregis
 	}
 
 	return seedWebhooks, shootWebhooks, nil
+}
+
+// NewAddToManagerSimpleOptions creates new AddToManagerSimpleOptions with the given switch options.
+// It can be used for webhooks which are required to run only without an automatic registration in the K8s cluster.
+// Hence, Validatingwebhookconfiguration or Mutatingwebhookconfiguration must be created separately.
+func NewAddToManagerSimpleOptions(switchOpts *SwitchOptions) *AddToManagerSimpleOptions {
+	return &AddToManagerSimpleOptions{
+		Switch: *switchOpts,
+	}
+}
+
+// AddToManagerSimpleOptions are options to create an `AddToManager` function from SwitchOptions.
+type AddToManagerSimpleOptions struct {
+	Switch SwitchOptions
+}
+
+// AddFlags implements Option.
+func (o *AddToManagerSimpleOptions) AddFlags(fs *pflag.FlagSet) {
+	o.Switch.AddFlags(fs)
+}
+
+// Complete implements Option.
+func (o *AddToManagerSimpleOptions) Complete() error {
+	return o.Switch.Complete()
+}
+
+// Completed returns the completed AddToManagerSimpleOptions. Only call this if a previous call to `Complete` succeeded.
+func (o *AddToManagerSimpleOptions) Completed() *AddToManagerSimple {
+	return &AddToManagerSimple{
+		Switch: *o.Switch.Completed(),
+	}
+}
+
+// AddToManagerSimple is a completed AddToManager configuration w/o webhook registration.
+type AddToManagerSimple struct {
+	Switch SwitchConfig
+}
+
+// AddToManager makes the configured webhooks known to the given manager.
+// The registration for these webhooks must happen separately via Validatingwebhookconfiguration or Mutatingwebhookconfiguration.
+func (s *AddToManagerSimple) AddToManager(mgr manager.Manager) error {
+	webhooks, err := s.Switch.WebhooksFactory(mgr)
+	if err != nil {
+		return errors.Wrapf(err, "could not create webhooks")
+	}
+
+	webhookServer := mgr.GetWebhookServer()
+
+	for _, wh := range webhooks {
+		if wh.Handler != nil {
+			webhookServer.Register(wh.Path, wh.Handler)
+		} else {
+			webhookServer.Register(wh.Path, wh.Webhook)
+		}
+	}
+
+	return nil
 }

@@ -48,7 +48,7 @@ var (
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
 func NewHandlerWithShootClient(mgr manager.Manager, types []runtime.Object, mutator MutatorWithShootClient, logger logr.Logger) (*handlerShootClient, error) {
 	// Build a map of the given types keyed by their GVKs
-	typesMap, err := buildTypesMap(mgr, types)
+	typesMap, err := buildTypesMap(mgr.GetScheme(), types)
 	if err != nil {
 		return nil, err
 	}
@@ -65,13 +65,13 @@ type handlerShootClient struct {
 	typesMap map[metav1.GroupVersionKind]runtime.Object
 	mutator  MutatorWithShootClient
 	client   client.Client
-	decoder  *admission.Decoder
+	decoder  runtime.Decoder
 	logger   logr.Logger
 }
 
-// InjectDecoder injects the given decoder into the handler.
-func (h *handlerShootClient) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
+// InjectScheme injects the given scheme into the handler.
+func (h *handlerShootClient) InjectScheme(s *runtime.Scheme) error {
+	h.decoder = serializer.NewCodecFactory(s).UniversalDecoder()
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (h *handlerShootClient) InjectClient(client client.Client) error {
 }
 
 func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admission.Request, r *http.Request) admission.Response {
-	f := func(ctx context.Context, new, old runtime.Object, r *http.Request) error {
+	var mut MutateFunc = func(ctx context.Context, new, old runtime.Object) error {
 		ipPort := strings.Split(r.RemoteAddr, ":")
 		if len(ipPort) < 1 {
 			return fmt.Errorf("remote address not parseable: %s", r.RemoteAddr)
@@ -121,7 +121,13 @@ func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admissio
 		return h.mutator.Mutate(ctx, new, old, shootClient)
 	}
 
-	return handle(ctx, req, r, f, h.typesMap, h.decoder, h.logger)
+	// Decode object
+	t, ok := h.typesMap[req.AdmissionRequest.Kind]
+	if !ok {
+		return admission.Errored(http.StatusBadRequest, errors.Errorf("unexpected request kind %s", req.AdmissionRequest.Kind))
+	}
+
+	return handle(ctx, req, mut, t, h.decoder, h.logger)
 }
 
 // ServeHTTP is a handler for serving an HTTP endpoint that is used for shoot webhooks.

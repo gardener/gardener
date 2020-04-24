@@ -45,8 +45,8 @@ const (
 
 var logger = log.Log.WithName("controlplane-webhook")
 
-// AddArgs are arguments for adding a controlplane webhook to a manager.
-type AddArgs struct {
+// Args are arguments for creating a controlplane webhook.
+type Args struct {
 	// Kind is the kind of this webhook
 	Kind string
 	// Provider is the provider of this webhook.
@@ -57,12 +57,12 @@ type AddArgs struct {
 	Mutator extensionswebhook.Mutator
 }
 
-// Add creates a new controlplane webhook and adds it to the given Manager.
-func Add(mgr manager.Manager, args AddArgs) (*extensionswebhook.Webhook, error) {
+// New creates a new controlplane webhook with the given args.
+func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger := logger.WithValues("kind", args.Kind, "provider", args.Provider)
 
 	// Create handler
-	handler, err := extensionswebhook.NewHandler(mgr, args.Types, args.Mutator, logger)
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, args.Types...).Build()
 	if err != nil {
 		return nil, err
 	}
