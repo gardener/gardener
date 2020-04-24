@@ -12,6 +12,7 @@
 * [Gardener Scheduler](concepts/scheduler.md)
 * [Gardenlet](concepts/gardenlet.md)
 * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
+* [Backup Restore](concepts/backup-restore.md)
 
 ## Usage
 
@@ -76,7 +77,7 @@
   * Operating systems
     * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
   * Container runtimes
-    * [`ContainerRuntime` resource](extensions/containerruntime.md)    
+    * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
 * [Extending project roles](extensions/project-roles.md)
