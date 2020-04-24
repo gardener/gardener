@@ -181,9 +181,6 @@ type ShootControllerConfiguration struct {
 	// RetryDuration is the maximum duration how often a reconciliation will be retried
 	// in case of errors.
 	RetryDuration *metav1.Duration
-	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	RetrySyncPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
 }
@@ -198,6 +195,10 @@ type ShootCareControllerConfiguration struct {
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
 	SyncPeriod *metav1.Duration
+	// StaleExtensionHealthCheckThreshold configures the threshold when Gardener considers a Health check report of an
+	// Extension CRD as outdated.
+	// The StaleExtensionHealthCheckThreshold should have some leeway in case a Gardener extension is temporarily unavailable.
+	StaleExtensionHealthCheckThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
 }

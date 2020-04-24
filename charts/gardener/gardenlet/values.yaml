@@ -82,6 +82,7 @@ global:
         shootCare:
           concurrentSyncs: 5
           syncPeriod: 30s
+          staleExtensionHealthCheckThreshold: 5m
           conditionThresholds:
           - type: APIServerAvailable
             duration: 1m

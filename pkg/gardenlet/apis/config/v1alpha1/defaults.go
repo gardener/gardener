@@ -261,11 +261,6 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 		v := metav1.Duration{Duration: 24 * time.Hour}
 		obj.RetryDuration = &v
 	}
-
-	if obj.RetrySyncPeriod == nil {
-		v := metav1.Duration{Duration: 15 * time.Second}
-		obj.RetrySyncPeriod = &v
-	}
 }
 
 // SetDefaults_ShootCareControllerConfiguration sets defaults for the shoot care controller.
@@ -278,6 +273,11 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 	if obj.SyncPeriod == nil {
 		v := metav1.Duration{Duration: time.Minute}
 		obj.SyncPeriod = &v
+	}
+
+	if obj.StaleExtensionHealthCheckThreshold == nil {
+		v := metav1.Duration{Duration: 5 * time.Minute}
+		obj.StaleExtensionHealthCheckThreshold = &v
 	}
 }
 
