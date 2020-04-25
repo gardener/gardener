@@ -7,7 +7,7 @@ COPY . .
 RUN make install
 
 ############# base
-FROM alpine:3.11.3 AS base
+FROM alpine:3.11.6 AS base
 
 #############      apiserver     #############
 FROM base AS apiserver
