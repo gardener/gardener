@@ -507,3 +507,19 @@ func marshalWebhooks(webhooks []admissionregistrationv1beta1.MutatingWebhook, na
 
 	return buf.Bytes(), nil
 }
+
+func (a *actuator) Restore(
+	ctx context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) (bool, error) {
+	return a.Reconcile(ctx, cp, cluster)
+}
+
+func (a *actuator) Migrate(
+	ctx context.Context,
+	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
+) error {
+	return a.Delete(ctx, cp, cluster)
+}
