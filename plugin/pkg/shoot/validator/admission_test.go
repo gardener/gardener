@@ -477,6 +477,48 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		Context("shoot with generate name", func() {
+			BeforeEach(func() {
+				shoot.ObjectMeta = metav1.ObjectMeta{
+					GenerateName: "demo-",
+					Namespace:    namespaceName,
+				}
+			})
+
+			It("should admit Shoot resources", func() {
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject Shoot resources with not fulfilling the length constraints", func() {
+				tooLongName := "too-long-namespace"
+				project.ObjectMeta = metav1.ObjectMeta{
+					Name: tooLongName,
+				}
+				shoot.ObjectMeta = metav1.ObjectMeta{
+					GenerateName: "too-long-name",
+					Namespace:    namespaceName,
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
+			})
+		})
+
 		Context("finalizer removal checks", func() {
 			var (
 				oldShoot *core.Shoot
