@@ -1030,6 +1030,7 @@ func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]ExtensionCo
 		&extensionsv1alpha1.NetworkList{},
 		&extensionsv1alpha1.OperatingSystemConfigList{},
 		&extensionsv1alpha1.WorkerList{},
+		&extensionsv1alpha1.ContainerRuntimeList{},
 	} {
 		listKind := listObj.GetObjectKind().GroupVersionKind().Kind
 		if err := b.K8sSeedClient.Client().List(ctx, listObj, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
