@@ -508,6 +508,8 @@ func marshalWebhooks(webhooks []admissionregistrationv1beta1.MutatingWebhook, na
 	return buf.Bytes(), nil
 }
 
+// Restore reconciles the given controlplane and cluster, restoring the additional Shoot
+// control plane components as needed.
 func (a *actuator) Restore(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
@@ -516,6 +518,8 @@ func (a *actuator) Restore(
 	return a.Reconcile(ctx, cp, cluster)
 }
 
+// Migrate reconciles the given controlplane and cluster, deleting the additional
+// control plane components as needed.
 func (a *actuator) Migrate(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,

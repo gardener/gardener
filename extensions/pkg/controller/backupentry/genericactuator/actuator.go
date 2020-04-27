@@ -111,7 +111,7 @@ func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntr
 
 // Restore restores the update of a BackupEntry
 func (a *actuator) Restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
-	return a.deployEtcdBackupSecret(ctx, be)
+	return a.Reconcile(ctx, be)
 }
 
 // Migrate migrates the BackupEntry
