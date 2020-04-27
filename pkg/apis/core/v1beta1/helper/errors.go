@@ -49,7 +49,9 @@ var (
 	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey)`)
 	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
 	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|not available in the current hardware cluster)`)
+	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse)`)
+	resourcesDepletedRegexp      = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed)`)
+	configurationProblemRegexp   = regexp.MustCompile(`(?i)(AzureBastionSubnet|not supported in your requested Availability Zone|InvalidParameterValue|notFound|NetcfgInvalidSubnet|InvalidSubnet|Invalid value)`)
 )
 
 // DetermineError determines the Garden error code for the given error and creates a new error with the given message.
@@ -76,7 +78,7 @@ func determineErrorCode(err error) gardencorev1beta1.ErrorCode {
 	// first try to re-use code from error
 	if errors.As(err, &coder) {
 		switch coder.Code() {
-		case gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorInfraQuotaExceeded, gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraDependencies:
+		case gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorInfraQuotaExceeded, gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraDependencies, gardencorev1beta1.ErrorInfraResourcesDepleted, gardencorev1beta1.ErrorConfigurationProblem:
 			return coder.Code()
 		}
 	}
@@ -91,6 +93,10 @@ func determineErrorCode(err error) gardencorev1beta1.ErrorCode {
 		return gardencorev1beta1.ErrorInfraInsufficientPrivileges
 	case dependenciesRegexp.MatchString(message):
 		return gardencorev1beta1.ErrorInfraDependencies
+	case resourcesDepletedRegexp.MatchString(message):
+		return gardencorev1beta1.ErrorInfraResourcesDepleted
+	case configurationProblemRegexp.MatchString(message):
+		return gardencorev1beta1.ErrorConfigurationProblem
 	default:
 		return ""
 	}

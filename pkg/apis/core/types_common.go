@@ -22,14 +22,20 @@ import (
 type ErrorCode string
 
 const (
-	// ErrorInfraUnauthorized indicates that the last error occurred due to invalid cloud provider credentials.
+	// ErrorInfraUnauthorized indicates that the last error occurred due to invalid infrastructure credentials.
 	ErrorInfraUnauthorized ErrorCode = "ERR_INFRA_UNAUTHORIZED"
-	// ErrorInfraInsufficientPrivileges indicates that the last error occurred due to insufficient cloud provider privileges.
+	// ErrorInfraInsufficientPrivileges indicates that the last error occurred due to insufficient infrastructure privileges.
 	ErrorInfraInsufficientPrivileges ErrorCode = "ERR_INFRA_INSUFFICIENT_PRIVILEGES"
-	// ErrorInfraQuotaExceeded indicates that the last error occurred due to cloud provider quota limits.
+	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
 	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
-	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the cloud provider level.
+	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level.
 	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"
+	// ErrorInfraResourcesDepleted indicates that the last error occurred due to depleted resource in the infrastructure.
+	ErrorInfraResourcesDepleted ErrorCode = "ERR_INFRA_RESOURCES_DEPLETED"
+	// ErrorCleanupClusterResources indicates that the last error occurred due to resources in the cluster are stuck in deletion.
+	ErrorCleanupClusterResources ErrorCode = "ERR_CLEANUP_CLUSTER_RESOURCES"
+	// ErrorConfigurationProblem indicates that the last error occurred due a configuration problem.
+	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.
