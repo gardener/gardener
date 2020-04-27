@@ -94,11 +94,13 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		workerPool.Labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
 
 		// add CRI labels selected by the RuntimeClass
-		if workerPool.CRI != nil && len(workerPool.CRI.ContainerRuntimes) > 0 {
+		if workerPool.CRI != nil {
 			workerPool.Labels[extensionsv1alpha1.CRINameWorkerLabel] = string(workerPool.CRI.Name)
-			for _, cr := range workerPool.CRI.ContainerRuntimes {
-				key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
-				workerPool.Labels[key] = "true"
+			if len(workerPool.CRI.ContainerRuntimes) > 0 {
+				for _, cr := range workerPool.CRI.ContainerRuntimes {
+					key := fmt.Sprintf(extensionsv1alpha1.ContainerRuntimeNameWorkerLabel, cr.Type)
+					workerPool.Labels[key] = "true"
+				}
 			}
 		}
 
