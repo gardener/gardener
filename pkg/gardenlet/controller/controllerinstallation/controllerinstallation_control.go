@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -252,11 +251,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
 	// Create secret
-	data := make(map[string][]byte, len(release.Files()))
-	for fileName, fileContent := range release.Files() {
-		key := strings.Replace(fileName, "/", "_", -1)
-		data[key] = []byte(fileContent)
-	}
+	data := release.AsSecretData()
 
 	var secretName = controllerInstallation.Name
 	if err := manager.
