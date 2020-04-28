@@ -26,4 +26,8 @@ type Actuator interface {
 	Reconcile(ctx context.Context, ex *extensionsv1alpha1.Extension) error
 	// Delete the Extension resource.
 	Delete(ctx context.Context, ex *extensionsv1alpha1.Extension) error
+	// Restore the Extension resource.
+	Restore(ctx context.Context, ex *extensionsv1alpha1.Extension) error
+	// Migrate the Extension resource.
+	Migrate(ctx context.Context, ex *extensionsv1alpha1.Extension) error
 }
