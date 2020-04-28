@@ -94,6 +94,10 @@ func (c *Controller) respectSyncPeriodOverwrite() bool {
 	return controllerutils.BoolPtrDerefOr(c.config.Controllers.Shoot.RespectSyncPeriodOverwrite, false)
 }
 
+func confineSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) bool {
+	return maintenance != nil && maintenance.ConfineSpecUpdateRollout != nil && *maintenance.ConfineSpecUpdateRollout
+}
+
 func (c *Controller) checkSeedAndSyncClusterResource(shoot *gardencorev1beta1.Shoot, o *operation.Operation) error {
 	seedName := shoot.Spec.SeedName
 	if seedName == nil || o.Seed == nil {
@@ -171,7 +175,7 @@ func (c *Controller) updateShootStatusProcessing(shoot *gardencorev1beta1.Shoot,
 
 func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) time.Duration {
 	syncPeriod := common.SyncPeriodOfShoot(c.respectSyncPeriodOverwrite(), c.config.Controllers.Shoot.SyncPeriod.Duration, shoot)
-	if !c.reconcileInMaintenanceOnly() {
+	if !c.reconcileInMaintenanceOnly() && !confineSpecUpdateRollout(shoot.Spec.Maintenance) {
 		return syncPeriod
 	}
 
@@ -277,7 +281,7 @@ func (c *Controller) reconcileShoot(shoot *gardencorev1beta1.Shoot, logger *logr
 		reconcileInMaintenanceOnly                 = c.reconcileInMaintenanceOnly()
 		isUpToDate                                 = common.IsObservedAtLatestGenerationAndSucceeded(shoot)
 		isNowInEffectiveShootMaintenanceTimeWindow = common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
-		reconcileAllowed                           = !reconcileInMaintenanceOnly || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow
+		reconcileAllowed                           = (!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow
 		allowedToUpdate                            = !failedOrIgnored && reconcileAllowed
 	)
 	// need retry logic, because the scheduler is acting on it at the same time and cached object might not be up to date

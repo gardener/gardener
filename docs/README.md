@@ -17,12 +17,13 @@
 ## Usage
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
-* [Cluster purposes](usage/shoot_purposes.md)
+* [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
+* [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 

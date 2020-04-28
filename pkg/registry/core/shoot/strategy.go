@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -96,7 +97,7 @@ func updateKubeletConfig(kubeletConfig *core.KubeletConfig) {
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 	// The Shoot specification changes.
-	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
+	if mustIncreaseGenerationForSpecChanges(oldShoot, newShoot) {
 		return true
 	}
 
@@ -141,6 +142,14 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	return false
+}
+
+func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
+	if newShoot.Spec.Maintenance != nil && newShoot.Spec.Maintenance.ConfineSpecUpdateRollout != nil && *newShoot.Spec.Maintenance.ConfineSpecUpdateRollout {
+		return helper.HibernationIsEnabled(oldShoot) != helper.HibernationIsEnabled(newShoot)
+	}
+
+	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
 }
 
 func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {

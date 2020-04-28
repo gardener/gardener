@@ -579,6 +579,10 @@ type Maintenance struct {
 	AutoUpdate *MaintenanceAutoUpdate
 	// TimeWindow contains information about the time window for maintenance operations.
 	TimeWindow *MaintenanceTimeWindow
+	// ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately.
+	// Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
+	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
+	ConfineSpecUpdateRollout *bool
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.

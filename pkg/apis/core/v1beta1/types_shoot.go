@@ -702,6 +702,11 @@ type Maintenance struct {
 	// TimeWindow contains information about the time window for maintenance operations.
 	// +optional
 	TimeWindow *MaintenanceTimeWindow `json:"timeWindow,omitempty" protobuf:"bytes,2,opt,name=timeWindow"`
+	// ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately.
+	// Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger
+	// an immediate roll out which is changes to the Spec.Hibernation.Enabled field.
+	// +optional
+	ConfineSpecUpdateRollout *bool `json:"confineSpecUpdateRollout,omitempty" protobuf:"varint,3,opt,name=confineSpecUpdateRollout"`
 }
 
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.

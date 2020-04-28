@@ -4981,6 +4981,20 @@ MaintenanceTimeWindow
 <p>TimeWindow contains information about the time window for maintenance operations.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>confineSpecUpdateRollout</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately.
+Instead, they are rolled out during the shoot&rsquo;s maintenance time window. There is one exception that will trigger
+an immediate roll out which is changes to the Spec.Hibernation.Enabled field.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MaintenanceAutoUpdate">MaintenanceAutoUpdate

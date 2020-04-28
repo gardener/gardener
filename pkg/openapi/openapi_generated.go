@@ -3298,6 +3298,13 @@ func schema_pkg_apis_core_v1alpha1_Maintenance(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceTimeWindow"),
 						},
 					},
+					"confineSpecUpdateRollout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately. Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger an immediate roll out which is changes to the Spec.Hibernation.Enabled field.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -8364,6 +8371,13 @@ func schema_pkg_apis_core_v1beta1_Maintenance(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "TimeWindow contains information about the time window for maintenance operations.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow"),
+						},
+					},
+					"confineSpecUpdateRollout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfineSpecUpdateRollout prevents that changes/updates to the shoot specification will be rolled out immediately. Instead, they are rolled out during the shoot's maintenance time window. There is one exception that will trigger an immediate roll out which is changes to the Spec.Hibernation.Enabled field.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
