@@ -295,13 +295,12 @@ func checkExtensionObject(generation int64, observedGeneration int64, annotation
 		return fmt.Errorf("observed generation outdated (%d/%d)", observedGeneration, generation)
 	}
 
-	op, ok := annotations[v1beta1constants.GardenerOperation]
-	if ok {
+	if op, ok := annotations[v1beta1constants.GardenerOperation]; ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
 	}
 
 	if lastError != nil {
-		return fmt.Errorf("extension encountered error during reconciliation: %s", lastError.Description)
+		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Sprintf("extension encountered error during reconciliation: %s", lastError.Description), lastError.Codes...)
 	}
 
 	if lastOperation == nil {
@@ -311,6 +310,7 @@ func checkExtensionObject(generation int64, observedGeneration int64, annotation
 	if lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 		return fmt.Errorf("extension state is not succeeded but %v", lastOperation.State)
 	}
+
 	return nil
 }
 

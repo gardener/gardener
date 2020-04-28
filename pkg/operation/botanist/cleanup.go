@@ -172,7 +172,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list runtime
 		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
 			if err := cleanOps.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
 				if utilclient.AreObjectsRemaining(err) {
-					return retry.MinorError(helper.NewErrorWithCode(gardencorev1beta1.ErrorCleanupClusterResources, err.Error()))
+					return retry.MinorError(helper.NewErrorWithCodes(err.Error(), gardencorev1beta1.ErrorCleanupClusterResources))
 				}
 				return retry.SevereError(err)
 			}

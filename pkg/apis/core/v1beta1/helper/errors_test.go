@@ -37,18 +37,18 @@ var _ = Describe("helper", func() {
 
 				Entry("no error", nil, "foo", errors.New("foo")),
 				Entry("no code to extract", errors.New("foo"), "", errors.New("foo")),
-				Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "unauthorized")),
-				Entry("unauthorized with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, ""), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "")),
-				Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
-				Entry("quota exceeded with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
-				Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
-				Entry("insufficient privileges with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
-				Entry("infrastructure dependencies", errors.New("pendingverification"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
-				Entry("infrastructure dependencies with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification"), "error occurred: pendingverification", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: pendingverification")),
-				Entry("resources depleted", errors.New("not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "error occurred: not available in the current hardware cluster")),
-				Entry("resources depleted with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "error occurred: not available in the current hardware cluster")),
-				Entry("configuration problem", errors.New("InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "error occurred: InvalidParameterValue")),
-				Entry("configuration problem with coder", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "error occurred: InvalidParameterValue")),
+				Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCodes("unauthorized", gardencorev1beta1.ErrorInfraUnauthorized)),
+				Entry("unauthorized with coder", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)),
+				Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
+				Entry("quota exceeded with coder", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
+				Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
+				Entry("insufficient privileges with coder", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
+				Entry("infrastructure dependencies", errors.New("pendingverification"), "", NewErrorWithCodes("pendingverification", gardencorev1beta1.ErrorInfraDependencies)),
+				Entry("infrastructure dependencies with coder", NewErrorWithCodes("pendingverification", gardencorev1beta1.ErrorInfraDependencies), "error occurred: pendingverification", NewErrorWithCodes("error occurred: pendingverification", gardencorev1beta1.ErrorInfraDependencies)),
+				Entry("resources depleted", errors.New("not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCodes("error occurred: not available in the current hardware cluster", gardencorev1beta1.ErrorInfraResourcesDepleted)),
+				Entry("resources depleted with coder", NewErrorWithCodes("not available in the current hardware cluster", gardencorev1beta1.ErrorInfraResourcesDepleted), "error occurred: not available in the current hardware cluster", NewErrorWithCodes("error occurred: not available in the current hardware cluster", gardencorev1beta1.ErrorInfraResourcesDepleted)),
+				Entry("configuration problem", errors.New("InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCodes("error occurred: InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem)),
+				Entry("configuration problem with coder", NewErrorWithCodes("InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem), "error occurred: InvalidParameterValue", NewErrorWithCodes("error occurred: InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem)),
 			)
 		})
 
@@ -60,8 +60,9 @@ var _ = Describe("helper", func() {
 
 				Entry("no error given", nil, BeEmpty()),
 				Entry("no code error given", errors.New("error"), BeEmpty()),
-				Entry("code error given", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, ""), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
-				Entry("wrapped code error", fmt.Errorf("error %w", NewErrorWithCode(gardencorev1beta1.ErrorInfraUnauthorized, "")), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
+				Entry("code error given", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
+				Entry("multiple code error given", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorConfigurationProblem), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized), Equal(gardencorev1beta1.ErrorConfigurationProblem))),
+				Entry("wrapped code error", fmt.Errorf("error %w", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
 			)
 		})
 	})
