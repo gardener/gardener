@@ -44,10 +44,14 @@ var _ = Describe("helper", func() {
 				Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
 				Entry("insufficient privileges with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
 				Entry("infrastructure dependencies", errors.New("pendingverification"), "", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification")),
-				Entry("infrastructure dependencies", errors.New("not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: not available in the current hardware cluster")),
-				Entry("infrastructure dependencies with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: not available in the current hardware cluster")),
+				Entry("infrastructure dependencies with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "pendingverification"), "error occurred: pendingverification", NewErrorWithCode(gardencorev1beta1.ErrorInfraDependencies, "error occurred: pendingverification")),
+				Entry("resources depleted", errors.New("not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "error occurred: not available in the current hardware cluster")),
+				Entry("resources depleted with coder", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "not available in the current hardware cluster"), "error occurred: not available in the current hardware cluster", NewErrorWithCode(gardencorev1beta1.ErrorInfraResourcesDepleted, "error occurred: not available in the current hardware cluster")),
+				Entry("configuration problem", errors.New("InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "error occurred: InvalidParameterValue")),
+				Entry("configuration problem with coder", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCode(gardencorev1beta1.ErrorConfigurationProblem, "error occurred: InvalidParameterValue")),
 			)
 		})
+
 		Describe("#ExtractErrorCodes", func() {
 			DescribeTable("appropriate error code should be extracted",
 				func(err error, matcher GomegaMatcher) {
