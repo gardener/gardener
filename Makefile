@@ -130,7 +130,7 @@ install-requirements:
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
 	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
-	@go get golang.org/x/tools/cmd/goimports
+	@GO111MODULE=off go get golang.org/x/tools/cmd/goimports
 	@./hack/install-requirements.sh
 
 .PHONY: revendor
