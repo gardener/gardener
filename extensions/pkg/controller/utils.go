@@ -360,6 +360,6 @@ func IsMigrated(obj runtime.Object) bool {
 
 	lastOp := acc.GetExtensionStatus().GetLastOperation()
 	return lastOp != nil &&
-		lastOp.GetType() == gardencorev1beta1.LastOperationTypeMigrate &&
-		lastOp.GetState() == gardencorev1beta1.LastOperationStateSucceeded
+		lastOp.Type == gardencorev1beta1.LastOperationTypeMigrate &&
+		lastOp.State == gardencorev1beta1.LastOperationStateSucceeded
 }

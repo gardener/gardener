@@ -240,6 +240,6 @@ func removeAnnotation(ctx context.Context, c client.Client, worker *extensionsv1
 
 func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {
 	return worker.Status.LastOperation != nil &&
-		worker.Status.LastOperation.GetType() == gardencorev1beta1.LastOperationTypeMigrate &&
-		worker.Status.LastOperation.GetState() == gardencorev1beta1.LastOperationStateSucceeded
+		worker.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate &&
+		worker.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }

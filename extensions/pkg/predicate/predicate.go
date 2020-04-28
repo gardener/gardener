@@ -175,7 +175,7 @@ func LastOperationNotSuccessful() predicate.Predicate {
 
 		lastOp := acc.GetExtensionStatus().GetLastOperation()
 		return lastOp == nil ||
-			lastOp.GetState() != gardencorev1beta1.LastOperationStateSucceeded
+			lastOp.State != gardencorev1beta1.LastOperationStateSucceeded
 	}
 
 	return predicate.Funcs{
