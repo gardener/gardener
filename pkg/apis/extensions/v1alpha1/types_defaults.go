@@ -81,18 +81,12 @@ func (d *DefaultStatus) SetConditions(c []gardencorev1beta1.Condition) {
 }
 
 // GetLastOperation implements Status.
-func (d *DefaultStatus) GetLastOperation() LastOperation {
-	if d.LastOperation == nil {
-		return nil
-	}
+func (d *DefaultStatus) GetLastOperation() *gardencorev1beta1.LastOperation {
 	return d.LastOperation
 }
 
 // GetLastError implements Status.
-func (d *DefaultStatus) GetLastError() LastError {
-	if d.LastError == nil {
-		return nil
-	}
+func (d *DefaultStatus) GetLastError() *gardencorev1beta1.LastError {
 	return d.LastError
 }
 

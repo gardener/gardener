@@ -31,42 +31,14 @@ type Status interface {
 	SetConditions([]gardencorev1beta1.Condition)
 	// GetLastOperation retrieves the LastOperation of a status.
 	// LastOperation may be nil.
-	GetLastOperation() LastOperation
+	GetLastOperation() *gardencorev1beta1.LastOperation
 	// GetObservedGeneration retrieves the last generation observed by the extension controller.
 	GetObservedGeneration() int64
 	// GetLastError retrieves the LastError of a status.
 	// LastError may be nil.
-	GetLastError() LastError
+	GetLastError() *gardencorev1beta1.LastError
 	// GetState retrieves the State of the extension
 	GetState() *runtime.RawExtension
-}
-
-// LastOperation is the last operation on an object.
-type LastOperation interface {
-	Get() *gardencorev1beta1.LastOperation
-	// GetDescription returns the description of the last operation.
-	GetDescription() string
-	// GetLastUpdateTime returns the last update time of the last operation.
-	GetLastUpdateTime() metav1.Time
-	// GetProgress returns progress of the last operation.
-	GetProgress() int32
-	// GetState returns the LastOperationState of the last operation.
-	GetState() gardencorev1beta1.LastOperationState
-	// GetType returns the LastOperationType of the last operation.
-	GetType() gardencorev1beta1.LastOperationType
-}
-
-// LastError is the last error on an object.
-type LastError interface {
-	Get() *gardencorev1beta1.LastError
-	// GetDescription gets the description of the last occurred error.
-	GetDescription() string
-	// GetTaskID gets the task ID of the last error.
-	GetTaskID() *string
-	// GetCodes gets the error codes of the last error.
-	GetCodes() []gardencorev1beta1.ErrorCode
-	// GetLastUpdateTime retrieves the last time the error was updated.
-	GetLastUpdateTime() *metav1.Time
 }
 
 // Spec is the spec section of an Object.
@@ -84,8 +56,8 @@ type Object interface {
 	metav1.Object
 	runtime.Object
 
-	// GetExtensionStatus retrieves the object's status.
-	GetExtensionStatus() Status
 	// GetExtensionSpec retrieves the object's spec.
 	GetExtensionSpec() Spec
+	// GetExtensionStatus retrieves the object's status.
+	GetExtensionStatus() Status
 }

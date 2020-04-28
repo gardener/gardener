@@ -241,8 +241,8 @@ func WaitUntilExtensionCRDeleted(
 		}
 
 		if lastErr := acc.GetExtensionStatus().GetLastError(); lastErr != nil {
-			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.GetDescription())
-			lastError = lastErr.Get()
+			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
+			lastError = lastErr
 		}
 
 		logger.Infof("Waiting for %s %s/%s to be deleted...", kind, namespace, name)

@@ -2495,16 +2495,6 @@ be statically defined in the Shoot resource but must be computed dynamically.</p
 </tr>
 </tbody>
 </table>
-<h3 id="extensions.gardener.cloud/v1alpha1.LastError">LastError
-</h3>
-<p>
-<p>LastError is the last error on an object.</p>
-</p>
-<h3 id="extensions.gardener.cloud/v1alpha1.LastOperation">LastOperation
-</h3>
-<p>
-<p>LastOperation is the last operation on an object.</p>
-</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.MachineDeployment">MachineDeployment
 </h3>
 <p>

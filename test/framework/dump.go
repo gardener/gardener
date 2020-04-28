@@ -203,9 +203,9 @@ func (f *GardenerFramework) dumpGardenerExtension(extension v1alpha1.Object) {
 	} else {
 		f.Logger.Printf("%s of type %s is %s", extension.GetName(), extension.GetExtensionSpec().GetExtensionType(), healthy)
 	}
-	f.Logger.Printf("At %v - last operation %s %s: %s", extension.GetExtensionStatus().GetLastOperation().GetLastUpdateTime(), extension.GetExtensionStatus().GetLastOperation().GetType(), extension.GetExtensionStatus().GetLastOperation().GetState(), extension.GetExtensionStatus().GetLastOperation().GetDescription())
+	f.Logger.Printf("At %v - last operation %s %s: %s", extension.GetExtensionStatus().GetLastOperation().LastUpdateTime, extension.GetExtensionStatus().GetLastOperation().Type, extension.GetExtensionStatus().GetLastOperation().State, extension.GetExtensionStatus().GetLastOperation().Description)
 	if extension.GetExtensionStatus().GetLastError() != nil {
-		f.Logger.Printf("At %v - last error: %s", extension.GetExtensionStatus().GetLastError().GetLastUpdateTime(), extension.GetExtensionStatus().GetLastError().GetDescription())
+		f.Logger.Printf("At %v - last error: %s", extension.GetExtensionStatus().GetLastError().LastUpdateTime, extension.GetExtensionStatus().GetLastError().Description)
 	}
 }
 

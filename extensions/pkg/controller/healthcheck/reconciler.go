@@ -229,6 +229,5 @@ func isInMigration(accessor extensionsv1alpha1.Object) bool {
 	}
 
 	lastOperation := status.GetLastOperation()
-
-	return lastOperation != nil && lastOperation.GetType() == gardencorev1beta1.LastOperationTypeMigrate
+	return lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate
 }

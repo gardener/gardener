@@ -271,20 +271,8 @@ func CheckExtensionObject(o runtime.Object) error {
 		return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
 	}
 
-	var (
-		status        = obj.GetExtensionStatus()
-		lastError     *gardencorev1beta1.LastError
-		lastOperation *gardencorev1beta1.LastOperation
-	)
-
-	if status.GetLastError() != nil {
-		lastError = status.GetLastError().Get()
-	}
-	if status.GetLastOperation() != nil {
-		lastOperation = status.GetLastOperation().Get()
-	}
-
-	return checkExtensionObject(obj.GetGeneration(), status.GetObservedGeneration(), obj.GetAnnotations(), lastError, lastOperation)
+	status := obj.GetExtensionStatus()
+	return checkExtensionObject(obj.GetGeneration(), status.GetObservedGeneration(), obj.GetAnnotations(), status.GetLastError(), status.GetLastOperation())
 }
 
 // CheckBackupBucket checks if an backup bucket Object is healthy or not.

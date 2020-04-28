@@ -52,10 +52,6 @@ func mkUnstructuredAccessorWithStatus(status extensionsv1alpha1.DefaultStatus) e
 	return mkUnstructuredAccessor(&extensionsv1alpha1.Infrastructure{Status: extensionsv1alpha1.InfrastructureStatus{DefaultStatus: status}}).GetExtensionStatus()
 }
 
-func mkUnstructuredAccessorWithLastOperation(lastOperation *gardencorev1beta1.LastOperation) extensionsv1alpha1.LastOperation {
-	return mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{LastOperation: lastOperation}).GetLastOperation()
-}
-
 var _ = Describe("Accessor", func() {
 	Describe("#Accessor", func() {
 		It("should create an accessor for extensions", func() {
@@ -138,106 +134,72 @@ var _ = Describe("Accessor", func() {
 				})
 			})
 
-			Context("#GetLastOperation", func() {
-				Describe("#GetDescription", func() {
-					It("should get the description", func() {
-						var (
-							desc = "desc"
-							acc  = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Description: desc})
-						)
+			Describe("#GetLastOperation", func() {
+				It("should get the last operation", func() {
+					var (
+						desc = "desc"
+						acc  = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{LastOperation: &gardencorev1beta1.LastOperation{Description: "desc"}})
+					)
 
-						Expect(acc.GetDescription()).To(Equal(desc))
-					})
+					Expect(acc.GetLastOperation()).To(Equal(&gardencorev1beta1.LastOperation{Description: desc}))
 				})
+			})
 
-				Describe("#GetLastUpdateTime", func() {
-					It("should get the last update time", func() {
-						var (
-							t   = metav1.NewTime(time.Unix(50, 0))
-							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{LastUpdateTime: t})
-						)
+			Describe("#GetLastError", func() {
+				It("should get the last error", func() {
+					var (
+						desc = "desc"
+						acc  = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{LastError: &gardencorev1beta1.LastError{Description: "desc"}})
+					)
 
-						Expect(acc.GetLastUpdateTime()).To(Equal(t))
-					})
+					Expect(acc.GetLastError()).To(Equal(&gardencorev1beta1.LastError{Description: desc}))
 				})
+			})
 
-				Describe("#GetProgress", func() {
-					It("should get the progress", func() {
-						var (
-							progress int32 = 10
-							acc            = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Progress: progress})
-						)
-
-						Expect(acc.GetProgress()).To(Equal(progress))
-					})
+			Describe("#GetConditions", func() {
+				It("should get the conditions", func() {
+					var (
+						conditions = []gardencorev1beta1.Condition{
+							{
+								Type:           "ABC",
+								Status:         gardencorev1beta1.ConditionTrue,
+								Reason:         "reason",
+								Message:        "message",
+								LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
+							},
+						}
+						acc = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{Conditions: conditions})
+					)
+					getConditions := acc.GetConditions()
+					Expect(getConditions).To(Equal(conditions))
 				})
+			})
 
-				Describe("#GetState", func() {
-					It("should get the state", func() {
-						var (
-							state = gardencorev1beta1.LastOperationStateSucceeded
-							acc   = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{State: state})
-						)
-
-						Expect(acc.GetState()).To(Equal(state))
-					})
+			Describe("#GetState", func() {
+				It("should get the extensions state", func() {
+					state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{State: state})
+					Expect(acc.GetState()).To(Equal(state))
 				})
+			})
 
-				Describe("#GetType", func() {
-					It("should get the type", func() {
-						var (
-							t   = gardencorev1beta1.LastOperationTypeReconcile
-							acc = mkUnstructuredAccessorWithLastOperation(&gardencorev1beta1.LastOperation{Type: t})
-						)
-
-						Expect(acc.GetType()).To(Equal(t))
-					})
-				})
-				Describe("#Get Conditions", func() {
-					It("should get the conditions", func() {
-						var (
-							conditions = []gardencorev1beta1.Condition{
-								{
-									Type:           "ABC",
-									Status:         gardencorev1beta1.ConditionTrue,
-									Reason:         "reason",
-									Message:        "message",
-									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
-								},
-							}
-							acc = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{Conditions: conditions})
-						)
-						getConditions := acc.GetConditions()
-						Expect(getConditions).To(Equal(conditions))
-					})
-				})
-
-				Describe("#GetState", func() {
-					It("should get the extensions state", func() {
-						state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
-						acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{State: state})
-						Expect(acc.GetState()).To(Equal(state))
-					})
-				})
-
-				Describe("#Set Conditions", func() {
-					It("should set the conditions", func() {
-						var (
-							acc        = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
-							conditions = []gardencorev1beta1.Condition{
-								{
-									Type:           "ABC",
-									Status:         gardencorev1beta1.ConditionTrue,
-									Reason:         "reason",
-									Message:        "message",
-									LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
-								},
-							}
-						)
-						acc.SetConditions(conditions)
-						getConditions := acc.GetConditions()
-						Expect(getConditions).To(Equal(conditions))
-					})
+			Describe("#SetConditions", func() {
+				It("should set the conditions", func() {
+					var (
+						acc        = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+						conditions = []gardencorev1beta1.Condition{
+							{
+								Type:           "ABC",
+								Status:         gardencorev1beta1.ConditionTrue,
+								Reason:         "reason",
+								Message:        "message",
+								LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
+							},
+						}
+					)
+					acc.SetConditions(conditions)
+					getConditions := acc.GetConditions()
+					Expect(getConditions).To(Equal(conditions))
 				})
 			})
 		})
