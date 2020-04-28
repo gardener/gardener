@@ -120,7 +120,7 @@ func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.Stateful
 	return statefulSet
 }
 
-func newEtcd(namespace, name, role string, healthy bool) *druidv1alpha1.Etcd {
+func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
 	etcd := &druidv1alpha1.Etcd{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -130,6 +130,9 @@ func newEtcd(namespace, name, role string, healthy bool) *druidv1alpha1.Etcd {
 	}
 	if healthy {
 		etcd.Status.Ready = pointer.BoolPtr(true)
+	} else {
+		etcd.Status.Ready = pointer.BoolPtr(false)
+		etcd.Status.LastError = lastError
 	}
 
 	return etcd
@@ -173,6 +176,13 @@ func newNode(name string, healthy bool, set labels.Set) *corev1.Node {
 func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": Equal(status),
+	}))
+}
+
+func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status": Equal(status),
+		"Codes":  Equal(codes),
 	}))
 }
 
@@ -223,22 +233,14 @@ var _ = Describe("health check", func() {
 		}
 
 		// control plane etcds
-		etcdMain   = newEtcd(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true)
-		etcdEvents = newEtcd(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
-
-		// control plane etcds
-		etcdMainStatefulSet   = newStatefulSet(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true)
-		etcdEventsStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true)
+		etcdMain   = newEtcd(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true, nil)
+		etcdEvents = newEtcd(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true, nil)
 
 		requiredControlPlaneEtcds = []*druidv1alpha1.Etcd{
 			etcdMain,
 			etcdEvents,
 		}
 
-		requiredControlPlaneStatefulSets = []*appsv1.StatefulSet{
-			etcdMainStatefulSet,
-			etcdEventsStatefulSet,
-		}
 		// system component deployments
 		coreDNSDeployment       = newDeployment(shootNamespace, common.CoreDNSDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
 		vpnShootDeployment      = newDeployment(shootNamespace, common.VPNShootDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
@@ -305,31 +307,22 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardencorev1beta1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardencorev1beta1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
-				deploymentLister  = constDeploymentLister(deployments)
-				statefulSetLister = constStatefulSetLister(statefulSets)
-				etcdLister        = constEtcdLister(etcds)
-				workerLister      = constWorkerLister(workers)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
+				deploymentLister = constDeploymentLister(deployments)
+				etcdLister       = constEtcdLister(etcds)
+				workerLister     = constWorkerLister(workers)
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, metav1.Duration{Duration: time.Minute})
 			)
-			versionsToCheck := []string{
-				"v1.0.4",
-				"v1.2.0",
-			}
 
-			for _, version := range versionsToCheck {
-				exitCondition, err := checker.CheckControlPlane(version, shoot, seedNamespace, condition, deploymentLister, statefulSetLister, etcdLister, workerLister)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(exitCondition).To(conditionMatcher)
-			}
-
+			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, etcdLister, workerLister)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			gcpShoot,
 			"gcp",
 			requiredControlPlaneDeployments,
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			nil,
 			BeNil()),
@@ -342,7 +335,6 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 			},
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			nil,
 			BeNil()),
@@ -356,7 +348,6 @@ var _ = Describe("health check", func() {
 				kubeSchedulerDeployment,
 				clusterAutoscalerDeployment,
 			},
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			[]*extensionsv1alpha1.Worker{
 				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
@@ -372,7 +363,6 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 			},
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
@@ -385,36 +375,38 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 			},
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("missing required stateful set",
+		Entry("missing required etcd",
 			gcpShoot,
 			"gcp",
 			requiredControlPlaneDeployments,
-			[]*appsv1.StatefulSet{
-				etcdEventsStatefulSet,
-			},
 			[]*druidv1alpha1.Etcd{
 				etcdEvents,
 			},
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("required stateful set unhealthy",
+		Entry("required etcd unready",
 			gcpShoot,
 			"gcp",
 			requiredControlPlaneDeployments,
-			[]*appsv1.StatefulSet{
-				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),
-				etcdEventsStatefulSet,
-			},
 			[]*druidv1alpha1.Etcd{
-				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false),
+				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, nil),
 				etcdEvents,
 			},
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+		Entry("required etcd unhealthy with error code message",
+			gcpShoot,
+			"gcp",
+			requiredControlPlaneDeployments,
+			[]*druidv1alpha1.Etcd{
+				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, pointer.StringPtr("some error that maps to an error code, e.g. unauthorized")),
+				etcdEvents,
+			},
+			nil,
+			beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("possibly rolling update ongoing (with autoscaler)",
 			gcpShootThatNeedsAutoscaler,
 			"gcp",
@@ -424,7 +416,6 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 			},
-			requiredControlPlaneStatefulSets,
 			requiredControlPlaneEtcds,
 			[]*extensionsv1alpha1.Worker{
 				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
@@ -480,9 +471,12 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 	)
 
-	workerPoolName1 := "cpu-worker-1"
-	workerPoolName2 := "cpu-worker-2"
-	nodeName := "node1"
+	var (
+		workerPoolName1 = "cpu-worker-1"
+		workerPoolName2 = "cpu-worker-2"
+		nodeName        = "node1"
+	)
+
 	DescribeTable("#CheckClusterNodes",
 		func(nodes []*corev1.Node, workerPools []gardencorev1beta1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
@@ -518,6 +512,36 @@ var _ = Describe("health check", func() {
 				},
 			},
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy", nodeName, workerPoolName1))),
+		Entry("node not healthy with error codes",
+			[]*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   nodeName,
+						Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{
+								Type:   corev1.NodeReady,
+								Status: corev1.ConditionTrue,
+							},
+							{
+								Type:   corev1.NodeDiskPressure,
+								Status: corev1.ConditionTrue,
+								Reason: "KubeletHasDiskPressure",
+							},
+						},
+					},
+				},
+			},
+			[]gardencorev1beta1.Worker{
+				{
+					Name:    workerPoolName1,
+					Maximum: 10,
+					Minimum: 1,
+				},
+			},
+			beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorConfigurationProblem)),
 		Entry("not enough nodes in worker pool",
 			[]*corev1.Node{
 				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
