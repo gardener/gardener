@@ -37,6 +37,7 @@ The result is k8s on top of bare metal in minutes.
 and CI/CD systems internally.
 - [Beez Innovation Labs Pvt Ltd](https://www.beezlabs.com/) uses Gardener to offer its 
 products across cloud providers and manage its clusters for different environments.
+- [PingCAP](https://pingcap.com/) uses Gardener to build its managed database service known as [TiDB Cloud](https://pingcap.com/tidb-cloud/) on mainstream cloud providers.
 
 If you’re using Gardener and aren’t on this list, feel free to
 [submit a pull request](https://github.com/gardener/gardener/pulls)!
