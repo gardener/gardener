@@ -21,14 +21,13 @@ import (
 	"sync"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/test/gomega"
 
 	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -751,14 +750,12 @@ spec:
 
 			It("should delete configmap", func() {
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+				Expect(err).To(BeNotFoundError())
 			})
 
 			It("should delete pod", func() {
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+				Expect(err).To(BeNotFoundError())
 			})
 
 			It("should keep configmap which should not be deleted", func() {

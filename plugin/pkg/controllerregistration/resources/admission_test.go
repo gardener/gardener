@@ -21,9 +21,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 
+	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
@@ -110,8 +111,7 @@ var _ = Describe("resources", func() {
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			Expect(err).To(BeForbiddenError())
 		})
 	})
 

@@ -22,14 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/helm/pkg/engine"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	. "github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -176,8 +175,7 @@ var _ = Describe("chart applier", func() {
 			actual := &corev1.ConfigMap{}
 			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			Expect(err).To(BeNotFoundError())
 		})
 
 		It("deletes the chart with custom values", func() {
@@ -216,8 +214,7 @@ var _ = Describe("chart applier", func() {
 			actual := &corev1.ConfigMap{}
 			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			Expect(err).To(BeNotFoundError())
 		})
 	})
 })
