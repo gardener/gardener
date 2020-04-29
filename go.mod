@@ -7,7 +7,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/etcd v3.3.17+incompatible
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/gardener/etcd-druid v0.1.12
+	github.com/gardener/etcd-druid v0.1.15
 	github.com/gardener/external-dns-management v0.7.7
 	github.com/gardener/gardener-resource-manager v0.10.0
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
@@ -41,7 +41,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.17.0
+	k8s.io/api v0.16.8
 	k8s.io/apiextensions-apiserver v0.17.0
 	k8s.io/apimachinery v0.17.0
 	k8s.io/apiserver v0.16.8
