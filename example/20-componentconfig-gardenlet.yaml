@@ -83,6 +83,7 @@ featureGates:
   Logging: true
   HVPA: true
   HVPAForShootedSeed: true
+  ManagedIstio: false
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

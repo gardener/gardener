@@ -1,0 +1,6 @@
+trustDomain: cluster.local
+image: docker.io/istio/pilot:1.5.1
+labels:
+  app: istiod
+  istio: pilot
+deployNamespace: false

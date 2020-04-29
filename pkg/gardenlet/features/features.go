@@ -28,6 +28,7 @@ var (
 		features.Logging:            {Default: false, PreRelease: featuregate.Alpha},
 		features.HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 		features.HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
+		features.ManagedIstio:       {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

@@ -1,0 +1,17 @@
+labels:
+  app: istio-ingressgateway
+  istio: ingressgateway
+image: docker.io/istio/proxyv2:1.5.1
+trustDomain: cluster.local
+istiodNamespace: istio-system
+deployNamespace: false
+serviceType: LoadBalancer
+ports: []
+# ports:
+# - name: tls
+#   port: 443
+#   targetPort: 443
+#
+#- name: tcp
+#  port: 8443
+#  targetPort: 8443

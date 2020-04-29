@@ -1,0 +1,13 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: istiod
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istiod
+subjects:
+- kind: ServiceAccount
+  name: istiod

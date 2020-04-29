@@ -33,11 +33,19 @@ const (
 
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
-	// alpha: v0.1.0
+	// alpha: v0.31.0
 	HVPA featuregate.Feature = "HVPA"
 
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
-	// alpha: v0.1.0
+	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
+
+	// ManagedIstio installs minimal Istio components in istio-system.
+	// Disable this feature if Istio is already installed in the cluster.
+	// Istio is not automatically removed if this feature is set to false.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/istio.md
+	// owner @mvladev
+	// alpha: v1.5.0
+	ManagedIstio featuregate.Feature = "ManagedIstio"
 )

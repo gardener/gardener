@@ -1,0 +1,174 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: istio-ingressgateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+{{ .Values.labels | toYaml | indent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+{{ .Values.labels | toYaml | indent 8 }}
+        service.istio.io/canonical-name: "istio-ingressgateway"
+        service.istio.io/canonical-revision: "1.5"
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: istio-ingressgateway
+      containers:
+      - name: istio-proxy
+        image: {{ .Values.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 15020
+        {{- range .Values.ports }}
+        - containerPort: {{ .targetPort }}
+        {{- end }}
+        args:
+        - proxy
+        - router
+        - --domain={{ .Release.Namespace }}.svc.{{ .Values.trustDomain }}
+        - --proxyLogLevel=warning
+        - --proxyComponentLogLevel=misc:error
+        - --log_output_level=all:warn,ads:error
+        - --drainDuration=45s
+        - --parentShutdownDuration=1m0s
+        - --connectTimeout=10s
+        - --serviceCluster=istio-ingressgateway
+        - --proxyAdminPort=15000
+        - --statusPort=15020
+        - --controlPlaneAuthPolicy=NONE
+        - --discoveryAddress=istiod.{{ .Values.istiodNamespace }}.svc:15012
+        - --trust-domain={{ .Values.trustDomain }}
+        readinessProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15020
+            scheme: HTTP
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: ISTIO_META_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: ISTIO_META_CONFIG_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: JWT_POLICY
+          value: third-party-jwt
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: ISTIO_META_USER_SDS
+          value: "true"
+        - name: CA_ADDR
+          value: istiod.{{ .Values.istiodNamespace }}.svc:15012
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: istio-ingressgateway
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/{{ .Release.Namespace }}/deployments/istio-ingressgateway
+        - name: ISTIO_META_MESH_ID
+          value: "{{ .Values.trustDomain }}"
+        - name: ISTIO_AUTO_MTLS_ENABLED
+          value: "true"
+        - name: ISTIO_META_ROUTER_MODE
+          value: sni-dnat
+        - name: ISTIO_META_CLUSTER_ID
+          value: "Kubernetes"
+        volumeMounts:
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - name: istio-token
+          mountPath: /var/run/secrets/tokens
+          readOnly: true
+        - name: ingressgatewaysdsudspath
+          mountPath: /var/run/ingress_gateway
+        - name: podinfo
+          mountPath: /etc/istio/pod
+      volumes:
+      - name: istiod-ca-cert
+        configMap:
+          name: istio-ca-root-cert
+      - name: podinfo
+        downwardAPI:
+          items:
+          - path: "labels"
+            fieldRef:
+              fieldPath: metadata.labels
+          - path: "annotations"
+            fieldRef:
+              fieldPath: metadata.annotations
+      - name: ingressgatewaysdsudspath
+        emptyDir: {}
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: istio-token
+              expirationSeconds: 43200
+              audience: istio-ca
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                {{- range $key, $value := .Values.labels }}
+                - key: {{ $key }}
+                  operator: In
+                  values:
+                  - {{ $value }}
+                {{- end }}
+              topologyKey: "kubernetes.io/hostname"

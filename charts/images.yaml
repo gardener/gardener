@@ -224,3 +224,13 @@ images:
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
   tag: "v0.2.5"
+
+# Istio + SNI
+- name: istio-proxy
+  sourceRepository: github.com/istio/istio
+  repository: docker.io/istio/proxyv2
+  tag: "1.5.2"
+- name: istio-istiod
+  sourceRepository: github.com/istio/istio
+  repository: docker.io/istio/pilot
+  tag: "1.5.2"
