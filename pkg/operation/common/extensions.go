@@ -256,8 +256,11 @@ func WaitUntilExtensionCRDeleted(
 			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(lastErr.Description, lastErr.Codes...)
 		}
 
-		logger.Infof("Waiting for %s %s/%s to be deleted...", kind, namespace, name)
-		return retry.MinorError(fmt.Errorf("%s is still present, last observed error: %s", extensionKey(kind, namespace, name), lastObservedError.Error()))
+		var message = fmt.Sprintf("%s is still present", extensionKey(kind, namespace, name))
+		if lastObservedError != nil {
+			message += fmt.Sprintf(", last observed error: %s", lastObservedError.Error())
+		}
+		return retry.MinorError(fmt.Errorf(message))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
