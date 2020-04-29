@@ -144,11 +144,13 @@ func DeleteExtensionCRs(
 			return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", obj)
 		}
 
-		if predicateFunc != nil && predicateFunc(o) {
-			fns = append(fns, func(ctx context.Context) error {
-				return DeleteExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName())
-			})
+		if predicateFunc != nil && !predicateFunc(o) {
+			return nil
 		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			return DeleteExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName())
+		})
 
 		return nil
 	}); err != nil {
@@ -188,21 +190,23 @@ func WaitUntilExtensionCRsDeleted(
 			return nil
 		}
 
-		if predicateFunc != nil && predicateFunc(o) {
-			fns = append(fns, func(ctx context.Context) error {
-				return WaitUntilExtensionCRDeleted(
-					ctx,
-					c,
-					logger,
-					newObjFunc,
-					kind,
-					o.GetNamespace(),
-					o.GetName(),
-					interval,
-					timeout,
-				)
-			})
+		if predicateFunc != nil && !predicateFunc(o) {
+			return nil
 		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			return WaitUntilExtensionCRDeleted(
+				ctx,
+				c,
+				logger,
+				newObjFunc,
+				kind,
+				o.GetNamespace(),
+				o.GetName(),
+				interval,
+				timeout,
+			)
+		})
 
 		return nil
 	}); err != nil {
