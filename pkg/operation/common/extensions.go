@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -79,6 +78,8 @@ func WaitUntilObjectReadyWithHealthFunction(
 	timeout time.Duration,
 	postReadyFunc func(runtime.Object) error,
 ) error {
+	var lastObservedError error
+
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		obj := newObjFunc()
 		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
@@ -87,6 +88,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		if err := healthFunc(obj); err != nil {
 			logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
+			lastObservedError = err
 			return retry.MinorError(err)
 		}
 
@@ -98,8 +100,13 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		return retry.Ok()
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Error while waiting for %s to become ready: %v", extensionKey(kind, namespace, name), err))
+		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(kind, namespace, name))
+		if lastObservedError != nil {
+			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
+		}
+		return errors.New(formatErrorMessage(message, err.Error()))
 	}
+
 	return nil
 }
 
@@ -228,7 +235,7 @@ func WaitUntilExtensionCRDeleted(
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	var lastError *gardencorev1beta1.LastError
+	var lastObservedError error
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		obj := newObjFunc()
@@ -246,17 +253,17 @@ func WaitUntilExtensionCRDeleted(
 
 		if lastErr := acc.GetExtensionStatus().GetLastError(); lastErr != nil {
 			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
-			lastError = lastErr
+			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(lastErr.Description, lastErr.Codes...)
 		}
 
 		logger.Infof("Waiting for %s %s/%s to be deleted...", kind, namespace, name)
-		return retry.MinorError(gardencorev1beta1helper.WrapWithLastError(fmt.Errorf("%s is still present", extensionKey(kind, namespace, name)), lastError))
+		return retry.MinorError(fmt.Errorf("%s is still present, last observed error: %s", extensionKey(kind, namespace, name), lastObservedError.Error()))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
-		if lastError != nil {
-			return gardencorev1beta1helper.DetermineError(errors.New(lastError.Description), fmt.Sprintf("%s: %s", message, lastError.Description))
+		if lastObservedError != nil {
+			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
 		}
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("%s: %s", message, err.Error()))
+		return errors.New(formatErrorMessage(message, err.Error()))
 	}
 
 	return nil
@@ -264,4 +271,8 @@ func WaitUntilExtensionCRDeleted(
 
 func extensionKey(kind, namespace, name string) string {
 	return fmt.Sprintf("%s %s/%s", kind, namespace, name)
+}
+
+func formatErrorMessage(message, description string) string {
+	return fmt.Sprintf("%s: %s", message, description)
 }
