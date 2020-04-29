@@ -172,10 +172,11 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}
 
-		delete(s.Annotations, v1beta1constants.GardenerOperation)
-		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
 		s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
 
+		if !gardencorev1beta1helper.HibernationIsEnabled(s) {
+			controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
+		}
 		if utils.IsTrue(c.config.EnableShootControlPlaneRestarter) {
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
 		}
