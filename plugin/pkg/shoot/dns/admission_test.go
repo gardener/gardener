@@ -471,6 +471,91 @@ var _ = Describe("dns", func() {
 
 				Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged and assigned to a seed which does not disable DNS")))
 			})
+
+			Context("#Shoot GenerateName used", func() {
+				BeforeEach(func() {
+					shoot.Name = ""
+					shoot.GenerateName = "demo-"
+				})
+
+				It("should set different default domain for multiple shoots with same generate name", func() {
+					shootCopy := shoot.DeepCopy()
+
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					Expect(err).To(Not(HaveOccurred()))
+
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs = admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err = admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+
+					Expect(*shoot.Spec.DNS.Domain).NotTo(Equal(*shootCopy.Spec.DNS.Domain))
+				})
+
+				It("should generate a default domain with shoot name for the shoot (no domain)", func() {
+					shoot.Name = "foo"
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.DNS.Providers).To(BeNil())
+					Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shoot.Name, projectName, domain)))
+				})
+
+				It("should pass because a default domain was generated for the shoot (no domain)", func() {
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.DNS.Providers).To(BeNil())
+					Expect(*shoot.Spec.DNS.Domain).To(HaveSuffix(fmt.Sprintf(".%s.%s", projectName, domain)))
+				})
+
+				It("should reject because a default domain was already used for the shoot but is invalid (with domain)", func() {
+					shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
+					shoot.Spec.DNS.Domain = &shootDomain
+
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should not reject shoots using a non compliant default domain on updates", func() {
+					shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
+					shoot.Spec.DNS.Domain = &shootDomain
+
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+				})
+			})
 		})
 	})
 })

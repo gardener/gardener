@@ -29,6 +29,7 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -289,6 +290,13 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.Pr
 		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
 			// Check that the specified domain matches the pattern for default domains, especially in order
 			// to prevent shoots from "stealing" domain names for shoots in other projects
+			if len(shoot.GenerateName) > 0 && (len(shoot.Name) == 0 || strings.HasPrefix(shoot.Name, shoot.GenerateName)) {
+				// Case where shoot name is generated or to be generated
+				if !strings.HasSuffix(*shootDomain, fmt.Sprintf(".%s.%s", project.Name, domain)) {
+					return apierrors.NewBadRequest("shoot with 'metadata.generateName' uses a default domain but does not match expected scheme: <random-subdomain>.<project-name>.<default-domain>")
+				}
+				return nil
+			}
 			if *shootDomain != fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain) {
 				return apierrors.NewBadRequest("shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain>")
 			}
@@ -301,7 +309,14 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.Pr
 			if shoot.Spec.DNS == nil {
 				shoot.Spec.DNS = &core.DNS{}
 			}
-			generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+			shootDNSName := shoot.Name
+			if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
+				shootDNSName, err = gardenerutils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
+				if err != nil {
+					return apierrors.NewInternalError(err)
+				}
+			}
+			generatedDomain := fmt.Sprintf("%s.%s.%s", shootDNSName, project.Name, domain)
 			shoot.Spec.DNS.Domain = &generatedDomain
 			return nil
 		}

@@ -200,8 +200,15 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
 		// Shoots in case the limits are changed in the future).
 		var lengthLimit = 21
-		if len(project.Name+shoot.Name) > lengthLimit {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, project.Name, shoot.Name))
+		if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
+			var randomLength = 5
+			if len(project.Name+shoot.GenerateName) > lengthLimit-randomLength {
+				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, project.Name, shoot.GenerateName))
+			}
+		} else {
+			if len(project.Name+shoot.Name) > lengthLimit {
+				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, project.Name, shoot.Name))
+			}
 		}
 		if strings.Contains(project.Name, "--") {
 			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", project.Name))
