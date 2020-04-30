@@ -30,7 +30,6 @@ spec:
         {{- end }}
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
-        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
         checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/admission-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
@@ -267,22 +266,6 @@ spec:
           name: vpn-seed
         - mountPath: /srv/secrets/tlsauth
           name: vpn-seed-tlsauth
-      - name: blackbox-exporter
-        image: {{ index .Values.images "blackbox-exporter" }}
-        args:
-        - --config.file=/vpn/blackbox.yaml
-        ports:
-        # port name must be max 15 characters long
-        - name: blackbox-export
-          containerPort: {{ required ".blackboxExporterPort is required" .Values.blackboxExporterPort }}
-          protocol: TCP
-        {{- if .Values.blackBoxExporterResources }}
-        resources:
-{{ toYaml .Values.blackBoxExporterResources | indent 10 }}
-        {{- end }}
-        volumeMounts:
-        - name: blackbox-exporter-config-apiserver
-          mountPath: /vpn
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -347,9 +330,6 @@ spec:
       - name: vpn-seed-tlsauth
         secret:
           secretName: vpn-seed-tlsauth
-      - name: blackbox-exporter-config-apiserver
-        configMap:
-          name: blackbox-exporter-config-apiserver
       {{- if .Values.enableEtcdEncryption }}
       - name: etcd-encryption-secret
         secret:

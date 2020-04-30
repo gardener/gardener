@@ -56,7 +56,6 @@ admissionPlugins:
 images:
   kube-apiserver: image-repository
   vpn-seed: image-repository:image-tag
-  blackbox-exporter: image-repository:image-tag
 
 blackboxExporterPort: 9115
 etcdServicePort: 2379
@@ -69,13 +68,6 @@ vpnSeedResources:
       cpu: 500m
       memory: 1000M
 
-blackBoxExporterResources:
-    requests:
-      cpu: 5m
-      memory: 16Mi
-    limits:
-      cpu: 50m
-      memory: 128Mi
 
 apiServerResources:
   requests:
