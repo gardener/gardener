@@ -19,17 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/constants"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	// ManagedResourceLabelKeyOrigin is a key for a label on a managed resource with the value 'origin'.
-	ManagedResourceLabelKeyOrigin = "origin"
-	// ManagedResourceLabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
-	ManagedResourceLabelValueGardener = "gardener"
 )
 
 // DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
@@ -38,7 +32,7 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener},
+		client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener},
 	)
 }
 
@@ -49,7 +43,7 @@ func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 		if err := b.K8sSeedClient.Client().List(ctx,
 			managedResources,
 			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener}); err != nil {
+			client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener}); err != nil {
 			return retry.SevereError(err)
 		}
 
