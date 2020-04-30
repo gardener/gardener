@@ -26,4 +26,8 @@ type Actuator interface {
 	Reconcile(context.Context, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error)
 	// Delete the operating system config.
 	Delete(context.Context, *extensionsv1alpha1.OperatingSystemConfig) error
+	// Restore the operating system config.
+	Restore(context.Context, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error)
+	// Migrate the operating system config.
+	Migrate(context.Context, *extensionsv1alpha1.OperatingSystemConfig) error
 }

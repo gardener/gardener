@@ -108,3 +108,13 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.backupEntryDelegate.Delete(ctx, be)
 }
+
+// Restore restores the update of a BackupEntry
+func (a *actuator) Restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+	return a.Reconcile(ctx, be)
+}
+
+// Migrate migrates the BackupEntry
+func (a *actuator) Migrate(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+	return nil
+}

@@ -28,4 +28,8 @@ type Actuator interface {
 	Reconcile(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (bool, error)
 	// Delete deletes the ControlPlane.
 	Delete(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) error
+	// Restore restores the ControlPlane.
+	Restore(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (bool, error)
+	// Migrate migrates the ControlPlane.
+	Migrate(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) error
 }
