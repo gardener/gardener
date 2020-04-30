@@ -132,6 +132,10 @@ func NewController(
 	})
 	controller.controllerRegistrationSynced = controllerRegistrationInformer.Informer().HasSynced
 
+	controllerInstallationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.controllerInstallationAdd,
+		UpdateFunc: controller.controllerInstallationUpdate,
+	})
 	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

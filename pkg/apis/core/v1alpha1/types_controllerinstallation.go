@@ -73,4 +73,7 @@ const (
 	ControllerInstallationInstalled ConditionType = "Installed"
 	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
 	ControllerInstallationValid ConditionType = "Valid"
+	// ControllerInstallationRequired is a condition type for indicating that the respective extension controller is
+	// still required on the seed cluster as corresponding extension resources still exist.
+	ControllerInstallationRequired ConditionType = "Required"
 )

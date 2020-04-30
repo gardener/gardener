@@ -69,6 +69,10 @@ data:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.controllerInstallationCare.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.controllerInstallationCare.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.controllerInstallationCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.controllerInstallationCare.syncPeriod }}
       {{- end }}
+      {{- if .Values.global.gardenlet.config.controllers.controllerInstallationRequired }}
+      controllerInstallationRequired:
+        concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.controllerInstallationRequired.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.controllerInstallationRequired.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.global.gardenlet.config.controllers.seed }}
       seed:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.seed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.seed.concurrentSyncs }}

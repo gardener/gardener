@@ -81,6 +81,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.ControllerInstallationCare == nil {
 		obj.Controllers.ControllerInstallationCare = &ControllerInstallationCareControllerConfiguration{}
 	}
+	if obj.Controllers.ControllerInstallationRequired == nil {
+		obj.Controllers.ControllerInstallationRequired = &ControllerInstallationRequiredControllerConfiguration{}
+	}
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{}
 	}
@@ -214,6 +217,14 @@ func SetDefaults_ControllerInstallationCareControllerConfiguration(obj *Controll
 	if obj.SyncPeriod == nil {
 		v := metav1.Duration{Duration: 30 * time.Second}
 		obj.SyncPeriod = &v
+	}
+}
+
+// SetDefaults_ControllerInstallationRequiredControllerConfiguration sets defaults for the ControllerInstallationRequired controller.
+func SetDefaults_ControllerInstallationRequiredControllerConfiguration(obj *ControllerInstallationRequiredControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -153,7 +154,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 						Union(wantedKindTypeCombinationForShoots)
 	)
 
-	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, kindTypeToControllerRegistrationName)
+	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, kindTypeToControllerRegistrationName, seed.Name)
 	if err != nil {
 		return err
 	}
@@ -295,7 +296,9 @@ func computeControllerRegistrationMaps(
 // to existing ControllerRegistration objects.
 func computeWantedControllerRegistrationNames(
 	wantedKindTypeCombinations sets.String,
+	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
 	kindTypeToControllerRegistrationName map[string]string,
+	seedName string,
 ) (sets.String, error) {
 	names := sets.NewString()
 
@@ -304,8 +307,17 @@ func computeWantedControllerRegistrationNames(
 		if !ok {
 			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", requiredExtension)
 		}
-
 		names.Insert(name)
+	}
+
+	for _, controllerInstallation := range controllerInstallationList.Items {
+		if controllerInstallation.Spec.SeedRef.Name != seedName {
+			continue
+		}
+		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
+			continue
+		}
+		names.Insert(controllerInstallation.Spec.RegistrationRef.Name)
 	}
 
 	return names, nil
