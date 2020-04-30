@@ -443,12 +443,6 @@ const (
 	// KubeStateMetricsImageName is the name of the KubeStateMetrics image.
 	KubeStateMetricsImageName = "kube-state-metrics"
 
-	// ETCDImageName is the name of the ETCD image.
-	ETCDImageName = "etcd"
-
-	// ETCDBackupRestoreImageName is the name of the ETCD backup-restore image.
-	ETCDBackupRestoreImageName = "etcd-backup-restore"
-
 	// EtcdDruidImageName is the name of Etcd Druid image
 	EtcdDruidImageName = "etcd-druid"
 
