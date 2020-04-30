@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -42,7 +43,8 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	var (
 		lastOperation                       = b.Shoot.Info.Status.LastOperation
 		creationPhase                       = lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate
-		requestInfrastructureReconciliation = creationPhase || controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
+		shootIsWakingUp                     = !gardencorev1beta1helper.HibernationIsEnabled(b.Shoot.Info) && b.Shoot.Info.Status.IsHibernated
+		requestInfrastructureReconciliation = creationPhase || shootIsWakingUp || controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
 
 		infrastructure = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
