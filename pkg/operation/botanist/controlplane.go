@@ -883,7 +883,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	values, err := b.InjectSeedShootImages(defaultValues,
 		common.KubeAPIServerImageName,
 		common.VPNSeedImageName,
-		common.BlackboxExporterImageName,
 		common.AlpineIptablesImageName,
 	)
 	if err != nil {
@@ -929,6 +928,17 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+
+	// Remove deprecated blackbox exporter configmap
+	// TODO: Remove in a future version
+	if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "blackbox-exporter-config-apiserver",
+			Namespace: b.Shoot.SeedNamespace,
+		},
+	}); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))

@@ -78,8 +78,6 @@ spec:
                 cpu: 300m
             - containerName: vpn-seed
               mode: "Off"
-            - containerName: blackbox-exporter
-              mode: "Off"
   weightBasedScalingIntervals:
 {{- if gt (int .Values.maxReplicas) (int .Values.minReplicas) }}
     - vpaWeight: 0
