@@ -4,10 +4,6 @@ labels: {}
 annotations: {}
 podAnnotations: {}
 
-images:
-  etcd: image-repository:image-tag
-  etcd-backup-restore: image-repository:image-tag
-
 etcd:
   resources:
     requests:

@@ -1066,11 +1066,10 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 func (b *Botanist) DeployETCD(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if b.ShootedSeed != nil {
-		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
-	defaultValues := map[string]interface{}{
+	values := map[string]interface{}{
 		"annotations": map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 		},
@@ -1080,15 +1079,6 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
 		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
-	}
-
-	values, err := b.InjectSeedShootImages(
-		defaultValues,
-		common.ETCDImageName,
-		common.ETCDBackupRestoreImageName,
-	)
-	if err != nil {
-		return err
 	}
 
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {

@@ -33,7 +33,6 @@ spec:
     networking.gardener.cloud/to-public-networks: allowed
     networking.gardener.cloud/to-private-networks: allowed
   etcd:
-    image: {{ index .Values.images "etcd" }}
 {{- if .Values.etcd.resources }}
     resources:
 {{ toYaml .Values.etcd.resources | indent 6 }}
@@ -53,7 +52,6 @@ spec:
     metrics: {{ .Values.etcd.metrics }}
     defragmentationSchedule: {{ .Values.etcd.defragmentSchedule }}
   backup:
-    image: {{ index .Values.images "etcd-backup-restore" }}
     port: {{ .Values.sidecar.port }}
 {{- if .Values.sidecar.resources }}
     resources:
