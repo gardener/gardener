@@ -53,7 +53,7 @@ Please report bugs or suggestions about our Kubernetes clusters as such or the G
 
 ## Learn More!
 
-Please find further resources about out project here:
+Please find further resources about our project here:
 
 * [Our landing page gardener.cloud](https://gardener.cloud/)
 * ["Gardener, the Kubernetes Botanist" blog on kubernetes.io](https://kubernetes.io/blog/2018/05/17/gardener/)
