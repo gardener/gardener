@@ -136,33 +136,32 @@ type artifacts struct {
 
 func (sca *syncControllerArtifacts) initialize(extensionsInformers extensionsinformers.SharedInformerFactory) {
 	var (
-		infraInformer        = extensionsInformers.Extensions().V1alpha1().Infrastructures()
-		workerInformer       = extensionsInformers.Extensions().V1alpha1().Workers()
-		backupEntryInformer  = extensionsInformers.Extensions().V1alpha1().BackupEntries()
-		extensionInformer    = extensionsInformers.Extensions().V1alpha1().Extensions()
-		controlPlaneInformer = extensionsInformers.Extensions().V1alpha1().ControlPlanes()
-		networkInformer      = extensionsInformers.Extensions().V1alpha1().Networks()
-		oscInformer          = extensionsInformers.Extensions().V1alpha1().OperatingSystemConfigs()
+		backupEntryInformer           = extensionsInformers.Extensions().V1alpha1().BackupEntries()
+		controlPlaneInformer          = extensionsInformers.Extensions().V1alpha1().ControlPlanes()
+		containerRuntimeInformer      = extensionsInformers.Extensions().V1alpha1().ContainerRuntimes()
+		extensionInformer             = extensionsInformers.Extensions().V1alpha1().Extensions()
+		infrastructureInformer        = extensionsInformers.Extensions().V1alpha1().Infrastructures()
+		networkInformer               = extensionsInformers.Extensions().V1alpha1().Networks()
+		operatingSystemConfigInformer = extensionsInformers.Extensions().V1alpha1().OperatingSystemConfigs()
+		workerInformer                = extensionsInformers.Extensions().V1alpha1().Workers()
 	)
 
-	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.InfrastructureResource, func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} }, infraInformer.Informer())
-	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.WorkerResource, func() runtime.Object { return &extensionsv1alpha1.Worker{} }, workerInformer.Informer())
 	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.BackupEntryResource, func() runtime.Object { return &extensionsv1alpha1.BackupEntry{} }, backupEntryInformer.Informer())
-	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.ExtensionResource, func() runtime.Object { return &extensionsv1alpha1.Extension{} }, extensionInformer.Informer())
 	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.ControlPlaneResource, func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} }, controlPlaneInformer.Informer())
+	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.ContainerRuntimeResource, func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} }, containerRuntimeInformer.Informer())
+	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.ExtensionResource, func() runtime.Object { return &extensionsv1alpha1.Extension{} }, extensionInformer.Informer())
+	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.InfrastructureResource, func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} }, infrastructureInformer.Informer())
 	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.NetworkResource, func() runtime.Object { return &extensionsv1alpha1.Network{} }, networkInformer.Informer())
-	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.OperatingSystemConfigResource, func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} }, oscInformer.Informer())
+	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.OperatingSystemConfigResource, func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} }, operatingSystemConfigInformer.Informer())
+	sca.registerExtensionControllerArtifacts(extensionsv1alpha1.WorkerResource, func() runtime.Object { return &extensionsv1alpha1.Worker{} }, workerInformer.Informer())
 }
 
 func (sca *syncControllerArtifacts) registerExtensionControllerArtifacts(kind string, objectCreator func() runtime.Object, informer cache.SharedIndexInformer) {
-	workqueueName := fmt.Sprintf("%s-controller", kind)
-	workqueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), workqueueName)
-
 	sca.hasSyncedFuncs = append(sca.hasSyncedFuncs, informer.HasSynced)
 	sca.controllerArtifacts[kind] = &artifacts{
 		objectCreator: objectCreator,
 		informer:      informer,
-		workqueue:     workqueue,
+		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), fmt.Sprintf("%s-controller", kind)),
 	}
 }
 
