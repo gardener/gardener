@@ -23,8 +23,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 
+	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,8 +85,7 @@ var _ = Describe("Validate ShootState deletion", func() {
 
 		err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-		Expect(err).To(HaveOccurred())
-		Expect(apierrors.IsForbidden(err)).To(BeTrue())
+		Expect(err).To(BeForbiddenError())
 	})
 
 	It("should return an error which is not Forbidden if retrieving the shoot fails with an error different from NotFound", func() {
@@ -96,7 +97,7 @@ var _ = Describe("Validate ShootState deletion", func() {
 
 		err := admissionHandler.Validate(context.TODO(), attrs, nil)
 		Expect(err).To(HaveOccurred())
-		Expect(apierrors.IsForbidden(err)).To(BeFalse())
+		Expect(err).ToNot(BeForbiddenError())
 	})
 
 	It("should allow ShootState deletion because shoot object does not exist", func() {
@@ -145,8 +146,7 @@ var _ = Describe("Validate ShootState deletion", func() {
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			Expect(err).To(BeForbiddenError())
 		})
 	})
 

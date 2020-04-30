@@ -24,9 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 
+	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
@@ -107,8 +108,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-					Expect(err).To(HaveOccurred())
-					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+					Expect(err).To(BeForbiddenError())
 				})
 
 				It("should reject for false annotation value", func() {
@@ -121,8 +121,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-					Expect(err).To(HaveOccurred())
-					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+					Expect(err).To(BeForbiddenError())
 				})
 
 				It("should succeed for true annotation value (cache lookup)", func() {
@@ -172,8 +171,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-					Expect(err).To(HaveOccurred())
-					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+					Expect(err).To(BeForbiddenError())
 				})
 			})
 
@@ -233,8 +231,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-					Expect(err).To(HaveOccurred())
-					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+					Expect(err).To(BeForbiddenError())
 				})
 
 				It("should reject for false annotation value", func() {
@@ -247,8 +244,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-					Expect(err).To(HaveOccurred())
-					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+					Expect(err).To(BeForbiddenError())
 				})
 
 				It("should succeed for true annotation value (cache lookup)", func() {
