@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -117,6 +116,7 @@ func DeleteExtensionCR(
 	newObjFunc func() extensionsv1alpha1.Object,
 	namespace string,
 	name string,
+	deleteOpts ...client.DeleteOption,
 ) error {
 	obj := newObjFunc()
 	obj.SetNamespace(namespace)
@@ -126,7 +126,7 @@ func DeleteExtensionCR(
 		return err
 	}
 
-	return client.IgnoreNotFound(c.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...))
+	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
 }
 
 // DeleteExtensionCRs lists all extension resources and loops over them. It executes the given <predicateFunc> for each
@@ -138,6 +138,7 @@ func DeleteExtensionCRs(
 	newObjFunc func() extensionsv1alpha1.Object,
 	namespace string,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
+	deleteOpts ...client.DeleteOption,
 ) error {
 	if err := c.List(ctx, listObj, client.InNamespace(namespace)); err != nil {
 		return err
@@ -156,7 +157,7 @@ func DeleteExtensionCRs(
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			return DeleteExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName())
+			return DeleteExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName(), deleteOpts...)
 		})
 
 		return nil

@@ -18,7 +18,6 @@ import (
 	"context"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
@@ -77,11 +76,11 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldOriginalOsc.Namespace, oldOriginalOsc.Name), &oldOriginalOsc)
 			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldOriginalOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldOriginalOscCopy, kubernetes.DefaultDeleteOptions)
+			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldOriginalOscCopy)
 
 			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldDownloaderOsc.Namespace, oldDownloaderOsc.Name), &oldDownloaderOsc)
 			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldDownloaderOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldDownloaderOscCopy, kubernetes.DefaultDeleteOptions)
+			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldDownloaderOscCopy)
 
 			op := &operation.Operation{
 				K8sSeedClient: k8sSeedClient,
