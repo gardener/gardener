@@ -49,7 +49,7 @@ shoot-info:
   maintenanceEnd: 220000+0000
   extensions: shoot-dns-service,foo-bar
 vpn-shoot:
-  enabled: true
+  enabled: false
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16
 # nodeNetwork: 172.16.0.0/20
@@ -58,3 +58,8 @@ vpn-shoot:
   podAnnotations: {}
   images:
     vpn-shoot: image-repository:image-tag
+konnectivity-agent:
+  enabled: false
+  podAnnotations: {}
+  images:
+    konnectivity-agent: image-repository:image-tag

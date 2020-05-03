@@ -2,3 +2,6 @@ type: LoadBalancer
 targetPort: 443
 # nodePort: 31443
 annotations: {}
+konnectivityTunnel:
+  enabled: false
+

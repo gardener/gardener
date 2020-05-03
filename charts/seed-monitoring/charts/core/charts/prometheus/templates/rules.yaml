@@ -5,7 +5,17 @@ metadata:
   name: prometheus-rules
   namespace: {{ .Release.Namespace }}
 data:
-{{ (.Files.Glob "rules/**").AsConfig | indent 2 }}
+{{ range $name, $bytes := .Files.Glob "rules/**.yaml" }}
+  {{ if eq $name "rules/vpn.rules.yaml" }}
+  {{ if not $.Values.konnectivityTunnel.enabled }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+  {{ end }}
+  {{ else }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+  {{ end }}
+{{ end }}
 # provider-specific rules
 {{- if .Values.extensions.rules }}
 {{toString .Values.extensions.rules | indent 2}}

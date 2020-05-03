@@ -12,19 +12,8 @@ groups:
     annotations:
       description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
       summary: VPN Shoot deployment no pods
-  - alert: VPNConnectionDown
-    expr: absent(probe_success{job="vpn-connection"}) == 1 or probe_success{job="vpn-connection"} != 1
-    for: 10m
-    labels:
-      service: vpn
-      severity: critical
-      type: shoot
-      visibility: operator
-    annotations:
-      description: VPN connection check failed. No communication from control plane (Prometheus pod) to the Shoot workers possible.
-      summary: VPN connection down
   - alert: VPNProbeAPIServerProxyFailed
-    expr: absent(probe_success{job="vpn-probe-apiserver-proxy"}) == 1 or probe_success{job="vpn-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="vpn-probe-apiserver-proxy"} != 200
+    expr: absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200
     for: 30m
     labels:
       service: vpn-test

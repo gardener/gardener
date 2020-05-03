@@ -37,11 +37,11 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -312,10 +312,8 @@ func (b *Botanist) deleteLegacyCloudConfigSecret(ctx context.Context) error {
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
-		kubeProxySecret  = b.Secrets["kube-proxy"]
-		vpnShootSecret   = b.Secrets["vpn-shoot"]
-		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
-		global           = map[string]interface{}{
+		kubeProxySecret = b.Secrets["kube-proxy"]
+		global          = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 		}
@@ -348,14 +346,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				"data": b.Secrets["metrics-server"].Data,
 			},
 		}
-		vpnShootConfig = map[string]interface{}{
-			"podNetwork":     b.Shoot.Networks.Pods.String(),
-			"serviceNetwork": b.Shoot.Networks.Services.String(),
-			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
-			},
-		}
 
 		shootInfo = map[string]interface{}{
 			"projectName":       b.Garden.Project.Name,
@@ -372,20 +362,13 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		blackboxExporterConfig    = map[string]interface{}{}
 		nodeProblemDetectorConfig = map[string]interface{}{}
 		networkPolicyConfig       = map[string]interface{}{}
-	)
 
-	if v := b.Shoot.GetNodeNetwork(); v != nil {
-		vpnShootConfig["nodeNetwork"] = *v
-		shootInfo["nodeNetwork"] = *v
-	}
+		nodeNetwork = b.Shoot.GetNodeNetwork()
+	)
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
 	if proxyConfig != nil {
 		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
-	}
-
-	if openvpnDiffieHellmanSecret, ok := b.Secrets[common.GardenRoleOpenVPNDiffieHellman]; ok {
-		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
 
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
@@ -417,11 +400,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
-	vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, common.VPNShootImageName)
-	if err != nil {
-		return nil, err
-	}
-
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
@@ -431,21 +409,11 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
-	newVpnShootSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vpn-shoot",
-			Namespace: metav1.NamespaceSystem,
-		},
-	}
-	if _, err := controllerutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), newVpnShootSecret, func() error {
-		newVpnShootSecret.Type = corev1.SecretTypeOpaque
-		newVpnShootSecret.Data = vpnShootSecret.Data
-		return nil
-	}); err != nil {
-		return nil, err
+	if nodeNetwork != nil {
+		shootInfo["nodeNetwork"] = *nodeNetwork
 	}
 
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
+	values := map[string]interface{}{
 		"global":                  global,
 		"cluster-autoscaler":      common.GenerateAddonConfig(nil, b.Shoot.WantsClusterAutoscaler),
 		"coredns":                 coreDNS,
@@ -462,8 +430,74 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"node-problem-detector": common.GenerateAddonConfig(nodeProblemDetector, true),
 		"podsecuritypolicies":   common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":            common.GenerateAddonConfig(shootInfo, true),
-		"vpn-shoot":             common.GenerateAddonConfig(vpnShoot, true),
-	})
+	}
+
+	var shootClient = b.K8sShootClient.Client()
+
+	if b.Shoot.KonnectivityTunnelEnabled {
+		konnectivityAgentConfig := map[string]interface{}{
+			"proxyHost": common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-konnectivity-agent": b.CheckSums["konnectivity-agent"],
+			},
+		}
+
+		// Konnectivity agent related values
+		konnectivityAgent, err := b.InjectShootShootImages(konnectivityAgentConfig, common.KonnectivityAgentImageName)
+		if err != nil {
+			return nil, err
+		}
+
+		values["konnectivity-agent"] = common.GenerateAddonConfig(konnectivityAgent, true)
+
+		// TODO: remove when konnectivity tunnel is the default tunneling method for all shoots.
+		secret, err := common.GetSecretFromSecretRef(context.TODO(), shootClient, &corev1.SecretReference{Namespace: metav1.NamespaceSystem, Name: "vpn-shoot"})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+
+		if secret != nil {
+			if err := b.K8sShootClient.Client().Delete(context.TODO(), secret); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		var (
+			vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
+			vpnShootSecret   = b.Secrets["vpn-shoot"]
+			vpnShootConfig   = map[string]interface{}{
+				"podNetwork":     b.Shoot.Networks.Pods.String(),
+				"serviceNetwork": b.Shoot.Networks.Services.String(),
+				"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
+				"vpnShootSecretData": map[string]interface{}{
+					"ca":     vpnShootSecret.Data["ca.crt"],
+					"tlsCrt": vpnShootSecret.Data["tls.crt"],
+					"tlsKey": vpnShootSecret.Data["tls.key"],
+				},
+				"podAnnotations": map[string]interface{}{
+					"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
+				},
+			}
+		)
+
+		// OpenVPN related values
+		if openvpnDiffieHellmanSecret, ok := b.Secrets[common.GardenRoleOpenVPNDiffieHellman]; ok {
+			vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
+		}
+
+		if nodeNetwork != nil {
+			vpnShootConfig["nodeNetwork"] = *nodeNetwork
+		}
+
+		vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, common.VPNShootImageName)
+		if err != nil {
+			return nil, err
+		}
+
+		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
+	}
+
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
 }
 
 // generateCoreNamespacesChart renders the gardener-resource-manager configuration for the core namespaces. After that it

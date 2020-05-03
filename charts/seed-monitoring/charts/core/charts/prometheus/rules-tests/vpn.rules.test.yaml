@@ -1,3 +1,4 @@
+{{- if .Values.rules.optional.vpn.enabled }}
 rule_files:
 - ../rules/vpn.rules.yaml
 
@@ -52,3 +53,4 @@ tests:
       exp_annotations:
         description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
         summary: API Server Proxy not usable
+{{- end }}

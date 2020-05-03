@@ -64,15 +64,6 @@ spec:
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
-      initContainers:
-      - name: set-iptable-rules
-        image: {{ index .Values.images "alpine-iptables" }}
-        command: ['/bin/sh', '-c', 'iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP']
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-          privileged: true
       containers:
       - name: prometheus
         image: {{ index .Values.images "prometheus" }}
@@ -137,53 +128,10 @@ spec:
         # we mount the Shoot cluster's CA and certs
         - mountPath: /etc/prometheus/seed
           name: prometheus-kubeconfig
-{{- if hasKey .Values.alerting.auth_type "certificate" }}
+        {{- if hasKey .Values.alerting.auth_type "certificate" }}
         - mountPath: /etc/prometheus/operator
           name: prometheus-remote-am-tls
-{{- end }}
-      - image: {{ index .Values.images "vpn-seed" }}
-        imagePullPolicy: IfNotPresent
-        name: vpn-seed
-        env:
-        - name: OPENVPN_PORT
-          value: "4314"
-        - name: APISERVER_AUTH_MODE
-          value: client-cert
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CA
-          value: /srv/secrets/vpn-seed/ca.crt
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CRT
-          value: /srv/secrets/vpn-seed/tls.crt
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_KEY
-          value: /srv/secrets/vpn-seed/tls.key
-        - name: SERVICE_NETWORK
-          value: {{ .Values.networks.services }}
-        - name: POD_NETWORK
-          value: {{ .Values.networks.pods }}
-        - name: NODE_NETWORK
-          value: {{ .Values.networks.nodes }}
-        ports:
-        - name: https
-          containerPort: 1194
-          protocol: TCP
-        resources:
-          requests:
-            cpu: 11m
-            memory: 16Mi
-          limits:
-            cpu: 300m
-            memory: 512Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-          privileged: true
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /srv/secrets/vpn-seed
-          name: vpn-seed
-        - mountPath: /srv/secrets/tlsauth
-          name: vpn-seed-tlsauth
+        {{- end }}
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}
         args:
@@ -238,12 +186,6 @@ spec:
         configMap:
           defaultMode: 420
           name: prometheus-rules
-      - name: vpn-seed
-        secret:
-          secretName: vpn-seed
-      - name: vpn-seed-tlsauth
-        secret:
-          secretName: vpn-seed-tlsauth
       - name: shoot-ca
         secret:
           defaultMode: 420

@@ -17,6 +17,9 @@ rules:
   resources:
   - nodes/metrics
   - pods/log
+  - nodes/proxy
+  - services/proxy
+  - pods/proxy
   verbs:
   - get
 - nonResourceURLs:

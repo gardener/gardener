@@ -99,20 +99,17 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"pods":     b.Shoot.Networks.Pods.String(),
 			"services": b.Shoot.Networks.Services.String(),
 		}
-
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"konnectivityTunnel": map[string]interface{}{
+				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"hosts":           hosts,
 			},
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
-			},
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-prometheus":       b.CheckSums["prometheus"],
-				"checksum/secret-vpn-seed":         b.CheckSums["vpn-seed"],
-				"checksum/secret-vpn-seed-tlsauth": b.CheckSums["vpn-seed-tlsauth"],
 			},
 			"replicas":           b.Shoot.GetReplicas(1),
 			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
@@ -134,6 +131,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					},
 					"hvpa": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
+					},
+					"vpn": map[string]interface{}{
+						"enabled": !b.Shoot.KonnectivityTunnelEnabled,
 					},
 				},
 			},
@@ -163,13 +163,20 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 	prometheusConfig["networks"] = networks
 
-	prometheus, err := b.InjectSeedShootImages(prometheusConfig,
-		common.PrometheusImageName,
-		common.ConfigMapReloaderImageName,
-		common.VPNSeedImageName,
-		common.BlackboxExporterImageName,
-		common.AlpineIptablesImageName,
+	var (
+		prometheusImages = []string{
+			common.PrometheusImageName,
+			common.ConfigMapReloaderImageName,
+			common.BlackboxExporterImageName,
+		}
+		podAnnotations = map[string]interface{}{
+			"checksum/secret-prometheus": b.CheckSums["prometheus"],
+		}
 	)
+
+	prometheusConfig["podAnnotations"] = podAnnotations
+
+	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
 	if err != nil {
 		return err
 	}
@@ -376,6 +383,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"role":     role,
 		"extensions": map[string]interface{}{
 			"dashboards": dashboards,
+		},
+		"konnectivityTunnel": map[string]interface{}{
+			"enabled": b.Shoot.KonnectivityTunnelEnabled,
 		},
 	}, common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {

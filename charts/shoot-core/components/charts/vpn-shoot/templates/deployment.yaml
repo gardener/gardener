@@ -5,6 +5,7 @@ metadata:
   name: vpn-shoot
   namespace: kube-system
   labels:
+    gardener.cloud/role: system-component
     garden.sapcloud.io/role: system-component
     app: vpn-shoot
     origin: gardener
@@ -25,8 +26,10 @@ spec:
 {{- end }}
       labels:
         origin: gardener
+        gardener.cloud/role: system-component
         garden.sapcloud.io/role: system-component
         app: vpn-shoot
+        type: tunnel
     spec:
       automountServiceAccountToken: false
       serviceAccountName: vpn-shoot

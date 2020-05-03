@@ -135,9 +135,7 @@ data:
       tls_config:
         # This is needed because the api server's certificates are not are generated
         # for a specific pod IP
-        insecure_skip_verify: true
-        cert_file: /etc/prometheus/seed/prometheus.crt
-        key_file: /etc/prometheus/seed/prometheus.key
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       relabel_configs:
       - source_labels:
         - __meta_kubernetes_service_name
@@ -162,11 +160,7 @@ data:
       honor_labels: false
       scheme: https
       tls_config:
-        # This is needed because the kubelets' certificates are not are generated
-        # for a specific pod IP
-        insecure_skip_verify: true
-        cert_file: /srv/kubernetes/prometheus-kubelet/prometheus-kubelet.crt
-        key_file: /srv/kubernetes/prometheus-kubelet/prometheus-kubelet.key
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: node
         api_server: https://kube-apiserver:443
@@ -177,6 +171,12 @@ data:
         target_label: instance
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
       - target_label: type
         replacement: shoot
       # get system services
@@ -188,23 +188,24 @@ data:
     - job_name: cadvisor
       honor_labels: false
       scheme: https
-      metrics_path: /metrics/cadvisor
       tls_config:
-        # This is needed because the kubelets' certificates are not are generated
+        # This is needed because the api server's certificates are not are generated
         # for a specific pod IP
-        insecure_skip_verify: true
-        cert_file: /srv/kubernetes/prometheus-kubelet/prometheus-kubelet.crt
-        key_file: /srv/kubernetes/prometheus-kubelet/prometheus-kubelet.key
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: node
         api_server: https://kube-apiserver:443
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
-      - source_labels: [ __meta_kubernetes_node_address_InternalIP ]
-        target_label: instance
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
       - target_label: type
         replacement: shoot
       metric_relabel_configs:
@@ -297,9 +298,7 @@ data:
       {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
       scheme: https
       tls_config:
-        insecure_skip_verify: true
-        cert_file: /etc/prometheus/seed/prometheus.crt
-        key_file: /etc/prometheus/seed/prometheus.key
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       {{- end }}
       honor_labels: false
       scrape_timeout: 15s
@@ -325,9 +324,7 @@ data:
       {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
       scheme: https
       tls_config:
-        insecure_skip_verify: true
-        cert_file: /etc/prometheus/seed/prometheus.crt
-        key_file: /etc/prometheus/seed/prometheus.key
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       {{- end }}
       honor_labels: false
       kubernetes_sd_configs:
@@ -414,6 +411,11 @@ data:
 
     - job_name: coredns
       honor_labels: false
+      scheme: https
+      tls_config:
+        # This is needed because the kubelets' certificates are not are generated
+        # for a specific pod IP
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: endpoints
         api_server: https://kube-apiserver:443
@@ -430,18 +432,29 @@ data:
         regex: __meta_kubernetes_service_label_(.+)
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
+        regex: (.+);(.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.coredns | indent 6 }}
 
     - job_name: node-exporter
       honor_labels: false
       scrape_timeout: 30s
+      scheme: https
+      tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: endpoints
         api_server: https://kube-apiserver:443
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
+      - target_label: type
+        replacement: shoot
       - source_labels:
         - __meta_kubernetes_service_name
         - __meta_kubernetes_endpoint_port_name
@@ -454,11 +467,20 @@ data:
         target_label: pod
       - source_labels: [ __meta_kubernetes_pod_node_name ]
         target_label: node
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+        regex: (.+);(.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
 
     - job_name: kube-proxy
       honor_labels: false
+      scheme: https
+      tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: endpoints
         api_server: https://kube-apiserver:443
@@ -474,34 +496,17 @@ data:
         target_label: pod
       - source_labels: [ __meta_kubernetes_pod_node_name ]
         target_label: node
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+        regex: (.+):(.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeProxy | indent 6 }}
 
-    - job_name: vpn-connection
-      honor_labels: false
-      metrics_path: /probe
-      params:
-        module:
-        - icmp_probe
-        target:
-        - {{ .Values.vpnEndpointIP }}
-      static_configs:
-      - targets:
-        - 127.0.0.1:9115
-      relabel_configs:
-      - target_label: type
-        replacement: seed
-      - source_labels: [ __param_target ]
-        target_label: instance
-        action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-        action: replace
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
-
-    # Fetch logs of the vpn-shoot pod via the kube-apiserver, which requires a functional vpn connection.
-    - job_name: vpn-probe-apiserver-proxy
+    # Fetch logs of the tunnel pod (vpn-shoot or konnectivity-agent) via the kube-apiserver, which requires a functional tunnel connection.
+    - job_name: tunnel-probe-apiserver-proxy
       honor_labels: false
       metrics_path: /probe
       params:
@@ -517,9 +522,15 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
+    {{- if .Values.konnectivityTunnel.enabled }}
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        action: keep
+        regex: konnectivity-agent-(.+)
+    {{- else }}
       - source_labels: [ __meta_kubernetes_pod_name ]
         action: keep
         regex: vpn-shoot-(.+)
+    {{- end }}
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: __param_target
         regex: (.+)
@@ -557,12 +568,16 @@ data:
         action: replace
 
     - job_name: blackbox-exporter-k8s-service-check
+      honor_labels: false
+      scheme: https
       params:
         module:
         - http_kubernetes_service
         target:
         - https://kubernetes.default.svc.cluster.local/healthz
       metrics_path: /probe
+      tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
@@ -577,6 +592,12 @@ data:
         - __meta_kubernetes_service_name
         action: keep
         regex: blackbox-exporter
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_service_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/services/${1}:probe/proxy/probe
       - source_labels: [ __param_target ]
         target_label: instance
         action: replace
