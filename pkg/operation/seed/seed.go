@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -44,7 +44,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
@@ -52,6 +51,68 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+// NewBuilder returns a new Builder.
+func NewBuilder() *Builder {
+	return &Builder{
+		seedObjectFunc: func() (*gardencorev1beta1.Seed, error) { return nil, fmt.Errorf("seed object is required but not set") },
+	}
+}
+
+// WithSeedObject sets the seedObjectFunc attribute at the Builder.
+func (b *Builder) WithSeedObject(seedObject *gardencorev1beta1.Seed) *Builder {
+	b.seedObjectFunc = func() (*gardencorev1beta1.Seed, error) { return seedObject, nil }
+	return b
+}
+
+// WithSeedObjectFromLister sets the seedObjectFunc attribute at the Builder after fetching it from the given lister.
+func (b *Builder) WithSeedObjectFromLister(seedLister gardencorelisters.SeedLister, seedName string) *Builder {
+	b.seedObjectFunc = func() (*gardencorev1beta1.Seed, error) { return seedLister.Get(seedName) }
+	return b
+}
+
+// WithSeedSecret sets the seedSecretFunc attribute at the Builder.
+func (b *Builder) WithSeedSecret(seedSecret *corev1.Secret) *Builder {
+	b.seedSecretFunc = func(*corev1.SecretReference) (*corev1.Secret, error) { return seedSecret, nil }
+	return b
+}
+
+// WithSeedSecretFromClient sets the seedSecretFunc attribute at the Builder after reading it with the client.
+func (b *Builder) WithSeedSecretFromClient(ctx context.Context, c client.Client) *Builder {
+	b.seedSecretFunc = func(secretRef *corev1.SecretReference) (*corev1.Secret, error) {
+		if secretRef == nil {
+			return nil, fmt.Errorf("cannot fetch secret because spec.secretRef is nil")
+		}
+
+		secret := &corev1.Secret{}
+		if err := c.Get(ctx, kutil.Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
+			return nil, err
+		}
+		return secret, nil
+	}
+	return b
+}
+
+// Build initializes a new Seed object.
+func (b *Builder) Build() (*Seed, error) {
+	seed := &Seed{}
+
+	seedObject, err := b.seedObjectFunc()
+	if err != nil {
+		return nil, err
+	}
+	seed.Info = seedObject
+
+	if b.seedSecretFunc != nil && seedObject.Spec.SecretRef != nil {
+		seedSecret, err := b.seedSecretFunc(seedObject.Spec.SecretRef)
+		if err != nil {
+			return nil, err
+		}
+		seed.Secret = seedSecret
+	}
+
+	return seed, nil
+}
 
 const (
 	caSeed = "ca-seed"
@@ -63,51 +124,6 @@ var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretCon
 		CommonName: "kubernetes",
 		CertType:   secretsutils.CACert,
 	},
-}
-
-// New takes a <k8sGardenClient>, the <k8sGardenCoreInformers> and a <seed> manifest, and creates a new Seed representation.
-// It will add the CloudProfile and identify the cloud provider.
-func New(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, seed *gardencorev1beta1.Seed) (*Seed, error) {
-	seedObj := &Seed{Info: seed}
-
-	if seed.Spec.SecretRef != nil {
-		secret := &corev1.Secret{}
-		if err := k8sGardenClient.Client().Get(context.TODO(), kutil.Key(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name), secret); err != nil {
-			return nil, err
-		}
-		seedObj.Secret = secret
-	}
-
-	return seedObj, nil
-}
-
-// NewFromName creates a new Seed object based on the name of a Seed manifest.
-func NewFromName(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, seedName string) (*Seed, error) {
-	seed, err := k8sGardenCoreInformers.Seeds().Lister().Get(seedName)
-	if err != nil {
-		return nil, err
-	}
-	return New(k8sGardenClient, k8sGardenCoreInformers, seed)
-}
-
-// List returns a list of Seed clusters (along with the referenced secrets).
-func List(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface) ([]*Seed, error) {
-	var seedList []*Seed
-
-	list, err := k8sGardenCoreInformers.Seeds().Lister().List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, obj := range list {
-		seed, err := New(k8sGardenClient, k8sGardenCoreInformers, obj)
-		if err != nil {
-			return nil, err
-		}
-		seedList = append(seedList, seed)
-	}
-
-	return seedList, nil
 }
 
 // GetSeedClient returns the Kubernetes client for the seed cluster. If `inCluster` is set to true then

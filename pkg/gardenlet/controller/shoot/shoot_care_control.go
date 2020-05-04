@@ -134,7 +134,17 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
-	operation, err := operation.New(shoot, c.config, shootLogger, c.k8sGardenClient, c.k8sGardenCoreInformers, c.identity, c.secrets, c.imageVector)
+	operation, err := operation.
+		NewBuilder().
+		WithLogger(shootLogger).
+		WithConfig(c.config).
+		WithGardenerInfo(c.identity).
+		WithSecrets(c.secrets).
+		WithImageVector(c.imageVector).
+		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).
+		WithSeedFrom(c.k8sGardenCoreInformers, *shoot.Spec.SeedName).
+		WithShootFrom(c.k8sGardenCoreInformers, shoot).
+		Build(context.TODO(), c.k8sGardenClient)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 		return nil // We do not want to run in the exponential backoff for the condition checks.

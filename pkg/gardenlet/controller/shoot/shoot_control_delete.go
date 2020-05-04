@@ -33,6 +33,7 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/version"
 
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +46,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *errors.ErrorContext) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		namespace                            = &corev1.Namespace{}
@@ -54,8 +55,17 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		kubeControllerManagerDeploymentFound = true
 		controlPlaneDeploymentNeeded         bool
 		workerDeploymentNeeded               bool
+		tasksWithErrors                      []string
 		err                                  error
 	)
+
+	for _, lastError := range o.Shoot.Info.Status.LastErrors {
+		if lastError.TaskID != nil {
+			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
+		}
+	}
+
+	errorContext := errors.NewErrorContext("Shoot cluster deletion", tasksWithErrors)
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
@@ -185,11 +195,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
-		syncClusterResourceToSeed = g.Add(flow.Task{
-			Name: "Syncing shoot cluster information to seed",
-			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-
 		_ = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -200,9 +205,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		// restart the components using the secrets (cloud controller, controller manager). We also need to update all
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
-			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
+			Name: "Deploying cloud provider account secret",
+			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
@@ -214,7 +218,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, syncClusterResourceToSeed),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane has been reconciled",
@@ -224,7 +228,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation, errorContext *er
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
 			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -520,7 +524,7 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type:           gardencorev1beta1.LastOperationTypeDelete,
 				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Progress:       1,
+				Progress:       0,
 				Description:    "Deletion of Shoot cluster in progress.",
 				LastUpdateTime: now,
 			}
@@ -573,10 +577,10 @@ func (c *Controller) updateShootStatusDeleteSuccess(shoot *gardencorev1beta1.Sho
 	})
 }
 
-func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, description string, lastErrors ...gardencorev1beta1.LastError) error {
+func (c *Controller) updateShootStatusDeleteError(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, description string, lastErrors ...gardencorev1beta1.LastError) error {
 	state := gardencorev1beta1.LastOperationStateFailed
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 				description += " Operation will be retried."
@@ -585,7 +589,7 @@ func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, descri
 				shoot.Status.RetryCycleStartTime = nil
 			}
 
-			shoot.Status.Gardener = *o.GardenerInfo
+			shoot.Status.Gardener = *c.identity
 			shoot.Status.LastErrors = lastErrors
 
 			if shoot.Status.LastOperation == nil {
@@ -600,14 +604,11 @@ func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, descri
 		},
 	)
 	if err == nil {
-		o.Shoot.Info = newShoot
+		shoot = newShoot
 	}
-	o.Logger.Error(description)
+	logger.Error(description)
 
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
-	if err == nil {
-		o.Shoot.Info = newShootAfterLabel
-	}
+	_, err = kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	return err
 }
 

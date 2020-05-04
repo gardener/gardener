@@ -38,7 +38,7 @@ import (
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist             *botanistpkg.Botanist
@@ -95,19 +95,14 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		allTasks                       = controllerutils.GetTasks(o.Shoot.Info.Annotations)
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
-		g                         = flow.NewGraph("Shoot cluster reconciliation")
-		syncClusterResourceToSeed = g.Add(flow.Task{
-			Name: "Syncing shoot cluster information to seed",
-			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
+		g                      = flow.NewGraph("Shoot cluster reconciliation")
 		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 		deployNamespace = g.Add(flow.Task{
-			Name:         "Deploying Shoot namespace in Seed",
-			Fn:           flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
+			Name: "Deploying Shoot namespace in Seed",
+			Fn:   flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
@@ -420,8 +415,8 @@ func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operatio
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type:           operationType,
 				State:          state,
-				Progress:       1,
-				Description:    "Reconciliation of Shoot cluster state in progress.",
+				Progress:       0,
+				Description:    "Reconciliation of Shoot cluster state initialized.",
 				LastUpdateTime: now,
 			}
 			return shoot, nil
@@ -470,15 +465,15 @@ func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, o
 	return err
 }
 
-func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1beta1.LastOperationType, description string, lastErrors ...gardencorev1beta1.LastError) error {
+func (c *Controller) updateShootStatusReconcileError(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, description string, lastErrors ...gardencorev1beta1.LastError) error {
 	var (
 		state               = gardencorev1beta1.LastOperationStateFailed
-		lastOperation       = o.Shoot.Info.Status.LastOperation
+		lastOperation       = shoot.Status.LastOperation
 		progress      int32 = 1
-		willRetry           = !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
+		willRetry           = !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if willRetry {
 				description += " Operation will be retried."
@@ -499,17 +494,13 @@ func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, ope
 				LastUpdateTime: metav1.Now(),
 			}
 			shoot.Status.LastErrors = lastErrors
-			shoot.Status.Gardener = *(o.GardenerInfo)
+			shoot.Status.Gardener = *c.identity
 			return shoot, nil
 		})
 	if err == nil {
-		o.Shoot.Info = newShoot
+		shoot = newShoot
 	}
 
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
-	if err == nil {
-		o.Shoot.Info = newShootAfterLabel
-	}
-
+	_, err = kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	return err
 }
