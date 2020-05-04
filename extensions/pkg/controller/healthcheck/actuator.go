@@ -41,8 +41,13 @@ import (
 	More sophisticated checks should be implemented in the extension itself by using the HealthCheck interface.
 */
 
-// GetExtensionObjectFunc returns the extension object that should be registered with the health check controller
+// GetExtensionObjectFunc returns the extension object that should be registered with the health check controller.
+// For example: func() runtime.Object {return &extensionsv1alpha1.Worker{}}
 type GetExtensionObjectFunc = func() runtime.Object
+
+// GetExtensionObjectFunc returns the extension object that should be registered with the health check controller. Has to be a List.
+// For example: func() runtime.Object {return &extensionsv1alpha1.WorkerList{}}
+type GetExtensionObjectListFunc = func() runtime.Object
 
 // PreCheckFunc checks whether the health check shall be performed based on the given object and cluster.
 type PreCheckFunc = func(runtime.Object, *extensionscontroller.Cluster) bool
@@ -60,14 +65,14 @@ type ConditionTypeToHealthCheck struct {
 type HealthCheckActuator interface {
 	// ExecuteHealthCheckFunctions is regularly called by the health check controller
 	// Executes all registered Health Checks and aggregates the result
-	// Returns Result for each healthConditionType registered with the individual health checks.
+	// Returns Result for each healthConditionTypes registered with the individual health checks.
 	// returns an error if it could not execute the health checks
 	// returning an error results in a condition with with type "Unknown" with reason "ConditionCheckError"
 	ExecuteHealthCheckFunctions(context.Context, types.NamespacedName) (*[]Result, error)
 }
 
 // Result represents an aggregated health status for the health checks performed on the dependent API Objects of an extension resource.
-// An Result refers to a single healthConditionType (e.g SystemComponentsHealthy) of an extension Resource.
+// An Result refers to a single healthConditionTypes (e.g SystemComponentsHealthy) of an extension Resource.
 type Result struct {
 	// HealthConditionType is being used as the .type field of the Condition that the HealthCheck controller writes to the extension Resource.
 	// To contribute to the Shoot's health, the Gardener checks each extension for a Health Condition Type of SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
