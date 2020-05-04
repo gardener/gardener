@@ -262,3 +262,5 @@ spec:
     kubernetesDashboard:
       enabled: true
     # authenticationMode: basic # allowed values: basic,token
+# Explicitly specify the seed that will run the shoot control plane. 
+# seedName: my-seed
