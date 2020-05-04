@@ -20,13 +20,13 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsevent "github.com/gardener/gardener/extensions/pkg/event"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
-
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/version"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -77,9 +77,11 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 	}
 
 	lastOperation := cluster.Shoot.Status.LastOperation
-	return lastOperation != nil &&
-		lastOperation.State != gardencorev1beta1.LastOperationStateFailed &&
-		cluster.Shoot.Generation == cluster.Shoot.Status.ObservedGeneration
+	if lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
+		return cluster.Shoot.Generation != cluster.Shoot.Status.ObservedGeneration
+	}
+
+	return true
 }
 
 // ShootNotFailed is a predicate for failed shoots.
