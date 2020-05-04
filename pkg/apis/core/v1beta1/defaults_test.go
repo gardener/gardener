@@ -20,7 +20,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Defaults", func() {
@@ -127,6 +129,49 @@ var _ = Describe("Defaults", func() {
 				Expect(m.Role).NotTo(HaveLen(0))
 				Expect(m.Role).To(Equal(ProjectMemberViewer))
 			}
+		})
+	})
+
+	Describe("#SetDefaults_ControllerResource", func() {
+		It("should default the primary field", func() {
+			resource := ControllerResource{}
+
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.Primary).To(PointTo(BeTrue()))
+		})
+
+		It("should not default the primary field", func() {
+			resource := ControllerResource{Primary: pointer.BoolPtr(false)}
+			resourceCopy := resource.DeepCopy()
+
+			SetDefaults_ControllerResource(&resource)
+
+			Expect(resource.Primary).To(Equal(resourceCopy.Primary))
+		})
+	})
+
+	Describe("#SetDefaults_ControllerDeployment", func() {
+		var (
+			ondemand = ControllerDeploymentPolicyOnDemand
+			always   = ControllerDeploymentPolicyAlways
+		)
+
+		It("should default the policy field", func() {
+			deployment := ControllerDeployment{}
+
+			SetDefaults_ControllerDeployment(&deployment)
+
+			Expect(deployment.Policy).To(PointTo(Equal(ondemand)))
+		})
+
+		It("should not default the policy field", func() {
+			deployment := ControllerDeployment{Policy: &always}
+			deploymentCopy := deployment.DeepCopy()
+
+			SetDefaults_ControllerDeployment(&deployment)
+
+			Expect(deployment.Policy).To(Equal(deploymentCopy.Policy))
 		})
 	})
 })

@@ -15,16 +15,18 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("validation", func() {
@@ -46,6 +48,7 @@ var _ = Describe("validation", func() {
 				Resources: []core.ControllerResource{
 					ctrlResource,
 				},
+				Deployment: &core.ControllerDeployment{},
 			},
 		}
 	})
@@ -98,9 +101,10 @@ var _ = Describe("validation", func() {
 
 		It("should allow to set required field for kind Extension", func() {
 			resource := core.ControllerResource{
-				Kind:            v1alpha1.ExtensionResource,
-				Type:            "arbitrary",
-				GloballyEnabled: pointer.BoolPtr(true),
+				Kind:             v1alpha1.ExtensionResource,
+				Type:             "arbitrary",
+				GloballyEnabled:  pointer.BoolPtr(true),
+				ReconcileTimeout: makeDurationPointer(10 * time.Second),
 			}
 
 			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
@@ -109,8 +113,9 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid to set required field for kind != Extension", func() {
+		It("should forbid to set certain fields for kind != Extension", func() {
 			ctrlResource.GloballyEnabled = pointer.BoolPtr(true)
+			ctrlResource.ReconcileTimeout = makeDurationPointer(10 * time.Second)
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
@@ -118,6 +123,70 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.resources[0].globallyEnabled"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.resources[0].reconcileTimeout"),
+			}))))
+		})
+
+		It("should allow setting the OnDemand policy", func() {
+			policy := core.ControllerDeploymentPolicyOnDemand
+			controllerRegistration.Spec.Deployment.Policy = &policy
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow setting the Always policy", func() {
+			policy := core.ControllerDeploymentPolicyAlways
+			controllerRegistration.Spec.Deployment.Policy = &policy
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid to set unsupported deployment policies", func() {
+			policy := core.ControllerDeploymentPolicy("foo")
+			controllerRegistration.Spec.Deployment.Policy = &policy
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.deployment.policy"),
+			}))))
+		})
+
+		It("should forbid to set seed selectors if it controls a resource primarily", func() {
+			controllerRegistration.Spec.Deployment.SeedSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"foo": "bar",
+				},
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.deployment.seedSelector"),
+			}))))
+		})
+
+		It("should forbid to set unsupported seed selectors", func() {
+			controllerRegistration.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+			controllerRegistration.Spec.Deployment.SeedSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"foo": "no/slash/allowed",
+				},
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.deployment.seedSelector.matchLabels"),
 			}))))
 		})
 	})
@@ -136,6 +205,18 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec"),
+			}))))
+		})
+
+		It("should prevent changing the primary field of a resource", func() {
+			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
+			newControllerRegistration.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+
+			errorList := ValidateControllerRegistrationUpdate(newControllerRegistration, controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.resources[0].primary"),
 			}))))
 		})
 	})

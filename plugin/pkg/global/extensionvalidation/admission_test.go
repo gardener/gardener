@@ -67,7 +67,7 @@ var _ = Describe("ExtensionValidator", func() {
 		}
 
 		It("should allow to create the object", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
@@ -77,8 +77,19 @@ var _ = Describe("ExtensionValidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should prevent the object from being created because no primary extension is registered for type", func() {
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, false)
+			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
+
+			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should prevent the object from being created because extension type is not registered", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, "some-other-type")
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, "some-other-type", true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
@@ -120,7 +131,7 @@ var _ = Describe("ExtensionValidator", func() {
 		)
 
 		It("should allow to create the object", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
@@ -131,8 +142,20 @@ var _ = Describe("ExtensionValidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should prevent the object from being created because no primary extension is registered for type", func() {
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, false)
+			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
+			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
+
+			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should prevent the object from being created because extension type is not registered", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, "some-other-type")
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, "some-other-type", true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
@@ -176,7 +199,7 @@ var _ = Describe("ExtensionValidator", func() {
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 					Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -196,8 +219,24 @@ var _ = Describe("ExtensionValidator", func() {
 			for _, registration := range kindToTypes {
 				registerAllExtensions()
 
-				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType)
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred(), fmt.Sprintf("expected that extension %s is not registered", controllerRegistration.Name))
+				Expect(err.Error()).To(ContainSubstring(registration.extensionType))
+			}
+		})
+
+		It("should prevent the object from being created because no primary extension is registered for some type", func() {
+			for _, registration := range kindToTypes {
+				registerAllExtensions()
+
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, false)
+				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Update(controllerRegistration)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
 
@@ -279,7 +318,7 @@ var _ = Describe("ExtensionValidator", func() {
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 					Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -299,7 +338,7 @@ var _ = Describe("ExtensionValidator", func() {
 			for _, registration := range kindToTypes {
 				registerAllExtensions()
 
-				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType)
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
@@ -368,7 +407,7 @@ var _ = Describe("ExtensionValidator", func() {
 	})
 })
 
-func createControllerRegistrationForKindType(extensionKind, extensionType string) *gardencorev1beta1.ControllerRegistration {
+func createControllerRegistrationForKindType(extensionKind, extensionType string, primary bool) *gardencorev1beta1.ControllerRegistration {
 	return &gardencorev1beta1.ControllerRegistration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: extensionKind + extensionType,
@@ -376,8 +415,9 @@ func createControllerRegistrationForKindType(extensionKind, extensionType string
 		Spec: gardencorev1beta1.ControllerRegistrationSpec{
 			Resources: []gardencorev1beta1.ControllerResource{
 				{
-					Kind: extensionKind,
-					Type: extensionType,
+					Kind:    extensionKind,
+					Type:    extensionType,
+					Primary: &primary,
 				},
 			},
 		},

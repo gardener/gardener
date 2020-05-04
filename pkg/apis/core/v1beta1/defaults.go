@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -182,6 +183,21 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 	if obj.ExternalTrafficPolicy == nil {
 		v := corev1.ServiceExternalTrafficPolicyTypeCluster
 		obj.ExternalTrafficPolicy = &v
+	}
+}
+
+// SetDefaults_ControllerResource sets default values for ControllerResource objects.
+func SetDefaults_ControllerResource(obj *ControllerResource) {
+	if obj.Primary == nil {
+		obj.Primary = pointer.BoolPtr(true)
+	}
+}
+
+// SetDefaults_ControllerDeployment sets default values for ControllerDeployment objects.
+func SetDefaults_ControllerDeployment(obj *ControllerDeployment) {
+	p := ControllerDeploymentPolicyOnDemand
+	if obj.Policy == nil {
+		obj.Policy = &p
 	}
 }
 

@@ -140,7 +140,7 @@ func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attribute
 	}
 
 	var (
-		kindToTypesMap  = computeRegisteredExtensionKindTypes(controllerRegistrationList)
+		kindToTypesMap  = computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList)
 		validationError error
 	)
 
@@ -299,16 +299,21 @@ func isExtensionRegistered(kindToTypesMap map[string]sets.String, extensionKind,
 	return nil
 }
 
-// computeRegisteredExtensionKindTypes computes a map that maps the extension kind to the set of types that are
-// registered, e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.String {
+// computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
+// registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.String {
 	out := map[string]sets.String{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
+			if resource.Primary != nil && !*resource.Primary {
+				continue
+			}
+
 			if _, ok := out[resource.Kind]; !ok {
 				out[resource.Kind] = sets.NewString()
 			}
+
 			out[resource.Kind].Insert(resource.Type)
 		}
 	}

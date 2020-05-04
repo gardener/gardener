@@ -123,13 +123,21 @@ func (r *Resources) Validate(ctx context.Context, a admission.Attributes, o admi
 		}
 
 		for _, resource := range obj.Spec.Resources {
+			if resource.Primary != nil && !*resource.Primary {
+				continue
+			}
+
 			existingResources[resource.Kind] = resource.Type
 		}
 	}
 
 	for _, resource := range controllerRegistration.Spec.Resources {
+		if resource.Primary != nil && !*resource.Primary {
+			continue
+		}
+
 		if t, ok := existingResources[resource.Kind]; ok && t == resource.Type {
-			return admission.NewForbidden(a, fmt.Errorf("another ControllerRegistration resource already exists that supports resource %s/%s", resource.Kind, resource.Type))
+			return admission.NewForbidden(a, fmt.Errorf("another ControllerRegistration resource already exists that controls resource %s/%s primarily", resource.Kind, resource.Type))
 		}
 	}
 

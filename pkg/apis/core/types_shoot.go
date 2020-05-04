@@ -214,6 +214,8 @@ type Extension struct {
 	Type string
 	// ProviderConfig is the configuration passed to extension resource.
 	ProviderConfig *ProviderConfig
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	Disabled *bool
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

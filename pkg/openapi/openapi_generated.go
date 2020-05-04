@@ -1582,12 +1582,25 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
 						},
 					},
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -1872,7 +1885,6 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"resources"},
 			},
 		},
 		Dependencies: []string{
@@ -1912,6 +1924,13 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"primary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
@@ -2141,6 +2160,13 @@ func schema_pkg_apis_core_v1alpha1_Extension(ref common.ReferenceCallback) commo
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to extension resource.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
+					"disabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
@@ -6736,12 +6762,25 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
 						},
 					},
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -7026,7 +7065,6 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"resources"},
 			},
 		},
 		Dependencies: []string{
@@ -7066,6 +7104,13 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"primary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
@@ -7295,6 +7340,13 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to extension resource.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+						},
+					},
+					"disabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

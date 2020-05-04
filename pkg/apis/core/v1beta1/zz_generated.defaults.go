@@ -30,6 +30,8 @@ import (
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&CloudProfile{}, func(obj interface{}) { SetObjectDefaults_CloudProfile(obj.(*CloudProfile)) })
 	scheme.AddTypeDefaultingFunc(&CloudProfileList{}, func(obj interface{}) { SetObjectDefaults_CloudProfileList(obj.(*CloudProfileList)) })
+	scheme.AddTypeDefaultingFunc(&ControllerRegistration{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistration(obj.(*ControllerRegistration)) })
+	scheme.AddTypeDefaultingFunc(&ControllerRegistrationList{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistrationList(obj.(*ControllerRegistrationList)) })
 	scheme.AddTypeDefaultingFunc(&Project{}, func(obj interface{}) { SetObjectDefaults_Project(obj.(*Project)) })
 	scheme.AddTypeDefaultingFunc(&ProjectList{}, func(obj interface{}) { SetObjectDefaults_ProjectList(obj.(*ProjectList)) })
 	scheme.AddTypeDefaultingFunc(&SecretBinding{}, func(obj interface{}) { SetObjectDefaults_SecretBinding(obj.(*SecretBinding)) })
@@ -54,6 +56,23 @@ func SetObjectDefaults_CloudProfileList(in *CloudProfileList) {
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_CloudProfile(a)
+	}
+}
+
+func SetObjectDefaults_ControllerRegistration(in *ControllerRegistration) {
+	for i := range in.Spec.Resources {
+		a := &in.Spec.Resources[i]
+		SetDefaults_ControllerResource(a)
+	}
+	if in.Spec.Deployment != nil {
+		SetDefaults_ControllerDeployment(in.Spec.Deployment)
+	}
+}
+
+func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_ControllerRegistration(a)
 	}
 }
 

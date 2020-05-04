@@ -62,6 +62,10 @@ type ControllerResource struct {
 	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	ReconcileTimeout *metav1.Duration
+	// Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
+	// resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
+	// combination.
+	Primary *bool
 }
 
 // ControllerDeployment contains information for how this controller is deployed.
@@ -70,4 +74,22 @@ type ControllerDeployment struct {
 	Type string
 	// ProviderConfig contains type-specific configuration.
 	ProviderConfig *ProviderConfig
+	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
+	Policy *ControllerDeploymentPolicy
+	// SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+	// considered for a deployment.
+	// An empty list means that all seeds are selected.
+	SeedSelector *metav1.LabelSelector
 }
+
+// ControllerDeploymentPolicy is a string alias.
+type ControllerDeploymentPolicy string
+
+const (
+	// ControllerDeploymentPolicyOnDemand specifies that the controller shall be only deployed if required by another
+	// resource. If nothing requires it then the controller shall not be deployed.
+	ControllerDeploymentPolicyOnDemand ControllerDeploymentPolicy = "OnDemand"
+	// ControllerDeploymentPolicyAlways specifies that the controller shall be deployed always, independent of whether
+	// another resource requires it.
+	ControllerDeploymentPolicyAlways ControllerDeploymentPolicy = "Always"
+)

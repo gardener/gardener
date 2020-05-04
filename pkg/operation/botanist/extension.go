@@ -78,7 +78,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 				extension.Namespace,
 				extension.Name,
 				DefaultInterval,
-				shoot.ExtensionDefaultTimeout,
+				extension.Timeout,
 				nil,
 			)
 		})

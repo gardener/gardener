@@ -750,3 +750,8 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) e
 		return c.Update(ctx, obj)
 	})
 }
+
+// ExtensionID returns an identifier for the given extension kind/type.
+func ExtensionID(extensionKind, extensionType string) string {
+	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
+}

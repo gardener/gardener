@@ -412,12 +412,15 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 // for a successful reconciliation of this extension resource.
 const ExtensionDefaultTimeout = 3 * time.Minute
 
-// MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in extensions is also represented in the registration.
+// MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in
+// extensions is also represented in the registration. It ignores all extensions that were explicitly disabled in the
+// shoot spec.
 func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string) (map[string]Extension, error) {
 	var (
 		typeToExtension    = make(map[string]Extension)
 		requiredExtensions = make(map[string]Extension)
 	)
+
 	// Extensions enabled by default for all Shoot clusters.
 	for _, reg := range registrations {
 		for _, res := range reg.Spec.Resources {
@@ -453,12 +456,17 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 
 	// Extensions defined in Shoot resource.
 	for _, extension := range extensions {
-		obj, ok := typeToExtension[extension.Type]
-		if ok {
+		if obj, ok := typeToExtension[extension.Type]; ok {
+			if utils.IsTrue(extension.Disabled) {
+				delete(requiredExtensions, extension.Type)
+				continue
+			}
+
 			if extension.ProviderConfig != nil {
 				providerConfig := extension.ProviderConfig.RawExtension
 				obj.Spec.ProviderConfig = &providerConfig
 			}
+
 			requiredExtensions[extension.Type] = obj
 			continue
 		}
@@ -512,30 +520,37 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	requiredExtensions := sets.NewString()
 
 	if seed.Spec.Backup != nil {
-		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
-		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
+		requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
+		requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
 	}
 	// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
 	// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
 	// does not reflect this today.
-	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
 
-	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
-	requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
+	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
+	var disabledExtensions = sets.NewString()
 	for _, extension := range shoot.Spec.Extensions {
-		requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ExtensionResource, extension.Type))
+		id := common.ExtensionID(extensionsv1alpha1.ExtensionResource, extension.Type)
+
+		if utils.IsTrue(extension.Disabled) {
+			disabledExtensions.Insert(id)
+		} else {
+			requiredExtensions.Insert(id)
+		}
 	}
 
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.Machine.Image != nil {
-			requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
+			requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
 		}
 		if pool.CRI != nil {
 			for _, cr := range pool.CRI.ContainerRuntimes {
-				requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
+				requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
 			}
 		}
 	}
@@ -544,24 +559,25 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		if shoot.Spec.DNS != nil {
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
-					requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, *provider.Type))
+					requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, *provider.Type))
 				}
 			}
 		}
 
 		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
+			requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
 		}
 
 		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(fmt.Sprintf("%s/%s", dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
+			requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
 		}
 	}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled {
-				requiredExtensions.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.ExtensionResource, resource.Type))
+			id := common.ExtensionID(extensionsv1alpha1.ExtensionResource, resource.Type)
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled && !disabledExtensions.Has(id) {
+				requiredExtensions.Insert(id)
 			}
 		}
 	}

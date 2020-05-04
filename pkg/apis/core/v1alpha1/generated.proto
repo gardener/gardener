@@ -381,6 +381,16 @@ message ControllerDeployment {
   // ProviderConfig contains type-specific configuration.
   // +optional
   optional ProviderConfig providerConfig = 2;
+
+  // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
+  // +optional
+  optional string policy = 3;
+
+  // SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+  // considered for a deployment.
+  // An empty list means that all seeds are selected.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 4;
 }
 
 // ControllerInstallation represents an installation request for an external controller.
@@ -450,6 +460,7 @@ message ControllerRegistrationList {
 message ControllerRegistrationSpec {
   // Resources is a list of combinations of kinds (DNSProvider, Infrastructure, Generic, ...) and their actual types
   // (aws-route53, gcp, auditlog, ...).
+  // +optional
   repeated ControllerResource resources = 1;
 
   // Deployment contains information for how this controller is deployed.
@@ -473,6 +484,12 @@ message ControllerResource {
   // ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration reconcileTimeout = 4;
+
+  // Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
+  // resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
+  // combination.
+  // +optional
+  optional bool primary = 5;
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
@@ -560,6 +577,10 @@ message Extension {
   // ProviderConfig is the configuration passed to extension resource.
   // +optional
   optional ProviderConfig providerConfig = 2;
+
+  // Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+  // +optional
+  optional bool disabled = 3;
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
