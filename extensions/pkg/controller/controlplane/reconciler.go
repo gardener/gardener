@@ -158,7 +158,7 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the reconciliation of controlplane", "controlplane", cp.Name)
+	r.logger.Info("Starting the restoration of controlplane", "controlplane", cp.Name)
 	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneRestoration, "Restoring the controlplane")
 	requeue, err := r.actuator.Restore(ctx, cp, cluster)
 	if err != nil {
