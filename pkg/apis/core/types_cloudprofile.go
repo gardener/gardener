@@ -80,7 +80,7 @@ type SeedSelector struct {
 	*metav1.LabelSelector
 	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
 	// +optional
-	Providers []string
+	ProviderTypes []string
 }
 
 // KubernetesSettings contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.

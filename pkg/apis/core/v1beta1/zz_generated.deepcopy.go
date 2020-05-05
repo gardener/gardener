@@ -2912,8 +2912,8 @@ func (in *SeedSelector) DeepCopyInto(out *SeedSelector) {
 		*out = new(metav1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Providers != nil {
-		in, out := &in.Providers, &out.Providers
+	if in.ProviderTypes != nil {
+		in, out := &in.ProviderTypes, &out.ProviderTypes
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

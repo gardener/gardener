@@ -3871,7 +3871,7 @@ func Convert_core_SeedProvider_To_v1beta1_SeedProvider(in *core.SeedProvider, ou
 
 func autoConvert_v1beta1_SeedSelector_To_core_SeedSelector(in *SeedSelector, out *core.SeedSelector, s conversion.Scope) error {
 	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
-	out.Providers = *(*[]string)(unsafe.Pointer(&in.Providers))
+	out.ProviderTypes = *(*[]string)(unsafe.Pointer(&in.ProviderTypes))
 	return nil
 }
 
@@ -3882,7 +3882,7 @@ func Convert_v1beta1_SeedSelector_To_core_SeedSelector(in *SeedSelector, out *co
 
 func autoConvert_core_SeedSelector_To_v1beta1_SeedSelector(in *core.SeedSelector, out *SeedSelector, s conversion.Scope) error {
 	out.LabelSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.LabelSelector))
-	out.Providers = *(*[]string)(unsafe.Pointer(&in.Providers))
+	out.ProviderTypes = *(*[]string)(unsafe.Pointer(&in.ProviderTypes))
 	return nil
 }
 

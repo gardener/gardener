@@ -1617,7 +1617,7 @@ message SeedSelector {
 
   // Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
   // +optional
-  repeated string providers = 2;
+  repeated string providerTypes = 2;
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the

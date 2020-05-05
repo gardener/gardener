@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/texttheater/golang-levenshtein/levenshtein"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -32,6 +30,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
+	"github.com/texttheater/golang-levenshtein/levenshtein"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -178,33 +177,25 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	}
 
 	filteredSeeds, err := filterUsableSeeds(seedList)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
 	}
-	filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
-	if err != nil {
-		return nil, err
+	if err == nil {
+		filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
 	}
-	filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
-	if err != nil {
-		return nil, err
+	if err == nil {
+		filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
 	}
-	filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		filteredSeeds, err = filterCandidates(shoot, filteredSeeds)
 	}
-
-	candidates, err := getCandidates(shoot, filteredSeeds, strategy)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		filteredSeeds, err = applyStrategy(shoot, filteredSeeds, strategy)
 	}
-
-	filteredCandidates, err := filterCandidates(shoot, candidates)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
 	}
-
-	return getSeedWithLeastShootsDeployed(filteredCandidates, shootList)
+	return nil, err
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
@@ -227,13 +218,12 @@ func filterUsableSeeds(seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1
 }
 
 func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]*gardencorev1beta1.Seed, error) {
-	selectordef := &metav1.LabelSelector{}
-	if seedSelector != nil && seedSelector.LabelSelector != nil {
-		selectordef = seedSelector.LabelSelector
+	if seedSelector == nil || seedSelector.LabelSelector == nil {
+		return seedList, nil
 	}
-	selector, err := metav1.LabelSelectorAsSelector(selectordef)
+	selector, err := metav1.LabelSelectorAsSelector(seedSelector.LabelSelector)
 	if err != nil {
-		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *selectordef, err)
+		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *seedSelector.LabelSelector, err)
 	}
 
 	var matchingSeeds []*gardencorev1beta1.Seed
@@ -252,7 +242,7 @@ func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, seedSel
 func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
 	var possibleProviders []string
 	if cloudProfile.Spec.SeedSelector != nil {
-		possibleProviders = cloudProfile.Spec.SeedSelector.Providers
+		possibleProviders = cloudProfile.Spec.SeedSelector.ProviderTypes
 	}
 
 	var matchingSeeds []*gardencorev1beta1.Seed
@@ -264,7 +254,7 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 	return matchingSeeds, nil
 }
 
-func getCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]*gardencorev1beta1.Seed, error) {
+func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]*gardencorev1beta1.Seed, error) {
 	var candidates []*gardencorev1beta1.Seed
 
 	switch {
@@ -351,21 +341,6 @@ func matchProvider(seed, shoot string, providers []string) bool {
 	return false
 }
 
-func addCanditatesWithMatchingProviders(providers []string, seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, candidates []*gardencorev1beta1.Seed) []*gardencorev1beta1.Seed {
-next:
-	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && matchProvider(seed.Spec.Provider.Type, shoot.Spec.Provider.Type, providers) && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
-			for _, c := range candidates {
-				if c == seed {
-					continue next
-				}
-			}
-			candidates = append(candidates, seed)
-		}
-	}
-	return candidates
-}
-
 func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Seed {
 	var candidates []*gardencorev1beta1.Seed
 	// Determine all candidate seed clusters matching the shoot's provider and region.
@@ -389,10 +364,6 @@ func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.See
 }
 
 func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Seed {
-	if sameRegionCandidates := determineCandidatesWithSameRegionStrategy(seeds, shoot); sameRegionCandidates != nil {
-		return sameRegionCandidates
-	}
-
 	var (
 		minDistance = 1000
 		shootRegion = shoot.Spec.Region
@@ -401,7 +372,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 
 	for _, seed := range seeds {
 		seedRegion := seed.Spec.Provider.Region
-		dist, _ := distance(seedRegion, shootRegion)
+		dist := distance(seedRegion, shootRegion)
 
 		// append
 		if dist == minDistance {
@@ -419,7 +390,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 
 var orientations = []string{"north", "south", "east", "west", "central"}
 
-// distance extracts an orientation relative to a base from a region name
+// orientation extracts an orientation relative to a base from a region name
 func orientation(name string) (normalized string, orientation string) {
 	for _, o := range orientations {
 		if i := strings.Index(name, o); i >= 0 {
@@ -435,9 +406,13 @@ func orientation(name string) (normalized string, orientation string) {
 // some usual orientation keywords. It is based on the levenshtein distance
 // of the regions base names plus the difference based on the orientation.
 // regions with the same base but different orientations are basically nearer
-// to each other than two completely diffrent regions.
-func distance(seed, shoot string) (int, int) {
+// to each other than two completely unrelated regions.
+func distance(seed, shoot string) int {
+	d, _ := _distance(seed, shoot)
+	return d
+}
 
+func _distance(seed, shoot string) (int, int) {
 	seed_base, seed_orient := orientation(seed)
 	shoot_base, shoot_orient := orientation(shoot)
 	dist := levenshtein.DistanceForStrings([]rune(seed_base), []rune(shoot_base), levenshtein.DefaultOptionsWithSub)

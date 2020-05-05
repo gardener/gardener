@@ -24,7 +24,7 @@ import (
 const (
 	// SameRegion Strategy determines a seed candidate for a shoot only if the cloud profile and region are identical
 	SameRegion CandidateDeterminationStrategy = "SameRegion"
-	// BestRegion Strategy prefers a matching region, only if no such seed exsists it tries to find the nearest one.
+	// BestRegion Strategy prefers a matching region, only if no such seed exists it tries to find the nearest one.
 	BestRegion CandidateDeterminationStrategy = "BestRegion"
 	// MinimalDistance Strategy determines a seed candidate for a shoot if the cloud profile are identical. Then chooses the seed with the minimal distance to the shoot.
 	MinimalDistance CandidateDeterminationStrategy = "MinimalDistance"

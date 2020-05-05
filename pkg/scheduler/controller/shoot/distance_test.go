@@ -47,42 +47,42 @@ var _ = Describe("Scheduler_Control", func() {
 
 	Context("orientation", func() {
 		It("handles name without orientation", func() {
-			dist, leven := distance("europe", "asia")
+			dist, leven := _distance("europe", "asia")
 			Expect(leven).To(Equal(6))
 			Expect(dist).To(Equal(leven * 2))
 		})
 
 		It("handles name both with identical orientation", func() {
-			dist, leven := distance("europe-west", "asia-west")
+			dist, leven := _distance("europe-west", "asia-west")
 			Expect(leven).To(Equal(6))
 			Expect(dist).To(Equal(leven * 2))
 		})
 
 		It("handles name both with different orientation", func() {
-			dist, leven := distance("europe-west", "asia-east")
+			dist, leven := _distance("europe-west", "asia-east")
 			Expect(leven).To(Equal(6))
 			Expect(dist).To(Equal(leven*2 + 2))
 		})
 		It("handles name with different orientation", func() {
-			dist, leven := distance("europe-west", "asia-:")
+			dist, leven := _distance("europe-west", "asia-:")
 			Expect(leven).To(Equal(6))
 			Expect(dist).To(Equal(leven*2 + 1))
 		})
 
-		It("handles identical base with diffent orientation", func() {
-			dist, leven := distance("europe-west", "europe-east")
+		It("handles identical base with different orientation", func() {
+			dist, leven := _distance("europe-west", "europe-east")
 			Expect(leven).To(Equal(0))
 			Expect(dist).To(Equal(2))
 		})
 
 		It("handles identical base with mixes orientation", func() {
-			dist, leven := distance("europe-west", "europe-:")
+			dist, leven := _distance("europe-west", "europe-:")
 			Expect(leven).To(Equal(0))
 			Expect(dist).To(Equal(1))
 		})
 
 		It("handles identical base with same orientation", func() {
-			dist, leven := distance("europe-west", "europe-west")
+			dist, leven := _distance("europe-west", "europe-west")
 			Expect(leven).To(Equal(0))
 			Expect(dist).To(Equal(0))
 		})
