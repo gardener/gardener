@@ -371,7 +371,7 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
 
-		if err := c.updateShootStatusProcessing(shoot, message); err != nil {
+		if err := c.updateShootStatusProcessing(o.Shoot.Info, message); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -383,11 +383,11 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 
 	if err := c.runDeleteShootFlow(o); err != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Description)
-		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusDeleteError(logger, shoot, err.Description, err.LastErrors...))
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusDeleteError(logger, o.Shoot.Info, err.Description, err.LastErrors...))
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, "Deleted Shoot cluster")
-	return c.finalizeShootDeletion(ctx, logger, shoot, project.Name)
+	return c.finalizeShootDeletion(ctx, logger, o.Shoot.Info, project.Name)
 }
 
 func (c *Controller) finalizeShootDeletion(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, projectName string) (reconcile.Result, error) {
@@ -492,7 +492,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
 
-		if err := c.updateShootStatusProcessing(shoot, message); err != nil {
+		if err := c.updateShootStatusProcessing(o.Shoot.Info, message); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -511,7 +511,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		if err != nil {
 			message := "Cannot reconcile Shoot: Migrating DNS providers failed"
 			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, message)
-			return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("migrating dns providers failed: %v", err), c.updateShootStatusProcessing(shoot, message))
+			return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("migrating dns providers failed: %v", err), c.updateShootStatusReconcileError(o.Shoot.Info, operationType, err.Error(), shoot.Status.LastErrors...))
 		}
 		if updated {
 			message := "Requeue Shoot after migrating DNS providers"
@@ -523,7 +523,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	if err := c.runReconcileShootFlow(o); err != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Description)
-		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusReconcileError(shoot, operationType, err.Description, err.LastErrors...))
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusReconcileError(o.Shoot.Info, operationType, err.Description, err.LastErrors...))
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
