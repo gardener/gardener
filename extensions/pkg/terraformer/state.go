@@ -169,11 +169,9 @@ func (f StateConfigMapInitializerFunc) Initialize(ctx context.Context, c client.
 	return f(ctx, c, namespace, name)
 }
 
-// CreateState create terraform state config map and use empty state
-// It does not create or update state ConfigMap if alredy exists
+// CreateState create terraform state config map and use empty state.
+// It does not create or update state ConfigMap if already exists.
 func CreateState(ctx context.Context, c client.Client, namespace, name string) error {
-	var err error
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
 		Data: map[string]string{
@@ -181,17 +179,17 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string) e
 		},
 	}
 
-	if err = c.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
-		return nil
+	if err := c.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
 	}
 
-	return err
+	return nil
 }
 
 // Initialize implements StateConfigMapInitializer
 func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, namespace, name string) error {
 	if cus.State == nil {
-		return fmt.Errorf("missing state when creating or updating terraform state comfigMap %s/%s", namespace, name)
+		return fmt.Errorf("missing state when creating or updating terraform state ConfigMap %s/%s", namespace, name)
 	}
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 

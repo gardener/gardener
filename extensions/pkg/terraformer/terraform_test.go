@@ -94,27 +94,50 @@ var _ = Describe("terraformer", func() {
 		)
 
 		Describe("#CreateState", func() {
-			It("Should create the config map", func() {
-				var (
-					objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-					expected   = &corev1.ConfigMap{
-						ObjectMeta: objectMeta,
-						Data: map[string]string{
-							StateKey: "",
-						},
-					}
-					stateConfigMapInitializer = StateConfigMapInitializerFunc(CreateState)
-				)
+			var (
+				expected                  *corev1.ConfigMap
+				stateConfigMapInitializer StateConfigMapInitializerFunc
+			)
 
+			BeforeEach(func() {
+				expected = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+					Data: map[string]string{
+						StateKey: "",
+					},
+				}
+				stateConfigMapInitializer = StateConfigMapInitializerFunc(CreateState)
+			})
+
+			It("should create the ConfigMap", func() {
 				c.EXPECT().Create(gomock.Any(), expected.DeepCopy())
 
 				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("should return nil when the ConfigMap already exists", func() {
+				c.EXPECT().
+					Create(gomock.Any(), expected.DeepCopy()).
+					Return(apierrors.NewAlreadyExists(configMapGroupResource, name))
+
+				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return error when the ConfigMap creation fails", func() {
+				c.EXPECT().
+					Create(gomock.Any(), expected.DeepCopy()).
+					Return(apierrors.NewForbidden(configMapGroupResource, name, fmt.Errorf("not allowed to create ConfigMap")))
+
+				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
 		})
 
 		Describe("#CreateOrUpdateState", func() {
-			It("Should create the config map", func() {
+			It("Should create the ConfigMap", func() {
 				var (
 					state      = "state"
 					stateKey   = kutil.Key(namespace, name)
