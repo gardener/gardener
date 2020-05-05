@@ -44,9 +44,9 @@ status:
 ```
 The secret has one data key `cloud_config` that stores the generation.
 
-The generation of this operating system representation is executed by a [`Generator`](pkg/generator/generator.go). A default implementation for the `generator` based on [go templates](https://golang.org/pkg/text/template/) is provided in [`pkg/template`](pkg/template).
+The generation of this operating system representation is executed by a [`Generator`](generator/generator.go). A default implementation for the `generator` based on [go templates](https://golang.org/pkg/text/template/) is provided in [`template`](template).
 
-In addition, `oscommon` provides set of basic [`tests`](/pkg/generator/test/README.md) which can be used to test the operating system specific generator.
+In addition, `oscommon` provides set of basic [`tests`](generator/test/README.md) which can be used to test the operating system specific generator.
 
 Please find more information regarding the extensibility concepts and a detailed proposal [here](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md).
 

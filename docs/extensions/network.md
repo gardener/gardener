@@ -49,7 +49,7 @@ The above resources is divided into two parts (more information can be found [he
 - global configuration (e.g., podCIDR, serviceCIDR, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)
 
-> **Note**: certain cloud-provider extensions might have webhooks that would modify the network-resource to fit into their network specific context. As previously mentioned, Azure does not support IPIP, as a result, the [Azure provider extension](https://github.com/gardener/gardener-extension-provider-azure) implements a [webhook](https://github.com/gardener/gardener-extension-provider-azure/pkg/webhook/network/mutate.go) to mutate the backend and set it to `None` instead of `bird`.
+> **Note**: certain cloud-provider extensions might have webhooks that would modify the network-resource to fit into their network specific context. As previously mentioned, Azure does not support IPIP, as a result, the [Azure provider extension](https://github.com/gardener/gardener-extension-provider-azure) implements a [webhook](https://github.com/gardener/gardener-extension-provider-azure/blob/master/pkg/webhook/network/mutate.go) to mutate the backend and set it to `None` instead of `bird`.
 
 ## Supporting a new Network Extension Provider
 

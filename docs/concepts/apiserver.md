@@ -24,7 +24,7 @@ Please see [this](../../example/30-cloudprofile.yaml) example manifest and consu
 Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.11 and passes the Kubernetes conformance tests.
 The Gardener operator has to either deploy the Gardenlet into the cluster he wants to use as seed (recommended, then the Gardenlet will create the `Seed` object itself after bootstrapping), or he provides the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and creates the `Seed` resource himself.
 
-Please see [this](../../example/40-secret-seed-backup.yaml), [this](../../example/50-seed.yaml)(, and optionally [this](../../example/40-secret-seed.yaml)) example manifests.
+Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml)(, and optionally [this](../../example/40-secret-seed.yaml)) example manifests.
 
 ## `Quota`s
 

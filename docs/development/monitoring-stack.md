@@ -28,7 +28,7 @@ In each Seed cluster there is a Prometheus in the `garden` namespace responsible
 
 The alerts for all Shoot clusters hosted on a Seed are routed to a central Alertmanger running in the `garden` namespace of the Seed. The purpose of this central alertmanager is to forward all important alerts to the operators of the Gardener setup.
 
-The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. These Alertmanager is optional and the conditions for a deployment is already described  [here](../usage/shoots.md#configure-a-shoot-cluster-alert-receiver).
+The Alertmanager in the Shoot namespace on the Seed is only responsible for forwarding alerts from its Shoot cluster to a cluster owner/cluster alert receiver via email. The Alertmanager is optional and the conditions for a deployment are already described [here](../monitoring/alerting.md).
 
 ## Adding New Monitoring Targets
 
