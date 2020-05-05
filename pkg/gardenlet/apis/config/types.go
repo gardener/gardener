@@ -198,6 +198,8 @@ type ShootCareControllerConfiguration struct {
 	// StaleExtensionHealthCheckThreshold configures the threshold when Gardener considers a Health check report of an
 	// Extension CRD as outdated.
 	// The StaleExtensionHealthCheckThreshold should have some leeway in case a Gardener extension is temporarily unavailable.
+	// If not set, Gardener does not verify for outdated health check reports. This is for backwards-compatibility reasons
+	// and will become default in a future version.
 	StaleExtensionHealthCheckThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
