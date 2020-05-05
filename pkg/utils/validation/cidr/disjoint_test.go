@@ -81,6 +81,33 @@ var _ = Describe("utils", func() {
 			}))))
 		})
 
+		It("should fail due to disjointedness of service and pod networks", func() {
+			var (
+				podsCIDR     = seedServicesCIDR
+				servicesCIDR = seedPodsCIDR
+				nodesCIDR    = "10.242.128.0/17"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			}))),
+			)
+		})
+
 		It("should fail due to missing fields", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
