@@ -70,23 +70,43 @@ func (t TestDescription) newLabel(label string) TestDescription {
 }
 
 // It defines a ginkgo It block and enhances the test description with the provided labels
-func (t TestDescription) It(text string, body func()) {
-	ginkgo.It(fmt.Sprintf("%s %s", t.String(), text), body)
+func (t TestDescription) It(text string, body func(), opts ...TestOption) {
+	testOptions := &TestOptions{}
+	testOptions.ApplyOptions(opts)
+
+	testOptions.Complete(func() {
+		ginkgo.It(fmt.Sprintf("%s %s", t.String(), text), body)
+	})
 }
 
 // FIt defines a ginkgo FIt block and enhances the test description with the provided labels
-func (t TestDescription) FIt(text string, body func()) {
-	ginkgo.FIt(fmt.Sprintf("%s %s", t.String(), text), body)
+func (t TestDescription) FIt(text string, body func(), opts ...TestOption) {
+	testOptions := &TestOptions{}
+	testOptions.ApplyOptions(opts)
+
+	testOptions.Complete(func() {
+		ginkgo.FIt(fmt.Sprintf("%s %s", t.String(), text), body)
+	})
 }
 
 // CIt defines a contextified ginkgo It block and enhances the test description with the provided labels
-func (t TestDescription) CIt(text string, body func(context.Context), timeout time.Duration) {
-	CIt(fmt.Sprintf("%s %s", t.String(), text), body, timeout)
+func (t TestDescription) CIt(text string, body func(context.Context), timeout time.Duration, opts ...TestOption) {
+	testOptions := &TestOptions{}
+	testOptions.ApplyOptions(opts)
+
+	testOptions.Complete(func() {
+		CIt(fmt.Sprintf("%s %s", t.String(), text), body, timeout)
+	})
 }
 
 // FCIt defines a contextified ginkgo FIt block and enhances the test description with the provided labels
-func (t TestDescription) FCIt(text string, body func(context.Context), timeout time.Duration) {
-	FCIt(fmt.Sprintf("%s %s", t.String(), text), body, timeout)
+func (t TestDescription) FCIt(text string, body func(context.Context), timeout time.Duration, opts ...TestOption) {
+	testOptions := &TestOptions{}
+	testOptions.ApplyOptions(opts)
+
+	testOptions.Complete(func() {
+		FCIt(fmt.Sprintf("%s %s", t.String(), text), body, timeout)
+	})
 }
 
 // String returns the test description labels

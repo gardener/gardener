@@ -110,7 +110,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		}
 	}
 
-	//dump controlplane in the shoot namespace
+	// dump controlplane in the shoot namespace
 	if f.Seed != nil && f.SeedClient != nil {
 		if err := f.dumpControlplaneInSeed(ctx, f.Seed, f.ShootSeedNamespace()); err != nil {
 			f.Logger.Errorf("unable to dump controlplane of %s in seed %s: %v", f.Shoot.Name, f.Seed.Name, err)

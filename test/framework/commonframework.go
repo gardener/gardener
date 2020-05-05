@@ -92,6 +92,10 @@ func (f *CommonFramework) BeforeEach() {
 
 // CommonAfterSuite performs necessary common steps after all tests of a suite a run
 func CommonAfterSuite() {
+
+	// run all registered cleanup functions
+	RunCleanupActions()
+
 	resourcesDir, err := filepath.Abs(filepath.Join("..", "..", "framework", "resources"))
 	ExpectNoError(err)
 	err = os.RemoveAll(filepath.Join(resourcesDir, "charts"))

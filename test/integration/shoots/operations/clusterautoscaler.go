@@ -57,21 +57,31 @@ const (
 	testTimeout            = 60 * time.Minute
 	scaleUpTimeout         = 20 * time.Minute
 	scaleDownTimeout       = 20 * time.Minute
+	cleanupTimeout         = 20 * time.Minute
 )
 
 var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 
-	f := framework.NewShootFramework(nil)
+	var (
+		f = framework.NewShootFramework(nil)
+
+		testWorkerPoolName          = "ca-test"
+		origClusterAutoscalerConfig *corev1beta1.ClusterAutoscaler
+		origWorkers                 []corev1beta1.Worker
+		origMinWorkers              int32
+		origMaxWorkers              int32
+	)
 
 	f.Beta().Serial().CIt("should autoscale a single worker group", func(ctx context.Context) {
 		var (
 			shoot = f.Shoot
 
-			origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
-			workerPoolName              = shoot.Spec.Provider.Workers[0].Name
-			origMinWorkers              = shoot.Spec.Provider.Workers[0].Minimum
-			origMaxWorkers              = shoot.Spec.Provider.Workers[0].Maximum
+			workerPoolName = shoot.Spec.Provider.Workers[0].Name
 		)
+
+		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
+		origMinWorkers = shoot.Spec.Provider.Workers[0].Minimum
+		origMaxWorkers = shoot.Spec.Provider.Workers[0].Maximum
 
 		ginkgo.By("updating shoot spec for test")
 		// set clusterautoscaler params to lower values so we don't have to wait too long
@@ -90,18 +100,6 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 			return nil
 		})
 		framework.ExpectNoError(err)
-
-		// reset shoot spec to original values after test
-		defer func() {
-			ginkgo.By("reverting shoot spec changes by test")
-			err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
-				s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
-				s.Spec.Provider.Workers[0].Maximum = origMaxWorkers
-
-				return nil
-			})
-			framework.ExpectNoError(err)
-		}()
 
 		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &workerPoolName)
 		framework.ExpectNoError(err)
@@ -131,17 +129,6 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
 		framework.ExpectNoError(err)
 
-		defer func() {
-			ginkgo.By("deleting reserve-capacity deployment")
-			err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: reserveCapacityDeploymentNamespace,
-					Name:      reserveCapacityDeploymentName,
-				},
-			})
-			framework.ExpectNoError(err)
-		}()
-
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
@@ -164,17 +151,37 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		ginkgo.By("one node should be removed from the worker pool")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers), &workerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
-	}, testTimeout)
+	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+
+		ginkgo.By("reverting shoot spec changes by test")
+		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
+			s.Spec.Provider.Workers[0].Maximum = origMaxWorkers
+
+			return nil
+		})
+		framework.ExpectNoError(err)
+
+		ginkgo.By("deleting reserve-capacity deployment")
+		err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: reserveCapacityDeploymentNamespace,
+				Name:      reserveCapacityDeploymentName,
+			},
+		})
+		framework.ExpectNoError(err)
+	}, cleanupTimeout))
 
 	f.Beta().Serial().CIt("should autoscale a single worker group to/from zero", func(ctx context.Context) {
 		var (
 			shoot = f.Shoot
 
-			origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
-			workerPoolName              = shoot.Spec.Provider.Workers[0].Name
-			testWorkerPoolName          = "ca-test"
-			origWorkers                 = shoot.Spec.Provider.Workers
+			workerPoolName = shoot.Spec.Provider.Workers[0].Name
 		)
+
+		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
+		origWorkers = shoot.Spec.Provider.Workers
+
 		if shoot.Spec.Provider.Type != "aws" && shoot.Spec.Provider.Type != "azure" {
 			ginkgo.Skip("not applicable")
 		}
@@ -205,26 +212,6 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 			return nil
 		})
 		framework.ExpectNoError(err)
-
-		// Reset shoot spec to original values after test
-		defer func() {
-			ginkgo.By("reverting shoot spec changes by test")
-			err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
-				s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
-
-				for i, worker := range s.Spec.Provider.Workers {
-					if worker.Name == testWorkerPoolName {
-						// Remove the dedicated ca-test workerpool
-						s.Spec.Provider.Workers[i] = s.Spec.Provider.Workers[len(s.Spec.Provider.Workers)-1]
-						s.Spec.Provider.Workers = s.Spec.Provider.Workers[:len(s.Spec.Provider.Workers)-1]
-						break
-					}
-				}
-
-				return nil
-			})
-			framework.ExpectNoError(err)
-		}()
 
 		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &testWorkerPoolName)
 		framework.ExpectNoError(err)
@@ -261,17 +248,6 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
 		framework.ExpectNoError(err)
 
-		defer func() {
-			ginkgo.By("deleting reserve-capacity deployment")
-			err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: reserveCapacityDeploymentNamespace,
-					Name:      reserveCapacityDeploymentName,
-				},
-			})
-			framework.ExpectNoError(err)
-		}()
-
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
@@ -294,7 +270,33 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		ginkgo.By("worker pool should be scaled-down to 0")
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, 0, &testWorkerPoolName, scaleDownTimeout)
 		framework.ExpectNoError(err)
-	}, testTimeout)
+	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		ginkgo.By("reverting shoot spec changes by test")
+		err := f.UpdateShoot(ctx, func(s *corev1beta1.Shoot) error {
+			s.Spec.Kubernetes.ClusterAutoscaler = origClusterAutoscalerConfig
+
+			for i, worker := range s.Spec.Provider.Workers {
+				if worker.Name == testWorkerPoolName {
+					// Remove the dedicated ca-test workerpool
+					s.Spec.Provider.Workers[i] = s.Spec.Provider.Workers[len(s.Spec.Provider.Workers)-1]
+					s.Spec.Provider.Workers = s.Spec.Provider.Workers[:len(s.Spec.Provider.Workers)-1]
+					break
+				}
+			}
+
+			return nil
+		})
+		framework.ExpectNoError(err)
+
+		ginkgo.By("deleting reserve-capacity deployment")
+		err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: reserveCapacityDeploymentNamespace,
+				Name:      reserveCapacityDeploymentName,
+			},
+		})
+		framework.ExpectNoError(err)
+	}, cleanupTimeout))
 
 })
 
