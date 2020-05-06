@@ -115,7 +115,7 @@ func (r *stateReconciler) Reconcile(request reconcile.Request) (reconcile.Result
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully update worker state"
+	msg := "Successfully updated worker state"
 	r.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	r.recorder.Event(worker, corev1.EventTypeNormal, SuccessSynced, msg)
 

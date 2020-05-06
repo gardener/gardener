@@ -132,6 +132,21 @@ func ShootFromCluster(decoder runtime.Decoder, cluster *extensionsv1alpha1.Clust
 	return shoot, nil
 }
 
+// GetShoot tries to read Gardener's Cluster extension resource in the given namespace and return the embedded Shoot resource.
+func GetShoot(ctx context.Context, c client.Client, namespace string) (*gardencorev1beta1.Shoot, error) {
+	cluster := &extensionsv1alpha1.Cluster{}
+	if err := c.Get(ctx, kutil.Key(namespace), cluster); err != nil {
+		return nil, err
+	}
+
+	decoder, err := NewGardenDecoder()
+	if err != nil {
+		return nil, err
+	}
+
+	return ShootFromCluster(decoder, cluster)
+}
+
 // NewGardenDecoder returns a new Garden API decoder.
 func NewGardenDecoder() (runtime.Decoder, error) {
 	return serializer.NewCodecFactory(gardenscheme).UniversalDecoder(), nil

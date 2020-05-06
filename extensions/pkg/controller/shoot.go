@@ -15,6 +15,7 @@
 package controller
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
@@ -57,6 +58,20 @@ func GetServiceNetwork(cluster *Cluster) string {
 // IsHibernated returns true if the shoot is hibernated, or false otherwise.
 func IsHibernated(cluster *Cluster) bool {
 	return cluster.Shoot.Spec.Hibernation != nil && cluster.Shoot.Spec.Hibernation.Enabled != nil && *cluster.Shoot.Spec.Hibernation.Enabled
+}
+
+// IsFailed returns true if the embedded shoot is failed, or false otherwise.
+func IsFailed(cluster *Cluster) bool {
+	return IsShootFailed(cluster.Shoot)
+}
+
+// IsShootFailed returns true if the shoot is failed, or false otherwise.
+func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+	lastOperation := shoot.Status.LastOperation
+	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed
 }
 
 // IsUnmanagedDNSProvider returns true if the shoot uses an unmanaged DNS provider.
