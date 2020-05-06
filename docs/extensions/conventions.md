@@ -21,7 +21,7 @@ Some extensions might not only create resources in the seed cluster itself but a
 However, there are no credentials for the shoot for every extension.
 
 Gardener creates a kubeconfig for itself that it uses to interact with the shoot cluster.
-This kubeconfig is stored as a `Secret` with name [`gardener`](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/types_constants.go) in the shoot namespace.
+This kubeconfig is stored as a `Secret` with name [`gardener`](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/constants/types_constants.go) in the shoot namespace.
 Extension controllers may use this kubeconfig to interact with the shoot cluster if desired (it has full administrator privileges and no further RBAC rules are required).
 Instead, they could also create their own kubeconfig for every shoot (which, of course, is better for auditing reasons, but not yet enforced at this point in time).
 
@@ -30,6 +30,6 @@ Instead, they could also create their own kubeconfig for every shoot (which, of 
 Gardener creates several certificate authorities (CA) that are used to create server/client certificates for various components.
 For example, the shoot's etcd has its own CA, the kube-aggregator has its own CA as well, and both are different to the actual cluster's CA.
 
-These CAs are stored as `Secret`s in the shoot namespace (see [this](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/types_constants.go) for the actual names).
+These CAs are stored as `Secret`s in the shoot namespace (see [this](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/constants/types_constants.go) for the actual names).
 Extension controllers may use them to create further certificates/kubeconfigs for potential other components they need to deploy to the seed or shoot.
 [These utility functions](https://github.com/gardener/gardener/tree/master/pkg/utils/secrets) should help with the creation and management.

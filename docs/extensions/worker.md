@@ -81,7 +81,7 @@ spec:
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
-Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`), see [`Infrastructure` resource](../infrastructure.md), into the `.spec`.
+Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`), see [`Infrastructure` resource](infrastructure.md), into the `.spec`.
 
 In the `.spec.pools[]` field the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).
@@ -278,7 +278,7 @@ You can take a look at the below referenced example implementation for the AWS p
 
 All of the described behaviour is mostly the same for every provider.
 The only difference is maybe the version/configuration of the machine-controller-manager, and the machine class specification itself.
-You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](https://github.com/gardener/gardener/extensions/tree/master/pkg/controller/worker) part where you will find a lot of utilities that you can use.
+You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](https://github.com/gardener/gardener/tree/master/extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
 

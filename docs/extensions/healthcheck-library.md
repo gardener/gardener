@@ -42,17 +42,19 @@ However extensions are free to choose any `HealthConditionType`.
 More information [can be found here](https://github.com/gardener/gardener/blob/master/docs/extensions/shoot-health-status-conditions.md).
 
 A health check has to [satisfy below interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/healthcheck/actuator.go).
-You can find implementation examples [here](https://github.com/gardener/gardener/extensions/tree/master/pkg/controller/healthcheck/general).
+You can find implementation examples [here](https://github.com/gardener/gardener/tree/master/extensions/pkg/controller/healthcheck/general).
 ```go
 type HealthCheck interface {
-       // Check is the function that executes the actual health check
-       Check(context.Context, types.NamespacedName) (*HealthCheckResult, error)
-       // SetSeedClient injects the seed client
-       SetSeedClient(client.Client)
-       // SetShootClient injects the shoot client
-       SetShootClient(client.Client)
-       // SetLoggerSuffix injects the logger
-       SetLoggerSuffix(string, string)
+    // Check is the function that executes the actual health check
+    Check(context.Context, types.NamespacedName) (*SingleCheckResult, error)
+    // InjectSeedClient injects the seed client
+    InjectSeedClient(client.Client)
+    // InjectShootClient injects the shoot client
+    InjectShootClient(client.Client)
+    // SetLoggerSuffix injects the logger
+    SetLoggerSuffix(string, string)
+    // DeepCopy clones the healthCheck
+    DeepCopy() HealthCheck
 }
 ```
 

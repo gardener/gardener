@@ -213,7 +213,7 @@ sed -i -e 's/Logging: true/Logging: false/g' dev/20-componentconfig-gardenlet.ya
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`.
 In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
 You need to have control over a domain (or subdomain) for which these records will be created.
-Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../concepts/configuration.md).
+Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../usage/configuration.md).
 
 ```bash
 kubectl apply -f example/10-secret-internal-domain-unmanaged.yaml
