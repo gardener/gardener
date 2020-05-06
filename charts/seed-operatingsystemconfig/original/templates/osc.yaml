@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     gardener.cloud/operation: reconcile
+    gardener.cloud/timestamp: {{ required ".osc.annotationCurrentTimestamp is required" .Values.osc.annotationCurrentTimestamp }}
 spec:
   type: {{ required ".osc.type is required" .Values.osc.type }}
   purpose: {{ required ".osc.purpose is required" .Values.osc.purpose }}

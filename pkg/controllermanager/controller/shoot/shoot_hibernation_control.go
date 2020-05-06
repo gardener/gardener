@@ -104,7 +104,7 @@ func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.Field
 				}
 
 				cr.Schedule(start, NewHibernationJob(client, cronLogger, shoot, true))
-				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(TimeNow()))
+				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(TimeNow().UTC()))
 			}
 
 			if schedule.End != nil {
@@ -114,7 +114,7 @@ func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.Field
 				}
 
 				cr.Schedule(end, NewHibernationJob(client, cronLogger, shoot, false))
-				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(TimeNow()))
+				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(TimeNow().UTC()))
 			}
 		}
 		schedule[locationID] = cr

@@ -1,6 +1,7 @@
 osc:
   type: coreos
   purpose: bootstrap
+  annotationCurrentTimestamp: 2020-05-06T10:18:01Z
   reloadConfigFilePath: /var/lib/...
   secretName: cpu-worker-0
   sshKey: "ssh-rsa"

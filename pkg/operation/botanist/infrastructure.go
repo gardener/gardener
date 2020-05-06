@@ -64,6 +64,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
 		if requestInfrastructureReconciliation {
 			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 		}
 
 		infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{

@@ -27,9 +27,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/golang/mock/gomock"
@@ -551,17 +553,21 @@ var _ = Describe("common", func() {
 
 	Describe("#ConfirmDeletion", func() {
 		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
+			ctrl    *gomock.Controller
+			c       *mockclient.MockClient
+			now     time.Time
+			mockNow *mocktime.MockNow
 		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
+			mockNow = mocktime.NewMockNow(ctrl)
 			c = mockclient.NewMockClient(ctrl)
 		})
 
 		AfterEach(func() {
 			ctrl.Finish()
+
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
@@ -570,8 +576,14 @@ var _ = Describe("common", func() {
 				obj = &corev1.Namespace{}
 			)
 
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
+
 			expectedObj := obj.DeepCopy()
-			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true"}
+			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
 			c.EXPECT().Update(ctx, expectedObj)
@@ -591,9 +603,15 @@ var _ = Describe("common", func() {
 				}
 			)
 
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
+
 			expectedObj := obj.DeepCopy()
 			expectedObj.Annotations[ConfirmationDeletion] = "true"
+			expectedObj.Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().String()
 
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
 			c.EXPECT().Update(ctx, expectedObj)
 
@@ -620,9 +638,14 @@ var _ = Describe("common", func() {
 				obj     = baseObj.DeepCopy()
 			)
 
-			expectedObj := obj.DeepCopy()
-			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true"}
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
 
+			expectedObj := obj.DeepCopy()
+			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
 			c.EXPECT().Update(ctx, expectedObj).Return(apierrors.NewConflict(corev1.Resource("namespaces"), "", errors.New("conflict")))
 			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), expectedObj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {

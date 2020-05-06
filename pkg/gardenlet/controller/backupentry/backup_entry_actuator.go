@@ -213,6 +213,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 
 	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
 		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

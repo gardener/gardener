@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -48,6 +49,7 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
 				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+				metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
 				toApply.Spec.Type = extensionType
 				toApply.Spec.ProviderConfig = providerConfig

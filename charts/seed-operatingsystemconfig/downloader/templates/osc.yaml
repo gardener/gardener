@@ -11,6 +11,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     gardener.cloud/operation: reconcile
+    gardener.cloud/timestamp: {{ required "annotationCurrentTimestamp is required" .Values.annotationCurrentTimestamp }}
 spec:
   type: {{ required "type is required" .Values.type }}
   purpose: {{ required "purpose is required" .Values.purpose }}

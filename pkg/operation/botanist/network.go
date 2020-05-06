@@ -43,6 +43,8 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), network, func() error {
 		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		network.Spec = extensionsv1alpha1.NetworkSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: string(b.Shoot.Info.Spec.Networking.Type),
