@@ -1,239 +1,14 @@
 {
-  "editable": false,
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1561128684160,
+  "id": 6,
+  "iteration": 1588767609744,
   "links": [],
   "panels": [
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "prometheus",
-      "editable": true,
-      "error": false,
-      "fill": 0,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 20,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$pod\"}[1m]))",
-          "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 1,
-          "legendFormat": "Current",
-          "refId": "A",
-          "step": 20
-        },
-        {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"$pod\"})",
-          "format": "time_series",
-          "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
-          "legendFormat": "Requests",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"$pod\"})",
-          "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
-          "legendFormat": "Limits",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "CPU Usage",
-      "tooltip": {
-        "msResolution": true,
-        "shared": true,
-        "sort": 0,
-        "value_type": "cumulative"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "prometheus",
-      "editable": true,
-      "error": false,
-      "fill": 0,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 22,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum (container_memory_working_set_bytes{pod=~\"$pod\"})",
-          "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 1,
-          "legendFormat": "Current",
-          "metric": "container_memory_working_set_bytes",
-          "refId": "A",
-          "step": 10
-        },
-        {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"$pod\"})",
-          "format": "time_series",
-          "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
-          "legendFormat": "Requests",
-          "refId": "C"
-        },
-        {
-          "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"$pod\"})",
-          "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
-          "legendFormat": "Limits:",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Memory Usage",
-      "tooltip": {
-        "msResolution": true,
-        "shared": true,
-        "sort": 0,
-        "value_type": "cumulative"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
     {
       "aliasColors": {},
       "bars": false,
@@ -250,7 +25,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 0
       },
       "id": 8,
       "legend": {
@@ -356,7 +131,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 7
       },
       "id": 16,
       "legend": {
@@ -439,7 +214,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 14
       },
       "id": 18,
       "panels": [
@@ -453,12 +228,13 @@
           "editable": true,
           "error": false,
           "fill": 1,
+          "fillGradient": 0,
           "grid": {},
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 22
+            "y": 15
           },
           "id": 6,
           "legend": {
@@ -474,6 +250,9 @@
           "linewidth": 2,
           "links": [],
           "nullPointMode": "connected",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -547,11 +326,12 @@
           "decimals": 0,
           "description": "Count of cached entries in the cache of the DNS.",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 22
+            "y": 15
           },
           "id": 2,
           "legend": {
@@ -567,6 +347,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
@@ -636,7 +419,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 15
       },
       "id": 14,
       "panels": [
@@ -647,11 +430,12 @@
           "dashes": false,
           "description": "Average request (packets per second) rate made to upstream DNS.",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 30
+            "y": 23
           },
           "id": 10,
           "legend": {
@@ -669,6 +453,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
@@ -734,11 +521,12 @@
           "dashes": false,
           "description": "Average per second rate of responses from upstream DNS split by status code (rcode).",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 30
+            "y": 23
           },
           "id": 12,
           "legend": {
@@ -754,6 +542,9 @@
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
           "percentage": false,
           "pointradius": 2,
           "points": false,
