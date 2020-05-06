@@ -19,7 +19,7 @@ deployment:
       imagePullPolicy: IfNotPresent
       resources:
         limits:
-          cpu: 100m
+          cpu: 250m
           memory: 100Mi
         requests:
           cpu: 50m
@@ -74,4 +74,4 @@ horizontalPodAutoScaler:
     maxReplicas: 5
     minReplicas: 2
     metrics:
-      targetAverageUtilization: 80
+      targetAverageUtilization: 70

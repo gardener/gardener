@@ -11,7 +11,7 @@ data:
     modules:
       http_kubernetes_service:
         prober: http
-        timeout: 5s
+        timeout: 10s
         http:
           headers:
             Accept: "*/*"
