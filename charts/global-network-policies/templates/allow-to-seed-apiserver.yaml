@@ -21,18 +21,8 @@ spec:
     # In some cases it might be in the private IP range.
   - to:
     - ipBlock:
-        cidr: 0.0.0.0/0
-        except:
-        - 10.0.0.0/8
-        - 172.16.0.0/12
-        - 192.168.0.0/16
-        - 100.64.0.0/10
-{{- if .Values.blockedAddresses }}
-{{- range $i, $address := .Values.blockedAddresses }}
-        - {{ $address }}
-{{- end }}
-{{- end }}
-{{ template "global-network-policies.except-networks" .Values.privateNetworks }}
+        cidr:
+          - 0.0.0.0/0
   # TODO (mvladev): discover ports on every Seed cluster dynamically.
   # ports:
   # - protocol: TCP
