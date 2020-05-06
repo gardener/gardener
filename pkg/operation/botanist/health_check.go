@@ -331,24 +331,22 @@ func (b *HealthChecker) CheckSystemComponents(
 func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	switch condition.Status {
 	case gardencorev1beta1.ConditionTrue:
-		_, ok := b.conditionThresholds[condition.Type]
-		if !ok {
+		if _, ok := b.conditionThresholds[condition.Type]; !ok {
 			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+
 	case gardencorev1beta1.ConditionProgressing:
 		threshold, ok := b.conditionThresholds[condition.Type]
 		if !ok {
 			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
-
-		delta := Now().UTC().Sub(condition.LastTransitionTime.Time.UTC())
-		if delta > threshold {
-			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+		if delta := Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 	}
+
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
@@ -436,7 +434,7 @@ func (b *HealthChecker) CheckClusterNodes(
 ) (*gardencorev1beta1.Condition, error) {
 
 	for _, worker := range workers {
-		requirement, err := labels.NewRequirement("worker.gardener.cloud/pool", selection.Equals, []string{worker.Name})
+		requirement, err := labels.NewRequirement(v1beta1constants.LabelWorkerPool, selection.Equals, []string{worker.Name})
 		if err != nil {
 			return nil, err
 		}
@@ -451,9 +449,6 @@ func (b *HealthChecker) CheckClusterNodes(
 
 		if len(nodeList) < int(worker.Minimum) {
 			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodeList), worker.Minimum))
-			return &c, nil
-		} else if len(nodeList) > int(worker.Maximum) {
-			c := b.FailedCondition(condition, "TooManyNodes", fmt.Sprintf("Too many worker nodes registered in worker pool '%s' - exceeds maximum desired machine count. (%d/%d).", worker.Name, len(nodeList), worker.Maximum))
 			return &c, nil
 		}
 	}
@@ -611,11 +606,18 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%q CRD (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()).Round(time.Minute).String(), cond.Condition.LastUpdateTime.UTC().Round(time.Minute).String()))
 			return &c
 		}
+
+		if cond.Condition.Status == gardencorev1beta1.ConditionProgressing {
+			c := gardencorev1beta1helper.UpdatedCondition(condition, cond.Condition.Status, cond.ExtensionType+cond.Condition.Reason, cond.Condition.Message, cond.Condition.Codes...)
+			return &c
+		}
+
 		if cond.Condition.Status == gardencorev1beta1.ConditionFalse || cond.Condition.Status == gardencorev1beta1.ConditionUnknown {
 			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.ExtensionType), fmt.Sprintf("%q CRD (%s/%s) reports failing health check: %s", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, cond.Condition.Message), cond.Condition.Codes...)
 			return &c
 		}
 	}
+
 	return nil
 }
 

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
@@ -92,27 +93,27 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
 	}
 	if err != nil {
-		err := fmt.Errorf("failed to retrieve DeamonSet '%s' in namespace '%s': %v", healthChecker.name, request.Namespace, err)
+		err := fmt.Errorf("failed to retrieve DaemonSet '%s' in namespace '%s': %v", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 	if isHealthy, reason, err := DaemonSetIsHealthy(daemonSet); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
-			IsHealthy: false,
-			Detail:    err.Error(),
-			Reason:    *reason,
+			Status: gardencorev1beta1.ConditionFalse,
+			Detail: err.Error(),
+			Reason: *reason,
 		}, nil
 	}
 
 	return &healthcheck.SingleCheckResult{
-		IsHealthy: true,
+		Status: gardencorev1beta1.ConditionTrue,
 	}, nil
 }
 
 func DaemonSetIsHealthy(daemonSet *appsv1.DaemonSet) (bool, *string, error) {
 	if err := health.CheckDaemonSet(daemonSet); err != nil {
-		reason := "DeamonSetUnhealthy"
+		reason := "DaemonSetUnhealthy"
 		err := fmt.Errorf("daemonSet %s in namespace %s is unhealthy: %v", daemonSet.Name, daemonSet.Namespace, err)
 		return false, &reason, err
 	}

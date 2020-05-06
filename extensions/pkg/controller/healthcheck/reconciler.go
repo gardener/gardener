@@ -17,6 +17,7 @@ package healthcheck
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -30,7 +31,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -52,11 +52,12 @@ type reconciler struct {
 }
 
 const (
-	// HealthCheckUnsuccessful is the reason phrase for the health check condition if one or more of its tests failed.
-	HealthCheckUnsuccessful = "HealthCheckUnsuccessful"
-
-	// HealthCheckSuccessful is the reason phrase for the health check condition if all tests are successful.
-	HealthCheckSuccessful = "HealthCheckSuccessful"
+	// ReasonUnsuccessful is the reason phrase for the health check condition if one or more of its tests failed.
+	ReasonUnsuccessful = "HealthCheckUnsuccessful"
+	// ReasonProgressing is the reason phrase for the health check condition if one or more of its tests are progressing.
+	ReasonProgressing = "HealthCheckProgressing"
+	// ReasonSuccessful is the reason phrase for the health check condition if all tests are successful.
+	ReasonSuccessful = "HealthCheckSuccessful"
 )
 
 // NewReconciler creates a new performHealthCheck.Reconciler that reconciles
@@ -114,12 +115,19 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	if controller.IsHibernated(cluster) {
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
-			if err := r.updateExtensionConditionHibernated(r.ctx, healthConditionType, r.registeredExtension.extension, extension); err != nil {
+			conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			if err := r.updateExtensionConditionHibernated(r.ctx, conditionBuilder, healthConditionType, extension); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
+
 		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Shoot is hibernated.", "name", acc.GetName(), "namespace", acc.GetNamespace(), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
 		return reconcile.Result{}, nil
 	}
@@ -128,12 +136,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return r.performHealthCheck(r.ctx, request, extension)
 }
 
-func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.Request, extension runtime.Object) (reconcile.Result, error) {
+func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.Request, extension extensionsv1alpha1.Object) (reconcile.Result, error) {
 	healthCheckResults, err := r.actuator.ExecuteHealthCheckFunctions(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name})
 	if err != nil {
 		r.logger.Info("Failed to execute healthChecks. Updating each HealthCheckCondition for the extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition types", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
-			if err := r.updateExtensionConditionFailedToExecute(ctx, healthConditionType, r.registeredExtension.extension, extension, r.registeredExtension.groupVersionKind.Kind, err); err != nil {
+			conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
+			if err != nil {
+				return r.resultWithRequeue(), err
+			}
+
+			if err := r.updateExtensionConditionFailedToExecute(ctx, conditionBuilder, healthConditionType, extension, r.registeredExtension.groupVersionKind.Kind, err); err != nil {
 				return r.resultWithRequeue(), err
 			}
 		}
@@ -146,102 +159,110 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 			return r.resultWithRequeue(), err
 		}
 
-		if !healthCheckResult.IsHealthy && healthCheckResult.FailedChecks > 0 {
-			r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
-			if err := r.updateExtensionConditionToConditionCheckError(ctx, conditionBuilder, healthCheckResult.HealthConditionType, r.registeredExtension.extension, extension, r.registeredExtension.groupVersionKind.Kind, healthCheckResult); err != nil {
+		var logger logr.InfoLogger
+		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue || healthCheckResult.Status == gardencorev1beta1.ConditionProgressing {
+			logger = r.logger.V(6)
+		} else {
+			logger = r.logger
+		}
+
+		if healthCheckResult.Status == gardencorev1beta1.ConditionProgressing || healthCheckResult.Status == gardencorev1beta1.ConditionFalse {
+			if healthCheckResult.FailedChecks > 0 {
+				r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+				if err := r.updateExtensionConditionToConditionCheckError(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, r.registeredExtension.groupVersionKind.Kind, healthCheckResult); err != nil {
+					return r.resultWithRequeue(), err
+				}
+				continue
+			}
+
+			logger.Info("Health check for extension resource progressing or unsuccessful.", "kind", fmt.Sprintf("%s.%s.%s", r.registeredExtension.groupVersionKind.Kind, r.registeredExtension.groupVersionKind.Group, r.registeredExtension.groupVersionKind.Version), "name", request.Name, "namespace", request.Namespace, "failed", healthCheckResult.FailedChecks, "progressing", healthCheckResult.ProgressingChecks, "successful", healthCheckResult.SuccessfulChecks, "details", healthCheckResult.GetDetails())
+			if err := r.updateExtensionConditionToUnsuccessful(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, healthCheckResult); err != nil {
 				return r.resultWithRequeue(), err
 			}
 			continue
 		}
 
-		if !healthCheckResult.IsHealthy {
-			r.logger.Info("Health check for extension resource unsuccessful.", "kind", fmt.Sprintf("%s.%s.%s", r.registeredExtension.groupVersionKind.Kind, r.registeredExtension.groupVersionKind.Group, r.registeredExtension.groupVersionKind.Version), "name", request.Name, "namespace", request.Namespace, "failed", healthCheckResult.FailedChecks, "successful", healthCheckResult.SuccessfulChecks, "details", healthCheckResult.GetDetails())
-			if err := r.updateExtensionConditionToError(ctx, conditionBuilder, healthCheckResult.HealthConditionType, r.registeredExtension.extension, extension, healthCheckResult); err != nil {
-				return r.resultWithRequeue(), err
-			}
-			continue
-		}
-
-		r.logger.V(6).Info("Health check for extension resource successful.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
-		if err := r.updateExtensionConditionToSuccessful(ctx, conditionBuilder, healthCheckResult.HealthConditionType, r.registeredExtension.extension, extension, healthCheckResult); err != nil {
+		logger.Info("Health check for extension resource successful.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+		if err := r.updateExtensionConditionToSuccessful(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, healthCheckResult); err != nil {
 			return r.resultWithRequeue(), err
 		}
 	}
+
 	return r.resultWithRequeue(), nil
 }
 
-func (r *reconciler) updateExtensionConditionFailedToExecute(ctx context.Context, healthConditionType string, extensionResource extensionsv1alpha1.Object, extension runtime.Object, kind string, executionError error) error {
-	conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
-	if err != nil {
-		return err
-	}
-
-	msg := fmt.Sprintf("failed to execute health checks for '%s': %v", kind, executionError.Error())
+func (r *reconciler) updateExtensionConditionFailedToExecute(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, kind string, executionError error) error {
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionUnknown).
 		WithReason(gardencorev1beta1.ConditionCheckError).
-		WithMessage(msg)
-	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension, extensionResource)
+		WithMessage(fmt.Sprintf("failed to execute health checks for '%s': %v", kind, executionError.Error()))
+	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
 }
 
-func (r *reconciler) updateExtensionConditionToConditionCheckError(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extensionResource extensionsv1alpha1.Object, extension runtime.Object, kind string, healthCheckResult Result) error {
-	msg := fmt.Sprintf("failed to execute %d/%d health checks for '%s': %v", healthCheckResult.FailedChecks, healthCheckResult.SuccessfulChecks+healthCheckResult.UnsuccessfulChecks+healthCheckResult.FailedChecks, kind, healthCheckResult.GetDetails())
+func (r *reconciler) updateExtensionConditionToConditionCheckError(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, kind string, healthCheckResult Result) error {
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionUnknown).
 		WithReason(gardencorev1beta1.ConditionCheckError).
-		WithMessage(msg)
-	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension, extensionResource)
+		WithMessage(fmt.Sprintf("failed to execute %d/%d health checks for '%s': %v", healthCheckResult.FailedChecks, healthCheckResult.SuccessfulChecks+healthCheckResult.UnsuccessfulChecks+healthCheckResult.FailedChecks, kind, healthCheckResult.GetDetails()))
+	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
 }
 
-func (r *reconciler) updateExtensionConditionToError(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extensionResource extensionsv1alpha1.Object, extension runtime.Object, healthCheckResult Result) error {
-	msg := fmt.Sprintf("Health check for %d/%d component(s) unsuccessful: %v", healthCheckResult.UnsuccessfulChecks, healthCheckResult.UnsuccessfulChecks+healthCheckResult.SuccessfulChecks, healthCheckResult.GetDetails())
-	conditionBuilder.
-		WithStatus(gardencorev1beta1.ConditionFalse).
-		WithReason(HealthCheckUnsuccessful).
-		WithMessage(msg)
-	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension, extensionResource)
-}
+func (r *reconciler) updateExtensionConditionToUnsuccessful(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, healthCheckResult Result) error {
+	var (
+		numberOfChecks = healthCheckResult.UnsuccessfulChecks + healthCheckResult.ProgressingChecks + healthCheckResult.SuccessfulChecks
+		detail         = fmt.Sprintf("Health check summary: %d/%d unsuccessful, %d/%d progressing, %d/%d successful. ", healthCheckResult.UnsuccessfulChecks, numberOfChecks, healthCheckResult.ProgressingChecks, numberOfChecks, healthCheckResult.SuccessfulChecks, numberOfChecks)
+		status         = gardencorev1beta1.ConditionFalse
+		reason         = ReasonUnsuccessful
+	)
 
-func (r *reconciler) updateExtensionConditionToSuccessful(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extensionResource extensionsv1alpha1.Object, extension runtime.Object, healthCheckResult Result) error {
-	msg := fmt.Sprintf("(%d/%d) Health checks successful", healthCheckResult.SuccessfulChecks, healthCheckResult.SuccessfulChecks)
-	conditionBuilder.
-		WithStatus(gardencorev1beta1.ConditionTrue).
-		WithReason(HealthCheckSuccessful).
-		WithMessage(msg)
-	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension, extensionResource)
-}
-
-func (r *reconciler) updateExtensionConditionHibernated(ctx context.Context, healthConditionType string, extensionResource extensionsv1alpha1.Object, extension runtime.Object) error {
-	conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
-	if err != nil {
-		return err
-	}
-	msg := "Shoot is hibernated"
-	conditionBuilder.
-		WithStatus(gardencorev1beta1.ConditionTrue).
-		WithReason(HealthCheckSuccessful).
-		WithMessage(msg)
-	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension, extensionResource)
-}
-
-func (r *reconciler) updateExtensionCondition(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension runtime.Object, extensionResource extensionsv1alpha1.Object) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
-		acc, err := extensions.Accessor(extension)
-		if err != nil {
-			return fmt.Errorf("error updating health check condition (type: %s, name: %s, ns %s) - failed to create an extensionsv1alpha1.Object from the extension object: %v", healthConditionType, extensionResource.GetName(), extensionResource.GetNamespace(), err)
+	if healthCheckResult.ProgressingChecks > 0 && healthCheckResult.ProgressingThreshold != nil {
+		if oldCondition := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(healthConditionType)); oldCondition == nil {
+			status = gardencorev1beta1.ConditionProgressing
+			reason = ReasonProgressing
+		} else if oldCondition.Status != gardencorev1beta1.ConditionFalse {
+			delta := time.Now().UTC().Sub(oldCondition.LastTransitionTime.Time.UTC())
+			if oldCondition.Status == gardencorev1beta1.ConditionTrue || delta <= *healthCheckResult.ProgressingThreshold {
+				status = gardencorev1beta1.ConditionProgressing
+				reason = ReasonProgressing
+			}
 		}
+	}
 
-		if c := gardencorev1beta1helper.GetCondition(acc.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(healthConditionType)); c != nil {
+	conditionBuilder.
+		WithStatus(status).
+		WithReason(reason).
+		WithCodes(healthCheckResult.Codes...).
+		WithMessage(detail)
+	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
+}
+
+func (r *reconciler) updateExtensionConditionToSuccessful(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, healthCheckResult Result) error {
+	conditionBuilder.
+		WithStatus(gardencorev1beta1.ConditionTrue).
+		WithReason(ReasonUnsuccessful).
+		WithMessage(fmt.Sprintf("(%d/%d) Health checks successful", healthCheckResult.SuccessfulChecks, healthCheckResult.SuccessfulChecks))
+	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
+}
+
+func (r *reconciler) updateExtensionConditionHibernated(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object) error {
+	conditionBuilder.
+		WithStatus(gardencorev1beta1.ConditionTrue).
+		WithReason(ReasonSuccessful).
+		WithMessage("Shoot is hibernated")
+	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
+}
+
+func (r *reconciler) updateExtensionCondition(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object) error {
+	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
+		if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(healthConditionType)); c != nil {
 			conditionBuilder.WithOldCondition(*c)
 		}
 
 		updatedCondition, _ := conditionBuilder.WithNowFunc(metav1.Now).Build()
-
 		// always update - the Gardenlet expects a recent health check
 		updatedCondition.LastUpdateTime = metav1.Now()
 
-		newConditions := gardencorev1beta1helper.MergeConditions(acc.GetExtensionStatus().GetConditions(), updatedCondition)
-		acc.GetExtensionStatus().SetConditions(newConditions)
+		extension.GetExtensionStatus().SetConditions(gardencorev1beta1helper.MergeConditions(extension.GetExtensionStatus().GetConditions(), updatedCondition))
 		return nil
 	})
 }

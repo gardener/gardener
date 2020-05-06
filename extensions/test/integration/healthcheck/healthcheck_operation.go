@@ -125,7 +125,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		err = operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionKind, types.NamespacedName{
 			Namespace: f.ShootSeedNamespace(),
 			Name:      extensionName,
-		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.HealthCheckSuccessful)
+		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 		framework.ExpectNoError(err)
 	}()
 	managedResource := resourcev1alpha1.ManagedResource{}
@@ -150,7 +150,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 	return operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionKind, types.NamespacedName{
 		Namespace: f.ShootSeedNamespace(),
 		Name:      extensionName,
-	}, healthConditionType, gardencorev1beta1.ConditionFalse, healthcheck.HealthCheckUnsuccessful)
+	}, healthConditionType, gardencorev1beta1.ConditionFalse, healthcheck.ReasonUnsuccessful)
 }
 
 func ControlPlaneHealthCheckDeleteSeedDeployment(ctx context.Context, f *framework.ShootFramework, controlPlaneName, deploymentName string, healthConditionType gardencorev1beta1.ConditionType) error {
@@ -179,7 +179,7 @@ func deleteSeedDeploymentCheck(ctx context.Context, f *framework.ShootFramework,
 		err = operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionKind, types.NamespacedName{
 			Namespace: f.ShootSeedNamespace(),
 			Name:      controlPlaneName,
-		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.HealthCheckSuccessful)
+		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 		framework.ExpectNoError(err)
 	}()
 	return operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionKind, types.NamespacedName{
@@ -208,7 +208,7 @@ func MachineDeletionHealthCheck(ctx context.Context, f *framework.ShootFramework
 	if err := operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource), types.NamespacedName{
 		Namespace: f.ShootSeedNamespace(),
 		Name:      f.Shoot.GetName(),
-	}, gardencorev1beta1.ShootEveryNodeReady, gardencorev1beta1.ConditionFalse, healthcheck.HealthCheckUnsuccessful); err != nil {
+	}, gardencorev1beta1.ShootEveryNodeReady, gardencorev1beta1.ConditionFalse, healthcheck.ReasonUnsuccessful); err != nil {
 		return err
 	}
 
@@ -216,5 +216,5 @@ func MachineDeletionHealthCheck(ctx context.Context, f *framework.ShootFramework
 	return operation.WaitForExtensionCondition(ctx, f.Logger, f.SeedClient.Client(), extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource), types.NamespacedName{
 		Namespace: f.ShootSeedNamespace(),
 		Name:      f.Shoot.GetName(),
-	}, gardencorev1beta1.ShootEveryNodeReady, gardencorev1beta1.ConditionTrue, healthcheck.HealthCheckSuccessful)
+	}, gardencorev1beta1.ShootEveryNodeReady, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 }

@@ -20,15 +20,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 )
 
-// CheckConditionState checks if the given condition is healthy
-func CheckConditionState(conditionType string, expected, actual, reason, message string) error {
-	if expected != actual {
-		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
-			conditionType, actual, expected, reason, message)
-	}
-	return nil
-}
-
 var (
 	trueManagedResourceConditionTypes = []resourcesv1alpha1.ConditionType{
 		resourcesv1alpha1.ResourcesApplied,

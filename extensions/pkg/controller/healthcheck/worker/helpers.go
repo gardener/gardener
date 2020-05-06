@@ -17,7 +17,7 @@ package worker
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck/general"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,38 +38,6 @@ var (
 	}
 )
 
-func checkSufficientNodesAvailable(nodeList *corev1.NodeList, machineDeploymentList *machinev1alpha1.MachineDeploymentList) (bool, *string, error) {
-	desiredMachines := getDesiredMachineCount(machineDeploymentList.Items)
-
-	if registeredNodes := len(nodeList.Items); registeredNodes < desiredMachines {
-		reason := "MissingNodes"
-		err := fmt.Errorf("not enough worker nodes registered in the cluster (%d/%d)", registeredNodes, desiredMachines)
-		return false, &reason, err
-	}
-	return true, nil, nil
-}
-
-func getDesiredMachineCount(machineDeploymentList []machinev1alpha1.MachineDeployment) int {
-	desiredMachines := 0
-	for _, machineDeployment := range machineDeploymentList {
-		if machineDeployment.DeletionTimestamp == nil {
-			desiredMachines += int(machineDeployment.Spec.Replicas)
-		}
-	}
-	return desiredMachines
-}
-
-func machineDeploymentsAreHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, *string, error) {
-	for _, deployment := range machineDeployments {
-		if err := CheckMachineDeployment(&deployment); err != nil {
-			reason := "MachineDeploymentUnhealthy"
-			err := fmt.Errorf("machine deployment %s in namespace %s is unhealthy: %v", deployment.Name, deployment.Namespace, err)
-			return false, &reason, err
-		}
-	}
-	return true, nil, nil
-}
-
 // CheckMachineDeployment checks whether the given MachineDeployment is healthy.
 // A MachineDeployment is considered healthy if its controller observed its current revision and if
 // its desired number of replicas is equal to its updated replicas.
@@ -79,38 +47,137 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 	}
 
 	for _, trueConditionType := range trueMachineDeploymentConditionTypes {
-		conditionType := string(trueConditionType)
 		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueConditionType)
 		if condition == nil {
-			return requiredConditionMissing(conditionType)
+			return requiredConditionMissing(trueConditionType)
 		}
-		if err := general.CheckConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionStatus(condition, machinev1alpha1.ConditionTrue); err != nil {
 			return err
 		}
 	}
 
 	for _, trueOptionalConditionType := range trueOptionalMachineDeploymentConditionTypes {
-		conditionType := string(trueOptionalConditionType)
 		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
 		if condition == nil {
 			continue
 		}
-		if err := general.CheckConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionStatus(condition, machinev1alpha1.ConditionTrue); err != nil {
 			return err
 		}
 	}
 
 	for _, falseConditionType := range falseMachineDeploymentConditionTypes {
-		conditionType := string(falseConditionType)
 		condition := getMachineDeploymentCondition(deployment.Status.Conditions, falseConditionType)
 		if condition == nil {
 			continue
 		}
-		if err := general.CheckConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionStatus(condition, machinev1alpha1.ConditionFalse); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, string, error) {
+	for _, deployment := range machineDeployments {
+		for _, failedMachine := range deployment.Status.FailedMachines {
+			return false, "MachineDeploymentHasFailedMachines", fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+		}
+
+		if err := CheckMachineDeployment(&deployment); err != nil {
+			return false, "MachineDeploymentUnhealthy", fmt.Errorf("machine deployment %s in namespace %s is unhealthy: %v", deployment.Name, deployment.Namespace, err)
+		}
+	}
+
+	return true, "", nil
+}
+
+func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, string, error) {
+	if readyNodes == desiredMachines {
+		return gardencorev1beta1.ConditionTrue, "", nil
+	}
+
+	if machineObjects := len(machineList.Items); machineObjects < desiredMachines {
+		return gardencorev1beta1.ConditionFalse, "MissingMachines", fmt.Errorf("not enough machine objects created yet (%d/%d)", machineObjects, desiredMachines)
+	}
+
+	var pendingMachines, erroneousMachines int
+	for _, machine := range machineList.Items {
+		switch machine.Status.CurrentStatus.Phase {
+		case machinev1alpha1.MachineRunning, machinev1alpha1.MachineAvailable:
+			// machine is already running fine
+			continue
+		case machinev1alpha1.MachinePending:
+			// machine is being created
+			pendingMachines++
+		default:
+			// undesired machine phase
+			erroneousMachines++
+		}
+	}
+
+	if erroneousMachines > 0 {
+		return gardencorev1beta1.ConditionFalse, "ErroneousMachines", fmt.Errorf("%d machine objects are erroneous", erroneousMachines)
+	}
+	if pendingMachines == 0 {
+		return gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Errorf("not enough ready worker nodes registered in the cluster (%d/%d)", readyNodes, desiredMachines)
+	}
+
+	return gardencorev1beta1.ConditionProgressing, "PendingMachines", fmt.Errorf("%s being provisioned and should join the cluster and become ready soon", cosmeticMachineMessage(pendingMachines))
+}
+
+func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, string, error) {
+	if registeredNodes == desiredMachines {
+		return gardencorev1beta1.ConditionTrue, "", nil
+	}
+
+	// Check if all nodes that are cordoned map to machines with a deletion timestamp. This might be the case during
+	// a rolling update.
+	nodeNameToMachine := map[string]machinev1alpha1.Machine{}
+	for _, machine := range machineList.Items {
+		if machine.Labels != nil && machine.Labels["node"] != "" {
+			nodeNameToMachine[machine.Labels["node"]] = machine
+		}
+	}
+
+	var cordonedNodes int
+	for _, node := range nodeList.Items {
+		if node.Spec.Unschedulable {
+			machine, ok := nodeNameToMachine[node.Name]
+			if !ok {
+				return gardencorev1beta1.ConditionFalse, "MachineNotFound", fmt.Errorf("machine object for cordoned node %s not found", node.Name)
+			}
+			if machine.DeletionTimestamp == nil {
+				return gardencorev1beta1.ConditionFalse, "NodeUnexpectedlyCordoned", fmt.Errorf("cordoned node %s found but corresponding machine object does not have deletion timestam", node.Name)
+			}
+			cordonedNodes++
+		}
+	}
+
+	// If there are still more nodes than desired then report an error.
+	if registeredNodes-cordonedNodes != desiredMachines {
+		return gardencorev1beta1.ConditionFalse, "TooManyNodes", fmt.Errorf("too many worker nodes registered, exceeds maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
+	}
+
+	return gardencorev1beta1.ConditionProgressing, "DrainingMachines", fmt.Errorf("%s being drained and about to being deprovisioned", cosmeticMachineMessage(cordonedNodes))
+}
+
+func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployment) int {
+	desiredMachines := 0
+	for _, deployment := range machineDeployments {
+		if deployment.DeletionTimestamp == nil {
+			desiredMachines += int(deployment.Spec.Replicas)
+		}
+	}
+	return desiredMachines
+}
+
+func checkConditionStatus(condition *machinev1alpha1.MachineDeploymentCondition, expectedStatus machinev1alpha1.ConditionStatus) error {
+	if condition.Status != expectedStatus {
+		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
+			condition.Type, condition.Status, expectedStatus, condition.Reason, condition.Message)
+	}
 	return nil
 }
 
@@ -123,6 +190,13 @@ func getMachineDeploymentCondition(conditions []machinev1alpha1.MachineDeploymen
 	return nil
 }
 
-func requiredConditionMissing(conditionType string) error {
+func requiredConditionMissing(conditionType machinev1alpha1.MachineDeploymentConditionType) error {
 	return fmt.Errorf("condition %q is missing", conditionType)
+}
+
+func cosmeticMachineMessage(numberOfMachines int) string {
+	if numberOfMachines == 1 {
+		return fmt.Sprintf("%d machine is", numberOfMachines)
+	}
+	return fmt.Sprintf("%d machines are", numberOfMachines)
 }

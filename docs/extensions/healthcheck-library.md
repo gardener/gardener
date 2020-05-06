@@ -79,7 +79,18 @@ status:
       type: EveryNodeReady
 ```
 
+Please note that there are four statuses: `True`, `False`, `Unknown`, and `Progressing`.
+
+* `True` should be used for successful health checks.
+* `False` should be used for unsuccessful/failing health checks.
+* `Unknown` should be used when there was an error trying to determine the health status.
+* `Progressing` should be used to indicate that the health status did not succeed but for expected reasons (e.g., a cluster scale up/down could make the standard health check fail because something is wrong with the `Machines`, however, it's actually an expected situation and known to be completed within a few minutes.)
+
+Health checks that report `Progressing` should also provide a timeout after which this "progressing situation" is expected to be completed.
+The health check library will automatically transition the status to `False` if the timeout was exceeded.
+
 ## Additional Considerations
+
 It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `managed-resources` for trivial checks.
 By [deploying the depending resources via managed resources](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/worker/genericactuator/machine_controller_manager.go), the [gardener resource manager](https://github.com/gardener/gardener-resource-manager) conducts basic checks for different API objects out-of-the-box (e.g `Deployments`, `DaemonSets`, ...) - and writes health conditions.
 In turn, the library contains a health check function to gather the health information from managed resources.
