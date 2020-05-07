@@ -15,38 +15,13 @@
 package v1alpha1
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-var (
-	// DefaultDiscoveryDir is the directory where the discovery and http cache directory reside.
-	DefaultDiscoveryDir string
-	// DefaultDiscoveryCacheDir is the default discovery cache directory.
-	DefaultDiscoveryCacheDir string
-	// DefaultDiscoveryHTTPCacheDir is the default discovery http cache directory.
-	DefaultDiscoveryHTTPCacheDir string
-)
-
-func init() {
-	var err error
-	DefaultDiscoveryDir, err = ioutil.TempDir("", DefaultDiscoveryDirName)
-	utilruntime.Must(err)
-
-	DefaultDiscoveryCacheDir = filepath.Join(DefaultDiscoveryDir, DefaultDiscoveryCacheDirName)
-	DefaultDiscoveryHTTPCacheDir = filepath.Join(DefaultDiscoveryDir, DefaultDiscoveryHTTPCacheDirName)
-
-	utilruntime.Must(os.Mkdir(DefaultDiscoveryCacheDir, 0700))
-	utilruntime.Must(os.Mkdir(DefaultDiscoveryHTTPCacheDir, 0700))
-}
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
@@ -99,10 +74,6 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 
 	if obj.Controllers.SeedAPIServerNetworkPolicy == nil {
 		obj.Controllers.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
-	}
-
-	if obj.Discovery == nil {
-		obj.Discovery = &DiscoveryConfiguration{}
 	}
 
 	if obj.LeaderElection == nil {
@@ -160,19 +131,6 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 	}
 	if obj.Burst == 0 {
 		obj.Burst = 100
-	}
-}
-
-// SetDefaults_DiscoveryConfiguration sets defaults for the discovery configuration of the gardenlet.
-func SetDefaults_DiscoveryConfiguration(obj *DiscoveryConfiguration) {
-	if obj.TTL == nil {
-		obj.TTL = &metav1.Duration{Duration: DefaultDiscoveryTTL}
-	}
-	if obj.HTTPCacheDir == nil {
-		obj.HTTPCacheDir = &DefaultDiscoveryHTTPCacheDir
-	}
-	if obj.DiscoveryCacheDir == nil {
-		obj.DiscoveryCacheDir = &DefaultDiscoveryCacheDir
 	}
 }
 

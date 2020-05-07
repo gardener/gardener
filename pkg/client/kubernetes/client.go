@@ -32,6 +32,7 @@ import (
 	componentbaseconfig "k8s.io/component-base/config"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // KubeConfig is the key to the kubeconfig
@@ -259,6 +260,10 @@ func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
 }
 
 func new(conf *config) (Interface, error) {
+	if err := setConfigDefaults(conf); err != nil {
+		return nil, err
+	}
+
 	c, err := client.New(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
@@ -315,4 +320,19 @@ func new(conf *config) (Interface, error) {
 	clientSet.version = serverVersion.GitVersion
 
 	return clientSet, nil
+}
+
+func setConfigDefaults(conf *config) error {
+	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
+}
+
+func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
+	// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
+	mapper, err := apiutil.NewDynamicRESTMapper(config, apiutil.WithLazyDiscovery)
+	if err != nil {
+		return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
+	}
+	options.Mapper = mapper
+
+	return nil
 }

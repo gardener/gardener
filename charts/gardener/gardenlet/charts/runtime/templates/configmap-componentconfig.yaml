@@ -107,20 +107,6 @@ data:
       renewDeadline: {{ required ".Values.global.gardenlet.config.leaderElection.renewDeadline is required" .Values.global.gardenlet.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.gardenlet.config.leaderElection.retryPeriod is required" .Values.global.gardenlet.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.gardenlet.config.leaderElection.resourceLock is required" .Values.global.gardenlet.config.leaderElection.resourceLock }}
-    {{- if .Values.global.gardenlet.config.discovery }}
-    discovery:
-      {{- with .Values.global.gardenlet.config.discovery }}
-      {{- if .discoveryCacheDir }}
-      discoveryCacheDir: {{ .discoveryCacheDir }}
-      {{- end }}
-      {{- if .httpCacheDir }}
-      httpCacheDir: {{ .httpCacheDir }}
-      {{- end }}
-      {{- if .ttl }}
-      ttl: {{ .ttl }}
-      {{- end }}
-      {{- end }}
-    {{- end }}
     logLevel: {{ required ".Values.global.gardenlet.config.logLevel is required" .Values.global.gardenlet.config.logLevel }}
     kubernetesLogLevel: {{ required ".Values.global.gardenlet.config.kubernetesLogLevel is required" .Values.global.gardenlet.config.kubernetesLogLevel }}
     server:

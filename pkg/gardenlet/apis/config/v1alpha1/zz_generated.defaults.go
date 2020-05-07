@@ -81,7 +81,4 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
-	if in.Discovery != nil {
-		SetDefaults_DiscoveryConfiguration(in.Discovery)
-	}
 }

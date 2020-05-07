@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -41,10 +40,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/discovery"
-	diskcache "k8s.io/client-go/discovery/cached/disk"
 	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -166,16 +162,10 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		return nil, err
 	}
 
-	disc, err := discoveryFromSchedulerConfiguration(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	k8sGardenClient, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(restCfg),
 		kubernetes.WithClientOptions(
 			client.Options{
-				Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
 				Scheme: kubernetes.GardenScheme,
 			}),
 	)
@@ -211,15 +201,8 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 	}, nil
 }
 
-func (g *GardenerScheduler) cleanup() {
-	if err := os.RemoveAll(configv1alpha1.DefaultDiscoveryDir); err != nil {
-		g.Logger.Errorf("Could not cleanup base discovery cache directory: %v", err)
-	}
-}
-
 // Run runs the Gardener Scheduler. This should never exit.
 func (g *GardenerScheduler) Run(ctx context.Context) error {
-	defer g.cleanup()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -288,29 +271,4 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 
 	logger.Logger.Infof("I have received a stop signal and will no longer watch events of the Garden API group.")
 	logger.Logger.Infof("Bye Bye!")
-}
-
-func discoveryFromSchedulerConfiguration(cfg *config.SchedulerConfiguration) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	discoveryCfg := cfg.Discovery
-	var discoveryCacheDir string
-	if discoveryCfg.DiscoveryCacheDir != nil {
-		discoveryCacheDir = *discoveryCfg.DiscoveryCacheDir
-	}
-
-	var httpCacheDir string
-	if discoveryCfg.HTTPCacheDir != nil {
-		httpCacheDir = *discoveryCfg.HTTPCacheDir
-	}
-
-	var ttl time.Duration
-	if discoveryCfg.TTL != nil {
-		ttl = discoveryCfg.TTL.Duration
-	}
-
-	return diskcache.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
 }
