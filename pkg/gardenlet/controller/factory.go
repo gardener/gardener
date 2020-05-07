@@ -29,10 +29,10 @@ import (
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-
 	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -60,10 +60,18 @@ type GardenletControllerFactory struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory
 	recorder               record.EventRecorder
+	healthManager          healthz.Manager
 }
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenletControllerFactory(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener, gardenNamespace string, recorder record.EventRecorder) *GardenletControllerFactory {
+func NewGardenletControllerFactory(
+	k8sGardenClient kubernetes.Interface,
+	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
+	gardenNamespace string, recorder record.EventRecorder,
+	healthManager healthz.Manager,
+) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
 		cfg:                    cfg,
 		identity:               identity,
@@ -72,6 +80,7 @@ func NewGardenletControllerFactory(k8sGardenClient kubernetes.Interface, gardenC
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		k8sInformers:           kubeInformerFactory,
 		recorder:               recorder,
+		healthManager:          healthManager,
 	}
 }
 
@@ -132,7 +141,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
 		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)

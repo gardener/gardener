@@ -21,7 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/logger"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +37,13 @@ func (c *Controller) seedLeaseAdd(obj interface{}) {
 	c.seedLeaseQueue.Add(key)
 }
 
-const leaseResyncSeconds = 2
+const (
+	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
+	LeaseResyncSeconds = 2
+	// LeaseResyncGracePeriodSeconds is the grace period for how long the lease may not be resynced before the health status
+	// is changed to false.
+	LeaseResyncGracePeriodSeconds = LeaseResyncSeconds * 10
+)
 
 func (c *Controller) reconcileSeedLeaseKey(key string) error {
 	_, name, err := cache.SplitMetaNamespaceKey(key)
@@ -57,14 +63,27 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 	}
 
 	if err := c.checkSeedConnection(seed); err != nil {
+		c.lock.Lock()
+		c.leaseMap[seed.Name] = false
+		c.lock.Unlock()
 		return fmt.Errorf("[SEED LEASE] cannot establish connection with Seed %s: %v", key, err)
 	}
 
-	seedCopy := seed.DeepCopy()
-	seedOwnerReference := buildSeedOwnerReference(seedCopy)
-	if err := c.seedLeaseControl.Sync(seedCopy.GetName(), *seedOwnerReference); err != nil {
+	var (
+		seedCopy           = seed.DeepCopy()
+		seedOwnerReference = buildSeedOwnerReference(seedCopy)
+	)
+
+	if err := c.seedLeaseControl.Sync(seedCopy.Name, *seedOwnerReference); err != nil {
+		c.lock.Lock()
+		c.leaseMap[seed.Name] = false
+		c.lock.Unlock()
 		return err
 	}
+
+	c.lock.Lock()
+	c.leaseMap[seed.Name] = true
+	c.lock.Unlock()
 
 	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
@@ -87,8 +106,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 		}
 	}
 
-	durationAfter := time.Duration(leaseResyncSeconds * time.Second)
-	c.seedLeaseQueue.AddAfter(key, durationAfter)
+	c.seedLeaseQueue.AddAfter(key, LeaseResyncSeconds*time.Second)
 	return nil
 }
 
@@ -108,7 +126,7 @@ func (c *Controller) checkSeedConnection(seed *gardencorev1beta1.Seed) error {
 	}
 	result := client.RESTClient().Get().AbsPath("/healthz").Do()
 	if result.Error() != nil {
-		return fmt.Errorf("Failed to execute call to Kubernetes API Server: %v", result.Error())
+		return fmt.Errorf("failed to execute call to Kubernetes API Server: %v", result.Error())
 	}
 
 	var statusCode int

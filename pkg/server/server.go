@@ -20,69 +20,47 @@ import (
 	"net/http"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/server/handlers"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"k8s.io/client-go/tools/cache"
 )
 
-// ServeHTTPS starts a HTTPS server.
-func ServeHTTPS(ctx context.Context, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, httpsHandlerFunctions map[string]func(http.ResponseWriter, *http.Request), serverHTTPSPort int, serverHTTPSBindAddress string, serverHTTPSTLSServerCertPath string, serverHTTPSTLSServerKeyPath string, informers ...cache.SharedInformer) {
-	var (
-		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverHTTPSBindAddress, serverHTTPSPort)
-		serverMuxHTTPS     = http.NewServeMux()
-		serverHTTPS        = &http.Server{Addr: listenAddressHTTPS, Handler: serverMuxHTTPS}
-		informersSynced    = []cache.InformerSynced{}
-	)
-
-	for _, informer := range informers {
-		informersSynced = append(informersSynced, informer.HasSynced)
-	}
-
-	k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), informersSynced...) {
-		panic("Timed out waiting for Garden caches to sync")
-	}
-	// Add handlers to HTTPS server and start it.
-	for pattern, handlerFunc := range httpsHandlerFunctions {
-		serverMuxHTTPS.HandleFunc(pattern, handlerFunc)
-	}
-
-	go func() {
-		logger.Logger.Infof("Starting HTTPS server on %s", listenAddressHTTPS)
-		if err := serverHTTPS.ListenAndServeTLS(serverHTTPSTLSServerCertPath, serverHTTPSTLSServerKeyPath); err != http.ErrServerClosed {
-			logger.Logger.Errorf("Could not start HTTPS server: %v", err)
-		}
-	}()
-	// Server shutdown logic.
-	<-ctx.Done()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := serverHTTPS.Shutdown(ctx); err != nil {
-		logger.Logger.Errorf("Error when shutting down HTTPS server: %v", err)
-	}
-	logger.Logger.Info("HTTPS server stopped.")
+// Server is a HTTP(S) server.
+type Server struct {
+	bindAddress  string
+	port         int
+	tlsCertPath  *string
+	tlsKeyPath   *string
+	handlers     map[string]http.Handler
+	handlerFuncs map[string]http.HandlerFunc
 }
 
-// ServeHTTP starts a HTTP server.
-func ServeHTTP(ctx context.Context, serverHTTPPort int, serverHTTPBindAddress string) {
+// Start starts the server. If the TLS cert and key paths are provided then it will start it as HTTPS server.
+func (s *Server) Start(ctx context.Context) {
 	var (
-		listenAddressHTTP = fmt.Sprintf("%s:%d", serverHTTPBindAddress, serverHTTPPort)
-		serverMuxHTTP     = http.NewServeMux()
-		serverHTTP        = &http.Server{Addr: listenAddressHTTP, Handler: serverMuxHTTP}
+		listenAddress = fmt.Sprintf("%s:%d", s.bindAddress, s.port)
+		serverMux     = http.NewServeMux()
+		server        = &http.Server{Addr: listenAddress, Handler: serverMux}
 	)
 
-	// Add handlers to HTTP server and start it.
-	serverMuxHTTP.Handle("/metrics", promhttp.Handler())
-	serverMuxHTTP.HandleFunc("/healthz", handlers.Healthz)
+	// Add handlers to HTTPS server and start it.
+	for pattern, handler := range s.handlers {
+		serverMux.Handle(pattern, handler)
+	}
+	for pattern, handlerFunc := range s.handlerFuncs {
+		serverMux.HandleFunc(pattern, handlerFunc)
+	}
 
+	// Server startup logic.
 	go func() {
-		logger.Logger.Infof("Starting HTTP server on %s", listenAddressHTTP)
-		if err := serverHTTP.ListenAndServe(); err != http.ErrServerClosed {
+		if s.tlsCertPath != nil && s.tlsKeyPath != nil {
+			logger.Logger.Infof("Starting new HTTPS server on %s", listenAddress)
+			if err := server.ListenAndServeTLS(*s.tlsCertPath, *s.tlsKeyPath); err != http.ErrServerClosed {
+				logger.Logger.Errorf("Could not start HTTPS server: %v", err)
+			}
+			return
+		}
+
+		logger.Logger.Infof("Starting new HTTP server on %s", listenAddress)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Logger.Errorf("Could not start HTTP server: %v", err)
 		}
 	}()
@@ -91,9 +69,9 @@ func ServeHTTP(ctx context.Context, serverHTTPPort int, serverHTTPBindAddress st
 	<-ctx.Done()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := serverHTTP.Shutdown(ctx); err != nil {
-		logger.Logger.Errorf("Error when shutting down HTTP server: %v", err)
-	}
 
-	logger.Logger.Info("HTTP(S) servers stopped.")
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Logger.Errorf("Error when shutting down server: %v", err)
+	}
+	logger.Logger.Info("Server stopped.")
 }

@@ -57,6 +57,9 @@ type GardenletConfiguration struct {
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	// +optional
 	KubernetesLogLevel *klog.Level `json:"kubernetesLogLevel,omitempty"`
+	// Server defines the configuration of the HTTP server.
+	// +optional
+	Server *ServerConfiguration `json:"server,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
@@ -308,6 +311,36 @@ type LeaderElectionConfiguration struct {
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
 	gardencorev1beta1.Seed `json:",inline"`
+}
+
+// ServerConfiguration contains details for the HTTP(S) servers.
+type ServerConfiguration struct {
+	// HTTPS is the configuration for the HTTPS server.
+	HTTPS HTTPSServer `json:"https"`
+}
+
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
+	// BindAddress is the IP address on which to listen for the specified port.
+	BindAddress string `json:"bindAddress"`
+	// Port is the port on which to serve unsecured, unauthenticated access.
+	Port int `json:"port"`
+}
+
+// HTTPSServer is the configuration for the HTTPSServer server.
+type HTTPSServer struct {
+	// Server is the configuration for the bind address and the port.
+	Server `json:",inline"`
+	// TLSServer contains information about the TLS configuration for a HTTPS server.
+	TLS TLSServer `json:"tls"`
+}
+
+// TLSServer contains information about the TLS configuration for a HTTPS server.
+type TLSServer struct {
+	// ServerCertPath is the path to the server certificate file.
+	ServerCertPath string `json:"serverCertPath"`
+	// ServerKeyPath is the path to the private key file.
+	ServerKeyPath string `json:"serverKeyPath"`
 }
 
 const (

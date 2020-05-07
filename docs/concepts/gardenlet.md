@@ -68,17 +68,26 @@ Most of the configuration options are similar to what the gardener-controller-ma
 
 ## Heartbeats
 
-The Gardenlet is sending regular heartbeats by updating the `GardenletReady` condition in its `Seed` object(s).
+Similar to how Kubernetes is meanwhile using `Lease` objects for node heart beats (see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md)), the Gardenlet is using `Lease`s objects for seed heart beats.
+Every two seconds it is checking its connectivity to the seed and then it renews its lease.
+The status will be reported in the `GardenletReady` condition in its `Seed` object(s).
 Similarly to the `node-lifecycle-controller` inside the kube-controller-manager, the gardener-controller-manager features a `seed-lifecycle-controller` that will set the `GardenletReady` condition to `Unknown` in case the Gardenlet stops sending its heartbeat signals.
 Carrying on, this will make the gardener-scheduler not considering this seed for newly created shoots anymore.
 
-Similar to how Kubernetes moved to using `Lease` objects for node heart beats (see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md)), we are planning to move to `Lease`s as well in subsequent releases of Gardener.
+### `/healthz` Endpoint
+
+[gardener/gardener#2309](https://github.com/gardener/gardener/pull/2309) has enhanced the Gardenlet with a HTTPS server that serves a `/healthz` endpoint.
+It is used as a liveness probe in the `Deployment` of the Gardenlet.
+If the Gardenlet fails trying to renew its lease then the endpoint will return `500 Internal Server Error`, otherwise it will return `200 OK`.
+
+⚠️ In case the Gardenlet is managing mutliple seeds (i.e., a seed selector is used) then the `/healthz` will report `500 Internal Server Error` if there is at least one seed for which it could not renew its lease.
+Only if it can renew the lease for all seeds then it will report `200 OK`.
 
 ## Shooted Seeds
 
-If the Gardenlet manages a shoot cluster that has been marked to be used as seed then it will automatically deploy itself into the cluster, unless you prevent this by using the `no-gardenlet` configuration in the `shoot.garden.sapcloud.io/use-as-seed` annotation (in this case, you have to deploy the Gardenlet on your own into the seed cluster).
+If the Gardenlet manages a shoot cluster that has been marked to be used as seed then it will automatically deploy itself into the cluster, unless you prevent this by using the `no-gardenlet` configuration in the `shoot.gardener.cloud/use-as-seed` annotation (in this case, you have to deploy the Gardenlet on your own into the seed cluster).
 
-*Example: Annotate the shoot with `shoot.garden.sapcloud.io/use-as-seed="true,no-gardenlet,invisible"` to mark it as invisible (meaning, that the gardener-scheduler won't consider it) and to express your desire to deploy the gardenlet into the cluster on your own.*
+*Example: Annotate the shoot with `shoot.gardener.cloud/use-as-seed="true,no-gardenlet,invisible"` to mark it as invisible (meaning, that the gardener-scheduler won't consider it) and to express your desire to deploy the gardenlet into the cluster on your own.*
 
 For automatic deployments, the Gardenlet will use the same version and the same configuration for the clone it deploys.
 

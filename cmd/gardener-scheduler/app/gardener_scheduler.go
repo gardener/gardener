@@ -26,6 +26,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -34,8 +35,8 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	"github.com/gardener/gardener/pkg/server"
-	"github.com/gardener/gardener/pkg/server/handlers"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -227,9 +228,19 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 		g.startScheduler(ctx)
 	}
 
-	// Start HTTP server (HTTPS not needed because no webhook server is needed at the moment)
-	go server.ServeHTTP(ctx, g.Config.Server.HTTP.Port, g.Config.Server.HTTP.BindAddress)
-	handlers.UpdateHealth(true)
+	// Initialize /healthz manager.
+	healthManager := healthz.NewDefaultHealthz()
+	healthManager.Start()
+
+	// Start HTTP server.
+	go server.
+		NewBuilder().
+		WithBindAddress(g.Config.Server.HTTP.BindAddress).
+		WithPort(g.Config.Server.HTTP.Port).
+		WithHandler("/metrics", promhttp.Handler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
+		Build().
+		Start(ctx)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {

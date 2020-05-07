@@ -72,6 +72,13 @@ leaderElection:
 #   ttl: 10s
 logLevel: info
 kubernetesLogLevel: 0
+server:
+  https:
+    bindAddress: 0.0.0.0
+    port: 2720
+    tls:
+      serverCertPath: dev/tls/gardenlet.crt
+      serverKeyPath: dev/tls/gardenlet.key
 featureGates:
   Logging: true
   HVPA: true

@@ -114,6 +114,16 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		v := DefaultKubernetesLogLevel
 		obj.KubernetesLogLevel = &v
 	}
+
+	if obj.Server == nil {
+		obj.Server = &ServerConfiguration{}
+	}
+	if len(obj.Server.HTTPS.BindAddress) == 0 {
+		obj.Server.HTTPS.BindAddress = "0.0.0.0"
+	}
+	if obj.Server.HTTPS.Port == 0 {
+		obj.Server.HTTPS.Port = 2720
+	}
 }
 
 // SetDefaults_GardenClientConnection sets defaults for the client connection objects.
