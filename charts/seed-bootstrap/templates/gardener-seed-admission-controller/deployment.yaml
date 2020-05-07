@@ -40,7 +40,7 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /gardener-seed-admission-controller
-        - --port=9443
+        - --port=443
         - --tls-cert-path=/srv/gardener-seed-admission-controller/tls.crt
         - --tls-private-key-path=/srv/gardener-seed-admission-controller/tls.key
         {{- if .Values.gardenerSeedAdmissionController.resources }}
