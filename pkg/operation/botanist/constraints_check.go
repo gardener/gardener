@@ -34,7 +34,8 @@ func shootHibernatedConstraint(condition gardencorev1beta1.Condition) gardencore
 // ConstraintsChecks conducts the constraints checks on all the given constraints.
 func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients func() error, hibernation gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	hibernationPossible := b.constraintsChecks(ctx, initializeShootClients, hibernation)
-	return b.pardonCondition(hibernationPossible)
+	lastOp := b.Shoot.Info.Status.LastOperation
+	return PardonCondition(lastOp, hibernationPossible)
 }
 
 func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() error, hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {

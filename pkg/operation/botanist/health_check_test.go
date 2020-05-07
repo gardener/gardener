@@ -902,4 +902,48 @@ var _ = Describe("health check", func() {
 				"Status": Equal(gardencorev1beta1.ConditionUnknown),
 			})),
 	)
+
+	DescribeTable("#PardonCondition",
+		func(lastOp *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
+			updatedCondition := botanist.PardonCondition(lastOp, condition)
+			Expect(&updatedCondition).To(expected)
+		},
+		Entry("should pardon false ConditionStatus when the last operation is nil",
+			nil,
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should pardon false ConditionStatus when the last operation is create processing",
+			&gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeCreate,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			},
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should pardon false ConditionStatus when the last operation is delete processing",
+			&gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeDelete,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			},
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should not pardon false ConditionStatus when the last operation is create succeeded",
+			&gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeCreate,
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			},
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+	)
 })
