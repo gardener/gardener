@@ -26,6 +26,7 @@ rules:
   - networks
   - operatingsystemconfigs
   - workers
+  - clusters
   verbs:
   - get
   - list
