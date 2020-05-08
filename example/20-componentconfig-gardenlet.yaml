@@ -27,6 +27,8 @@ controllers:
   controllerInstallationCare:
     concurrentSyncs: 20
     syncPeriod: 30s
+  controllerInstallationRequired:
+    concurrentSyncs: 20
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h

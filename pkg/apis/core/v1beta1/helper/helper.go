@@ -172,6 +172,16 @@ func IsControllerInstallationSuccessful(controllerInstallation gardencorev1beta1
 	return installed && healthy
 }
 
+// IsControllerInstallationRequired returns true if a ControllerInstallation has been marked as "required".
+func IsControllerInstallationRequired(controllerInstallation gardencorev1beta1.ControllerInstallation) bool {
+	for _, condition := range controllerInstallation.Status.Conditions {
+		if condition.Type == gardencorev1beta1.ControllerInstallationRequired && condition.Status == gardencorev1beta1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 // ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
 func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1beta1.LastOperation) gardencorev1beta1.LastOperationType {
 	switch {
@@ -181,9 +191,9 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 		return gardencorev1beta1.LastOperationTypeDelete
 	case lastOperation == nil:
 		return gardencorev1beta1.LastOperationTypeCreate
-	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
 		return gardencorev1beta1.LastOperationTypeCreate
-	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
 		return gardencorev1beta1.LastOperationTypeMigrate
 	}
 	return gardencorev1beta1.LastOperationTypeReconcile

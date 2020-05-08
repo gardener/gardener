@@ -28,10 +28,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/shootstate"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 
+	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
+	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -56,7 +58,7 @@ type Controller struct {
 	workerCh               chan int
 }
 
-// NewFederatedSeedController creates new controller that syncs extensions states to the ShootState resource in the garden cluster.
+// NewFederatedSeedController creates new controller that reconciles extension resources.
 func NewFederatedSeedController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
 	var seedInformer = gardenCoreInformerFactory.Core().V1beta1().Seeds()
 
@@ -70,7 +72,7 @@ func NewFederatedSeedController(k8sGardenClient kubernetes.Interface, gardenCore
 	}
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
-		controllers: make(map[string]*shootStateSyncController),
+		controllers: make(map[string]*extensionsController),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -187,16 +189,16 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 }
 
 type federatedSeedControllerManager struct {
-	controllers map[string]*shootStateSyncController
+	controllers map[string]*extensionsController
 	lock        sync.RWMutex
 }
 
-type shootStateSyncController struct {
-	controller *shootstate.SyncController
+type extensionsController struct {
+	controller *extensions.Controller
 	cancelFunc context.CancelFunc
 }
 
-func (s *shootStateSyncController) Stop() {
+func (s *extensionsController) Stop() {
 	s.cancelFunc()
 	s.controller.Stop()
 }
@@ -207,37 +209,45 @@ func (f *federatedSeedControllerManager) createControllers(ctx context.Context, 
 		return nil
 	}
 
-	seedLogger := logger.Logger.WithField("Seed", seedName)
 	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seedName)
 	if err != nil {
 		return err
 	}
 
+	dnsClient, err := dnsclientset.NewForConfig(k8sSeedClient.RESTConfig())
+	if err != nil {
+		return err
+	}
 	extensionsClient, err := extensionsclientset.NewForConfig(k8sSeedClient.RESTConfig())
 	if err != nil {
 		return err
 	}
 
-	extensionsInformers := extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
-	shootStateSyncController := shootstate.NewSyncController(ctx, k8sGardenClient, k8sSeedClient, extensionsClient, extensionsInformers, config, seedLogger, recorder)
+	var (
+		childCtx, cancelFunc = context.WithCancel(ctx)
+		seedLogger           = logger.Logger.WithField("Seed", seedName)
 
-	childCtx, cancelFunc := context.WithCancel(ctx)
-	logger.Logger.Infof("Run ShootStateSync controller for seed: %s", seedName)
-	if err := shootStateSyncController.Run(childCtx, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
-		logger.Logger.Infof("There was error running the ShootStateSync controller for seed: %s", seedName)
+		dnsInformers         = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
+		extensionsInformers  = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
+		extensionsController = extensions.NewController(ctx, k8sGardenClient, k8sSeedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
+	)
+
+	logger.Logger.Infof("Run extensions controller for seed: %s", seedName)
+	if err := extensionsController.Run(childCtx, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
+		logger.Logger.Infof("There was error running the extensions controller for seed: %s", seedName)
 		cancelFunc()
 		return err
 	}
 
-	f.addController(seedName, shootStateSyncController, cancelFunc)
+	f.addController(seedName, extensionsController, cancelFunc)
 	return nil
 }
 
-func (f *federatedSeedControllerManager) addController(seedName string, controller *shootstate.SyncController, cancelFunc context.CancelFunc) {
+func (f *federatedSeedControllerManager) addController(seedName string, controller *extensions.Controller, cancelFunc context.CancelFunc) {
 	logger.Logger.Infof("Adding controllers for seed %s", seedName)
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	f.controllers[seedName] = &shootStateSyncController{
+	f.controllers[seedName] = &extensionsController{
 		controller: controller,
 		cancelFunc: cancelFunc,
 	}

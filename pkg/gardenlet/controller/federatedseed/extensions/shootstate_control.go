@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shootstate
+package extensions
 
 import (
 	"context"
@@ -22,55 +22,34 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func createEnqueueOnAddFunc(queue workqueue.RateLimitingInterface) func(extensionObject interface{}) {
-	return func(newObj interface{}) {
-		enqueue(queue, newObj)
-	}
+type shootStateControl struct {
+	k8sGardenClient kubernetes.Interface
+	seedClient      kubernetes.Interface
+	log             *logrus.Entry
+	recorder        record.EventRecorder
+	shootRetriever  *ShootRetriever
 }
 
-func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface) func(newExtensionObject, oldExtensionObject interface{}) {
-	return func(newObj, oldObj interface{}) {
-		var (
-			newExtensionObj = newObj.(extensionsv1alpha1.Object)
-			oldExtensionObj = oldObj.(extensionsv1alpha1.Object)
-		)
-
-		if apiequality.Semantic.DeepEqual(newExtensionObj.GetExtensionStatus().GetState(), oldExtensionObj.GetExtensionStatus().GetState()) {
-			return
-		}
-
-		enqueue(queue, newObj)
-	}
-}
-
-func enqueue(queue workqueue.RateLimitingInterface, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	queue.Add(key)
-}
-
-func (s *SyncController) createShootStateSyncReconcileFunc(ctx context.Context, kind string, objectCreator func() runtime.Object) reconcile.Func {
+func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Context, kind string, objectCreator func() runtime.Object) reconcile.Func {
 	return func(req reconcile.Request) (reconcile.Result, error) {
 		obj := objectCreator()
 		err := s.seedClient.Client().Get(ctx, req.NamespacedName, obj)
 		if apierrors.IsNotFound(err) {
-			s.log.Debugf("Skipping ShootState sync because resoruce with kind %s is missing in namespace %s", kind, req.NamespacedName)
+			s.log.Debugf("Skipping ShootState sync because resource with kind %s is missing in namespace %s", kind, req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		if err != nil {

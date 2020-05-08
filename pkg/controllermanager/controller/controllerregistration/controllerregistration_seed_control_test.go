@@ -369,15 +369,22 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
+		controllerRegistration4 = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cr4",
+			},
+		}
 		controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
 			controllerRegistration1,
 			controllerRegistration2,
 			controllerRegistration3,
+			controllerRegistration4,
 		}
 		controllerRegistrationNameToObject = map[string]*gardencorev1beta1.ControllerRegistration{
 			controllerRegistration1.Name: controllerRegistration1,
 			controllerRegistration2.Name: controllerRegistration2,
 			controllerRegistration3.Name: controllerRegistration3,
+			controllerRegistration4.Name: controllerRegistration4,
 		}
 		kindTypeToControllerRegistrationName = map[string]string{
 			extensionsv1alpha1.BackupBucketResource + "/" + type1:   controllerRegistration1.Name,
@@ -427,11 +434,33 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
+		controllerInstallation4 = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ci4",
+			},
+			Spec: gardencorev1beta1.ControllerInstallationSpec{
+				SeedRef: corev1.ObjectReference{
+					Name: seedName,
+				},
+				RegistrationRef: corev1.ObjectReference{
+					Name: controllerRegistration4.Name,
+				},
+			},
+			Status: gardencorev1beta1.ControllerInstallationStatus{
+				Conditions: []gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationRequired,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+			},
+		}
 		controllerInstallationList = &gardencorev1beta1.ControllerInstallationList{
 			Items: []gardencorev1beta1.ControllerInstallation{
 				*controllerInstallation1,
 				*controllerInstallation2,
 				*controllerInstallation3,
+				*controllerInstallation4,
 			},
 		}
 	)
@@ -546,9 +575,9 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, kindTypeToControllerRegistrationName)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, kindTypeToControllerRegistrationName, seedName)
 
-			Expect(names).To(Equal(sets.NewString(controllerRegistration2.Name, controllerRegistration3.Name)))
+			Expect(names).To(Equal(sets.NewString(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -557,7 +586,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ExtensionResource + "/foo",
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, kindTypeToControllerRegistrationName)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, kindTypeToControllerRegistrationName, seedName)
 
 			Expect(names).To(BeNil())
 			Expect(err).To(HaveOccurred())
@@ -572,6 +601,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			Expect(regNameToInstallationName).To(Equal(map[string]string{
 				controllerRegistration2.Name: controllerInstallation2.Name,
 				controllerRegistration3.Name: controllerInstallation3.Name,
+				controllerRegistration4.Name: controllerInstallation4.Name,
 			}))
 		})
 

@@ -302,6 +302,39 @@ var _ = Describe("helper", func() {
 			),
 		)
 
+		DescribeTable("#IsControllerInstallationRequired",
+			func(conditions []gardencorev1beta1.Condition, expectation bool) {
+				controllerInstallation := gardencorev1beta1.ControllerInstallation{
+					Status: gardencorev1beta1.ControllerInstallationStatus{
+						Conditions: conditions,
+					},
+				}
+				Expect(IsControllerInstallationRequired(controllerInstallation)).To(Equal(expectation))
+			},
+			Entry("expect true",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationRequired,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+			),
+			Entry("expect false",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationRequired,
+						Status: gardencorev1beta1.ConditionFalse,
+					},
+				},
+				false,
+			),
+			Entry("expect false",
+				[]gardencorev1beta1.Condition{},
+				false,
+			),
+		)
+
 		DescribeTable("#TaintsHave",
 			func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
 				Expect(TaintsHave(taints, key)).To(Equal(expectation))
