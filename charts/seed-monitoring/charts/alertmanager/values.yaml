@@ -11,3 +11,4 @@ ingress:
 
 emailConfigs: []
 replicas: 1
+podAnnotations: {}

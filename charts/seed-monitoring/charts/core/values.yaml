@@ -14,10 +14,12 @@ prometheus:
     vpn-seed: image-repository:image-tag
 kube-state-metrics-seed:
   replicas: 1
+  podAnnotations: {}
   images:
     kube-state-metrics: image-repository:image-tag
 kube-state-metrics-shoot:
   replicas: 1
+  podAnnotations: {}
   images:
     kube-state-metrics: image-repository:image-tag
 global:

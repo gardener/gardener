@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -147,6 +148,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cluster-autoscaler": b.CheckSums[v1beta1constants.DeploymentNameClusterAutoscaler],
+			"fluentbit.io/exclude":               strconv.FormatBool(b.isLoggingStackSkipped()),
 		},
 		"namespace": map[string]interface{}{
 			"uid": b.SeedNamespaceObject.UID,
@@ -479,6 +481,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-" + name: b.CheckSums[name],
+			"fluentbit.io/exclude":    strconv.FormatBool(b.isLoggingStackSkipped()),
 		},
 		"replicas": b.Shoot.GetReplicas(1),
 	}
@@ -711,6 +714,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
 				"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
 				"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+				"fluentbit.io/exclude":                   strconv.FormatBool(b.isLoggingStackSkipped()),
 			},
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
@@ -1000,6 +1004,7 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 			"checksum/secret-kube-controller-manager":        b.CheckSums[v1beta1constants.DeploymentNameKubeControllerManager],
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
+			"fluentbit.io/exclude":                           strconv.FormatBool(b.isLoggingStackSkipped()),
 		},
 		"podLabels": map[string]interface{}{
 			v1beta1constants.LabelPodMaintenanceRestart: "true",
@@ -1045,6 +1050,7 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-scheduler":        b.CheckSums[v1beta1constants.DeploymentNameKubeScheduler],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
+			"fluentbit.io/exclude":                  strconv.FormatBool(b.isLoggingStackSkipped()),
 		},
 	}
 
@@ -1087,6 +1093,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
 			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
+			"fluentbit.io/exclude":             strconv.FormatBool(b.isLoggingStackSkipped()),
 		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}

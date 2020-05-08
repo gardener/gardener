@@ -241,6 +241,7 @@ data:
         Labels              Off
         Annotations         Off
         tls.verify          Off
+        K8S-Logging.Exclude On
 
     [FILTER]
         Name record_modifier

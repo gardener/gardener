@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -113,6 +114,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"checksum/secret-prometheus":       b.CheckSums["prometheus"],
 				"checksum/secret-vpn-seed":         b.CheckSums["vpn-seed"],
 				"checksum/secret-vpn-seed-tlsauth": b.CheckSums["vpn-seed-tlsauth"],
+				"fluentbit.io/exclude":             strconv.FormatBool(b.isLoggingStackSkipped()),
 			},
 			"replicas":           b.Shoot.GetReplicas(1),
 			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
@@ -151,9 +153,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"fluentbit.io/exclude": strconv.FormatBool(b.isLoggingStackSkipped()),
+			},
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"fluentbit.io/exclude": strconv.FormatBool(b.isLoggingStackSkipped()),
+			},
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
@@ -250,6 +258,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"fluentbit.io/exclude": strconv.FormatBool(b.isLoggingStackSkipped()),
+			},
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuthUsers,
 				"hosts":           hosts,
@@ -368,6 +379,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	}
 
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
+		"podAnnotations": map[string]interface{}{
+			"fluentbit.io/exclude": strconv.FormatBool(b.isLoggingStackSkipped()),
+		},
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
 			"hosts":           hosts,

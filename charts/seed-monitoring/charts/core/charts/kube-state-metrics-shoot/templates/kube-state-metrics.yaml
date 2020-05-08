@@ -52,6 +52,10 @@ spec:
       maxUnavailable: 1
   template:
     metadata:
+      annotations:
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
       labels:
         garden.sapcloud.io/role: monitoring
         component: kube-state-metrics
