@@ -28,4 +28,8 @@ type Actuator interface {
 	Reconcile(context.Context, *extensionsv1alpha1.ContainerRuntime, *extensioncontroller.Cluster) error
 	// Delete the ContainerRuntime resource.
 	Delete(context.Context, *extensionsv1alpha1.ContainerRuntime, *extensioncontroller.Cluster) error
+	// Restore the ContainerRuntime resource.
+	Restore(context.Context, *extensionsv1alpha1.ContainerRuntime, *extensioncontroller.Cluster) error
+	// Migrate the ContainerRuntime resource.
+	Migrate(context.Context, *extensionsv1alpha1.ContainerRuntime, *extensioncontroller.Cluster) error
 }

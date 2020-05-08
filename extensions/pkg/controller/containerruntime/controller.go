@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// FinalizerPrefix is the prefix name of the finalizer written by this controller.
+	// FinalizerName is the prefix name of the finalizer written by this controller.
 	FinalizerName = "extensions.gardener.cloud/containerruntime"
 	// ControllerName is the name of the controller.
 	ControllerName = "containerruntime_controller"
