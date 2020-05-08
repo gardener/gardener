@@ -93,7 +93,7 @@ type RegisteredExtension struct {
 // healthChecks defines the checks to execute mapped to the healthConditionTypes its contributing to (e.g checkDeployment in Seed -> ControlPlaneHealthy).
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck) error {
-	predicates := append([]predicate.Predicate{}, customPredicates...)
+	predicates := append(DefaultPredicates(), customPredicates...)
 
 	args := AddArgs{
 		ControllerOptions:       opts.Controller,
@@ -133,6 +133,15 @@ func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, 
 
 func (a *AddArgs) GetExtensionGroupVersionKind() schema.GroupVersionKind {
 	return a.registeredExtension.groupVersionKind
+}
+
+// DefaultPredicates returns the default predicates.
+func DefaultPredicates() []predicate.Predicate {
+	return []predicate.Predicate{
+		// watch: only requeue on spec change to prevent infinite loop
+		// health checks are being executed every 'sync period' anyways
+		predicate.GenerationChangedPredicate{},
+	}
 }
 
 // Register the extension resource. Must be of type extensionsv1alpha1.Object
