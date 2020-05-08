@@ -88,16 +88,21 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	shoot, err := extensionscontroller.ShootFromCluster(r.decoder, cluster)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if extensionscontroller.IsShootFailed(shoot) {
+		r.logger.Info("Stop CSI migration of failed Shoot.", "namespace", request.Namespace, "name", shoot.Name)
+		return reconcile.Result{}, nil
+	}
+
 	if cluster.DeletionTimestamp != nil {
 		return reconcile.Result{}, nil
 	}
 
 	r.logger.Info("CSI migration controller got called with cluster", "name", cluster.Name)
-
-	shoot, err := extensionscontroller.ShootFromCluster(r.decoder, cluster)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
 	return r.reconcile(r.ctx, cluster, shoot)
 }

@@ -116,4 +116,37 @@ var _ = Describe("Shoot", func() {
 		Entry("hibernation is not enabled", nil, 3, 3),
 		Entry("hibernation is enabled", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, 1, 0),
 	)
+
+	DescribeTable("#IsFailed",
+		func(lastOperation *gardencorev1beta1.LastOperation, expectedToBeFailed bool) {
+			cluster := &Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						LastOperation: lastOperation,
+					},
+				},
+			}
+
+			Expect(IsFailed(cluster)).To(Equal(expectedToBeFailed))
+		},
+
+		Entry("cluster is failed", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}, true),
+		Entry("cluster is not failed", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}, false),
+		Entry("cluster is not failed", nil, false),
+	)
+
+	DescribeTable("#IsShootFailed",
+		func(lastOperation *gardencorev1beta1.LastOperation, expectedToBeFailed bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: lastOperation,
+				},
+			}
+			Expect(IsShootFailed(shoot)).To(Equal(expectedToBeFailed))
+		},
+
+		Entry("cluster is failed", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}, true),
+		Entry("cluster is not failed", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}, false),
+		Entry("cluster is not failed", nil, false),
+	)
 })

@@ -84,6 +84,11 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	if extensionscontroller.IsFailed(cluster) {
+		r.logger.Info("Stop reconciling Worker of failed Shoot.", "namespace", request.Namespace, "name", worker.Name)
+		return reconcile.Result{}, nil
+	}
+
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
 
 	switch {

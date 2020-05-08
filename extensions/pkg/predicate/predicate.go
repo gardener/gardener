@@ -76,8 +76,7 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 		return false
 	}
 
-	lastOperation := cluster.Shoot.Status.LastOperation
-	if lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
+	if extensionscontroller.IsFailed(cluster) {
 		return cluster.Shoot.Generation != cluster.Shoot.Status.ObservedGeneration
 	}
 

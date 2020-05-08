@@ -23,11 +23,11 @@ import (
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/extensions/pkg/util"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
@@ -169,10 +169,17 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	var (
-		result reconcile.Result
-		err    error
-	)
+	var result reconcile.Result
+
+	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if extensionscontroller.IsShootFailed(shoot) {
+		r.logger.Info("Stop reconciling Extension of failed Shoot.", "namespace", request.Namespace, "name", ex.Name)
+		return reconcile.Result{}, nil
+	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(ex.ObjectMeta, ex.Status.LastOperation)
 

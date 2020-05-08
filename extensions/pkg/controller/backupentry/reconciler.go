@@ -92,6 +92,16 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if extensionscontroller.IsShootFailed(shoot) {
+		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "namespace", request.Namespace, "name", be.Name)
+		return reconcile.Result{}, nil
+	}
+
 	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 
 	switch {
