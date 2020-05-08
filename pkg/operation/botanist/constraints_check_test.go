@@ -27,19 +27,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	eventsv1beta1 "k8s.io/api/events/v1beta1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	nodev1alpha1 "k8s.io/api/node/v1alpha1"
-	nodev1beta1 "k8s.io/api/node/v1beta1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -54,8 +48,6 @@ import (
 	"k8s.io/apiserver/pkg/admission/plugin/webhook"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
-	metricsv1alpha1 "k8s.io/metrics/pkg/apis/metrics/v1alpha1"
-	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 type webhookTestCase struct {
@@ -228,15 +220,10 @@ var _ = Describe("#IsProblematicWebhook", func() {
 		}
 	)
 
-	kubeSystemNamespaceTables(schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"})
-	kubeSystemNamespaceTables(schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1alpha1", Resource: "endpointslices"})
-	kubeSystemNamespaceTables(schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1beta1", Resource: "endpointslices"})
-
 	podsTestTables(corev1.SchemeGroupVersion.WithResource("pods"))
 	podsTestTables(corev1.SchemeGroupVersion.WithResource("pods/status"))
 	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("configmaps"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("endpoints"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("events"))
 	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("secrets"))
 	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("serviceaccounts"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services"))
@@ -246,8 +233,6 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces/status"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces/finalize"))
-
-	withoutSelectorsTables(eventsv1beta1.SchemeGroupVersion.WithResource("events"))
 
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("controllerrevisions"))
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets"))
@@ -293,25 +278,10 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	withoutSelectorsTables(coordinationv1.SchemeGroupVersion.WithResource("leases"))
 	withoutSelectorsTables(coordinationv1beta1.SchemeGroupVersion.WithResource("leases"))
 
-	kubeSystemNamespaceTables(metricsv1alpha1.SchemeGroupVersion.WithResource("podmetrics"))
-	withoutSelectorsTables(metricsv1alpha1.SchemeGroupVersion.WithResource("nodemetrics"))
-
-	kubeSystemNamespaceTables(metricsv1beta1.SchemeGroupVersion.WithResource("podmetrics"))
-	withoutSelectorsTables(metricsv1beta1.SchemeGroupVersion.WithResource("nodemetrics"))
-
 	kubeSystemNamespaceTables(networkingv1.SchemeGroupVersion.WithResource("networkpolicies"))
 	kubeSystemNamespaceTables(networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
 
 	withoutSelectorsTables(policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
-
-	kubeSystemNamespaceTables(autoscalingv1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"))
-	kubeSystemNamespaceTables(autoscalingv1.SchemeGroupVersion.WithResource("horizontalpodautoscalers/status"))
-
-	kubeSystemNamespaceTables(autoscalingv2beta1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"))
-	kubeSystemNamespaceTables(autoscalingv2beta1.SchemeGroupVersion.WithResource("horizontalpodautoscalers/status"))
-
-	kubeSystemNamespaceTables(autoscalingv2beta2.SchemeGroupVersion.WithResource("horizontalpodautoscalers"))
-	kubeSystemNamespaceTables(autoscalingv2beta2.SchemeGroupVersion.WithResource("horizontalpodautoscalers/status"))
 
 	withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterroles"))
 	withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterrolebindings"))
@@ -343,9 +313,6 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
 	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
 	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
-
-	withoutSelectorsTables(nodev1beta1.SchemeGroupVersion.WithResource("runtimeclasses"))
-	withoutSelectorsTables(nodev1alpha1.SchemeGroupVersion.WithResource("runtimeclasses"))
 
 	withoutSelectorsTables(schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"))
 	withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))

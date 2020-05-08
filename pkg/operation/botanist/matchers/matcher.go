@@ -23,19 +23,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	eventsv1beta1 "k8s.io/api/events/v1beta1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	nodev1alpha1 "k8s.io/api/node/v1alpha1"
-	nodev1beta1 "k8s.io/api/node/v1beta1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -50,8 +44,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
-	metricsv1alpha1 "k8s.io/metrics/pkg/apis/metrics/v1alpha1"
-	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 var (
@@ -67,27 +59,28 @@ var (
 	// WebhookConstraintMatchers contains a list of all api resources which can break
 	// the waking up of a cluster.
 	WebhookConstraintMatchers = []WebhookConstraintMatcher{
-		{GVR: schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1alpha1", Resource: "endpointslices"}, NamespaceLabels: kubeSystemLabels},
-		{GVR: schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1beta1", Resource: "endpointslices"}, NamespaceLabels: kubeSystemLabels},
-		// v1 is still not available, but the APi will be promoted soon
-		{GVR: schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}, NamespaceLabels: kubeSystemLabels},
-
 		{GVR: corev1.SchemeGroupVersion.WithResource("pods"), NamespaceLabels: kubeSystemLabels, ObjectLabels: podsLabels},
 		{GVR: corev1.SchemeGroupVersion.WithResource("pods"), NamespaceLabels: kubeSystemLabels, ObjectLabels: podsLabels, Subresource: "status"},
 		{GVR: corev1.SchemeGroupVersion.WithResource("configmaps"), NamespaceLabels: kubeSystemLabels},
+
+		// kube-system and default namespaces for apiserver in-cluster discovery.
 		{GVR: corev1.SchemeGroupVersion.WithResource("endpoints")},
-		{GVR: corev1.SchemeGroupVersion.WithResource("events")},
+
 		{GVR: corev1.SchemeGroupVersion.WithResource("secrets"), NamespaceLabels: kubeSystemLabels},
 		{GVR: corev1.SchemeGroupVersion.WithResource("serviceaccounts"), NamespaceLabels: kubeSystemLabels},
+
+		// part of /readyz/poststarthook/bootstrap-controller which fixes all services in the cluster.
 		{GVR: corev1.SchemeGroupVersion.WithResource("services")},
 		{GVR: corev1.SchemeGroupVersion.WithResource("services"), Subresource: "status"},
+
+		// kubelet must be allowed to register itself.
 		{GVR: corev1.SchemeGroupVersion.WithResource("nodes"), ClusterScoped: true},
 		{GVR: corev1.SchemeGroupVersion.WithResource("nodes"), ClusterScoped: true, Subresource: "status"},
+
+		// needed when cluster is migrating to a version which adds the "kube-node-lease" namespace
 		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true},
 		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, Subresource: "status"},
 		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, Subresource: "finalize"},
-
-		{GVR: eventsv1beta1.SchemeGroupVersion.WithResource("events")},
 
 		{GVR: appsv1.SchemeGroupVersion.WithResource("controllerrevisions"), NamespaceLabels: kubeSystemLabels},
 		{GVR: appsv1.SchemeGroupVersion.WithResource("daemonsets"), NamespaceLabels: kubeSystemLabels},
@@ -127,29 +120,17 @@ var (
 		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemLabels},
 		{GVR: extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"), ClusterScoped: true},
 
+		// needed for kubelet and kube-system controllers leader election.
 		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases")},
 		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases")},
 
-		{GVR: metricsv1alpha1.SchemeGroupVersion.WithResource("podmetrics"), NamespaceLabels: kubeSystemLabels},
-		{GVR: metricsv1alpha1.SchemeGroupVersion.WithResource("nodemetrics"), NamespaceLabels: kubeSystemLabels},
-
-		{GVR: metricsv1beta1.SchemeGroupVersion.WithResource("podmetrics"), NamespaceLabels: kubeSystemLabels},
-		{GVR: metricsv1beta1.SchemeGroupVersion.WithResource("nodemetrics"), NamespaceLabels: kubeSystemLabels},
-
+		// modifications might be needed for old clusters with new policies.
 		{GVR: networkingv1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemLabels},
 		{GVR: networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"), NamespaceLabels: kubeSystemLabels},
 
 		{GVR: policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"), ClusterScoped: true},
 
-		{GVR: autoscalingv1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels},
-		{GVR: autoscalingv1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels, Subresource: "status"},
-
-		{GVR: autoscalingv2beta1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels},
-		{GVR: autoscalingv2beta1.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels, Subresource: "status"},
-
-		{GVR: autoscalingv2beta2.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels},
-		{GVR: autoscalingv2beta2.SchemeGroupVersion.WithResource("horizontalpodautoscalers"), NamespaceLabels: kubeSystemLabels, Subresource: "status"},
-
+		// needed as part of /readyz/poststarthook/rbac/bootstrap-roles in kube-apiserver.
 		{GVR: rbacv1.SchemeGroupVersion.WithResource("clusterroles"), ClusterScoped: true},
 		{GVR: rbacv1.SchemeGroupVersion.WithResource("clusterrolebindings"), ClusterScoped: true},
 		{GVR: rbacv1.SchemeGroupVersion.WithResource("roles"), NamespaceLabels: kubeSystemLabels},
@@ -165,25 +146,26 @@ var (
 		{GVR: rbacv1beta1.SchemeGroupVersion.WithResource("roles"), NamespaceLabels: kubeSystemLabels},
 		{GVR: rbacv1beta1.SchemeGroupVersion.WithResource("rolebindings"), NamespaceLabels: kubeSystemLabels},
 
+		// needed for networking extensions.
 		{GVR: apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions"), ClusterScoped: true},
 		{GVR: apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions"), ClusterScoped: true, Subresource: "status"},
 
 		{GVR: apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"), ClusterScoped: true},
 		{GVR: apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"), ClusterScoped: true, Subresource: "status"},
 
+		// needed as part of /healthz/poststarthook/apiservice-openapi-controller in kube-apiserver.
 		{GVR: apiregistrationv1.SchemeGroupVersion.WithResource("apiservices"), ClusterScoped: true},
 		{GVR: apiregistrationv1.SchemeGroupVersion.WithResource("apiservices"), ClusterScoped: true, Subresource: "status"},
 
 		{GVR: apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices"), ClusterScoped: true},
 		{GVR: apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices"), ClusterScoped: true, Subresource: "status"},
 
+		// kubelet uses it to request a certificate for itself.
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true},
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "status"},
 		{GVR: certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"), ClusterScoped: true, Subresource: "approval"},
 
-		{GVR: nodev1alpha1.SchemeGroupVersion.WithResource("runtimeclasses"), ClusterScoped: true},
-		{GVR: nodev1beta1.SchemeGroupVersion.WithResource("runtimeclasses"), ClusterScoped: true},
-
+		// needed as part of /healthz/poststarthook/scheduling/bootstrap-system-priority-classes in kube-apiserver.
 		{GVR: schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
 		{GVR: schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
 		{GVR: schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"), ClusterScoped: true},
