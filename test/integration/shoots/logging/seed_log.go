@@ -35,6 +35,8 @@ const (
 	kibanaAvailableTimeout          = 10 * time.Second
 	getLogsFromElasticsearchTimeout = 5 * time.Minute
 
+	loggerDeploymentCleanupTimeout = 2 * time.Minute
+
 	fluentBitName = "fluent-bit"
 	fluentdName   = "fluentd-es"
 	garden        = "garden"
@@ -77,18 +79,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.LoggerAppName, loggerParams)
 		framework.ExpectNoError(err)
 
-		defer func() {
-			ginkgo.By("Cleaning up logger app resources")
-			loggerDeploymentToDelete := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: f.ShootSeedNamespace(),
-					Name:      logger,
-				},
-			}
-			err := framework.DeleteResource(ctx, f.SeedClient, loggerDeploymentToDelete)
-			framework.ExpectNoError(err)
-		}()
-
 		ginkgo.By("Wait until logger application is ready")
 		loggerLabels := labels.SelectorFromSet(labels.Set(map[string]string{
 			"app": logger,
@@ -99,5 +89,15 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		ginkgo.By("Verify elasticsearch received logger application logs")
 		err = WaitUntilElasticsearchReceivesLogs(ctx, f, f.ShootSeedNamespace(), logger, expectedLogsCount, f.SeedClient)
 		framework.ExpectNoError(err)
-	}, getLogsFromElasticsearchTimeout)
+	}, getLogsFromElasticsearchTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		ginkgo.By("Cleaning up logger app resources")
+		loggerDeploymentToDelete := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: f.ShootSeedNamespace(),
+				Name:      logger,
+			},
+		}
+		err := framework.DeleteResource(ctx, f.SeedClient, loggerDeploymentToDelete)
+		framework.ExpectNoError(err)
+	}, loggerDeploymentCleanupTimeout))
 })

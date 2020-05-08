@@ -43,30 +43,13 @@ const (
 )
 
 var _ = ginkgo.Describe("Shoot Care testing", func() {
-
-	f := framework.NewShootFramework(nil)
+	var (
+		f            = framework.NewShootFramework(nil)
+		origReplicas *int32
+		err          error
+	)
 
 	f.Beta().Serial().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
-		var (
-			origReplicas *int32
-			err          error
-		)
-
-		defer func(ctx context.Context) {
-			if origReplicas != nil {
-				f.Logger.Infof("Test cleanup: Scale API Server to '%d' replicas again", *origReplicas)
-				origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.Client(), origReplicas, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
-				gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-				// wait for healthy condition
-				f.Logger.Infof("Test cleanup: wait for Shoot Health condition '%s' to become healthy again", gardencorev1beta1.ShootAPIServerAvailable)
-				err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue)
-				gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-				f.Logger.Info("Test cleanup successful")
-			}
-		}(ctx)
-
 		cond := helper.GetCondition(f.Shoot.Status.Conditions, gardencorev1beta1.ShootAPIServerAvailable)
 		gomega.Expect(cond).ToNot(gomega.BeNil())
 		gomega.Expect(cond.Status).To(gomega.Equal(gardencorev1beta1.ConditionTrue))
@@ -78,5 +61,18 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 		// wait for unhealthy condition
 		err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionFalse)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	}, timeout)
+	}, timeout, framework.WithCAfterTest(func(ctx context.Context) {
+		if origReplicas != nil {
+			f.Logger.Infof("Test cleanup: Scale API Server to '%d' replicas again", *origReplicas)
+			origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.Client(), origReplicas, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+			// wait for healthy condition
+			f.Logger.Infof("Test cleanup: wait for Shoot Health condition '%s' to become healthy again", gardencorev1beta1.ShootAPIServerAvailable)
+			err = f.WaitForShootCondition(ctx, 20*time.Second, 5*time.Minute, gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+			f.Logger.Info("Test cleanup successful")
+		}
+	}, timeout))
 })

@@ -50,6 +50,7 @@ import (
 
 const (
 	networkTestTimeout = 1800 * time.Second
+	cleanupTimeout     = 2 * time.Minute
 )
 
 var _ = ginkgo.Describe("Shoot network testing", func() {
@@ -78,16 +79,6 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
 		err = f.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
 		framework.ExpectNoError(err)
-
-		defer func() {
-			ginkgo.By("cleanup network test daemonset")
-			err := f.ShootClient.Client().Delete(ctx, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
-			if err != nil {
-				if !apierrors.IsNotFound(err) {
-					framework.ExpectNoError(err)
-				}
-			}
-		}()
 
 		err = f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, f.Namespace)
 		framework.ExpectNoError(err)
@@ -118,6 +109,14 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 			}
 		}
 		framework.ExpectNoError(err)
-	}, networkTestTimeout)
+	}, networkTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+		ginkgo.By("cleanup network test daemonset")
+		err := f.ShootClient.Client().Delete(ctx, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				framework.ExpectNoError(err)
+			}
+		}
+	}, cleanupTimeout))
 
 })
