@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -65,6 +66,9 @@ func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList
 func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if projectSpec.Namespace != nil && *projectSpec.Namespace == core.GardenerSeedLeaseNamespace {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), fmt.Sprintf("Project namespace %s is reserved by Gardener", core.GardenerSeedLeaseNamespace)))
+	}
 	ownerFound := false
 
 	for i, member := range projectSpec.Members {

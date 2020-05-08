@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,10 +28,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	coordinationlister "k8s.io/client-go/listers/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -81,12 +86,13 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for checking the lifecycle for Seeds. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister, config *config.ControllerManagerConfiguration) ControlInterface {
-	return &defaultControl{k8sGardenClient, shootLister, config}
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, leaseLister coordinationlister.LeaseLister, shootLister gardencorelisters.ShootLister, config *config.ControllerManagerConfiguration) ControlInterface {
+	return &defaultControl{k8sGardenClient, leaseLister, shootLister, config}
 }
 
 type defaultControl struct {
 	k8sGardenClient kubernetes.Interface
+	leaseLister     coordinationlister.LeaseLister
 	shootLister     gardencorelisters.ShootLister
 	config          *config.ControllerManagerConfiguration
 }
@@ -98,32 +104,52 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 		seedLogger = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
 	)
 
-	// New seeds don't have conditions, i.e., gardenlet never reported anything yet. Let's wait until it sends the first heart beat.
+	// New seeds don't have conditions - gardenlet never reported anything yet. Wait for grace period.
 	if len(seed.Status.Conditions) == 0 {
 		return true, nil
 	}
 
-	for _, condition := range seed.Status.Conditions {
-		// If the `GardenletReady` condition is not yet `Unknown` then check when it most recently sent a heartbeat and wait for the
-		// configured `monitorPeriod` before proceeding with any action.
-		if condition.Type == gardencorev1beta1.SeedGardenletReady && condition.Status != gardencorev1beta1.ConditionUnknown && !condition.LastUpdateTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+	observedSeedLease, err := c.leaseLister.Leases(gardencorev1beta1.GardenerSeedLeaseNamespace).Get(seed.Name)
+	if client.IgnoreNotFound(err) != nil {
+		return false, err
+	}
+
+	if observedSeedLease != nil && observedSeedLease.Spec.RenewTime != nil {
+		if observedSeedLease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+			return true, nil
+		}
+
+		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
+		latestLeaseObject := &coordinationv1.Lease{}
+		if err := c.k8sGardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
+			return false, err
+		}
+
+		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
 			return true, nil
 		}
 	}
 
 	seedLogger.Debugf("Setting status for seed %q to 'Unknown' as gardenlet stopped reporting seed status.", seed.Name)
 
-	conditionGardenletReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
-	conditionGardenletReady = gardencorev1beta1helper.UpdatedCondition(conditionGardenletReady, gardencorev1beta1.ConditionUnknown, "SeedStatusUnknown", "Gardenlet stopped posting seed status.")
-
-	// Update Seed status
-	if _, err := kutil.TryUpdateSeedConditions(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta,
-		func(seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
-			seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, conditionGardenletReady)
-			return seed, nil
-		},
-	); err != nil {
+	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
+	if err != nil {
 		return false, err
+	}
+
+	conditionGardenletReady := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	if conditionGardenletReady != nil {
+		bldr.WithOldCondition(*conditionGardenletReady)
+	}
+
+	bldr.WithStatus(gardencorev1beta1.ConditionUnknown)
+	bldr.WithReason("SeedStatusUnknown")
+	bldr.WithMessage("Gardenlet stopped posting seed status.")
+	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
+		seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
+		if err := c.k8sGardenClient.Client().Status().Update(ctx, seed); err != nil {
+			return false, err
+		}
 	}
 
 	// If the `GardenletReady` condition is `Unknown` for at least the configured `shootMonitorPeriod` then we will mark the conditions

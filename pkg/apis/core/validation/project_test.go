@@ -101,6 +101,17 @@ var _ = Describe("Project Validation Tests", func() {
 			}))))
 		})
 
+		It("should forbid Projects with namespace gardener-system-seed-lease", func() {
+			project.ObjectMeta.Namespace = "gardener-system-seed-lease"
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("metadata.namespace"),
+			}))))
+		})
+
 		It("should forbid Projects having two consecutive hyphens", func() {
 			project.ObjectMeta.Name = "in--valid"
 
@@ -265,6 +276,18 @@ var _ = Describe("Project Validation Tests", func() {
 			Entry("no change (both unset)", nil, nil, BeEmpty()),
 			Entry("no change (same value)", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-dev"), BeEmpty()),
 		)
+
+		It("should forbid Project updates trying to change the createdBy field", func() {
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.CreatedBy.Name = "some-other-user"
+
+			errorList := ValidateProjectUpdate(newProject, project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.createdBy"),
+			}))))
+		})
 
 		It("should forbid Project updates trying to change the createdBy field", func() {
 			newProject := prepareProjectForUpdate(project)

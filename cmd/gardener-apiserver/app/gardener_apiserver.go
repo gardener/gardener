@@ -45,8 +45,11 @@ import (
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -60,6 +63,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -175,23 +179,10 @@ func (o *Options) complete() error {
 	return nil
 }
 
-func (o *Options) config() (*apiserver.Config, error) {
+func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernetes.Clientset) (*apiserver.Config, error) {
 	// Create clientset for the owned API groups
 	// Use loopback config to create a new Kubernetes client for the owned API groups
 	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
-
-	// Create clientset for the native Kubernetes API group
-	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
-	kubeAPIServerConfig, err := clientcmd.BuildConfigFromFlags("", o.Recommended.Authentication.RemoteKubeConfigFile)
-	if err != nil {
-		return nil, err
-	}
-
-	// kube client
-	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
-	if err != nil {
-		return nil, err
-	}
 	o.KubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
 
 	// Initialize admission plugins
@@ -240,11 +231,24 @@ func (o *Options) config() (*apiserver.Config, error) {
 		return nil, err
 	}
 
-	return apiConfig, err
+	return apiConfig, nil
 }
 
 func (o Options) run(stopCh <-chan struct{}) error {
-	config, err := o.config()
+	// Create clientset for the native Kubernetes API group
+	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
+	kubeAPIServerConfig, err := clientcmd.BuildConfigFromFlags("", o.Recommended.Authentication.RemoteKubeConfigFile)
+	if err != nil {
+		return err
+	}
+
+	// kube client
+	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
+	if err != nil {
+		return err
+	}
+
+	config, err := o.config(kubeAPIServerConfig, kubeClient)
 	if err != nil {
 		return err
 	}
@@ -259,6 +263,24 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		o.KubeInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)
 		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(context genericapiserver.PostStartHookContext) error {
+		if _, err := kubeClient.CoreV1().Namespaces().Get(gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+			return err
+		} else if err == nil {
+			// Namespace already exists
+			return nil
+		}
+
+		_, err = kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: gardencorev1beta1.GardenerSeedLeaseNamespace,
+			},
+		})
+		return err
 	}); err != nil {
 		return err
 	}

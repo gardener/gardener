@@ -4,8 +4,8 @@ Currently, the Gardener supports the following Kubernetes versions:
 
 ## Garden cluster version
 
-:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.10.x`**.
-The reason for that is that the least supported Kubernetes version in Gardener is `1.10`.
+:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.12.x`**.
+The reason for that is that the `Gardenlet` is reporting readiness by using a `Lease` object supported by Kubernetes version later than `1.12`, same as the `Kubelet` is using `Leases` for the `Nodes`.
 
 ## Seed cluster versions
 
