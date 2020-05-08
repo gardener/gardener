@@ -23,7 +23,7 @@ This information tells Gardener that there is an extension controller that can h
 
 Also, it specifies that this controller is the primary one responsible for the lifecycle of the `OperatingSystemConfig` resource.
 Setting `primary` to `false` would allow to register additional, secondary controllers that may also watch/react on the `OperatingSystemConfig/coreos` resources, however, only the primary controller may change/update the main `status` of the extension object (that are used to "communicate" with the Gardenlet).
-Particularly, only the primary controller may be set `.status.lastOperation`, `.status.lastError`, `.status.observedGeneration`, and `.status.state`.
+Particularly, only the primary controller may set `.status.lastOperation`, `.status.lastError`, `.status.observedGeneration`, and `.status.state`.
 Secondary controllers may contribute to the `.status.conditions[]` if they like, of course.
  
 Secondary controllers might be helpful in scenarios where additional tasks need to be completed which are not part of the reconciliation logic of the primary controller but separated out into a dedicated extension. 
@@ -202,5 +202,5 @@ There are the following policies:
 * `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers are deployed and ready in case you have highly fluctuating seed clusters.
 
 Also, the `.spec.deployment.seedSelector` allows to specify a label selector for seed clusters.
-Only if it matches to the labels of a seed then it will be deployed to it.
+Only if it matches the labels of a seed then it will be deployed to it.
 Please note that a seed selector can only be specified for secondary controllers (`primary=false` for all `.spec.resources[]`).

@@ -426,9 +426,9 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
-		controllerRegistration4 = &gardencorev1beta1.ControllerRegistration{
+		controllerRegistration6 = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "cr4",
+				Name: "cr6",
 			},
 		}
 		controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
@@ -437,26 +437,15 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			controllerRegistration3,
 			controllerRegistration4,
 			controllerRegistration5,
+			controllerRegistration6,
 		}
-		controllerRegistrationNameToObject = map[string]*gardencorev1beta1.ControllerRegistration{
-			controllerRegistration1.Name: controllerRegistration1,
-			controllerRegistration2.Name: controllerRegistration2,
-			controllerRegistration3.Name: controllerRegistration3,
-			controllerRegistration4.Name: controllerRegistration4,
-			controllerRegistration5.Name: controllerRegistration5,
-		}
-		kindTypeToControllerRegistrationNames = map[string][]string{
-			extensionsv1alpha1.BackupBucketResource + "/" + type1:      {controllerRegistration1.Name},
-			extensionsv1alpha1.ExtensionResource + "/" + type10:        {controllerRegistration1.Name},
-			extensionsv1alpha1.NetworkResource + "/" + type2:           {controllerRegistration1.Name, controllerRegistration2.Name},
-			extensionsv1alpha1.ContainerRuntimeResource + "/" + type12: {controllerRegistration2.Name},
-			extensionsv1alpha1.ControlPlaneResource + "/" + type3:      {controllerRegistration3.Name},
-			extensionsv1alpha1.InfrastructureResource + "/" + type3:    {controllerRegistration3.Name},
-			extensionsv1alpha1.WorkerResource + "/" + type3:            {controllerRegistration3.Name},
-		}
-		alwaysPolicyControllerRegistrationNames = []string{
-			controllerRegistration4.Name,
-			controllerRegistration5.Name,
+		controllerRegistrations = map[string]controllerRegistration{
+			controllerRegistration1.Name: {obj: controllerRegistration1, deployAlways: false},
+			controllerRegistration2.Name: {obj: controllerRegistration2, deployAlways: false},
+			controllerRegistration3.Name: {obj: controllerRegistration3, deployAlways: false},
+			controllerRegistration4.Name: {obj: controllerRegistration4, deployAlways: true},
+			controllerRegistration5.Name: {obj: controllerRegistration5, deployAlways: true},
+			controllerRegistration6.Name: {obj: controllerRegistration6, deployAlways: false},
 		}
 
 		controllerInstallation1 = &gardencorev1beta1.ControllerInstallation{
@@ -627,11 +616,9 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 	Describe("#computeControllerRegistrationMaps", func() {
 		It("should correctly compute the result", func() {
-			registrations, kindTypes, alwaysPolicyRegistrations := computeControllerRegistrationMaps(controllerRegistrationList)
+			registrations := computeControllerRegistrationMaps(controllerRegistrationList)
 
-			Expect(registrations).To(Equal(controllerRegistrationNameToObject))
-			Expect(kindTypes).To(Equal(kindTypeToControllerRegistrationNames))
-			Expect(alwaysPolicyRegistrations).To(Equal(alwaysPolicyControllerRegistrationNames))
+			Expect(registrations).To(Equal(controllerRegistrations))
 		})
 	})
 
@@ -642,7 +629,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, kindTypeToControllerRegistrationNames, alwaysPolicyControllerRegistrationNames, controllerRegistrationNameToObject, seedLabels)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerRegistrations, seedLabels)
 
 			Expect(names).To(Equal(sets.NewString(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)))
 			Expect(err).NotTo(HaveOccurred())
@@ -653,7 +640,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ExtensionResource + "/foo",
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, kindTypeToControllerRegistrationNames, alwaysPolicyControllerRegistrationNames, controllerRegistrationNameToObject, seedLabels)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerRegistrations, seedLabels)
 
 			Expect(names).To(BeNil())
 			Expect(err).To(HaveOccurred())
@@ -662,7 +649,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 	Describe("#computeRegistrationNameToInstallationNameMap", func() {
 		It("should correctly compute the result w/o error", func() {
-			regNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrationNameToObject, seedName)
+			regNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrations, seedName)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(regNameToInstallationName).To(Equal(map[string]string{
@@ -673,7 +660,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 		})
 
 		It("should fail to compute the result and return error", func() {
-			regNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, map[string]*gardencorev1beta1.ControllerRegistration{}, seedName)
+			regNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, map[string]controllerRegistration{}, seedName)
 
 			Expect(err).To(HaveOccurred())
 			Expect(regNameToInstallationName).To(BeNil())
@@ -710,7 +697,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
 
-				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrationNameToObject, registrationNameToInstallationName)
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -743,7 +730,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Update(ctx, installation3)
 
-				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrationNameToObject, registrationNameToInstallationName)
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
