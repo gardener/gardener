@@ -103,6 +103,9 @@ const (
 	// GardenerOperationReconcile is a constant for the value of the operation annotation describing a reconcile
 	// operation.
 	GardenerOperationReconcile = "reconcile"
+	// GardenerTimestamp is a constant for an annotation on a resource that describes the timestamp when a reconciliation has been requested.
+	// It is only used to guarantee an update event for watching clients in case the operation-annotation is already present.
+	GardenerTimestamp = "gardener.cloud/timestamp"
 	// GardenerOperationMigrate is a constant for the value of the operation annotation describing a migration
 	// operation.
 	GardenerOperationMigrate = "migrate"

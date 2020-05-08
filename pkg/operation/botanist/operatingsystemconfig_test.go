@@ -16,15 +16,19 @@ package botanist_test
 
 import (
 	"context"
+	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -56,6 +60,8 @@ var _ = Describe("operatingsystemconfig", func() {
 		It("should cleanup unused operating system configs", func() {
 			var (
 				ctx              = context.TODO()
+				now              time.Time
+				mockNow          = mocktime.NewMockNow(ctrl)
 				newDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-downloader"}}
 				newOriginalOsc   = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-original"}}
 				oldDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-old-worker-9f0e7-downloader"}}
@@ -68,11 +74,17 @@ var _ = Describe("operatingsystemconfig", func() {
 				return nil
 			})
 
+			defer test.WithVars(
+				&common.TimeNow, mockNow.Do,
+			)()
+
 			// Expect that the old OperatingSystemConfigs will be cleaned up
 			oldDownloaderOscCopy := oldDownloaderOsc.DeepCopy()
-			oldDownloaderOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+			oldDownloaderOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
 			oldOriginalOscCopy := oldOriginalOsc.DeepCopy()
-			oldOriginalOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+			oldOriginalOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldOriginalOsc.Namespace, oldOriginalOsc.Name), &oldOriginalOsc)
 			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldOriginalOscCopy)

@@ -49,6 +49,10 @@ type AddArgs struct {
 	Type string
 	// WatchBuilder defines additional watches on controllers that should be set up.
 	WatchBuilder extensionscontroller.WatchBuilder
+	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
+	// If the annotation is not ignored, the extension controller will only reconcile
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	IgnoreOperationAnnotation bool
 }
 
 // DefaultPredicates returns the default predicates for an infrastructure reconciler.
@@ -94,10 +98,14 @@ func add(mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(ClusterToInfrastructureMapper(predicates), extensionshandler.UpdateWithNew),
-	}); err != nil {
-		return err
+	// do not watch cluster if respect operation annotation to prevent unwanted reconciliations in case the operation annotation
+	// is already present & the extension CRD is already deleting
+	if args.IgnoreOperationAnnotation {
+		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+			ToRequests: extensionshandler.SimpleMapper(ClusterToInfrastructureMapper(predicates), extensionshandler.UpdateWithNew),
+		}); err != nil {
+			return err
+		}
 	}
 
 	// Add additional watches to the controller besides the standard one.

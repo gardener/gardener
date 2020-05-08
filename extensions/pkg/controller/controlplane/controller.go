@@ -46,6 +46,10 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
+	// If the annotation is not ignored, the extension controller will only reconcile
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	IgnoreOperationAnnotation bool
 }
 
 // DefaultPredicates returns the default predicates for a controlplane reconciler.
@@ -81,12 +85,13 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	}
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.ControlPlane{}}, &handler.EnqueueRequestForObject{}, predicates...); err != nil {
-		return err
+	if args.IgnoreOperationAnnotation {
+		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+			ToRequests: extensionshandler.SimpleMapper(ClusterToControlPlaneMapper(predicates), extensionshandler.UpdateWithNew),
+		}); err != nil {
+			return err
+		}
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(ClusterToControlPlaneMapper(predicates), extensionshandler.UpdateWithNew),
-	})
+	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.ControlPlane{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }

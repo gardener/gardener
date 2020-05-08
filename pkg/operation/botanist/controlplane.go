@@ -333,6 +333,8 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           string(b.Shoot.Info.Spec.Provider.Type),
@@ -371,6 +373,8 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
 		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: b.Seed.Info.Spec.Provider.Type,
@@ -523,6 +527,8 @@ func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardencorev1beta1.GardenerName)
 		backupEntry.SetFinalizers(finalizers.UnsortedList())
@@ -1082,6 +1088,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 	values := map[string]interface{}{
 		"annotations": map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+			v1beta1constants.GardenerTimestamp: time.Now().UTC().String(),
 		},
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],

@@ -47,6 +47,10 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
+	// If the annotation is not ignored, the extension controller will only reconcile
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	IgnoreOperationAnnotation bool
 }
 
 // DefaultPredicates returns the default predicates for a controlplane reconciler.
@@ -75,30 +79,32 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	return add(mgr, args.ControllerOptions, predicates)
+	return add(mgr, args, predicates)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, options controller.Options, predicates []predicate.Predicate) error {
-	ctrl, err := controller.New(ControllerName, mgr, options)
+func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
+	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &corev1.Namespace{}},
-		&extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
-		}); err != nil {
-		return err
-	}
+	if args.IgnoreOperationAnnotation {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &corev1.Namespace{}},
+			&extensionshandler.EnqueueRequestsFromMapFunc{
+				ToRequests: extensionshandler.SimpleMapper(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+			}); err != nil {
+			return err
+		}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
-		&extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(SecretToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
-		}); err != nil {
-		return err
+		if err := ctrl.Watch(
+			&source.Kind{Type: &corev1.Secret{}},
+			&extensionshandler.EnqueueRequestsFromMapFunc{
+				ToRequests: extensionshandler.SimpleMapper(SecretToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+			}); err != nil {
+			return err
+		}
 	}
 
 	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.BackupEntry{}}, &handler.EnqueueRequestForObject{}, predicates...)

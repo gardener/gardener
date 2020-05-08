@@ -53,7 +53,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var json = jsoniter.ConfigFastest
+var (
+	json = jsoniter.ConfigFastest
+
+	// TimeNow returns the current time. Exposed for testing.
+	TimeNow = time.Now
+)
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
@@ -736,6 +741,7 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) e
 			return err
 		}
 		kutil.SetMetaDataAnnotation(acc, ConfirmationDeletion, "true")
+		kutil.SetMetaDataAnnotation(acc, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		if reflect.DeepEqual(existing, obj) {
 			return nil

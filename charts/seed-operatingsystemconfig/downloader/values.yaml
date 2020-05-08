@@ -2,3 +2,4 @@ type: coreos
 purpose: bootstrap
 secretName: cpu-worker-0
 server: api.shoot-cluster.example.com
+annotationCurrentTimestamp: 2020-05-06T10:18:01Z

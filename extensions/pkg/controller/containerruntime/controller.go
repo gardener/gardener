@@ -51,6 +51,10 @@ type AddArgs struct {
 	Resync time.Duration
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
+	// If the annotation is not ignored, the extension controller will only reconcile
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	IgnoreOperationAnnotation bool
 }
 
 // Add adds an ContainerRuntime controller to the given manager using the given AddArgs.
@@ -88,11 +92,13 @@ func add(mgr manager.Manager, args AddArgs) error {
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.ContainerRuntime{}}, &handler.EnqueueRequestForObject{}, predicates...); err != nil {
-		return err
+	if args.IgnoreOperationAnnotation {
+		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+			ToRequests: extensionshandler.SimpleMapper(ClusterToContainerResourceMapper(predicates...), extensionshandler.UpdateWithNew),
+		}); err != nil {
+			return err
+		}
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(ClusterToContainerResourceMapper(predicates...), extensionshandler.UpdateWithNew),
-	})
+	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.ContainerRuntime{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }

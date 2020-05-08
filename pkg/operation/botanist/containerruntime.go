@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -54,6 +55,8 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 			fns = append(fns, func(ctx context.Context) error {
 				_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), &toApply, func() error {
 					metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+					metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 					toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
 					toApply.Spec.Type = cr.Type
 					if cr.ProviderConfig != nil {

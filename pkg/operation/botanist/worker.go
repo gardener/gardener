@@ -136,6 +136,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 
 	_, err = controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
 		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

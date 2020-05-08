@@ -119,9 +119,10 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 
 func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
 	return map[string]interface{}{
-		"type":    machineImageName,
-		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-		"server":  fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
+		"type":                       machineImageName,
+		"purpose":                    extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+		"annotationCurrentTimestamp": time.Now().UTC().String(),
+		"server":                     fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 	}
 }
 
@@ -172,13 +173,14 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 	}
 
 	originalConfig["osc"] = map[string]interface{}{
-		"type":                 machineImage.Name,
-		"purpose":              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
-		"reloadConfigFilePath": common.CloudConfigFilePath,
-		"secretName":           secretName,
-		"customization":        customization,
-		"sshKey":               string(sshKey),
-		"cri":                  criConfig,
+		"type":                       machineImage.Name,
+		"purpose":                    extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+		"reloadConfigFilePath":       common.CloudConfigFilePath,
+		"secretName":                 secretName,
+		"customization":              customization,
+		"sshKey":                     string(sshKey),
+		"cri":                        criConfig,
+		"annotationCurrentTimestamp": time.Now().UTC().String(),
 	}
 
 	if data := worker.CABundle; data != nil {
