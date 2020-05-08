@@ -17,8 +17,8 @@ package network
 import (
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -46,6 +46,10 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
+	// If the annotation is not ignored, the extension controller will only reconcile
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	IgnoreOperationAnnotation bool
 }
 
 // DefaultPredicates returns the default predicates for a Network reconciler.
@@ -86,14 +90,13 @@ func add(mgr manager.Manager, args AddArgs) error {
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Network{}}, &handler.EnqueueRequestForObject{}, predicates...); err != nil {
-		return err
-	}
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(ClusterToNetworkMapper(predicates), extensionshandler.UpdateWithNew),
-	}); err != nil {
-		return err
+	if args.IgnoreOperationAnnotation {
+		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
+			ToRequests: extensionshandler.SimpleMapper(ClusterToNetworkMapper(predicates), extensionshandler.UpdateWithNew),
+		}); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Network{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }
