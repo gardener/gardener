@@ -110,8 +110,9 @@ func ComputeStatus(lastOperation *gardencorev1beta1.LastOperation, lastErrors []
 		return StatusHealthy
 	}
 
-	// If shoot is created or deleted then the last error indicates the healthiness.
-	if lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate || lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete {
+	// If the Shoot is either in create (except successful create) or delete state then the last error indicates the healthiness.
+	if (lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
+		lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete {
 		return BoolToStatus(len(lastErrors) == 0)
 	}
 
