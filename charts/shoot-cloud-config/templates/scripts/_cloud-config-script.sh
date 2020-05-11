@@ -61,7 +61,7 @@ if [ ! -f "$PATH_CLOUDCONFIG_OLD" ]; then
   touch "$PATH_CLOUDCONFIG_OLD"
 fi
 
-if [[ ! -f "$DIR_KUBELET/kubeconfig-real" ]]; then
+if [[ ! -f "$DIR_KUBELET/kubeconfig-real" ]] || [[ ! -f "$DIR_KUBELET/pki/kubelet-client-current.pem" ]]; then
   cat <<EOF > "$DIR_KUBELET/kubeconfig-bootstrap"
 ---
 apiVersion: v1

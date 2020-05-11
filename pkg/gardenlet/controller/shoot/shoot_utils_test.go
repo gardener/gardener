@@ -107,6 +107,8 @@ var _ = Describe("Shoot Utils", func() {
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, nil, shoot.StatusHealthy),
 			Entry("lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionFalse}}, shoot.StatusUnhealthy),
+			Entry("lastOperation.Type is LastOperationTypeCreate and lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",
+				&gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate, State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionFalse}}, shoot.StatusUnhealthy),
 		)
 
 		DescribeTable("#StatusLabelTransform",
