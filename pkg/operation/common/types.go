@@ -95,12 +95,12 @@ const (
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
 	// which the shoot's apiserver uses for encrypting selected etcd content.
-	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/deployment.yaml
 	EtcdEncryptionSecretName = "etcd-encryption-secret"
 
 	// EtcdEncryptionSecretFileName is the name of the file within the EncryptionConfiguration
 	// which is made available as volume mount to the shoot's apiserver.
-	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/deployment.yaml
 	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
 
 	// EtcdEncryptionChecksumAnnotationName is the name of the annotation with which to annotate
