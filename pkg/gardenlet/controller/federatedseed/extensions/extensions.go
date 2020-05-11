@@ -154,11 +154,11 @@ func createEnqueueFunc(queue workqueue.RateLimitingInterface) func(extensionObje
 func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(old, new extensionsv1alpha1.Object) bool) func(newExtensionObject, oldExtensionObject interface{}) {
 	return func(newObj, oldObj interface{}) {
 		var (
-			newExtensionObj = newObj.(extensionsv1alpha1.Object)
-			oldExtensionObj = oldObj.(extensionsv1alpha1.Object)
+			newExtensionObj, ok1 = newObj.(extensionsv1alpha1.Object)
+			oldExtensionObj, ok2 = oldObj.(extensionsv1alpha1.Object)
 		)
 
-		if !predicateFunc(oldExtensionObj, newExtensionObj) {
+		if ok1 && ok2 && !predicateFunc(oldExtensionObj, newExtensionObj) {
 			return
 		}
 
