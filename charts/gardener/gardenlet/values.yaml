@@ -72,7 +72,6 @@ global:
         seed:
           concurrentSyncs: 5
           syncPeriod: 1m
-          reserveExcessCapacity: true
         shoot:
           concurrentSyncs: 20
           syncPeriod: 1h

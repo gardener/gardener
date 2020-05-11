@@ -223,9 +223,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				return apierrors.NewBadRequest("could not convert old resource into Seed object")
 			}
 
-			if (helper.TaintsHave(oldSeed.Spec.Taints, core.SeedTaintDisableDNS) && !helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS)) ||
-				(!helper.TaintsHave(oldSeed.Spec.Taints, core.SeedTaintDisableDNS) && helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS)) {
-
+			if oldSeed.Spec.Settings.ShootDNS.Enabled != seed.Spec.Settings.ShootDNS.Enabled {
 				shootList, err2 := r.shootLister.List(labels.Everything())
 				if err2 != nil {
 					return err2
@@ -236,7 +234,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 						continue
 					}
 
-					err = fmt.Errorf("may not add/remove %q taint when shoots are still referencing to a seed", core.SeedTaintDisableDNS)
+					err = errors.New("may not change shoot DNS enablement setting when shoots are still referencing to a seed")
 				}
 			}
 		}

@@ -289,17 +289,8 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 	}
 
 	var taints []gardencorev1beta1.SeedTaint
-	if shootedSeedConfig.DisableDNS != nil && *shootedSeedConfig.DisableDNS {
-		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableDNS})
-	}
-	if shootedSeedConfig.DisableCapacityReservation != nil && *shootedSeedConfig.DisableCapacityReservation {
-		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintDisableCapacityReservation})
-	}
 	if shootedSeedConfig.Protected != nil && *shootedSeedConfig.Protected {
 		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintProtected})
-	}
-	if shootedSeedConfig.Visible != nil && !*shootedSeedConfig.Visible {
-		taints = append(taints, gardencorev1beta1.SeedTaint{Key: gardencorev1beta1.SeedTaintInvisible})
 	}
 
 	var volume *gardencorev1beta1.SeedVolume
@@ -328,6 +319,17 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 			Nodes:         shoot.Spec.Networking.Nodes,
 			BlockCIDRs:    shootedSeedConfig.BlockCIDRs,
 			ShootDefaults: shootedSeedConfig.ShootDefaults,
+		},
+		Settings: &gardencorev1beta1.SeedSettings{
+			ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
+				Enabled: shootedSeedConfig.DisableCapacityReservation == nil || *shootedSeedConfig.DisableCapacityReservation,
+			},
+			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+				Visible: shootedSeedConfig.Visible == nil || !*shootedSeedConfig.Visible,
+			},
+			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+				Enabled: shootedSeedConfig.DisableDNS == nil || *shootedSeedConfig.DisableDNS,
+			},
 		},
 		Taints: taints,
 		Backup: backupProfile,

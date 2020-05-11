@@ -201,13 +201,6 @@ type SeedControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// ReserveExcessCapacity indicates whether the Seed controller should reserve
-	// excess capacity for Shoot control planes in the Seeds. This is done via
-	// PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or
-	// the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API
-	// group enabled. It defaults to true.
-	// +optional
-	ReserveExcessCapacity *bool `json:"reserveExcessCapacity,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`

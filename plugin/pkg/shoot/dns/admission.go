@@ -269,7 +269,7 @@ func seedDisablesDNS(seedLister corelisters.SeedLister, seedName string) (bool, 
 	if err != nil {
 		return false, err
 	}
-	return helper.TaintsHave(seed.Spec.Taints, core.SeedTaintDisableDNS), nil
+	return !seed.Spec.Settings.ShootDNS.Enabled, nil
 }
 
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>

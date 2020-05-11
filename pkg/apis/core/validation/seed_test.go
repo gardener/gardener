@@ -57,7 +57,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						Namespace: "garden",
 					},
 					Taints: []core.SeedTaint{
-						{Key: core.SeedTaintProtected},
+						{Key: "foo"},
 					},
 					Networks: core.SeedNetworks{
 						Nodes:    &nodesCIDR,
@@ -113,8 +113,8 @@ var _ = Describe("Seed Validation Tests", func() {
 				},
 			}
 			seed.Spec.Taints = []core.SeedTaint{
-				{Key: core.SeedTaintProtected},
-				{Key: core.SeedTaintProtected},
+				{Key: "foo"},
+				{Key: "foo"},
 				{Key: ""},
 			}
 			seed.Spec.Backup.SecretRef = corev1.SecretReference{}
@@ -182,10 +182,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.taints[2].key"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.taints[2].key"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{

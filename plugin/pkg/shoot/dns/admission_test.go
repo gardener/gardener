@@ -111,6 +111,12 @@ var _ = Describe("dns", func() {
 				},
 			}
 			shoot = shootBase
+
+			seedBase.Spec.Settings = &core.SeedSettings{
+				ShootDNS: &core.SeedSettingShootDNS{
+					Enabled: true,
+				},
+			}
 			seed = seedBase
 		})
 
@@ -155,7 +161,7 @@ var _ = Describe("dns", func() {
 
 		It("should do nothing because the seed disables DNS", func() {
 			seedCopy := seed.DeepCopy()
-			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, core.SeedTaint{Key: core.SeedTaintDisableDNS})
+			seedCopy.Spec.Settings = &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: false}}
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.DNS = nil
 			shootBefore := shootCopy.DeepCopy()
@@ -171,7 +177,7 @@ var _ = Describe("dns", func() {
 
 		It("should throw an error because the seed disables DNS but shoot specifies a dns section", func() {
 			seedCopy := seed.DeepCopy()
-			seedCopy.Spec.Taints = append(seedCopy.Spec.Taints, core.SeedTaint{Key: core.SeedTaintDisableDNS})
+			seedCopy.Spec.Settings = &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: false}}
 
 			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)).To(Succeed())
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)

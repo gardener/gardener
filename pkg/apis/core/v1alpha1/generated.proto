@@ -1516,6 +1516,44 @@ message SeedProvider {
   optional string region = 3;
 }
 
+// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
+// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
+// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+message SeedSettingExcessCapacityReservation {
+  // Enabled controls whether the excess capacity reservation should be enabled.
+  optional bool enabled = 1;
+}
+
+// SeedSettingScheduling controls settings for scheduling decisions for the seed.
+message SeedSettingScheduling {
+  // Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
+  // are not considered by the scheduler.
+  optional bool visible = 1;
+}
+
+// SeedSettingShootDNS controls the shoot DNS settings for the seed.
+message SeedSettingShootDNS {
+  // Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
+  // seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
+  // This is useful for environments where DNS is not required.
+  optional bool enabled = 1;
+}
+
+// SeedSettings contains certain settings for this seed cluster.
+message SeedSettings {
+  // ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
+  // +optional
+  optional SeedSettingExcessCapacityReservation excessCapacityReservation = 1;
+
+  // Scheduling controls settings for scheduling decisions for the seed.
+  // +optional
+  optional SeedSettingScheduling scheduling = 2;
+
+  // ShootDNS controls the shoot DNS settings for the seed.
+  // +optional
+  optional SeedSettingShootDNS shootDNS = 3;
+}
+
 // SeedSpec is the specification of a Seed.
 message SeedSpec {
   // Backup holds the object store configuration for the backups of shoot (currently only etcd).
@@ -1551,6 +1589,10 @@ message SeedSpec {
   // Volume contains settings for persistentvolumes created in the seed cluster.
   // +optional
   optional SeedVolume volume = 8;
+
+  // Settings contains certain settings for this seed cluster.
+  // +optional
+  optional SeedSettings settings = 9;
 }
 
 // SeedStatus is the status of a Seed.

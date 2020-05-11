@@ -558,7 +558,7 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		}
 	}
 
-	if !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
+	if seed.Spec.Settings.ShootDNS.Enabled {
 		if shoot.Spec.DNS != nil {
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {

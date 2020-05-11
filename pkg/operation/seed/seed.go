@@ -623,7 +623,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"images":                chart.ImageMapToValues(images),
 			"imageVectorOverwrites": imageVectorOverwrites,
 		},
-		"reserveExcessCapacity": seed.reserveExcessCapacity,
+		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(),
 		},
@@ -779,11 +779,6 @@ func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient clien
 		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
 	}
 	return version, nil
-}
-
-// MustReserveExcessCapacity configures whether we have to reserve excess capacity in the Seed cluster.
-func (s *Seed) MustReserveExcessCapacity(must bool) {
-	s.reserveExcessCapacity = must
 }
 
 // GetValidVolumeSize is to get a valid volume size.

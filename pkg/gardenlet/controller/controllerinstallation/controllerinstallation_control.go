@@ -233,7 +233,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"volumeProviders": volumeProviders,
 				"ingressDomain":   seed.Spec.DNS.IngressDomain,
 				"protected":       gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
-				"visible":         !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible),
+				"visible":         seed.Spec.Settings.Scheduling.Visible,
 				"taints":          seed.Spec.Taints,
 				"networks":        seed.Spec.Networks,
 				"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,

@@ -85,6 +85,43 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 	}
 }
 
+// SetDefaults_Seed sets default values for Seed objects.
+func SetDefaults_Seed(obj *Seed) {
+	if obj.Spec.Settings == nil {
+		obj.Spec.Settings = &SeedSettings{}
+	}
+
+	if obj.Spec.Settings.ExcessCapacityReservation == nil {
+		enabled := true
+		for _, taint := range obj.Spec.Taints {
+			if taint.Key == DeprecatedSeedTaintDisableCapacityReservation {
+				enabled = false
+			}
+		}
+		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{Enabled: enabled}
+	}
+
+	if obj.Spec.Settings.Scheduling == nil {
+		visible := true
+		for _, taint := range obj.Spec.Taints {
+			if taint.Key == DeprecatedSeedTaintInvisible {
+				visible = false
+			}
+		}
+		obj.Spec.Settings.Scheduling = &SeedSettingScheduling{Visible: visible}
+	}
+
+	if obj.Spec.Settings.ShootDNS == nil {
+		enabled := true
+		for _, taint := range obj.Spec.Taints {
+			if taint.Key == DeprecatedSeedTaintDisableDNS {
+				enabled = false
+			}
+		}
+		obj.Spec.Settings.ShootDNS = &SeedSettingShootDNS{Enabled: enabled}
+	}
+}
+
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
 	k8sVersionLessThan116, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")

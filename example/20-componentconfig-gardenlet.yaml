@@ -58,7 +58,6 @@ controllers:
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m
-    reserveExcessCapacity: false
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

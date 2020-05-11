@@ -286,7 +286,7 @@ func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot
 	var candidates []*gardencorev1beta1.Seed
 	// Determine all candidate seed clusters matching the shoot's provider and region.
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			candidates = append(candidates, seed)
 		}
 	}
@@ -297,7 +297,7 @@ func determineCandidatesOfSameProvider(seedList []*gardencorev1beta1.Seed, shoot
 func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Seed {
 	var candidates []*gardencorev1beta1.Seed
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			candidates = append(candidates, seed)
 		}
 	}
@@ -316,7 +316,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 	)
 
 	for _, seed := range seeds {
-		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintInvisible) && common.VerifySeedReadiness(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Settings.Scheduling.Visible && common.VerifySeedReadiness(seed) {
 			seedRegion := seed.Spec.Provider.Region
 			var matchingCharacters int
 			for i := 0; i <= len(shootRegion); i++ {
@@ -388,7 +388,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 
 // ignore seed if it disables DNS and shoot has DNS but not unmanaged
 func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) bool {
-	if !gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
+	if seed.Spec.Settings.ShootDNS.Enabled {
 		return false
 	}
 	if shoot.Spec.DNS == nil {

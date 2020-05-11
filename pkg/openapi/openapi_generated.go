@@ -130,6 +130,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedList":                              schema_pkg_apis_core_v1alpha1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":  schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                 schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                   schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings":                          schema_pkg_apis_core_v1alpha1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec":                              schema_pkg_apis_core_v1alpha1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus":                            schema_pkg_apis_core_v1alpha1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint":                             schema_pkg_apis_core_v1alpha1_SeedTaint(ref),
@@ -243,6 +247,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                               schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                  schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings":                           schema_pkg_apis_core_v1beta1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                               schema_pkg_apis_core_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus":                             schema_pkg_apis_core_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint":                              schema_pkg_apis_core_v1beta1_SeedTaint(ref),
@@ -4683,6 +4691,102 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the excess capacity reservation should be enabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingScheduling controls settings for scheduling decisions for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"visible": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds are not considered by the scheduler.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"visible"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingShootDNS controls the shoot DNS settings for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here. This is useful for environments where DNS is not required.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettings contains certain settings for this seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"excessCapacityReservation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation"),
+						},
+					},
+					"scheduling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Scheduling controls settings for scheduling decisions for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling"),
+						},
+					},
+					"shootDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootDNS controls the shoot DNS settings for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4753,12 +4857,18 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume"),
 						},
 					},
+					"settings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Settings contains certain settings for this seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -9819,6 +9929,102 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the excess capacity reservation should be enabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingScheduling controls settings for scheduling decisions for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"visible": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds are not considered by the scheduler.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"visible"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingShootDNS controls the shoot DNS settings for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here. This is useful for environments where DNS is not required.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettings contains certain settings for this seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"excessCapacityReservation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation"),
+						},
+					},
+					"scheduling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Scheduling controls settings for scheduling decisions for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling"),
+						},
+					},
+					"shootDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootDNS controls the shoot DNS settings for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9875,12 +10081,18 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"),
 						},
 					},
+					"settings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Settings contains certain settings for this seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
