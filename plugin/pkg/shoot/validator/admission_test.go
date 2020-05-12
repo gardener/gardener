@@ -32,7 +32,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -510,8 +509,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+				Expect(err).To(BeBadRequestError())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
 		})

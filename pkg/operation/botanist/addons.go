@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	botanistconstants "github.com/gardener/gardener/pkg/operation/botanist/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -136,7 +137,7 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			common.ShootNoCleanup: "true",
 		}
 		labels = map[string]string{
-			ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener,
+			botanistconstants.ManagedResourceLabelKeyOrigin: botanistconstants.ManagedResourceLabelValueGardener,
 		}
 		charts = map[string]managedResourceOptions{
 			"shoot-core":            {false, b.generateCoreAddonsChart},
@@ -188,7 +189,7 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 			common.ShootNoCleanup: "true",
 		}
 		labels = map[string]string{
-			ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener,
+			botanistconstants.ManagedResourceLabelKeyOrigin: botanistconstants.ManagedResourceLabelValueGardener,
 		}
 		managedResourceName = "shoot-cloud-config-execution"
 		secretLabels        = map[string]string{
