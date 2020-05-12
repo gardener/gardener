@@ -1090,11 +1090,6 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: time.Now().UTC().String(),
 		},
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
-			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
-			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
-		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
@@ -1137,10 +1132,16 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		hvpaValues["enabled"] = hvpaEnabled
 		hvpaValues["maintenanceWindow"] = b.Shoot.Info.Spec.Maintenance.TimeWindow
 
+		podAnnotations := map[string]interface{}{
+			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
+			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
+			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
+		}
+
 		switch role {
 		case common.EtcdRoleMain:
+			podAnnotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
 			etcdValues["metrics"] = "extensive" // etcd-main emits extensive (histogram) metrics
-
 			hvpaValues["minAllowed"] = map[string]interface{}{
 				"cpu":    "200m",
 				"memory": "700M",
@@ -1222,6 +1223,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		values["etcd"] = etcdValues
 		values["sidecar"] = sidecarValues
 		values["hvpa"] = hvpaValues
+		values["podAnnotations"] = podAnnotations
 
 		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 			return err
