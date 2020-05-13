@@ -76,7 +76,7 @@ global:
         shoot:
           concurrentSyncs: 20
           syncPeriod: 1h
-          retryDuration: 24h
+          retryDuration: 12h
           respectSyncPeriodOverwrite: false
           reconcileInMaintenanceOnly: false
         shootCare:

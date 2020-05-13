@@ -509,8 +509,7 @@ func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error 
 			if status.RetryCycleStartTime == nil ||
 				(status.LastOperation != nil && status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete) ||
 				o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
-				o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
-				(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed) {
+				o.Shoot.Info.Status.Gardener.Version != version.Get().GitVersion {
 
 				shoot.Status.RetryCycleStartTime = &now
 			}

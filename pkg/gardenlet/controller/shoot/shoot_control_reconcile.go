@@ -432,8 +432,7 @@ func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, ope
 
 	if o.Shoot.Info.Status.RetryCycleStartTime == nil ||
 		o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
-		o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
-		(o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed) {
+		o.Shoot.Info.Status.Gardener.Version != version.Get().GitVersion {
 
 		now := metav1.NewTime(time.Now().UTC())
 		retryCycleStartTime = &now

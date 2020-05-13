@@ -269,7 +269,7 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	}
 
 	if obj.RetryDuration == nil {
-		v := metav1.Duration{Duration: 24 * time.Hour}
+		v := metav1.Duration{Duration: 12 * time.Hour}
 		obj.RetryDuration = &v
 	}
 }
