@@ -50,245 +50,246 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/gardener/gardener/pkg/utils"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	. "github.com/gardener/gardener/test/integration/framework"
-	. "github.com/gardener/gardener/test/integration/shoots"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	kubeconfig             = flag.String("kubecfg", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-	testShootsPrefix       = flag.String("prefix", "", "prefix to use for test shoots")
-	cloudprofile           = flag.String("cloud-profile", "", "cloudprofile to use for the shoot")
-	logLevel               = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	schedulerTestNamespace = flag.String("scheduler-test-namespace", "", "the namespace where the shoot will be created")
-	secretBinding          = flag.String("secret-binding", "", "the secretBinding for the provider account of the shoot")
-	providerType           = flag.String("provider-type", "", "the type of the cloud provider where the shoot is deployed to. e.g gcp, aws,azure,alicloud")
-	shootK8sVersion        = flag.String("k8s-version", "", "kubernetes version to use for the shoot")
-	testMachineryRun       = flag.Bool("test-machinery-run", false, "indicates whether the test is being executed by the test machinery or locally")
-	projectNamespace       = flag.String("project-namespace", "", "project namespace where the shoot will be created")
-	workerZone             = flag.String("worker-zone", "", "zone to use for every worker of the shoot.")
+	hostKubeconfig   = flag.String("host-kubeconfig", "", "the path to the kubeconfig  of the cluster that hosts the gardener controlplane")
+	testMachineryRun = flag.Bool("test-machinery-run", false, "indicates whether the test is being executed by the test machinery or locally")
 
-	// ProviderConfigs
-	infrastructureProviderConfig = flag.String("infrastructure-provider-config-filepath", "", "filepath to the provider specific infrastructure config")
-
-	schedulerGardenerTest         *SchedulerGardenerTest
 	gardenerSchedulerReplicaCount *int32
 )
 
 const (
 	WaitForCreateDeleteTimeout = 600 * time.Second
 	InitializationTimeout      = 600 * time.Second
-	DumpStateTimeout           = 5 * time.Minute
 	// timeouts
 	setupContextTimeout = time.Minute * 2
 	restoreCtxTimeout   = time.Minute * 2
 )
 
+func init() {
+	framework.RegisterShootCreationFrameworkFlags()
+}
+
 type name string
 
 const nameKey name = "name"
 
-func validateFlags() {
-	if !StringSet(*kubeconfig) {
-		Fail("you need to specify a path to the Kubeconfig of the Garden cluster")
-	}
-
-	if !FileExists(*kubeconfig) {
-		Fail("path to the Kubeconfig of the Garden cluster does not exist")
-	}
-
-	if !StringSet(*schedulerTestNamespace) {
-		Fail("you need to specify the namespace where the shoot will be created")
-	}
-
-	if !StringSet(*logLevel) {
-		level := "debug"
-		logLevel = &level
-	}
-
-	if !StringSet(*providerType) {
-		Fail("you need to specify provider type of the shoot")
-	}
-
-	if !StringSet(*infrastructureProviderConfig) {
-		Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", *providerType))
-	}
-
-	if !FileExists(*infrastructureProviderConfig) {
-		Fail("path to the infrastructureProviderConfig of the Shoot is invalid")
-	}
-
-}
-
 var _ = Describe("Scheduler testing", func() {
+
+	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
+		GardenerConfig: &framework.GardenerConfig{
+			CommonConfig: &framework.CommonConfig{
+				ResourceDir: "../../framework/resources",
+			},
+		},
+	})
 	var (
-		gardenerTestOperation         *GardenerTestOperation
-		shoot                         *gardencorev1beta1.Shoot
-		schedulerOperationsTestLogger *logrus.Logger
-		cleanupNeeded                 bool
-		shootYamlPath                 = "/example/90-shoot.yaml"
+		hostClusterClient      kubernetes.Interface
+		cloudprofile           *gardencorev1beta1.CloudProfile
+		seeds                  []gardencorev1beta1.Seed
+		schedulerConfiguration *config.SchedulerConfiguration
+		cleanupNeeded          bool
 	)
 
-	CBeforeSuite(func(ctx context.Context) {
-		schedulerOperationsTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-		validateFlags()
-
-		// if running in test machinery, test will be executed from root of the project
-		if !FileExists(fmt.Sprintf(".%s", shootYamlPath)) {
-			// locally, we need find the example shoot
-			shootYamlPath = GetProjectRootPath() + shootYamlPath
-			Expect(FileExists(shootYamlPath)).To(Equal(true))
-		}
-
-		// parse shoot yaml into shoot object and generate random test names for shoots
-		_, shootObject, err := CreateShootTestArtifacts(shootYamlPath, testShootsPrefix, projectNamespace, nil, cloudprofile, secretBinding, providerType, shootK8sVersion, nil, true, true)
-		Expect(err).To(BeNil())
-
-		shoot = shootObject
-		shoot.Spec.SeedName = nil
-
-		// parse Infrastructure config
-		infrastructureProviderConfig, err := ParseFileAsProviderConfig(*infrastructureProviderConfig)
-		Expect(err).To(BeNil())
-		shoot.Spec.Provider.InfrastructureConfig = infrastructureProviderConfig
+	framework.CBeforeSuite(func(ctx context.Context) {
+		framework.ExpectNoError(f.InitializeShootWithFlags(ctx))
+		f.Shoot.Spec.SeedName = nil
 
 		// set other provider configs to nil as we do not need them for shoot creation (without reconciliation)
-		shoot.Spec.Provider.ControlPlaneConfig = nil
-		shoot.Spec.Extensions = nil
+		f.Shoot.Spec.Provider.ControlPlaneConfig = nil
+		f.Shoot.Spec.Extensions = nil
 
-		shootGardenerTest, err := NewShootGardenerTest(*kubeconfig, shoot, schedulerOperationsTestLogger)
-		Expect(err).To(BeNil())
+		var err error
+		hostClusterClient, err = kubernetes.NewClientFromFile("", *hostKubeconfig, kubernetes.WithClientOptions(
+			client.Options{
+				Scheme: kubernetes.ShootScheme,
+			}),
+		)
+		framework.ExpectNoError(err)
 
-		Expect(shootGardenerTest.SetupShootWorker(workerZone)).To(Succeed())
-		Expect(len(shootGardenerTest.Shoot.Spec.Provider.Workers)).Should(BeNumerically(">=", 1))
+		schedulerConfigurationConfigMap := &corev1.ConfigMap{}
+		err = hostClusterClient.Client().Get(ctx, client.ObjectKey{Namespace: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapNamespace, Name: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapName}, schedulerConfigurationConfigMap)
+		framework.ExpectNoError(err)
 
-		schedulerGardenerTest, err = NewGardenSchedulerTest(ctx, shootGardenerTest, *kubeconfig)
-		Expect(err).NotTo(HaveOccurred())
-		schedulerGardenerTest.ShootGardenerTest.Shoot.Namespace = *schedulerTestNamespace
+		schedulerConfiguration, err = framework.ParseSchedulerConfiguration(schedulerConfigurationConfigMap)
+		framework.ExpectNoError(err)
+
+		cloudprofile, err = f.GetCloudProfile(ctx, f.Shoot.Spec.CloudProfileName)
+		framework.ExpectNoError(err)
+
+		seeds, err = f.GetSeeds(ctx)
+		framework.ExpectNoError(err)
 
 		if testMachineryRun != nil && *testMachineryRun {
-			schedulerOperationsTestLogger.Info("Running in test Machinery")
-			replicas, err := ScaleGardenerControllerManager(setupContextTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), pointer.Int32Ptr(0))
+			f.Logger.Info("Running in test Machinery")
+			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
-			schedulerOperationsTestLogger.Info("Environment for test-machinery run is prepared")
+			f.Logger.Info("Environment for test-machinery run is prepared")
 		}
-
-		gardenerTestOperation, err = NewGardenTestOperationWithShoot(ctx, schedulerGardenerTest.ShootGardenerTest.GardenClient, schedulerOperationsTestLogger, nil)
-		Expect(err).ToNot(HaveOccurred())
 	}, InitializationTimeout)
 
-	CAfterSuite(func(ctx context.Context) {
+	framework.CAfterSuite(func(ctx context.Context) {
 		if cleanupNeeded {
 			// Finally we delete the shoot again
-			schedulerOperationsTestLogger.Infof("Delete shoot %s", shoot.Name)
-			err := schedulerGardenerTest.ShootGardenerTest.DeleteShoot(ctx)
-			Expect(err).NotTo(HaveOccurred())
+			f.Logger.Infof("Delete shoot %s", f.Shoot.Name)
+			err := f.DeleteShoot(ctx, f.Shoot)
+			framework.ExpectNoError(err)
 		}
 		if testMachineryRun != nil && *testMachineryRun {
 			// Scale up ControllerManager again to restore state before this test.
-			_, err := ScaleGardenerControllerManager(restoreCtxTimeout, schedulerGardenerTest.ShootGardenerTest.GardenClient.Client(), gardenerSchedulerReplicaCount)
-			Expect(err).NotTo(HaveOccurred())
-			schedulerOperationsTestLogger.Infof("Environment is restored")
+			_, err := framework.ScaleGardenerControllerManager(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
+			framework.ExpectNoError(err)
+			f.Logger.Infof("Environment is restored")
 		}
 		// wait until shoot is deleted
 		if cleanupNeeded {
-			err := schedulerGardenerTest.ShootGardenerTest.WaitForShootToBeDeleted(ctx)
-			Expect(err).NotTo(HaveOccurred())
+			err := f.WaitForShootToBeDeleted(ctx, f.Shoot)
+			framework.ExpectNoError(err)
 		}
 	}, InitializationTimeout)
 
-	CAfterEach(func(ctx context.Context) {
-		gardenerTestOperation.AfterEach(ctx)
-	}, DumpStateTimeout)
-
 	// Only being executed if Scheduler is configured with SameRegion Strategy
-	CIt("SameRegion Scheduling Strategy Test - should fail because no Seed in same region exists", func(ctx context.Context) {
-		if schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy != config.SameRegion {
-			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.SameRegion, schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy)
+	framework.CIt("SameRegion Scheduling Strategy Test - should fail because no Seed in same region exists", func(ctx context.Context) {
+		if schedulerConfiguration.Schedulers.Shoot.Strategy != config.SameRegion {
+			f.Logger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.SameRegion, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			return
 		}
 
 		// set shoot to a unsupportedRegion where no seed is deployed
-		unsupportedRegion, err := schedulerGardenerTest.ChooseRegionAndZoneWithNoSeed()
+		unsupportedRegion, err := ChooseRegionAndZoneWithNoSeed(cloudprofile.Spec.Regions, seeds)
 		Expect(err).NotTo(HaveOccurred())
-		schedulerGardenerTest.ShootGardenerTest.Shoot.Spec.Region = unsupportedRegion.Name
+		f.Shoot.Spec.Region = unsupportedRegion.Name
 
 		// First we create the target shoot.
 		shootCreateDeleteContext := context.WithValue(ctx, nameKey, "schedule shoot and delete the unschedulable shoot after")
 
-		_, err = schedulerGardenerTest.CreateShoot(shootCreateDeleteContext)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.GardenerFramework.CreateShoot(shootCreateDeleteContext, f.Shoot)
+		framework.ExpectNoError(err)
 		cleanupNeeded = true
 		// expecting it to fail to schedule shoot and report in condition (api server sets)
-		err = schedulerGardenerTest.WaitForShootToBeUnschedulable(ctx)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.WaitForShootToBeUnschedulable(ctx, f.Shoot)
+		framework.ExpectNoError(err)
 	}, WaitForCreateDeleteTimeout)
 
 	// Only being executed if Scheduler is configured with Minimal Distance Strategy
 	// Tests if scheduling with MinimalDistance & actual creation of the shoot cluster in different region than the seed control works
-	CIt("Minimal Distance Scheduling Strategy Test", func(ctx context.Context) {
-		if schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy != config.MinimalDistance {
-			schedulerOperationsTestLogger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.MinimalDistance, schedulerGardenerTest.SchedulerConfiguration.Schedulers.Shoot.Strategy)
+	framework.CIt("Minimal Distance Scheduling Strategy Test", func(ctx context.Context) {
+		if schedulerConfiguration.Schedulers.Shoot.Strategy != config.MinimalDistance {
+			f.Logger.Infof("Skipping Test, because Scheduler is not configured with strategy '%s' but with '%s'", config.MinimalDistance, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			return
 		}
 		// set shoot to a unsupportedRegion where no seed is deployed
-		unsupportedRegion, err := schedulerGardenerTest.ChooseRegionAndZoneWithNoSeed()
+		unsupportedRegion, err := ChooseRegionAndZoneWithNoSeed(cloudprofile.Spec.Regions, seeds)
 		Expect(err).NotTo(HaveOccurred())
-		schedulerGardenerTest.ShootGardenerTest.Shoot.Spec.Region = unsupportedRegion.Name
+		f.Shoot.Spec.Region = unsupportedRegion.Name
 		// setZones(unsupportedRegion)
 
 		// First we create the target shoot.
 		shootScheduling := context.WithValue(ctx, nameKey, "schedule shoot, create the shoot and delete the shoot after")
 
-		_, err = schedulerGardenerTest.CreateShoot(shootScheduling)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.GardenerFramework.CreateShoot(shootScheduling, f.Shoot)
+		framework.ExpectNoError(err)
 		cleanupNeeded = true
 		// expecting it to to schedule shoot to seed
-		err = schedulerGardenerTest.WaitForShootToBeScheduled(ctx)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.WaitForShootToBeScheduled(ctx, f.Shoot)
+		framework.ExpectNoError(err)
 
 		// We do apiserver scheduling tests here that rely on an existing shoot to avoid having to create another shoot
 		By("Api Server ShootBindingStrategy test - wrong scheduling decision: seed does not exist")
 		// create invalid Seed
-		invalidSeed, err := schedulerGardenerTest.GenerateInvalidSeed()
-		Expect(err).NotTo(HaveOccurred())
+		invalidSeed, err := GenerateInvalidSeed(seeds)
+		framework.ExpectNoError(err)
 
 		// retrieve valid shoot
 		alreadyScheduledShoot := &gardencorev1beta1.Shoot{}
-		err = schedulerGardenerTest.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, alreadyScheduledShoot)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, alreadyScheduledShoot)
+		framework.ExpectNoError(err)
 
-		err = schedulerGardenerTest.ScheduleShoot(ctx, alreadyScheduledShoot, invalidSeed)
-		Expect(err).To(HaveOccurred())
+		err = f.ScheduleShoot(ctx, alreadyScheduledShoot, invalidSeed)
+		framework.ExpectNoError(err)
 
 		// double check that invalid seed is not set
 		currentShoot := &gardencorev1beta1.Shoot{}
-		err = schedulerGardenerTest.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, currentShoot)
-		Expect(err).NotTo(HaveOccurred())
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, currentShoot)
+		framework.ExpectNoError(err)
 		Expect(*currentShoot.Spec.SeedName).NotTo(Equal(invalidSeed.Name))
 
 		By("Api Server ShootBindingStrategy test - wrong scheduling decision: already scheduled")
 
 		// try to schedule a shoot that is already scheduled to another valid seed
-		seed, err := schedulerGardenerTest.ChooseSeedWhereTestShootIsNotDeployed(currentShoot)
+		seed, err := ChooseSeedWhereTestShootIsNotDeployed(currentShoot, seeds)
 
 		if err != nil {
-			schedulerOperationsTestLogger.Warnf("Test not executed: %v", err)
+			f.Logger.Warnf("Test not executed: %v", err)
 		} else {
 			Expect(len(seed.Name)).NotTo(Equal(0))
-			err = schedulerGardenerTest.ScheduleShoot(ctx, alreadyScheduledShoot, seed)
-			Expect(err).To(HaveOccurred())
+			err = f.ScheduleShoot(ctx, alreadyScheduledShoot, seed)
+			framework.ExpectNoError(err)
 		}
 	}, WaitForCreateDeleteTimeout)
 })
+
+// GenerateInvalidSeed generates a seed with an invalid dummy name
+func GenerateInvalidSeed(seeds []gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+	validSeed := seeds[0]
+	if len(validSeed.Name) == 0 {
+		return nil, fmt.Errorf("failed to retrieve a valid seed from the current cluster")
+	}
+	invalidSeed := validSeed.DeepCopy()
+	randomString, err := utils.GenerateRandomString(10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate a random string for the name of the seed cluster")
+	}
+	invalidSeed.ObjectMeta.Name = "dummy-" + randomString
+	return invalidSeed, nil
+}
+
+// ChooseRegionAndZoneWithNoSeed chooses a region within the cloud provider of the shoot were no seed is deployed and that is allowed by the cloud profile
+func ChooseRegionAndZoneWithNoSeed(regions []gardencorev1beta1.Region, seeds []gardencorev1beta1.Seed) (*gardencorev1beta1.Region, error) {
+	if len(regions) == 0 {
+		return nil, fmt.Errorf("no regions configured in CloudProfile")
+	}
+
+	// Find Region where no seed is deployed -
+	for _, region := range regions {
+		foundRegionInSeed := false
+		for _, seed := range seeds {
+			if seed.Spec.Provider.Region == region.Name {
+				foundRegionInSeed = true
+				break
+			}
+		}
+		if !foundRegionInSeed {
+			return &region, nil
+		}
+	}
+	return nil, fmt.Errorf("could not determine a region where no seed is deployed already")
+}
+
+// ChooseSeedWhereTestShootIsNotDeployed determines a Seed different from the shoot's seed using the same Provider(e.g aws)
+// If none can be found, it returns an error
+func ChooseSeedWhereTestShootIsNotDeployed(shoot *gardencorev1beta1.Shoot, seeds []gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+	for _, seed := range seeds {
+		if seed.Name != *shoot.Spec.SeedName && seed.Spec.Provider.Type == shoot.Spec.Provider.Type {
+			return &seed, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find another seed that is not in use by the test shoot")
+}

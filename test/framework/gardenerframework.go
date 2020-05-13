@@ -73,7 +73,7 @@ func NewGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
 		commonConfig = cfg.CommonConfig
 	}
 	f := &GardenerFramework{
-		CommonFramework:         NewCommonFramework(commonConfig),
+		CommonFramework:         NewCommonFrameworkFromConfig(commonConfig),
 		TestDescription:         NewTestDescription("GARDENER"),
 		GardenerFrameworkConfig: cfg,
 	}
@@ -136,7 +136,7 @@ func RegisterGardenerFrameworkFlags() *GardenerConfig {
 
 	newCfg := &GardenerConfig{}
 
-	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the KubeconfigSecretKeyName  of the garden cluster that will be used for integration tests")
+	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
 	flag.StringVar(&newCfg.ProjectNamespace, "project-namespace", "", "specify the gardener project namespace to run tests")
 
 	gardenerCfg = newCfg

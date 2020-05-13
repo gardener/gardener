@@ -344,20 +344,6 @@ func (a *Agnostic) AddonManager() *SourcePod {
 	}
 }
 
-// DependencyWatchdog points to dependency-watchdog instance.
-func (a *Agnostic) DependencyWatchdog() *SourcePod {
-	return &SourcePod{
-		Pod: NewPod("dependency-watchdog", labels.Set{
-			"role": "dependency-watchdog",
-		}),
-		ExpectedPolicies: sets.NewString(
-			"allow-to-dns",
-			"allow-to-seed-apiserver",
-			"deny-all",
-		),
-	}
-}
-
 // Busybox points to busybox instance.
 func (a *Agnostic) Busybox() *SourcePod {
 	return &SourcePod{
