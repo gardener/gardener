@@ -620,6 +620,7 @@ ControllerRegistrationSpec
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Resources is a list of combinations of kinds (DNSProvider, Infrastructure, Generic, &hellip;) and their actual types
 (aws-route53, gcp, auditlog, &hellip;).</p>
 </td>
@@ -2702,8 +2703,47 @@ ProviderConfig
 <p>ProviderConfig contains type-specific configuration.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>policy</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">
+ControllerDeploymentPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Policy controls how the controller is deployed. It defaults to &lsquo;OnDemand&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+considered for a deployment.
+An empty list means that all seeds are selected.</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>)
+</p>
+<p>
+<p>ControllerDeploymentPolicy is a string alias.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ControllerInstallationSpec">ControllerInstallationSpec
 </h3>
 <p>
@@ -2823,6 +2863,7 @@ ProviderConfig
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Resources is a list of combinations of kinds (DNSProvider, Infrastructure, Generic, &hellip;) and their actual types
 (aws-route53, gcp, auditlog, &hellip;).</p>
 </td>
@@ -2907,6 +2948,20 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>primary</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
+resource&rsquo;s lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
+combination.</p>
 </td>
 </tr>
 </tbody>
@@ -3247,6 +3302,18 @@ ProviderConfig
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig is the configuration passed to extension resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>disabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Disabled allows to disable extensions that were marked as &lsquo;globally enabled&rsquo; by Gardener administrators.</p>
 </td>
 </tr>
 </tbody>

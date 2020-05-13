@@ -1,4 +1,4 @@
-# Register extension controllers
+# Registering Extension Controllers
 
 Extensions are registered in the garden cluster via [`ControllerRegistration`](../../example/25-controllerregistration.yaml) resources.
 Gardener is evaluating the registrations and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
@@ -16,10 +16,24 @@ spec:
   resources:
   - kind: OperatingSystemConfig
     type: coreos
+    primary: true
 ```
 
 This information tells Gardener that there is an extension controller that can handle `OperatingSystemConfig` resources of type `coreos`.
-It will now create `ControllerInstallation` resources:
+
+Also, it specifies that this controller is the primary one responsible for the lifecycle of the `OperatingSystemConfig` resource.
+Setting `primary` to `false` would allow to register additional, secondary controllers that may also watch/react on the `OperatingSystemConfig/coreos` resources, however, only the primary controller may change/update the main `status` of the extension object (that are used to "communicate" with the Gardenlet).
+Particularly, only the primary controller may set `.status.lastOperation`, `.status.lastError`, `.status.observedGeneration`, and `.status.state`.
+Secondary controllers may contribute to the `.status.conditions[]` if they like, of course.
+ 
+Secondary controllers might be helpful in scenarios where additional tasks need to be completed which are not part of the reconciliation logic of the primary controller but separated out into a dedicated extension. 
+
+⚠️ There must be exactly one primary controller for every registered kind/type combination.
+Also, please note that the `primary` field cannot be changed after creation of the `ControllerRegistration`.
+
+## Deploying Extension Controllers
+
+Submitting above `ControllerRegistration` will create a `ControllerInstallation` resource:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -41,6 +55,7 @@ This resource expresses that Gardener requires the `os-coreos` extension control
 
 The Gardener Controller Manager does automatically determine which extension is required on which seed cluster and will only create `ControllerInstallation` objects for those.
 Also, it will automatically delete `ControllerInstallation`s referencing extension controllers that are no longer required on a seed (e.g., because all shoots on it have been deleted).
+There are additional configuration options, please see [this section](#deployment-configuration-options).
 
 ## How do extension controllers get deployed to seeds?
 
@@ -154,3 +169,38 @@ In the above example, Gardener itself does not understand the AWS-specific provi
 However, if this part of the `Shoot` resource should be validated then you should run an AWS-specific component in the garden cluster that registers a webhook. You can do it similarly if you want to default some fields of a resource (by using a `MutatingWebhookConfiguration`).
 
 Again, similar to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
+
+### `Extension` resource configurations
+
+The `Extension` resource allows to inject arbitrary steps into the shoot reconciliation flow that are unknown to Gardener.
+Hence, it is slightly special and allows further configuration when registering it:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: extension-foo
+spec:
+  resources:
+  - kind: Extension
+    type: foo
+    primary: true
+    globallyEnabled: true
+    reconcileTimeout: 30s
+```
+
+The `globallyEnabled=true` option specifies that the `Extension/foo` object shall be created by default for all shoots (unless they opted out by setting `.spec.extensions[].enabled=false` in the `Shoot` spec).
+
+The `reconcileTimeout` tells Gardener how long it should wait during its shoot reconciliation flow for the `Extension/foo`'s reconciliation to finish.
+
+### Deployment configuration options
+
+The `.spec.deployment` resource allows to configure a deployment `policy`.
+There are the following policies:
+
+* `OnDemand` (default): Gardener will demand the deployment and deletion of the extension controller to/from seed clusters dynamically. It will automatically determine (based on other resources like `Shoot`s) whether it is required and decide accordingly.
+* `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers are deployed and ready in case you have highly fluctuating seed clusters.
+
+Also, the `.spec.deployment.seedSelector` allows to specify a label selector for seed clusters.
+Only if it matches the labels of a seed then it will be deployed to it.
+Please note that a seed selector can only be specified for secondary controllers (`primary=false` for all `.spec.resources[]`).

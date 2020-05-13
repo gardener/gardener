@@ -218,6 +218,7 @@ spec:
   #   apiVersion: foobar.extensions.gardener.cloud/v1alpha1
   #   kind: FooBarConfig
   #   foo: bar
+  # disabled: true # only relevant for extensions that were marked as 'globally enabled' by Gardener administrators
   networking:
     type: calico
     pods: 100.96.0.0/11

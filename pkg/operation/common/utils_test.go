@@ -657,4 +657,10 @@ var _ = Describe("common", func() {
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
 		})
 	})
+
+	Describe("#ExtensionID", func() {
+		It("should return the expected identifier", func() {
+			Expect(ExtensionID("foo", "bar")).To(Equal("foo/bar"))
+		})
+	})
 })

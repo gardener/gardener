@@ -22,7 +22,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -141,7 +140,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 	}
 
 	var (
-		controllerRegistrationNameToObject, kindTypeToControllerRegistrationName = computeControllerRegistrationMaps(controllerRegistrationList)
+		controllerRegistrations = computeControllerRegistrationMaps(controllerRegistrationList)
 
 		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList, seed.Name)
 		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(logger, backupEntryList, buckets, seed.Name)
@@ -154,17 +153,17 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 						Union(wantedKindTypeCombinationForShoots)
 	)
 
-	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, kindTypeToControllerRegistrationName, seed.Name)
+	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerRegistrations, seed.Labels)
 	if err != nil {
 		return err
 	}
 
-	registrationNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrationNameToObject, seed.Name)
+	registrationNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrations, seed.Name)
 	if err != nil {
 		return err
 	}
 
-	if err := deployNeededInstallations(ctx, logger, c.k8sGardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrationNameToObject, registrationNameToInstallationName); err != nil {
+	if err := deployNeededInstallations(ctx, logger, c.k8sGardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
 		return err
 	}
 	return deleteUnneededInstallations(ctx, logger, c.k8sGardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallationName)
@@ -188,7 +187,7 @@ func computeKindTypesForBackupBuckets(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(common.ExtensionID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations, buckets
@@ -215,7 +214,7 @@ func computeKindTypesForBackupEntries(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(fmt.Sprintf("%s/%s", extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(common.ExtensionID(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -270,64 +269,73 @@ func computeKindTypesForShoots(
 	return wantedKindTypeCombinations
 }
 
-// computeControllerRegistrationMaps computes two maps. The first map maps the name of a ControllerRegistration to
-// the *gardencorev1beta1.ControllerRegistration object. The second map maps the registered kind/type combinations
-// to the supporting *gardencorev1beta1.ControllerRegistration object.
+type controllerRegistration struct {
+	obj          *gardencorev1beta1.ControllerRegistration
+	deployAlways bool
+}
+
+// computeControllerRegistrationMaps computes two maps and a string slice. The first map maps the name of a
+// ControllerRegistration to the *gardencorev1beta1.ControllerRegistration object. The second map maps the registered
+// kind/type combinations to the supporting *gardencorev1beta1.ControllerRegistration objects. If the ControllerRegistration
+// specifies a seed selector then it will be validated against the provided seed labels map. Only if it matches then the
+// ControllerRegistration will be considered. The string slice contains the list of names of ControllerRegistrations
+// having the 'Always' deployment policy.
 func computeControllerRegistrationMaps(
 	controllerRegistrationList []*gardencorev1beta1.ControllerRegistration,
-) (map[string]*gardencorev1beta1.ControllerRegistration, map[string]string) {
-	var (
-		controllerRegistrationNameToObject   = make(map[string]*gardencorev1beta1.ControllerRegistration)
-		kindTypeToControllerRegistrationName = make(map[string]string)
-	)
-
-	for _, controllerRegistration := range controllerRegistrationList {
-		controllerRegistrationNameToObject[controllerRegistration.Name] = controllerRegistration
-		for _, resource := range controllerRegistration.Spec.Resources {
-			kindTypeToControllerRegistrationName[fmt.Sprintf("%s/%s", resource.Kind, resource.Type)] = controllerRegistration.Name
+) map[string]controllerRegistration {
+	var out = make(map[string]controllerRegistration)
+	for _, cr := range controllerRegistrationList {
+		out[cr.Name] = controllerRegistration{
+			obj:          cr.DeepCopy(),
+			deployAlways: cr.Spec.Deployment != nil && cr.Spec.Deployment.Policy != nil && *cr.Spec.Deployment.Policy == gardencorev1beta1.ControllerDeploymentPolicyAlways,
 		}
 	}
-
-	return controllerRegistrationNameToObject, kindTypeToControllerRegistrationName
+	return out
 }
 
 // computeWantedControllerRegistrationNames computes the list of names of ControllerRegistration objects that are desired
 // to be installed. The computation is performed based on a list of required kind/type combinations and the proper mapping
-// to existing ControllerRegistration objects.
+// to existing ControllerRegistration objects. Additionally, all names in the alwaysPolicyControllerRegistrationNames list
+// will be returned.
 func computeWantedControllerRegistrationNames(
 	wantedKindTypeCombinations sets.String,
-	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
-	kindTypeToControllerRegistrationName map[string]string,
-	seedName string,
+	controllerRegistrations map[string]controllerRegistration,
+	seedLabels map[string]string,
 ) (sets.String, error) {
-	names := sets.NewString()
+	var (
+		kindTypeToControllerRegistrationNames = make(map[string][]string)
+		wantedControllerRegistrationNames     = sets.NewString()
+	)
+
+	for name, controllerRegistration := range controllerRegistrations {
+		if controllerRegistration.deployAlways {
+			wantedControllerRegistrationNames.Insert(name)
+		}
+
+		for _, resource := range controllerRegistration.obj.Spec.Resources {
+			id := common.ExtensionID(resource.Kind, resource.Type)
+			kindTypeToControllerRegistrationNames[id] = append(kindTypeToControllerRegistrationNames[id], name)
+		}
+	}
 
 	for _, requiredExtension := range wantedKindTypeCombinations.UnsortedList() {
-		name, ok := kindTypeToControllerRegistrationName[requiredExtension]
+		names, ok := kindTypeToControllerRegistrationNames[requiredExtension]
 		if !ok {
 			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", requiredExtension)
 		}
-		names.Insert(name)
+
+		wantedControllerRegistrationNames.Insert(names...)
 	}
 
-	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != seedName {
-			continue
-		}
-		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
-			continue
-		}
-		names.Insert(controllerInstallation.Spec.RegistrationRef.Name)
-	}
-
-	return names, nil
+	// filter controller registrations with non-matching seed selector
+	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedLabels)
 }
 
 // computeRegistrationNameToInstallationNameMap computes a map that maps the name of a ControllerRegistration to the name of an
 // existing ControllerInstallation object that references this registration.
 func computeRegistrationNameToInstallationNameMap(
 	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
-	controllerRegistrationNameToObject map[string]*gardencorev1beta1.ControllerRegistration,
+	controllerRegistrations map[string]controllerRegistration,
 	seedName string,
 ) (map[string]string, error) {
 	registrationNameToInstallationName := make(map[string]string)
@@ -337,7 +345,7 @@ func computeRegistrationNameToInstallationNameMap(
 			continue
 		}
 
-		if _, ok := controllerRegistrationNameToObject[controllerInstallation.Spec.RegistrationRef.Name]; !ok {
+		if _, ok := controllerRegistrations[controllerInstallation.Spec.RegistrationRef.Name]; !ok {
 			return nil, fmt.Errorf("ControllerRegistration %q does not exist", controllerInstallation.Spec.RegistrationRef.Name)
 		}
 
@@ -356,13 +364,13 @@ func deployNeededInstallations(
 	c client.Client,
 	seed *gardencorev1beta1.Seed,
 	wantedControllerRegistrations sets.String,
-	controllerRegistrationNameToObject map[string]*gardencorev1beta1.ControllerRegistration,
+	controllerRegistrations map[string]controllerRegistration,
 	registrationNameToInstallationName map[string]string,
 ) error {
 	for _, registrationName := range wantedControllerRegistrations.UnsortedList() {
 		logger.Infof("Deploying wanted ControllerInstallation for %q", registrationName)
 
-		if err := deployNeededInstallation(ctx, c, seed, controllerRegistrationNameToObject[registrationName], registrationNameToInstallationName[registrationName]); err != nil {
+		if err := deployNeededInstallation(ctx, c, seed, controllerRegistrations[registrationName].obj, registrationNameToInstallationName[registrationName]); err != nil {
 			return err
 		}
 	}
@@ -465,4 +473,44 @@ func convertObjToMap(in interface{}) (map[string]interface{}, error) {
 	}
 
 	return out, nil
+}
+
+func seedSelectorMatches(deployment *gardencorev1beta1.ControllerDeployment, seedLabels map[string]string) (bool, error) {
+	selector := &metav1.LabelSelector{}
+	if deployment != nil && deployment.SeedSelector != nil {
+		selector = deployment.SeedSelector
+	}
+
+	seedSelector, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return false, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *selector, err)
+	}
+
+	return seedSelector.Matches(labels.Set(seedLabels)), nil
+}
+
+func controllerRegistrationNamesWithMatchingSeedLabelSelector(
+	namesInQuestion []string,
+	controllerRegistrations map[string]controllerRegistration,
+	seedLabels map[string]string,
+) (sets.String, error) {
+	matchingNames := sets.NewString()
+
+	for _, name := range namesInQuestion {
+		controllerRegistration, ok := controllerRegistrations[name]
+		if !ok {
+			return nil, fmt.Errorf("ControllerRegistration with name %s not found", name)
+		}
+
+		matches, err := seedSelectorMatches(controllerRegistration.obj.Spec.Deployment, seedLabels)
+		if err != nil {
+			return nil, err
+		}
+
+		if matches {
+			matchingNames.Insert(name)
+		}
+	}
+
+	return matchingNames, nil
 }

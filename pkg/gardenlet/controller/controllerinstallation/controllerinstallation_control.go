@@ -225,6 +225,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 			},
 			"seed": map[string]interface{}{
 				"identity":        seed.Name,
+				"annotations":     seed.Annotations,
+				"labels":          seed.Labels,
 				"provider":        seed.Spec.Provider.Type,
 				"region":          seed.Spec.Provider.Region,
 				"volumeProvider":  volumeProvider,

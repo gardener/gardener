@@ -20,15 +20,15 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-
 	. "github.com/gardener/gardener/test/gomega"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("resources", func() {
@@ -59,8 +59,9 @@ var _ = Describe("resources", func() {
 				Spec: core.ControllerRegistrationSpec{
 					Resources: []core.ControllerResource{
 						{
-							Kind: resourceKind,
-							Type: resourceType,
+							Kind:    resourceKind,
+							Type:    resourceType,
+							Primary: pointer.BoolPtr(true),
 						},
 					},
 				},
@@ -112,6 +113,24 @@ var _ = Describe("resources", func() {
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(BeForbiddenError())
+		})
+
+		It("should allow the object because another resource in the system  declared the kind/type combination as secondary only", func() {
+			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			controllerRegistration2 := controllerRegistration.DeepCopy()
+			controllerRegistration2.Name = "another-name"
+			controllerRegistration2.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+
+			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, &core.ControllerRegistrationList{
+					Items: []core.ControllerRegistration{*controllerRegistration2},
+				}, nil
+			})
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(Succeed())
 		})
 	})
 

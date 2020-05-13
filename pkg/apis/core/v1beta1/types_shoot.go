@@ -250,6 +250,9 @@ type Extension struct {
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
 	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	// +optional
+	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
