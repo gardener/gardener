@@ -20,6 +20,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
         checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
+        checksum/configmap-kube-proxy-cleanup-script: {{ include (print $.Template.BasePath "/kube-proxy-cleanup-script.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -45,6 +46,30 @@ spec:
           /sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1 || echo "IPv6 is already disabled. Doing nothing..."
         securityContext:
           privileged: true
+{{- end }}
+{{- if (semverCompare ">= 1.16" .Values.kubernetesVersion) }}
+      initContainers:
+      - name: cleanup
+        image: {{ index .Values.images "kube-proxy" }}
+        env:
+        - name: KUBE_PROXY_MODE
+          value: {{ include "kube-proxy.mode" . }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - /script/cleanup.sh /var/lib/kube-proxy/mode
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: kube-proxy-cleanup-script
+          mountPath: /script
+        - name: kernel-modules
+          mountPath: /lib/modules
+        - name: kube-proxy-dir
+          mountPath: /var/lib/kube-proxy
+        - name: kube-proxy-mode
+          mountPath: /var/lib/kube-proxy/mode
 {{- end }}
       priorityClassName: system-cluster-critical
       tolerations:
@@ -114,3 +139,15 @@ spec:
       - name: kernel-modules
         hostPath:
           path: /lib/modules
+      - name: kube-proxy-cleanup-script
+        configMap:
+          name: kube-proxy-cleanup-script
+          defaultMode: 0777
+      - name: kube-proxy-dir
+        hostPath:
+          path: /var/lib/kube-proxy
+          type: DirectoryOrCreate
+      - name: kube-proxy-mode
+        hostPath:
+          path: /var/lib/kube-proxy/mode
+          type: FileOrCreate

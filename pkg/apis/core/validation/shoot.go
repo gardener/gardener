@@ -323,7 +323,7 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *core.KubeProxyConfig, ver
 	if oldConfig != nil {
 		oldMode = *oldConfig.Mode
 	}
-	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
+	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1, < 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
 	return allErrs

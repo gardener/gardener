@@ -1469,10 +1469,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				mode := core.ProxyMode("IPVS")
 				shoot.Spec.Kubernetes.Version = "1.14.1"
 				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
-
 				errorList := ValidateShoot(shoot)
-
 				Expect(errorList).To(HaveLen(2))
+			})
+
+			It("should be successful when using kubernetes version 1.16.1 and proxy mode is changed", func() {
+				mode := core.ProxyMode("IPVS")
+				kubernetesConfig := core.KubernetesConfig{}
+				config := core.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Mode:             &mode,
+				}
+				shoot.Spec.Kubernetes.KubeProxy = &config
+				shoot.Spec.Kubernetes.Version = "1.16.1"
+				oldMode := core.ProxyMode("IPTables")
+				oldConfig := core.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Mode:             &oldMode,
+				}
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, false, field.NewPath("spec"))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
