@@ -25,12 +25,12 @@ spec:
       annotations:
         {{- if .Values.serviceAccountConfig }}
         {{- if .Values.serviceAccountConfig.signingKey}}
-        checksum/service-account-signing-key: {{ include ( print $.Template.BasePath "/service-account-signing-key-secret.yaml") . | sha256sum }}
+        checksum/service-account-signing-key: {{ include ( print $.Template.BasePath "/secret-service-account-signing-key.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
-        checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
-        checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
-        checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/admission-config.yaml") . | sha256sum }}
+        checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/configmap-audit-policy.yaml") . | sha256sum }}
+        checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/secret-oidc-ca.yaml") . | sha256sum }}
+        checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/configmap-admission-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -44,6 +44,20 @@ spec:
         networking.gardener.cloud/to-shoot-networks: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - kubernetes
+              - key: role
+                operator: In
+                values:
+                - apiserver
+            topologyKey: kubernetes.io/hostname
       priorityClassName: gardener-shoot-controlplane
       tolerations:
       - effect: NoExecute

@@ -1,0 +1,14 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: kube-apiserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: apiserver
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver
