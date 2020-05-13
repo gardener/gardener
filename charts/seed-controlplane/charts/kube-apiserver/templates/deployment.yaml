@@ -47,17 +47,19 @@ spec:
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - kubernetes
-              - key: role
-                operator: In
-                values:
-                - apiserver
-            topologyKey: kubernetes.io/hostname
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                    - kubernetes
+                  - key: role
+                    operator: In
+                    values:
+                    - apiserver
       priorityClassName: gardener-shoot-controlplane
       tolerations:
       - effect: NoExecute
