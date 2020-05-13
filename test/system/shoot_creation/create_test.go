@@ -53,7 +53,7 @@ var _ = Describe("Shoot Creation testing", func() {
 	})
 
 	f.CIt("Create and Reconcile Shoot", func(ctx context.Context) {
-		_, err := f.CreateShoot(ctx)
+		_, err := f.CreateShoot(ctx, true, true)
 		framework.ExpectNoError(err)
 	}, CreateAndReconcileTimeout)
 })
