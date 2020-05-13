@@ -10,7 +10,7 @@ jobs:
       cpu: 50m
       memory: 64Mi
 kyma:
-  version: "1.11.0"
+  version: "1.12.0"
 requires:
   k8s:
     version: "1.16"
