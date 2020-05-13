@@ -184,10 +184,16 @@ func (c *controllerArtifacts) addShootStateEventHandlers() {
 }
 
 func (c *controllerArtifacts) shutdownQueues() {
-	c.controllerInstallationRequiredQueue.ShutDown()
+	if c.controllerInstallationRequiredQueue != nil {
+		c.controllerInstallationRequiredQueue.ShutDown()
+	}
 
 	for _, artifact := range c.artifacts {
-		artifact.controllerInstallationExtensionQueue.ShutDown()
-		artifact.shootStateQueue.ShutDown()
+		if artifact.controllerInstallationExtensionQueue != nil {
+			artifact.controllerInstallationExtensionQueue.ShutDown()
+		}
+		if artifact.shootStateQueue != nil {
+			artifact.shootStateQueue.ShutDown()
+		}
 	}
 }
