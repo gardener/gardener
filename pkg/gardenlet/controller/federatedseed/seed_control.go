@@ -105,23 +105,14 @@ func (c *Controller) addSeedToQueue(obj interface{}) {
 	c.seedQueue.Add(key)
 }
 
-func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
-	var (
-		newSeedObj = newObj.(*gardencorev1beta1.Seed)
-		oldSeedObj = oldObj.(*gardencorev1beta1.Seed)
-	)
+func (c *Controller) seedUpdate(_, newObj interface{}) {
+	var newSeedObj = newObj.(*gardencorev1beta1.Seed)
 
 	newSeedBootstrappedCondition := helper.GetCondition(newSeedObj.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	oldSeedBootstrappedCondition := helper.GetCondition(oldSeedObj.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-
-	if seedChangedToBootstrapped(newSeedBootstrappedCondition, oldSeedBootstrappedCondition) {
+	_, found := c.federatedSeedControllerManager.controllers[newSeedObj.Name]
+	if !found && newSeedBootstrappedCondition != nil && newSeedBootstrappedCondition.Status == gardencorev1beta1.ConditionTrue {
 		c.addSeedToQueue(newSeedObj)
 	}
-}
-
-// seedChangedToBootstrapped returns true if condition changed and is equal to "True"
-func seedChangedToBootstrapped(oldCondition, newCondition *gardencorev1beta1.Condition) bool {
-	return newCondition != nil && newCondition.Status == gardencorev1beta1.ConditionTrue && (oldCondition == nil || oldCondition.Status != newCondition.Status)
 }
 
 func (c *Controller) seedDelete(obj interface{}) {
