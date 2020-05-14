@@ -223,7 +223,9 @@ func SetDefaults_ControllerInstallationCareControllerConfiguration(obj *Controll
 // SetDefaults_ControllerInstallationRequiredControllerConfiguration sets defaults for the ControllerInstallationRequired controller.
 func SetDefaults_ControllerInstallationRequiredControllerConfiguration(obj *ControllerInstallationRequiredControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
+		// The controller actually starts one controller per extension resource per Seed.
+		// For one seed that is already 1 * 10 extension resources = 10 workers.
+		v := 1
 		obj.ConcurrentSyncs = &v
 	}
 }
@@ -290,7 +292,9 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 // SetDefaults_ShootStateSyncControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
+		// The controller actually starts one controller per extension resource per Seed.
+		// For one seed that is already 1 * 10 extension resources = 10 workers.
+		v := 1
 		obj.ConcurrentSyncs = &v
 	}
 

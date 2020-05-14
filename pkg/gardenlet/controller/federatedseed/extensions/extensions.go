@@ -103,11 +103,11 @@ func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 		}
 	}()
 
-	for i := 0; i <= controllerInstallationWorkers; i++ {
+	for i := 0; i < controllerInstallationWorkers; i++ {
 		s.createControllerInstallationWorkers(ctx, s.controllerInstallationControl)
 	}
 
-	for i := 0; i <= shootStateWorkers; i++ {
+	for i := 0; i < shootStateWorkers; i++ {
 		s.createShootStateWorkers(ctx, s.shootStateControl)
 	}
 

@@ -28,7 +28,7 @@ controllers:
     concurrentSyncs: 20
     syncPeriod: 30s
   controllerInstallationRequired:
-    concurrentSyncs: 20
+    concurrentSyncs: 1
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h
@@ -53,7 +53,7 @@ controllers:
     - type: EveryNodeReady
       duration: 5m
   shootStateSync:
-    concurrentSyncs: 5
+    concurrentSyncs: 1
     syncPeriod: 30s
   seed:
     concurrentSyncs: 5
