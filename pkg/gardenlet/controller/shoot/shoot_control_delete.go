@@ -26,21 +26,17 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/version"
 
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -498,63 +494,14 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 	return nil
 }
 
-func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error {
-	var (
-		status = o.Shoot.Info.Status
-		now    = metav1.NewTime(time.Now().UTC())
-	)
-
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if status.RetryCycleStartTime == nil ||
-				(status.LastOperation != nil && status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete) ||
-				o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
-				o.Shoot.Info.Status.Gardener.Version != version.Get().GitVersion {
-
-				shoot.Status.RetryCycleStartTime = &now
-			}
-
-			if len(status.TechnicalID) == 0 {
-				shoot.Status.TechnicalID = o.Shoot.SeedNamespace
-			}
-
-			shoot.Status.Gardener = *o.GardenerInfo
-			shoot.Status.ObservedGeneration = o.Shoot.Info.Generation
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:           gardencorev1beta1.LastOperationTypeDelete,
-				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Progress:       0,
-				Description:    "Deletion of Shoot cluster in progress.",
-				LastUpdateTime: now,
-			}
-			return shoot, nil
-		})
-	if err == nil {
-		o.Shoot.Info = newShoot
-	}
-	return err
-}
-
-func (c *Controller) updateShootStatusDeleteSuccess(shoot *gardencorev1beta1.Shoot) error {
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			shoot.Status.RetryCycleStartTime = nil
-			shoot.Status.LastErrors = nil
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:           gardencorev1beta1.LastOperationTypeDelete,
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				Progress:       100,
-				Description:    "Shoot cluster has been successfully deleted.",
-				LastUpdateTime: metav1.Now(),
-			}
-			return shoot, nil
-		})
+func (c *Controller) removeFinalizerFrom(shoot *gardencorev1beta1.Shoot) error {
+	newShoot, err := c.updateShootStatusOperationSuccess(shoot, "")
 	if err != nil {
 		return err
 	}
 
 	// Remove finalizer with retry on conflict
-	if err = controllerutils.RemoveGardenerFinalizer(context.TODO(), c.k8sGardenClient.Client(), newShoot); err != nil {
+	if err := controllerutils.RemoveGardenerFinalizer(context.TODO(), c.k8sGardenClient.Client(), newShoot); err != nil {
 		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
 	}
 
@@ -574,41 +521,6 @@ func (c *Controller) updateShootStatusDeleteSuccess(shoot *gardencorev1beta1.Sho
 		}
 		return retryutils.MinorError(fmt.Errorf("shoot still has finalizer %s", gardencorev1beta1.GardenerName))
 	})
-}
-
-func (c *Controller) updateShootStatusDeleteError(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, description string, lastErrors ...gardencorev1beta1.LastError) error {
-	state := gardencorev1beta1.LastOperationStateFailed
-
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
-				description += " Operation will be retried."
-				state = gardencorev1beta1.LastOperationStateError
-			} else {
-				shoot.Status.RetryCycleStartTime = nil
-			}
-
-			shoot.Status.Gardener = *c.identity
-			shoot.Status.LastErrors = lastErrors
-
-			if shoot.Status.LastOperation == nil {
-				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
-			}
-
-			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
-			shoot.Status.LastOperation.State = state
-			shoot.Status.LastOperation.Description = description
-			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()
-			return shoot, nil
-		},
-	)
-	if err == nil {
-		shoot = newShoot
-	}
-	logger.Error(description)
-
-	_, err = kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
-	return err
 }
 
 func needsControlPlaneDeployment(o *operation.Operation, kubeAPIServerDeploymentFound bool) (bool, error) {

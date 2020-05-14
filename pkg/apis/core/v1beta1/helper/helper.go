@@ -182,7 +182,7 @@ func IsControllerInstallationRequired(controllerInstallation gardencorev1beta1.C
 	return false
 }
 
-// ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
+// ComputeOperationType checks the <lastOperation> and determines whether is it is Create operation or reconcile operation
 func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1beta1.LastOperation) gardencorev1beta1.LastOperationType {
 	switch {
 	case meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate:
