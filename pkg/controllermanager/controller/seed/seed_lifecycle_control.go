@@ -156,7 +156,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 	// and constraints for all the shoots that belong to this seed as `Unknown`. The reason is that the gardenlet didn't send a heartbeat
 	// anymore, hence, it most likely didn't check the shoot status. This means that the current shoot status might not reflect the truth
 	// anymore. We are indicating this by marking it as `Unknown`.
-	if !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.ShootMonitorPeriod.Duration)) {
+	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.ShootMonitorPeriod.Duration)) {
 		return true, nil
 	}
 
