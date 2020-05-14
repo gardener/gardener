@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package imports things required by build scripts, to force `go mod` to see them as dependencies
-package template
+// This package imports GitHub related templates - it is to force `go mod` to see them as dependencies.
+package github
