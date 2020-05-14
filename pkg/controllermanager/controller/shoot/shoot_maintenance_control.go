@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -172,7 +173,20 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}
 
-		s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+		// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
+		if s.Status.LastOperation != nil && s.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+		}
+
+		var needsRetry bool
+		if val, ok := s.Annotations[common.FailedShootNeedsRetryOperation]; ok {
+			needsRetry, _ = strconv.ParseBool(val)
+		}
+		delete(s.Annotations, common.FailedShootNeedsRetryOperation)
+
+		if needsRetry {
+			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationRetry
+		}
 
 		if !gardencorev1beta1helper.HibernationIsEnabled(s) {
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
@@ -186,6 +200,10 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		}
 		if updatedKubernetesVersion != nil {
 			s.Spec.Kubernetes.Version = *updatedKubernetesVersion
+		}
+
+		if hasMaintainNowAnnotation(s) {
+			delete(s.Annotations, v1beta1constants.GardenerOperation)
 		}
 
 		return s, nil

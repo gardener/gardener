@@ -31,6 +31,7 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -317,6 +318,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 			shoot.ObjectMeta.Annotations = make(map[string]string)
 		}
 		controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
+	}
+
+	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+		!apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) &&
+		shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.FailedShootNeedsRetryOperation, "true")
 	}
 
 	if shoot.DeletionTimestamp == nil {

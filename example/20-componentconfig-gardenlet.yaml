@@ -32,7 +32,7 @@ controllers:
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h
-    retryDuration: 24h
+    retryDuration: 12h
 #    `respectSyncPeriodOverwrite` specifies whether Shoot owners can
 #    mark their Shoots ignored (no reconciliation) or change their sync period.
 #    respectSyncPeriodOverwrite: true

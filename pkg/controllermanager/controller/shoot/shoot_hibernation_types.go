@@ -102,7 +102,10 @@ func (h *hibernationJob) Run() {
 			if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
 				return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
 			}
-			shoot.Spec.Hibernation.Enabled = &h.enabled
+			if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateFailed {
+				shoot.Spec.Hibernation.Enabled = &h.enabled
+			}
+
 			return shoot, nil
 		})
 	if err != nil {

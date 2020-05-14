@@ -615,6 +615,69 @@ var _ = Describe("validator", func() {
 			)
 		})
 
+		Context("shoot maintenance checks", func() {
+			var (
+				oldShoot           *core.Shoot
+				confineEnabled     = true
+				specUpdate         = true
+				operationFaild     = &core.LastOperation{State: core.LastOperationStateFailed}
+				operationSucceeded = &core.LastOperation{State: core.LastOperationStateSucceeded}
+			)
+			BeforeEach(func() {
+				shoot = *shootBase.DeepCopy()
+				shoot.Spec.Maintenance = &core.Maintenance{}
+				oldShoot = shoot.DeepCopy()
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			})
+
+			DescribeTable("confine spec roll-out checks",
+				func(specChange, oldConfine, confine bool, oldOperation, operation *core.LastOperation, matcher types.GomegaMatcher) {
+					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.BoolPtr(oldConfine)
+					oldShoot.Status.LastOperation = oldOperation
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.BoolPtr(confine)
+					shoot.Status.LastOperation = operation
+					if specChange {
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(
+							oldShoot.Spec.Kubernetes.AllowPrivilegedContainers == nil ||
+								!(*oldShoot.Spec.Kubernetes.AllowPrivilegedContainers))
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+					Expect(shoot.Annotations).To(matcher)
+				},
+				Entry(
+					"should add annotation for failed shoot",
+					specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
+					HaveKeyWithValue(common.FailedShootNeedsRetryOperation, "true"),
+				),
+				Entry(
+					"should not add annotation for failed shoot because of missing spec change",
+					!specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
+					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for succeeded shoot",
+					specUpdate, confineEnabled, confineEnabled, operationFaild, operationSucceeded,
+					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for shoot w/o confine spec roll-out enabled",
+					specUpdate, confineEnabled, !confineEnabled, operationFaild, operationFaild,
+					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+				),
+				Entry(
+					"should not add annotation for shoot w/o last operation",
+					specUpdate, confineEnabled, confineEnabled, nil, nil,
+					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+				),
+			)
+		})
+
 		Context("checks for shoots referencing a deleted seed", func() {
 			var oldShoot *core.Shoot
 
