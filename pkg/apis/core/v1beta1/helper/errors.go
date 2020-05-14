@@ -68,14 +68,15 @@ func DetermineError(err error, message string) error {
 		errMsg = err.Error()
 	}
 
-	codes := determineErrorCodes(err)
+	codes := DetermineErrorCodes(err)
 	if codes == nil {
 		return errors.New(errMsg)
 	}
 	return &errorWithCodes{errMsg, codes}
 }
 
-func determineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
+// DetermineErrorCodes determines error codes based on the given error.
+func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var (
 		coder   Coder
 		message = err.Error()

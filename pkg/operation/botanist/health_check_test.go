@@ -559,13 +559,9 @@ var _ = Describe("health check", func() {
 				},
 			},
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
-		Entry("too many nodes in worker pool",
+		Entry("not enough nodes in worker pool",
 			[]*corev1.Node{
 				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
-				newNode("node2", true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2}),
-				newNode("node3", true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2}),
-				newNode("node4", true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2}),
-				newNode("node5", true, labels.Set{"worker.gardener.cloud/pool": workerPoolName2}),
 			},
 			[]gardencorev1beta1.Worker{
 				{
@@ -579,7 +575,7 @@ var _ = Describe("health check", func() {
 					Minimum: 1,
 				},
 			},
-			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "TooManyNodes", fmt.Sprintf("Too many worker nodes registered in worker pool '%s' - exceeds maximum desired machine count. (%d/%d).", workerPoolName2, 4, 2))),
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
 	)
 
 	DescribeTable("#CheckMonitoringSystemComponents",
@@ -850,6 +846,7 @@ var _ = Describe("health check", func() {
 			}
 			Expect(*updatedCondition).To(expected)
 		},
+
 		Entry("health check report is not outdated - threshold not configured in Gardenlet config",
 			nil,
 			gardencorev1beta1.Condition{},
@@ -862,7 +859,8 @@ var _ = Describe("health check", func() {
 					},
 				},
 			},
-			nil),
+			nil,
+		),
 		Entry("health check report is not outdated",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
@@ -877,7 +875,8 @@ var _ = Describe("health check", func() {
 					},
 				},
 			},
-			nil),
+			nil,
+		),
 		Entry("should determine that health check report is outdated",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
@@ -900,7 +899,67 @@ var _ = Describe("health check", func() {
 			},
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionUnknown),
-			})),
+			}),
+		),
+		Entry("health check reports status progressing",
+			nil,
+			gardencorev1beta1.Condition{},
+			[]botanist.ExtensionCondition{
+				{
+					ExtensionType: "Foo",
+					Condition: gardencorev1beta1.Condition{
+						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:         gardencorev1beta1.ConditionProgressing,
+						Reason:         "Bar",
+						Message:        "Baz",
+						LastUpdateTime: metav1.Time{Time: time.Now()},
+					},
+				},
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status":  Equal(gardencorev1beta1.ConditionProgressing),
+				"Reason":  Equal("FooBar"),
+				"Message": Equal("Baz"),
+			}),
+		),
+		Entry("health check reports status false",
+			nil,
+			gardencorev1beta1.Condition{},
+			[]botanist.ExtensionCondition{
+				{
+					ExtensionType: "Foo",
+					Condition: gardencorev1beta1.Condition{
+						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:         gardencorev1beta1.ConditionFalse,
+						LastUpdateTime: metav1.Time{Time: time.Now()},
+					},
+				},
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status":  Equal(gardencorev1beta1.ConditionFalse),
+				"Reason":  Equal("FooUnhealthyReport"),
+				"Message": ContainSubstring("failing health check"),
+			}),
+		),
+		Entry("health check reports status unknown",
+			nil,
+			gardencorev1beta1.Condition{},
+			[]botanist.ExtensionCondition{
+				{
+					ExtensionType: "Foo",
+					Condition: gardencorev1beta1.Condition{
+						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:         gardencorev1beta1.ConditionUnknown,
+						LastUpdateTime: metav1.Time{Time: time.Now()},
+					},
+				},
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status":  Equal(gardencorev1beta1.ConditionFalse),
+				"Reason":  Equal("FooUnhealthyReport"),
+				"Message": ContainSubstring("failing health check"),
+			}),
+		),
 	)
 
 	DescribeTable("#PardonCondition",
