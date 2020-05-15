@@ -75,7 +75,8 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("test guestbook")
-		guestBookTest.WaitUntilPrerequisitesAreReady(ctx)
+		guestBookTest.WaitUntilRedisIsReady(ctx)
+		guestBookTest.WaitUntilGuestbookDeploymentIsReady(ctx)
 		guestBookTest.Test(ctx)
 
 	}, hibernationTestTimeout)

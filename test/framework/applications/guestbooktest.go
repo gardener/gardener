@@ -71,16 +71,22 @@ func NewGuestBookTest(f *framework.ShootFramework) (*GuestBookTest, error) {
 	}, nil
 }
 
-// WaitUntilPrerequisitesAreReady waits until the redis master is ready.
-func (t *GuestBookTest) WaitUntilPrerequisitesAreReady(ctx context.Context) {
+// WaitUntilRedisIsReady waits until the redis master is ready.
+func (t *GuestBookTest) WaitUntilRedisIsReady(ctx context.Context) {
 	err := t.framework.WaitUntilStatefulSetIsRunning(ctx, RedisMaster, t.framework.Namespace, t.framework.ShootClient)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
-// WaitUntilGuestbookAppIsAvailable waits until the deployed guestbook application can be reached via http
-func (t *GuestBookTest) WaitUntilGuestbookAppIsAvailable(ctx context.Context, guestbookAppUrls []string) error {
+// WaitUntilGuestbookDeploymentIsReady waits until the guestbook deployment is ready.
+func (t *GuestBookTest) WaitUntilGuestbookDeploymentIsReady(ctx context.Context) {
+	err := t.framework.WaitUntilDeploymentIsReady(ctx, GuestBook, t.framework.Namespace, t.framework.ShootClient)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+// WaitUntilGuestbookURLsRespondOK waits until the deployed guestbook application can be reached via http
+func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, guestbookAppUrls []string) error {
 	defaultPollInterval := time.Minute
-	return retry.UntilTimeout(ctx, defaultPollInterval, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+	return retry.UntilTimeout(ctx, defaultPollInterval, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := framework.HTTPGet(ctx, guestbookAppURL)
 			if err != nil {
@@ -145,7 +151,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}, chartOverrides)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	t.WaitUntilPrerequisitesAreReady(ctx)
+	t.WaitUntilRedisIsReady(ctx)
 
 	ginkgo.By("Deploy the guestbook application")
 	guestBookParams := struct {
@@ -157,6 +163,8 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}
 	err = t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, templates.GuestbookAppName, guestBookParams)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	t.WaitUntilGuestbookDeploymentIsReady(ctx)
 
 	ginkgo.By("Guestbook app was deployed successfully!")
 }
@@ -171,7 +179,7 @@ func (t *GuestBookTest) Test(ctx context.Context) {
 	pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 
 	// Check availability of the guestbook app
-	err := t.WaitUntilGuestbookAppIsAvailable(ctx, []string{guestBookAppURL, pushURL, pullURL})
+	err := t.WaitUntilGuestbookURLsRespondOK(ctx, []string{guestBookAppURL, pushURL, pullURL})
 	framework.ExpectNoError(err)
 
 	// Push foobar-<shoot-name> to the guestbook app

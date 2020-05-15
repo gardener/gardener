@@ -362,8 +362,8 @@ func (o *GardenerTestOperation) WaitUntilDeploymentsWithLabelsIsReady(ctx contex
 	})
 }
 
-// WaitUntilGuestbookAppIsAvailable waits until the guestbook app is available and ready to serve requests
-func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Context, guestbookAppUrls []string) error {
+// WaitUntilGuestbookURLsRespondOK waits until the guestbook app is available and ready to serve requests
+func (o *GardenerTestOperation) WaitUntilGuestbookURLsRespondOK(ctx context.Context, guestbookAppUrls []string) error {
 	return retry.UntilTimeout(ctx, defaultPollInterval, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := o.HTTPGet(ctx, guestbookAppURL)
