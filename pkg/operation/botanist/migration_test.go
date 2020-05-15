@@ -28,7 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -56,7 +56,7 @@ var _ = Describe("control plane migration", func() {
 				shoot = &shoot.Shoot{
 					SeedNamespace: testSeedNamespace,
 				}
-				extensionClientFake = fake.NewFakeClientWithScheme(extensionsclient.Scheme, &extensionsv1alpha1.Worker{ObjectMeta: v1.ObjectMeta{
+				extensionClientFake = fake.NewFakeClientWithScheme(extensionsclient.Scheme, &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-worker",
 					Namespace: testSeedNamespace,
 				}})

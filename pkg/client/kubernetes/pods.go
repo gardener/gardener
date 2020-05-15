@@ -45,7 +45,7 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
-	Execute(ctx context.Context, namespace, name, containerName, command string) (io.Reader, error)
+	Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error)
 }
 
 type podExecutor struct {
@@ -53,7 +53,7 @@ type podExecutor struct {
 }
 
 // Execute executes a command on a pod
-func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command string) (io.Reader, error) {
+func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error) {
 	client, err := corev1client.NewForConfig(p.config)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Namespace(namespace).
 		SubResource("exec").
 		Param("container", containerName).
-		Param("command", "/bin/sh").
+		Param("command", command).
 		Param("stdin", "true").
 		Param("stdout", "true").
 		Param("stderr", "true").
@@ -80,7 +80,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 	}
 
 	err = executor.Stream(remotecommand.StreamOptions{
-		Stdin:  strings.NewReader(command),
+		Stdin:  strings.NewReader(commandArg),
 		Stdout: &stdout,
 		Stderr: &stderr,
 		Tty:    false,

@@ -524,20 +524,11 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 		return err
 	}
 
-	if err := o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	return nil
+	return client.IgnoreNotFound(o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
 // SwitchBackupEntryToTargetSeed changes the BackupEntry in the Garden cluster to the Target Seed and removes it from the Source Seed
 func (o *Operation) SwitchBackupEntryToTargetSeed(ctx context.Context) error {
-	if err := o.InitializeSeedClients(); err != nil {
-		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
-		return err
-	}
-
 	var (
 		name              = common.GenerateBackupEntryName(o.Shoot.Info.Status.TechnicalID, o.Shoot.Info.Status.UID)
 		gardenBackupEntry = &gardencorev1beta1.BackupEntry{

@@ -16,13 +16,17 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -141,4 +145,35 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 		shoot.ExtensionDefaultTimeout,
 		nil,
 	)
+}
+
+// WaitForExtensionsOperationMigrateToSucceed waits until extension CRs has lastOperation Migrate Succeeded
+func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Context) error {
+	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
+		return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+			acc, err := extensions.Accessor(obj)
+			if err != nil {
+				return retry.SevereError(err)
+			}
+
+			if extensionObjStatus := acc.GetExtensionStatus(); extensionObjStatus != nil {
+				if lastOperation := extensionObjStatus.GetLastOperation(); lastOperation != nil {
+					if lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+						return retry.Ok()
+					}
+				}
+			}
+
+			var exetnsionType string
+			if extensionSpec := acc.GetExtensionSpec(); extensionSpec != nil {
+				exetnsionType = extensionSpec.GetExtensionType()
+			}
+			return retry.MinorError(fmt.Errorf("extension CR %s with type %s lastOperation was not Migrate=Succeeded", acc.GetName(), exetnsionType))
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }

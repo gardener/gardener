@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/version"
 
 	jsoniter "github.com/json-iterator/go"
@@ -50,7 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -723,7 +722,7 @@ func annotationRequiredError() error {
 
 // ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
 func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) error {
-	return k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		key, err := client.ObjectKeyFromObject(obj)
 		if err != nil {
 			return err
@@ -756,29 +755,4 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) e
 // ExtensionID returns an identifier for the given extension kind/type.
 func ExtensionID(extensionKind, extensionType string) string {
 	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
-}
-
-// WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.
-func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		deployment := &appsv1.Deployment{}
-		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if deployment.Generation != deployment.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)", name,
-				deployment.Status.ObservedGeneration, deployment.Generation))
-		}
-
-		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
-			return retry.SevereError(fmt.Errorf("waiting for deployment %q to scale failed. spec.replicas does not match the desired replicas", name))
-		}
-
-		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
-			return retry.Ok()
-		}
-
-		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", name, deployment.Status.AvailableReplicas, desiredReplicas))
-	})
 }

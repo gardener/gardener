@@ -25,13 +25,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +43,9 @@ import (
 
 func (c *Controller) prepareShootForMigration(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
+		ctx = context.TODO()
+		err error
+
 		respectSyncPeriodOverwrite = c.respectSyncPeriodOverwrite()
 		failed                     = common.IsShootFailed(shoot)
 		ignored                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -53,19 +55,22 @@ func (c *Controller) prepareShootForMigration(logger *logrus.Entry, shoot *garde
 		return reconcile.Result{}, fmt.Errorf("shoot %s is failed or ignored, will skip migration preparation", shoot.GetName())
 	}
 
-	o, err := c.initializeOperation(context.TODO(), logger, shoot, project, cloudProfile, seed)
-	if err != nil {
-		return reconcile.Result{}, utilerrors.WithSuppressed(err, c.updateShootStatusError(shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", err.Error())))
+	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
+	if operationErr != nil {
+		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
+		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
-	if err := c.updateShootStatusPrepareMigrationStart(o); err != nil {
+	o.Shoot.Info, err = c.updateShootStatusOperationStart(o.Shoot.Info, o.Shoot.SeedNamespace, gardencorev1beta1.LastOperationTypeMigrate)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := c.runPrepareShootControlPlaneMigration(o); err != nil {
-		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, err.Description)
-		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(err.Description), c.updateShootStatusPrepareMigrationError(o, err.Description, err.LastErrors...))
+	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
+		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
+		_, updateErr := c.updateShootStatusOperationError(o.Shoot.Info, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
 	return c.finalizeShootPrepareForMigration(shoot, o)
@@ -77,7 +82,6 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		botanist        *botanistpkg.Botanist
 		err             error
 		dnsEnabled      = !o.Shoot.DisableDNS
-		shootHibernated = isShootHibernated(o.Shoot.Info.Spec.Hibernation)
 		tasksWithErrors []string
 	)
 
@@ -140,7 +144,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		scaleETCDToOne = g.Add(flow.Task{
 			Name:         "Scaling etcd up",
-			Fn:           flow.TaskFn(botanist.ScaleETCDToOne).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && shootHibernated),
+			Fn:           flow.TaskFn(botanist.ScaleETCDToOne).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
@@ -149,29 +153,29 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
-			Name:         "ensures that the gardener resource manager is scaled to 1",
+			Name:         "Ensure that the gardener resource manager is scaled to 1",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(),
 		})
-		keepManagedResourcesObjects = g.Add(flow.Task{
-			Name:         "Keep managed resources objects",
+		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
+			Name:         "Keep Managed Resources objects in the Shoot",
 			Fn:           flow.TaskFn(botanist.KeepManagedResourcesObjects),
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
-		deleteAllManagedResources = g.Add(flow.Task{
-			Name:         "Deletes all Managed Resources from the Shoot's namespace",
+		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
+			Name:         "Deletes all Managed Resources  from the Shoot's namespace",
 			Fn:           flow.TaskFn(botanist.DeleteAllManagedResourcesObjects),
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjects),
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot),
 		})
-		waitManagedResourcesDeletion = g.Add(flow.Task{
+		waitForManagedResourcesDeletion = g.Add(flow.Task{
 			Name:         "Wait until ManagedResources are deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilAllManagedResourcesDeleted).Timeout(10 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deleteAllManagedResources),
+			Dependencies: flow.NewTaskIDs(deleteAllManagedResourcesFromShootNamespace),
 		})
 		prepareControlPlaneDeploymentsForMigration = g.Add(flow.Task{
-			Name:         "Prepare Control Plane Deployments in Shoot's namespace for migration, by scaling to zero and deleting the respective hvpa",
-			Fn:           flow.TaskFn(botanist.PrepareControlPlaneDeploymentsForMigration).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(shootHibernated),
-			Dependencies: flow.NewTaskIDs(waitManagedResourcesDeletion, waitUntilEtcdReady),
+			Name:         "Prepare Control Plane Deployments in Shoot's namespace for migration, by scaling to zero and deleting the respective hvpa",
+			Fn:           flow.TaskFn(botanist.PrepareControlPlaneDeploymentsForMigration).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
 		})
 		annotateExtensionCRsForMigration = g.Add(flow.Task{
 			Name:         "Annotate Extensions CRs with operation - migration",
@@ -190,27 +194,27 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		waitUntilAPIServerScaledDown = g.Add(flow.Task{
 			Name:         "Wait for Kubernetes API Server to be scaled to zero",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerScaledDown).SkipIf(shootHibernated || !nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerScaledDown).SkipIf(o.Shoot.HibernationEnabled || !nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(prepareControlPlaneDeploymentsForMigration),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Wait for gardener-resource-manager to be scaled to zero",
-			Fn:           flow.TaskFn(botanist.WaitUntilGardenerResourceManagerScalesDown).SkipIf(shootHibernated || !nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.WaitUntilGardenerResourceManagerScalesDown).SkipIf(o.Shoot.HibernationEnabled || !nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(prepareControlPlaneDeploymentsForMigration),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(dnsEnabled),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.NginxEntry).Destroy).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerScaledDown),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDomainDNSRecord).DoIf(dnsEnabled),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerScaledDown),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord).DoIf(dnsEnabled),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy).DoIf(dnsEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerScaledDown),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
@@ -226,7 +230,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, waitManagedResourcesDeletion, scaleETCDToZero),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
@@ -251,14 +255,16 @@ func (c *Controller) finalizeShootPrepareForMigration(shoot *gardencorev1beta1.S
 		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
 			lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
 			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
-			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusPrepareMigrationError(o, lastErr.Description, *lastErr))
+			_, updateErr := c.updateShootStatusOperationError(shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
+			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 		}
 	}
 
 	if err := o.SwitchBackupEntryToTargetSeed(context.TODO()); err != nil {
-		lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete BackupEntry resource in seed: %s", err))
+		lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not switch BackupEntry resource in Garden to new Seed: %s", err))
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
-		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), c.updateShootStatusPrepareMigrationError(o, lastErr.Description, *lastErr))
+		_, updateErr := c.updateShootStatusOperationError(shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
+		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventMigrationPrepared, "Shoot Control Plane prepared for migration, successfully")
@@ -278,43 +284,6 @@ func (c *Controller) finalizeShootPrepareForMigration(shoot *gardencorev1beta1.S
 	return reconcile.Result{}, err
 }
 
-func (c *Controller) updateShootStatusPrepareMigrationStart(o *operation.Operation) error {
-	var retryCycleStartTime *metav1.Time
-
-	if shouldRenewRetryCycleStartTime(o) {
-		now := metav1.NewTime(time.Now().UTC())
-		retryCycleStartTime = &now
-	}
-
-	var (
-		now                = metav1.Now()
-		observedGeneration = o.Shoot.Info.Generation
-	)
-
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-
-			if retryCycleStartTime != nil {
-				shoot.Status.RetryCycleStartTime = retryCycleStartTime
-			}
-
-			shoot.Status.Gardener = *o.GardenerInfo
-			shoot.Status.ObservedGeneration = observedGeneration
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:           gardencorev1beta1.LastOperationTypeMigrate,
-				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Progress:       1,
-				Description:    "Preparation of Shoot cluster for migration in progress.",
-				LastUpdateTime: now,
-			}
-			return shoot, nil
-		})
-	if err == nil {
-		o.Shoot.Info = newShoot
-	}
-	return err
-}
-
 func (c *Controller) updateShootRestorePendingStatusFunc(shoot *gardencorev1beta1.Shoot, successDescription string) func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	return func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		shoot.Status.RetryCycleStartTime = nil
@@ -329,53 +298,4 @@ func (c *Controller) updateShootRestorePendingStatusFunc(shoot *gardencorev1beta
 		}
 		return shoot, nil
 	}
-}
-
-func (c *Controller) updateShootStatusPrepareMigrationError(o *operation.Operation, description string, lastErrors ...gardencorev1beta1.LastError) error {
-	state := gardencorev1beta1.LastOperationStateFailed
-
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
-				description += " Operation will be retried."
-				state = gardencorev1beta1.LastOperationStateError
-			} else {
-				shoot.Status.RetryCycleStartTime = nil
-			}
-
-			shoot.Status.Gardener = *o.GardenerInfo
-			shoot.Status.LastErrors = lastErrors
-
-			if shoot.Status.LastOperation == nil {
-				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
-			}
-
-			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeMigrate
-			shoot.Status.LastOperation.State = state
-			shoot.Status.LastOperation.Description = description
-			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()
-			return shoot, nil
-		},
-	)
-	if err == nil {
-		o.Shoot.Info = newShoot
-	}
-	o.Logger.Error(description)
-
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
-	if err == nil {
-		o.Shoot.Info = newShootAfterLabel
-	}
-	return err
-}
-
-func shouldRenewRetryCycleStartTime(o *operation.Operation) bool {
-	return o.Shoot.Info.Status.RetryCycleStartTime == nil ||
-		o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration ||
-		o.Shoot.Info.Status.Gardener.Version == version.Get().GitVersion ||
-		o.Shoot.Info.Status.LastOperation != nil && o.Shoot.Info.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed
-}
-
-func isShootHibernated(shootHibernation *gardencorev1beta1.Hibernation) bool {
-	return shootHibernation != nil && shootHibernation.Enabled != nil && *shootHibernation.Enabled
 }

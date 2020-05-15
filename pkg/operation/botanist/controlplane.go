@@ -316,17 +316,16 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 	return nil
 }
 
-// ScaleGardenerResourceManagerToOne scales the gardener-resource-manager delpoyment
+// ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 // PrepareControlPlaneDeploymentsForMigration scales the kube-apiserver, kube-controller-manager and gardener-resource-manager to zero and deletes the hvpa for the kube-apiserver
 func (b *Botanist) PrepareControlPlaneDeploymentsForMigration(ctx context.Context) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil && !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
-
 	return b.scaleControlPlaneDeploymentsToZero(ctx, b.K8sSeedClient.Client())
 }
 

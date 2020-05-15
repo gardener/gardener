@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
+// DeleteManagedResources deletes all managed resources labeled with `origin=gardener` from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 	return b.K8sSeedClient.Client().DeleteAllOf(
 		ctx,
@@ -38,29 +38,9 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 	)
 }
 
-// WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
+// WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		managedResources := &resourcesv1alpha1.ManagedResourceList{}
-		if err := b.K8sSeedClient.Client().List(ctx,
-			managedResources,
-			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener}); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if len(managedResources.Items) == 0 {
-			return retry.Ok()
-		}
-
-		names := make([]string, 0, len(managedResources.Items))
-		for _, resource := range managedResources.Items {
-			names = append(names, resource.Name)
-		}
-
-		b.Logger.Infof("Waiting until all managed resources have been deleted in the shoot cluster...")
-		return retry.MinorError(fmt.Errorf("not all managed resources have been deleted in the shoot cluster (still existing: %s)", names))
-	})
+	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener})
 }
 
 // WaitUntilAllManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
@@ -116,7 +96,7 @@ func (b *Botanist) KeepManagedResourcesObjects(ctx context.Context) error {
 	return nil
 }
 
-// DeleteAllManagedResourcesObjects sets ManagedResource.Spec.KeepObjects to true.
+// DeleteAllManagedResourcesObjects deletes all managed resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteAllManagedResourcesObjects(ctx context.Context) error {
 	return b.K8sSeedClient.Client().DeleteAllOf(
 		ctx,

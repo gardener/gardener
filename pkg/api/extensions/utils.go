@@ -19,8 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GetAllGardenerExtensionsLists returns empty extension list struct for each Gardener Extension CRD
-func GetAllGardenerExtensionsLists() []runtime.Object {
+// GetShootCRsLists returns an empty CR list struct, for each CR used for Shoot managment
+func GetShootCRsLists() []runtime.Object {
 	return []runtime.Object{
 		&extensionsv1alpha1.BackupEntryList{},
 		&extensionsv1alpha1.ControlPlaneList{},

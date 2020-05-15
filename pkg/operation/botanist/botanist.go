@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -134,12 +134,12 @@ func (b *Botanist) CreateETCDSnapshot(ctx context.Context) error {
 	namespace := b.Shoot.SeedNamespace
 	etcdMainSelector := getETCDMainLabelSelector()
 
-	podsList := &v1.PodList{}
+	podsList := &corev1.PodList{}
 	if err := b.K8sSeedClient.Client().List(ctx, podsList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: etcdMainSelector}); err != nil {
 		return err
 	}
 
-	if podsList == nil {
+	if len(podsList.Items) == 0 {
 		return fmt.Errorf("Didn't find any pods for selector: %v", etcdMainSelector)
 	}
 
@@ -148,7 +148,7 @@ func (b *Botanist) CreateETCDSnapshot(ctx context.Context) error {
 	}
 	etcdMainPod := podsList.Items[0]
 
-	_, err := executor.Execute(ctx, b.Shoot.SeedNamespace, etcdMainPod.GetName(), "backup-restore", "curl -k https://etcd-main-local:8080/snapshot/full")
+	_, err := executor.Execute(ctx, b.Shoot.SeedNamespace, etcdMainPod.GetName(), "backup-restore", "/bin/sh", "curl -k https://etcd-main-local:8080/snapshot/full")
 	return err
 }
 

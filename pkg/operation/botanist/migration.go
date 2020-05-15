@@ -16,19 +16,15 @@ package botanist
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,59 +60,22 @@ func annotateObjectForMigrationFunc(ctx context.Context, client client.Client) f
 // DeleteAllExtensionCRs deletes all extension CRs from the Shoot namespace
 func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
-		if err := common.ConfirmDeletion(ctx, b.K8sSeedClient.Client(), obj); err != nil {
+		extensionObj, err := extensions.Accessor(obj)
+		if err != nil {
 			return err
 		}
 
-		if err := client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, obj, kubernetes.DefaultDeleteOptions...)); err != nil {
-			accObj, err := meta.Accessor(obj)
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("couldn't delete CR %s with name %s: %v", obj.GetObjectKind(), accObj.GetName(), err)
-		}
-		return nil
+		return common.DeleteExtensionCR(ctx, b.K8sSeedClient.Client(), func() extensionsv1alpha1.Object { return extensionObj }, extensionObj.GetNamespace(), extensionObj.GetName())
 	})
 	if err != nil {
 		return err
 	}
-	return flow.Parallel(fns...)(ctx)
-}
-
-// WaitForExtensionsOperationMigrateToSucceed waits until extension CRs has lastOperation Migrate Succeeded
-func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Context) error {
-	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
-		return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-			acc, err := extensions.Accessor(obj)
-			if err != nil {
-				return retry.SevereError(err)
-			}
-
-			exrtensionObjStatus := acc.GetExtensionStatus()
-			if exrtensionObjStatus != nil && exrtensionObjStatus.GetLastOperation() != nil {
-				lastOperation := exrtensionObjStatus.GetLastOperation()
-				if lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-					return retry.Ok()
-				}
-			}
-
-			var exetnsionType string
-			if extensionSpec := acc.GetExtensionSpec(); extensionSpec != nil {
-				exetnsionType = extensionSpec.GetExtensionType()
-			}
-			return retry.MinorError(fmt.Errorf("extension CR %s with type %s lastOperation was not Migrate=Succeeded", acc.GetName(), exetnsionType))
-		})
-	})
-	if err != nil {
-		return err
-	}
-
 	return flow.Parallel(fns...)(ctx)
 }
 
 func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc func(obj runtime.Object) error) ([]flow.TaskFn, error) {
 	var fns []flow.TaskFn
-	for _, listObj := range extensions.GetAllGardenerExtensionsLists() {
+	for _, listObj := range extensions.GetShootCRsLists() {
 		listObjCopy := listObj
 		if err := b.K8sSeedClient.Client().List(ctx, listObjCopy, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 			return nil, err
@@ -161,8 +120,5 @@ func (b *Botanist) isRestorePhase() bool {
 		return false
 	}
 
-	if lastOperation := b.Shoot.Info.Status.LastOperation; lastOperation != nil {
-		return lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
-	}
-	return false
+	return b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }
