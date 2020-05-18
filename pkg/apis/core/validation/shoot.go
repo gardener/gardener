@@ -539,12 +539,17 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			}
 		}
 
+		forbiddenAdmissionPlugins := sets.NewString("SecurityContextDeny")
 		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
 		for i, plugin := range kubeAPIServer.AdmissionPlugins {
 			idxPath := admissionPluginsPath.Index(i)
 
 			if len(plugin.Name) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
+			}
+
+			if forbiddenAdmissionPlugins.Has(plugin.Name) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("forbidden admission plugin was specified - do not use %+v", forbiddenAdmissionPlugins.UnsortedList())))
 			}
 		}
 
