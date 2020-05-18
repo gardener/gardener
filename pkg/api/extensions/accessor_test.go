@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -180,6 +181,26 @@ var _ = Describe("Accessor", func() {
 					state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
 					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{State: state})
 					Expect(acc.GetState()).To(Equal(state))
+				})
+			})
+
+			Describe("#GetResources", func() {
+				It("should get the resources", func() {
+					var (
+						resources = []gardencorev1beta1.NamedResourceReference{
+							{
+								Name: "test",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									Kind:       "Secret",
+									Name:       "test-secret",
+									APIVersion: "v1",
+								},
+							},
+						}
+						acc = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{Resources: resources})
+					)
+					getResources := acc.GetResources()
+					Expect(getResources).To(Equal(resources))
 				})
 			})
 

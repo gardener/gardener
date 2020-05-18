@@ -21,13 +21,17 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +66,7 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 			return reconcile.Result{}, err
 		}
 
-		if shouldSkipExtensionObjectSync(extensionObject, kind, &req, s.log) {
+		if shouldSkipExtensionObjectSync(extensionObject) {
 			return reconcile.Result{}, nil
 		}
 
@@ -83,10 +87,37 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 		name := extensionObject.GetName()
 		purpose := extensionObject.GetExtensionSpec().GetExtensionPurpose()
 		state := extensionObject.GetExtensionStatus().GetState()
+		resources := extensionObject.GetExtensionStatus().GetResources()
 
 		shootState := &gardencorev1alpha1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
 		if _, err := controllerutil.CreateOrUpdate(ctx, s.k8sGardenClient.Client(), shootState, func() error {
-			return updateShootStateExtensionState(state, shootState, kind, name, purpose)
+			// Delete resource data for resources that are no longer present in the extension state
+			_, currentResources := getShootStateExtensionState(shootState, kind, &name, purpose)
+			for _, currentResource := range currentResources {
+				if gardencorev1beta1helper.GetResourceByName(resources, currentResource.Name) == nil {
+					updateShootStateResourceData(shootState, &currentResource.ResourceRef, nil)
+				}
+			}
+
+			// Update the extension state
+			updateShootStateExtensionState(shootState, kind, &name, purpose, state, resources)
+
+			// Update resource data for resources that are still present in the extension state
+			for _, resource := range resources {
+				obj, err := utils.GetObjectByRef(ctx, s.seedClient.Client(), &resource.ResourceRef, extensionObject.GetNamespace())
+				if err != nil {
+					return err
+				}
+				if obj == nil {
+					return fmt.Errorf("object not found %v", resource.ResourceRef)
+				}
+				raw := &runtime.RawExtension{}
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj, raw); err != nil {
+					return err
+				}
+				updateShootStateResourceData(shootState, &resource.ResourceRef, raw)
+			}
+			return nil
 		}); err != nil {
 			message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %s was NOT successfully synced: %v", shoot.Name, kind, name, purposeToString(purpose), err)
 			s.log.Error(message)
@@ -101,7 +132,7 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 	}
 }
 
-func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object, kind string, req *reconcile.Request, log *logrus.Entry) bool {
+func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object) bool {
 	if extensionObject.GetDeletionTimestamp() != nil {
 		return true
 	}
@@ -114,21 +145,42 @@ func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object, ki
 	return false
 }
 
-func updateShootStateExtensionState(extensionState *runtime.RawExtension, shootState *gardencorev1alpha1.ShootState, kind string, name string, purpose *string) error {
+func getShootStateExtensionState(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string) (*runtime.RawExtension, []gardencorev1beta1.NamedResourceReference) {
 	list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
-	if extensionState == nil {
-		list.Delete(kind, &name, purpose)
-		shootState.Spec.Extensions = list
-		return nil
+	s := list.Get(kind, name, purpose)
+	if s != nil {
+		return s.State, s.Resources
 	}
-	list.Upsert(&gardencorev1alpha1.ExtensionResourceState{
-		Kind:    kind,
-		Name:    &name,
-		Purpose: purpose,
-		State:   *extensionState,
-	})
+	return nil, nil
+}
+
+func updateShootStateExtensionState(shootState *gardencorev1alpha1.ShootState, kind string, name, purpose *string, state *runtime.RawExtension, resources []gardencorev1beta1.NamedResourceReference) {
+	list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+	if state != nil || resources != nil {
+		list.Upsert(&gardencorev1alpha1.ExtensionResourceState{
+			Kind:      kind,
+			Name:      name,
+			Purpose:   purpose,
+			State:     state,
+			Resources: resources,
+		})
+	} else {
+		list.Delete(kind, name, purpose)
+	}
 	shootState.Spec.Extensions = list
-	return nil
+}
+
+func updateShootStateResourceData(shootState *gardencorev1alpha1.ShootState, ref *autoscalingv1.CrossVersionObjectReference, data *runtime.RawExtension) {
+	list := gardencorev1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+	if data != nil {
+		list.Upsert(&gardencorev1alpha1.ResourceData{
+			CrossVersionObjectReference: *ref,
+			Data:                        *data,
+		})
+	} else {
+		list.Delete(ref)
+	}
+	shootState.Spec.Resources = list
 }
 
 func purposeToString(purpose *string) string {

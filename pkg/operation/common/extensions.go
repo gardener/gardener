@@ -125,7 +125,11 @@ func DeleteExtensionCR(
 		return err
 	}
 
-	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
+	if err := client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DeleteExtensionCRs lists all extension resources and loops over them. It executes the given <predicateFunc> for each

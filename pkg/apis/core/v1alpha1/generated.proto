@@ -20,6 +20,8 @@ syntax = 'proto2';
 
 package github.com.gardener.gardener.pkg.apis.core.v1alpha1;
 
+import "github.com/gardener/gardener/pkg/apis/core/v1beta1/generated.proto";
+import "k8s.io/api/autoscaling/v1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/api/rbac/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/api/resource/generated.proto";
@@ -598,7 +600,12 @@ message ExtensionResourceState {
   optional string purpose = 3;
 
   // State of the extension resource
+  // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension state = 4;
+
+  // Resources holds a list of named resource references that can be referred to in the state by their names.
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.NamedResourceReference resources = 5;
 }
 
 // Gardener holds the information about the Gardener version that operated a resource.
@@ -1098,6 +1105,15 @@ message Monitoring {
   optional Alerting alerting = 1;
 }
 
+// NamedResourceReference is a named reference to a resource.
+message NamedResourceReference {
+  // Name of the resource reference.
+  optional string name = 1;
+
+  // ResourceRef is a reference to a resource.
+  optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
+}
+
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
   // Type identifies the type of the networking plugin.
@@ -1413,6 +1429,14 @@ message Region {
   // quality, reliability, access restrictions, etc.
   // +optional
   map<string, string> labels = 3;
+}
+
+// ResourceData holds the data of a resource referred to by an extension controller state.
+message ResourceData {
+  optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference ref = 1;
+
+  // Data of the resource
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension data = 2;
 }
 
 message SecretBinding {
@@ -1772,6 +1796,10 @@ message ShootSpec {
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 15;
+
+  // Resources holds a list of named resource references that can be referred to in extension configs by their names.
+  // +optional
+  repeated NamedResourceReference resources = 16;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
@@ -1806,6 +1834,10 @@ message ShootStateSpec {
   // Extensions holds the state of custom resources reconciled by extension controllers in the seed
   // +optional
   repeated ExtensionResourceState extensions = 2;
+
+  // Resources holds the data of resources referred to by extension controller states
+  // +optional
+  repeated ResourceData resources = 3;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

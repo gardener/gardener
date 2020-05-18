@@ -15,6 +15,7 @@
 package core
 
 import (
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -48,6 +49,8 @@ type ShootStateSpec struct {
 	Gardener []GardenerResourceData
 	// Extensions holds the state of custom resources reconciled by extension controllers in the seed
 	Extensions []ExtensionResourceState
+	// Resources holds the data of resources referred to by extension controller states
+	Resources []ResourceData
 }
 
 // GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.
@@ -70,5 +73,14 @@ type ExtensionResourceState struct {
 	// Purpose of the extension custom resource
 	Purpose *string
 	// State of the extension resource
-	State runtime.RawExtension
+	State *runtime.RawExtension
+	// Resources holds a list of named resource references that can be referred to in the state by their names.
+	Resources []NamedResourceReference
+}
+
+// ResourceData holds the data of a resource referred to by an extension controller state.
+type ResourceData struct {
+	autoscalingv1.CrossVersionObjectReference
+	// Data of the resource
+	Data runtime.RawExtension
 }

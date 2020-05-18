@@ -15,8 +15,11 @@
 package v1alpha1
 
 import (
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // +genclient
@@ -55,6 +58,9 @@ type ShootStateSpec struct {
 	// Extensions holds the state of custom resources reconciled by extension controllers in the seed
 	// +optional
 	Extensions []ExtensionResourceState `json:"extensions,omitempty" protobuf:"bytes,2,rep,name=extensions"`
+	// Resources holds the data of resources referred to by extension controller states
+	// +optional
+	Resources []ResourceData `json:"resources,omitempty" protobuf:"bytes,3,rep,name=resources"`
 }
 
 // GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.
@@ -79,5 +85,16 @@ type ExtensionResourceState struct {
 	// +optional
 	Purpose *string `json:"purpose,omitempty" protobuf:"bytes,3,opt,name=purpose"`
 	// State of the extension resource
-	State runtime.RawExtension `json:"state" protobuf:"bytes,4,opt,name=state"`
+	// +optional
+	State *runtime.RawExtension `json:"state,omitempty" protobuf:"bytes,4,opt,name=state"`
+	// Resources holds a list of named resource references that can be referred to in the state by their names.
+	// +optional
+	Resources []gardencorev1beta1.NamedResourceReference `json:"resources,omitempty" protobuf:"bytes,5,rep,name=resources"`
+}
+
+// ResourceData holds the data of a resource referred to by an extension controller state.
+type ResourceData struct {
+	autoscalingv1.CrossVersionObjectReference `json:",inline" protobuf:"bytes,1,opt,name=ref"`
+	// Data of the resource
+	Data runtime.RawExtension `json:"data" protobuf:"bytes,2,opt,name=data"`
 }

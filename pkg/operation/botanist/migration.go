@@ -23,8 +23,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,11 +99,31 @@ func (b *Botanist) restoreExtensionObject(ctx context.Context, client client.Cli
 
 func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client client.Client, extensionObj runtime.Object, objStatus *extensionsv1alpha1.DefaultStatus, resourceKind, resourceName string, purpose *string) error {
 	return kutil.TryUpdateStatus(ctx, k8sretry.DefaultBackoff, client, extensionObj, func() error {
+		var resourceRefs []autoscalingv1.CrossVersionObjectReference
 		if b.ShootState.Spec.Extensions != nil {
 			list := gardencorev1alpha1helper.ExtensionResourceStateList(b.ShootState.Spec.Extensions)
-			еxtensionResourceState := list.Get(resourceKind, &resourceName, purpose)
-			if еxtensionResourceState != nil {
-				objStatus.State = &еxtensionResourceState.State
+			extensionResourceState := list.Get(resourceKind, &resourceName, purpose)
+			if extensionResourceState != nil {
+				objStatus.State = extensionResourceState.State
+				objStatus.Resources = extensionResourceState.Resources
+				for _, r := range extensionResourceState.Resources {
+					resourceRefs = append(resourceRefs, r.ResourceRef)
+				}
+			}
+		}
+		if b.ShootState.Spec.Resources != nil {
+			list := gardencorev1alpha1helper.ResourceDataList(b.ShootState.Spec.Resources)
+			for _, resourceRef := range resourceRefs {
+				resourceData := list.Get(&resourceRef)
+				if resourceData != nil {
+					obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resourceData.Data)
+					if err != nil {
+						return err
+					}
+					if err := utils.CreateOrUpdateObjectByRef(ctx, b.K8sSeedClient.Client(), &resourceRef, b.Shoot.SeedNamespace, obj); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		return nil

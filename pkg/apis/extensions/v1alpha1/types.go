@@ -39,6 +39,8 @@ type Status interface {
 	GetLastError() *gardencorev1beta1.LastError
 	// GetState retrieves the State of the extension
 	GetState() *runtime.RawExtension
+	// GetResources retrieves the list of named resource references referred to in the state by their names.
+	GetResources() []gardencorev1beta1.NamedResourceReference
 }
 
 // Spec is the spec section of an Object.

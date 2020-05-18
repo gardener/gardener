@@ -16,6 +16,7 @@ package helper
 
 import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 )
 
@@ -48,6 +49,7 @@ func (e *ExtensionResourceStateList) Upsert(extensionResourceState *gardencorev1
 	for i, obj := range *e {
 		if matchesExtensionResourceState(&obj, extensionResourceState.Kind, extensionResourceState.Name, extensionResourceState.Purpose) {
 			(*e)[i].State = extensionResourceState.State
+			(*e)[i].Resources = extensionResourceState.Resources
 			return
 		}
 	}
@@ -61,7 +63,7 @@ func matchesExtensionResourceState(extensionResourceState *gardencorev1alpha1.Ex
 	return false
 }
 
-// GardenerResourceDataList defines function
+// GardenerResourceDataList is a list of GardenerResourceData
 type GardenerResourceDataList []gardencorev1alpha1.GardenerResourceData
 
 // Delete deletes an item from the list
@@ -93,4 +95,37 @@ func (g *GardenerResourceDataList) Upsert(data *gardencorev1alpha1.GardenerResou
 		}
 	}
 	*g = append(*g, *data)
+}
+
+// ResourceDataList is a list of ResourceData
+type ResourceDataList []gardencorev1alpha1.ResourceData
+
+// Delete deletes an item from the list
+func (r *ResourceDataList) Delete(ref *autoscalingv1.CrossVersionObjectReference) {
+	for i, obj := range *r {
+		if apiequality.Semantic.DeepEqual(obj.CrossVersionObjectReference, *ref) {
+			*r = append((*r)[:i], (*r)[i+1:]...)
+		}
+	}
+}
+
+// Get returns the item from the list
+func (r *ResourceDataList) Get(ref *autoscalingv1.CrossVersionObjectReference) *gardencorev1alpha1.ResourceData {
+	for _, obj := range *r {
+		if apiequality.Semantic.DeepEqual(obj.CrossVersionObjectReference, *ref) {
+			return &obj
+		}
+	}
+	return nil
+}
+
+// Upsert inserts a new element or updates an existing one
+func (r *ResourceDataList) Upsert(data *gardencorev1alpha1.ResourceData) {
+	for i, obj := range *r {
+		if apiequality.Semantic.DeepEqual(obj.CrossVersionObjectReference, data.CrossVersionObjectReference) {
+			(*r)[i].Data = data.Data
+			return
+		}
+	}
+	*r = append(*r, *data)
 }

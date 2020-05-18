@@ -20,6 +20,7 @@ syntax = 'proto2';
 
 package github.com.gardener.gardener.pkg.apis.core.v1beta1;
 
+import "k8s.io/api/autoscaling/v1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/api/rbac/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/api/resource/generated.proto";
@@ -1068,6 +1069,15 @@ message Monitoring {
   optional Alerting alerting = 1;
 }
 
+// NamedResourceReference is a named reference to a resource.
+message NamedResourceReference {
+  // Name of the resource reference.
+  optional string name = 1;
+
+  // ResourceRef is a reference to a resource.
+  optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
+}
+
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
   // Type identifies the type of the networking plugin.
@@ -1742,6 +1752,10 @@ message ShootSpec {
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 15;
+
+  // Resources holds a list of named resource references that can be referred to in extension configs by their names.
+  // +optional
+  repeated NamedResourceReference resources = 16;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

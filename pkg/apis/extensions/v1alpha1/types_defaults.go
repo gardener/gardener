@@ -63,6 +63,9 @@ type DefaultStatus struct {
 	// State can be filled by the operating controller with what ever data it needs.
 	// +optional
 	State *runtime.RawExtension `json:"state,omitempty"`
+	// Resources holds a list of named resource references that can be referred to in the state by their names.
+	// +optional
+	Resources []gardencorev1beta1.NamedResourceReference `json:"resources,omitempty"`
 }
 
 // GetProviderStatus implements Status.
@@ -98,4 +101,9 @@ func (d *DefaultStatus) GetObservedGeneration() int64 {
 // GetState implements Status.
 func (d *DefaultStatus) GetState() *runtime.RawExtension {
 	return d.State
+}
+
+// GetResources implements Status.
+func (d *DefaultStatus) GetResources() []gardencorev1beta1.NamedResourceReference {
+	return d.Resources
 }

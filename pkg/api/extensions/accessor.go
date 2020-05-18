@@ -214,3 +214,22 @@ func (u unstructuredStatusAccessor) SetConditions(conditions []gardencorev1beta1
 		return
 	}
 }
+
+// GetResources implements Status.
+func (u unstructuredStatusAccessor) GetResources() []gardencorev1beta1.NamedResourceReference {
+	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "resources")
+	if err != nil || !ok {
+		return nil
+	}
+	var resources []gardencorev1beta1.NamedResourceReference
+	interfaceResourceSlice := val.([]interface{})
+	for _, interfaceResource := range interfaceResourceSlice {
+		new := interfaceResource.(map[string]interface{})
+		resource := &gardencorev1beta1.NamedResourceReference{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(new, resource); err != nil {
+			return nil
+		}
+		resources = append(resources, *resource)
+	}
+	return resources
+}

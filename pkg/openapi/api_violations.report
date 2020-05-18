@@ -17,6 +17,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DNS,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DNSIncludeExclude,Exclude
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DNSIncludeExclude,Include
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ExtensionResourceState,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Hibernation,Schedules
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeAPIServerConfig,AdmissionPlugins
@@ -43,9 +44,11 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedVolume,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootSpec,Extensions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStateList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStateSpec,Extensions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStateSpec,Gardener
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStateSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,Constraints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,LastErrors
@@ -97,6 +100,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedVolume,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Extensions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,Constraints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,LastErrors
@@ -106,6 +110,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,ClusterOpenIDConnectPresetList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,KubeAPIServerOpenIDConnect,SigningAlgs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,OpenIDConnectPresetList,Items
+API rule violation: list_type_missing,k8s.io/api/autoscaling/v1,HorizontalPodAutoscalerList,Items
 API rule violation: list_type_missing,k8s.io/api/core/v1,AvoidPods,PreferAvoidPods
 API rule violation: list_type_missing,k8s.io/api/core/v1,Capabilities,Add
 API rule violation: list_type_missing,k8s.io/api/core/v1,Capabilities,Drop

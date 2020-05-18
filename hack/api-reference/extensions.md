@@ -2076,6 +2076,20 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>State can be filled by the operating controller with what ever data it needs.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.NamedResourceReference">
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.DropIn">DropIn
