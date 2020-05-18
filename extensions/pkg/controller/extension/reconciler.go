@@ -171,8 +171,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		r.logger.Error(err, "Could not fetch Extension resource")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not fetch Extension resource: %+v", err)
 	}
 
 	var result reconcile.Result
@@ -229,8 +228,7 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(ex, r.finalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 
 	if !hasFinalizer {
@@ -252,8 +250,7 @@ func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extensio
 	}
 
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, r.finalizerName, ex); err != nil {
-		r.logger.Error(err, "Error removing finalizer from Extension resource", "extension", ex.Name, "namespace", ex.Namespace)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from Extension resource: %+v", err)
 	}
 	return reconcile.Result{}, nil
 }
@@ -278,8 +275,7 @@ func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extensi
 
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, ex, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from Extension resource", "extension", ex.Name, "namespace", ex.Namespace)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Extension resource: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -300,14 +296,12 @@ func (r *reconciler) migrate(ctx context.Context, ex *extensionsv1alpha1.Extensi
 	}
 
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, ex); err != nil {
-		r.logger.Error(err, "Error removing all finalizers from Extension resource", "extension", ex.Name, "namespace", ex.Namespace)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from Extension resource: %+v", err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, ex, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from Extension resource", "extension", ex.Name, "namespace", ex.Namespace)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Extension resource: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -322,7 +316,6 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, ex *extensionsv
 }
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, ex *extensionsv1alpha1.Extension, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	r.logger.Error(err, description, "extension", ex.Name, "namespace", ex.Namespace)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, ex, func() error {
 		ex.Status.ObservedGeneration = ex.Generation
 		ex.Status.LastOperation, ex.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
