@@ -61,8 +61,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
-	integrationframework "github.com/gardener/gardener/test/integration/framework"
-
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -125,7 +123,7 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			f.Logger.Info("Running in test Machinery")
 			// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
 			// scale down the gardener-scheduler to 0 replicas
-			replicas, err := integrationframework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
+			replicas, err := framework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
 			gardenerSchedulerReplicaCount = replicas
 			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Info("Environment for test-machinery run is prepared")
@@ -180,7 +178,7 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			f.Logger.Infof("Cleaned Cloud Profile '%s'", testShootCloudProfile.Name)
 		}
 		if testMachineryRun != nil && *testMachineryRun {
-			_, err := integrationframework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
+			_, err := framework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			f.Logger.Infof("Environment is restored")
 		}

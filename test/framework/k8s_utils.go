@@ -418,6 +418,24 @@ func WaitUntilPodIsRunning(ctx context.Context, log *logrus.Logger, podName, pod
 	})
 }
 
+// WaitUntilPodIsRunningWithLabels waits until the pod with <podLabels> is running
+func (f *CommonFramework) WaitUntilPodIsRunningWithLabels(ctx context.Context, labels labels.Selector, podNamespace string, c kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		pod, err := GetFirstRunningPodWithLabels(ctx, labels, podNamespace, c)
+
+		if err != nil {
+			return retry.SevereError(err)
+		}
+
+		if !health.IsPodReady(pod) {
+			f.Logger.Infof("Waiting for %s to be ready!!", pod.GetName())
+			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, pod.GetNamespace(), pod.GetName(), err))
+		}
+
+		return retry.Ok()
+	})
+}
+
 // DeployRootPod deploys a pod with root permissions for testing purposes.
 func DeployRootPod(ctx context.Context, c client.Client, namespace string, nodename *string) (*corev1.Pod, error) {
 	podPriority := int32(0)

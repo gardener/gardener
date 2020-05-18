@@ -18,23 +18,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
-
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	metricsscheme "k8s.io/metrics/pkg/client/clientset/versioned/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var shootCfg *ShootConfig
@@ -77,6 +78,7 @@ func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 	}
 
 	ginkgo.BeforeEach(func() {
+		f.CommonFramework.BeforeEach()
 		f.GardenerFramework.BeforeEach()
 		f.BeforeEach()
 	})
@@ -92,7 +94,7 @@ func NewShootFrameworkFromConfig(cfg *ShootConfig) (*ShootFramework, error) {
 		gardenerConfig = cfg.GardenerConfig
 	}
 	f := &ShootFramework{
-		GardenerFramework: NewGardenerFramework(gardenerConfig),
+		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
 		TestDescription:   NewTestDescription("SHOOT"),
 		Config:            cfg,
 	}

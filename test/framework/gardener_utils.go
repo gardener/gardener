@@ -17,6 +17,13 @@ package framework
 import (
 	"context"
 	"fmt"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,6 +40,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// GetSeeds returns all registered seeds
+func (f *GardenerFramework) GetSeeds(ctx context.Context) ([]gardencorev1beta1.Seed, error) {
+	seeds := &gardencorev1beta1.SeedList{}
+	err := f.GardenClient.Client().List(ctx, seeds)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get Seeds from Garden cluster")
+	}
+
+	return seeds.Items, nil
+}
 
 // GetSeed returns the seed and its k8s client
 func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gardencorev1beta1.Seed, kubernetes.Interface, error) {
@@ -267,6 +285,13 @@ func (f *GardenerFramework) WakeUpShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
+// ScheduleShoot set the Spec.Cloud.Seed of a shoot to the specified seed.
+// This is the request the Gardener Scheduler executes after a scheduling decision.
+func (f *GardenerFramework) ScheduleShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) error {
+	shoot.Spec.SeedName = &seed.Name
+	return f.GardenClient.Client().Update(ctx, shoot)
+}
+
 // WaitForShootToBeCreated waits for the shoot to be created
 func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
@@ -364,6 +389,72 @@ func (f *GardenerFramework) RemoveShootAnnotation(shoot *gardencorev1beta1.Shoot
 	return nil
 }
 
+// WaitForShootToBeUnschedulable waits for the shoot to be unschedulable. This is indicated by Events created by the scheduler on the shoot
+func (f *GardenerFramework) WaitForShootToBeUnschedulable(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
+		newShoot := &gardencorev1beta1.Shoot{}
+		err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
+		if err != nil {
+			return false, err
+		}
+		*shoot = *newShoot
+		f.Logger.Infof("waiting for shoot %s to be unschedulable", shoot.Name)
+
+		uid := string(shoot.UID)
+		kind := "Shoot"
+		fieldSelector := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).GetFieldSelector(&shoot.Name, &shoot.Namespace, &kind, &uid)
+		eventList, err := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).List(metav1.ListOptions{FieldSelector: fieldSelector.String()})
+		if err != nil {
+			return false, err
+		}
+		if shootIsUnschedulable(eventList.Items) {
+			return true, nil
+		}
+
+		if shoot.Status.LastOperation != nil {
+			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+		}
+		return false, nil
+	})
+}
+
+// WaitForShootToBeScheduled waits for the shoot to be scheduled successfully
+func (f *GardenerFramework) WaitForShootToBeScheduled(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
+		newShoot := &gardencorev1beta1.Shoot{}
+		err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
+		if err != nil {
+			return retry.SevereError(err)
+		}
+		*shoot = *newShoot
+		if shootIsScheduledSuccessfully(&shoot.Spec) {
+			return retry.Ok()
+		}
+		f.Logger.Infof("waiting for shoot %s to be scheduled", shoot.Name)
+		if shoot.Status.LastOperation != nil {
+			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+		}
+		return retry.MinorError(fmt.Errorf("shoot %s is not yet scheduled", shoot.Name))
+	})
+}
+
+func shootIsScheduledSuccessfully(newSpec *gardencorev1beta1.ShootSpec) bool {
+	return newSpec.SeedName != nil
+}
+
+func shootIsUnschedulable(events []corev1.Event) bool {
+	if len(events) == 0 {
+		return false
+	}
+
+	for _, event := range events {
+		if strings.Contains(event.Message, scheduler.MsgUnschedulable) {
+			return true
+		}
+	}
+	return false
+}
+
 // MergePatchShoot performs a two way merge patch operation on a shoot object
 func (f *GardenerFramework) MergePatchShoot(oldShoot, newShoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
@@ -441,4 +532,42 @@ func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: &hibernated,
 	}
+}
+
+// ParseSchedulerConfiguration returns a SchedulerConfiguration from a ConfigMap
+func ParseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.SchedulerConfiguration, error) {
+	const configurationFileName = "schedulerconfiguration.yaml"
+	if configuration == nil {
+		return nil, fmt.Errorf("scheduler Configuration could not be extracted from ConfigMap. The gardener setup with the helm chart creates this config map")
+	}
+
+	rawConfig := configuration.Data[configurationFileName]
+	byteConfig := []byte(rawConfig)
+	scheme := runtime.NewScheme()
+	if err := config.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := schedulerconfigv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	codecs := serializer.NewCodecFactory(scheme)
+	configObj, gvk, err := codecs.UniversalDecoder().Decode(byteConfig, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	config, ok := configObj.(*config.SchedulerConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
+	}
+	return config, nil
+}
+
+// ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
+func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", gardencorev1beta1constants.GardenNamespace)
+}
+
+// ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
+func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
 }
