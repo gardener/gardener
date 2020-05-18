@@ -538,6 +538,30 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							"Field": Equal(fmt.Sprintf("spec.regions[0].zones[%d].name", len(duplicatedZones[0].Zones)-1)),
 						}))))
 				})
+
+				It("should forbid invalid label specifications", func() {
+					cloudProfile.Spec.Regions[0].Labels = map[string]string{
+						"this-is-not-allowed": "?*&!@",
+						"toolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolong": "toolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolong",
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.regions[0].labels"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.regions[0].labels"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.regions[0].labels"),
+						})),
+					))
+				})
 			})
 
 			Context("volume types validation", func() {

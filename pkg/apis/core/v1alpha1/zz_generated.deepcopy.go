@@ -2536,6 +2536,13 @@ func (in *Region) DeepCopyInto(out *Region) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
@@ -3093,6 +3100,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		in, out := &in.SeedName, &out.SeedName
 		*out = new(string)
 		**out = **in
+	}
+	if in.SeedSelector != nil {
+		in, out := &in.SeedSelector, &out.SeedSelector
+		*out = new(metav1.LabelSelector)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

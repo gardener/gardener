@@ -337,6 +337,7 @@ func validateRegions(regions []core.Region, fldPath *field.Path) field.ErrorList
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
 		zonesPath := idxPath.Child("zones")
+		labelsPath := idxPath.Child("labels")
 
 		if len(region.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a region name"))
@@ -357,6 +358,9 @@ func validateRegions(regions []core.Region, fldPath *field.Path) field.ErrorList
 				zonesFound.Insert(zone.Name)
 			}
 		}
+
+		allErrs = append(allErrs, metav1validation.ValidateLabels(region.Labels, labelsPath)...)
 	}
+
 	return allErrs
 }

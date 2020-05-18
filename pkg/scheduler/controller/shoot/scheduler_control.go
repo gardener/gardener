@@ -175,12 +175,16 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 		return nil, err
 	}
 
-	filteredSeeds, err := filterSeedsMatchingSeedSelector(cloudProfile, seedList)
+	seedsMatchingCloudProfileSelector, err := filterSeedsMatchingSeedSelector(seedList, cloudProfile.Spec.SeedSelector, "CloudProfile")
+	if err != nil {
+		return nil, err
+	}
+	seedsMatchingShootSelector, err := filterSeedsMatchingSeedSelector(seedsMatchingCloudProfileSelector, shoot.Spec.SeedSelector, "Shoot")
 	if err != nil {
 		return nil, err
 	}
 
-	candidates, err := getCandidates(shoot, filteredSeeds, strategy)
+	candidates, err := getCandidates(shoot, seedsMatchingShootSelector, strategy)
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +197,10 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	return getSeedWithLeastShootsDeployed(filteredCandidates, shootList)
 }
 
-func filterSeedsMatchingSeedSelector(cloudProfile *gardencorev1beta1.CloudProfile, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
+func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, labelSelector *metav1.LabelSelector, kind string) ([]*gardencorev1beta1.Seed, error) {
 	selector := &metav1.LabelSelector{}
-	if cloudProfile.Spec.SeedSelector != nil {
-		selector = cloudProfile.Spec.SeedSelector
+	if labelSelector != nil {
+		selector = labelSelector
 	}
 	seedSelector, err := metav1.LabelSelectorAsSelector(selector)
 	if err != nil {
@@ -213,7 +217,7 @@ func filterSeedsMatchingSeedSelector(cloudProfile *gardencorev1beta1.CloudProfil
 	}
 
 	if len(matchingSeeds) == 0 {
-		return nil, fmt.Errorf("none out of the %d seeds has the matching labels required by seed selector of CloudProfile '%s'. Selector: '%s'", len(seedList), cloudProfile.Name, cloudProfile.Spec.SeedSelector.String())
+		return nil, fmt.Errorf("none out of the %d seeds has the matching labels required by seed selector of '%s' (selector: '%s')", len(seedList), kind, seedSelector.String())
 	}
 	return matchingSeeds, nil
 }

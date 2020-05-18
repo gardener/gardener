@@ -394,6 +394,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.Region = ""
 			shoot.Spec.SecretBindingName = ""
 			shoot.Spec.SeedName = pointer.StringPtr("")
+			shoot.Spec.SeedSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}}
 			shoot.Spec.Provider.Type = ""
 
 			errorList := ValidateShoot(shoot)
@@ -414,6 +415,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.seedName"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.seedSelector.matchLabels"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),

@@ -151,6 +151,11 @@ type Region struct {
 	// +patchStrategy=merge
 	// +optional
 	Zones []AvailabilityZone `json:"zones,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=zones"`
+	// Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
+	// It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
+	// quality, reliability, access restrictions, etc.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,3,rep,name=labels"`
 }
 
 // AvailabilityZone is an availability zone.

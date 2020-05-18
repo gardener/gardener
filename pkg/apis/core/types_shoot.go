@@ -80,6 +80,8 @@ type ShootSpec struct {
 	SecretBindingName string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
 	SeedName *string
+	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+	SeedSelector *metav1.LabelSelector
 }
 
 func (s *Shoot) GetProviderType() string {
