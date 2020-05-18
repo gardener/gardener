@@ -70,10 +70,7 @@ func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	if err := a.waitUntilMachineResourcesDeleted(timeoutCtx, worker, workerDelegate); err != nil {
+	if err := a.waitUntilMachineResourcesDeleted(ctx, worker, workerDelegate); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 

@@ -24,12 +24,13 @@ import (
 	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/extensions/pkg/util"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,7 +38,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -142,10 +142,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Wait until all generated machine deployments are healthy/available.
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	if err := a.waitUntilWantedMachineDeploymentsAvailable(timeoutCtx, cluster, worker, wantedMachineDeployments); err != nil {
+	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, cluster, worker, wantedMachineDeployments); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
@@ -165,10 +162,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Wait until all unwanted machine deployments are deleted from the system.
-	timeoutCtx2, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	if err := a.waitUntilUnwantedMachineDeploymentsDeleted(timeoutCtx2, worker, wantedMachineDeployments); err != nil {
+	if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, worker, wantedMachineDeployments); err != nil {
 		return errors.Wrapf(err, "error while waiting for all undesired machine deployments to be deleted")
 	}
 
@@ -316,13 +310,13 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 // waitUntilWantedMachineDeploymentsAvailable waits until all the desired <machineDeployments> were marked as healthy /
 // available by the machine-controller-manager. It polls the status every 5 seconds.
 func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, cluster *controller.Cluster, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
-	return wait.PollUntil(5*time.Second, func() (bool, error) {
+	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numDesired, numberOfAwakeMachines int32
 
 		// Get the list of all existing machine deployments
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
 		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-			return false, err
+			return retryutils.SevereError(err)
 		}
 
 		// Collect the numbers of ready and desired replicas.
@@ -343,7 +337,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// ready replicas as desired (specified in the .spec.replicas). However, if we see any error in the
 			// status of the deployment then we return it.
 			for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
-				return false, fmt.Errorf("Machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+				return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
@@ -355,42 +349,48 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numUpdated += existingMachineDeployment.Status.UpdatedReplicas
 		}
 
+		var msg string
+
 		switch {
 		case !controller.IsHibernated(cluster):
-			a.logger.Info(fmt.Sprintf("Waiting until all desired machines are ready (%d/%d machine objects up-to-date, %d/%d machinedeployments available)...", numUpdated, numDesired, numHealthyDeployments, len(wantedMachineDeployments)), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 			if numUpdated >= numDesired && int(numHealthyDeployments) == len(wantedMachineDeployments) {
-				return true, nil
+				return retryutils.Ok()
 			}
+			msg = fmt.Sprintf("Waiting until all desired machines are ready (%d/%d machine objects up-to-date, %d/%d machinedeployments available)...", numUpdated, numDesired, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
-				return true, nil
+				return retryutils.Ok()
 			}
-			a.logger.Info(fmt.Sprintf("Waiting until all machines have been hibernated (%d still awake)...", numberOfAwakeMachines), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+			msg = fmt.Sprintf("Waiting until all machines have been hibernated (%d still awake)...", numberOfAwakeMachines)
 		}
 
-		return false, nil
-	}, ctx.Done())
+		a.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+		return retryutils.MinorError(errors.New(msg))
+	})
 }
 
 // waitUntilUnwantedMachineDeploymentsDeleted waits until all the undesired <machineDeployments> are deleted from the
 // system. It polls the status every 5 seconds.
 func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context.Context, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
-	return wait.PollUntil(5*time.Second, func() (bool, error) {
+	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
 		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-			return false, err
+			return retryutils.SevereError(err)
 		}
 
-		atLeastOneUnwantedMachineDeploymentExists := false
 		for _, existingMachineDeployment := range existingMachineDeployments.Items {
 			if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
-				atLeastOneUnwantedMachineDeploymentExists = true
-				break
+				for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
+					return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
+				}
+
+				a.logger.Info(fmt.Sprintf("Waiting until all unwanted machine deployment %s deleted...", existingMachineDeployment.Name), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+				return retryutils.MinorError(fmt.Errorf("at least one unwanted machine deployment (%s) still exists", existingMachineDeployment.Name))
 			}
 		}
 
-		return !atLeastOneUnwantedMachineDeploymentExists, nil
-	}, ctx.Done())
+		return retryutils.Ok()
+	})
 }
 
 func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments worker.MachineDeployments) error {
