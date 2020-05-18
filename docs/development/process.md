@@ -11,8 +11,6 @@ If you have finished your work, please create a pull request **based on `master`
 make verify
 ```
 
-:rotating_light: Please run `make generate` whenever you modify the any API within `pkg/apis`.
-
 Please do not file your pull request unless you receive a successful response from here!
 
 ## Creating a new Release
