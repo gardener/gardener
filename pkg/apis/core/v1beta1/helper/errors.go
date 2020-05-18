@@ -190,3 +190,16 @@ func LastErrorWithTaskID(description string, taskID string, codes ...gardencorev
 		},
 	}
 }
+
+// HasNonRetryableErrorCode returns true if at least one of given list of last errors has at least one error code that
+// indicates that an automatic retry would not help fixing the problem.
+func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
+	for _, lastError := range lastErrors {
+		for _, code := range lastError.Codes {
+			if code == gardencorev1beta1.ErrorInfraUnauthorized || code == gardencorev1beta1.ErrorConfigurationProblem {
+				return true
+			}
+		}
+	}
+	return false
+}
