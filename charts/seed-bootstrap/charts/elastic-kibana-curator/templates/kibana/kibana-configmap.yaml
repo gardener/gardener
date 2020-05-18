@@ -10,6 +10,7 @@ data:
   kibana.yml: |-
     server.name: kibana
     server.host: "0"
+    server.customResponseHeaders: {"x-frame-options":"sameorigin"}
 
 {{- if .Values.searchguard.enabled }}
     elasticsearch.username: {{ .Values.kibana.sgUsername }}
