@@ -157,8 +157,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.IgnoreAlerts = gardencorev1beta1helper.ShootIgnoresAlerts(shootObject)
 	shoot.WantsAlertmanager = !shoot.IgnoreAlerts && shootObject.Spec.Monitoring != nil && shootObject.Spec.Monitoring.Alerting != nil && len(shootObject.Spec.Monitoring.Alerting.EmailReceivers) > 0
 	shoot.Components = &Components{
-		DNS:   &DNS{},
-		Nginx: &Nginx{},
+		DNS: &DNS{},
 	}
 
 	extensions, err := calculateExtensions(c, shootObject, shoot.SeedNamespace)

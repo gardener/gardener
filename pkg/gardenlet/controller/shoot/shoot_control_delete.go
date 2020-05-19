@@ -416,7 +416,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.Nginx.DNSEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.DNS.NginxEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{

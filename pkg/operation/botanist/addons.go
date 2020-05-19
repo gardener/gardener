@@ -70,7 +70,7 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 
 // EnsureIngressDNSRecord ensures the nginx DNSEntry and waits for completion.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	return component.OpWaiter(b.Shoot.Components.Nginx.DNSEntry).Deploy(ctx)
+	return component.OpWaiter(b.Shoot.Components.DNS.NginxEntry).Deploy(ctx)
 }
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEtnry.
@@ -91,7 +91,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
-		b.Shoot.Components.Nginx.DNSEntry = dns.NewDNSEntry(
+		b.Shoot.Components.DNS.NginxEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),

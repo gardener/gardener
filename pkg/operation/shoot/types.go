@@ -74,8 +74,7 @@ type Shoot struct {
 
 // Components contains different components deployed
 type Components struct {
-	DNS   *DNS
-	Nginx *Nginx
+	DNS *DNS
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.
@@ -85,11 +84,7 @@ type DNS struct {
 	InternalProvider    component.DeployWaiter
 	InternalEntry       component.DeployWaiter
 	AdditionalProviders map[string]component.DeployWaiter
-}
-
-// Nginx contains nginx information.
-type Nginx struct {
-	DNSEntry component.DeployWaiter
+	NginxEntry          component.DeployWaiter
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

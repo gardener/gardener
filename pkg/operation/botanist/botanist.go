@@ -70,7 +70,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
-	o.Shoot.Components.Nginx.DNSEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
 
 	return b, nil
 }
