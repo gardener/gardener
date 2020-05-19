@@ -7,6 +7,7 @@ metadata:
   namespace: {{ $.Release.Namespace }}
   labels:
     gardener.cloud/role: extension-project-role
+    project.gardener.cloud/name: {{ $.Values.project.name }}
   ownerReferences:
   - apiVersion: core.gardener.cloud/v1beta1
     kind: Project
