@@ -44,9 +44,11 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 
 		for _, containerRuntime := range worker.CRI.ContainerRuntimes {
 			cr := containerRuntime
+			workerName := worker.Name
+
 			toApply := extensionsv1alpha1.ContainerRuntime{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      getContainerRuntimeKey(cr.Type, worker.Name),
+					Name:      getContainerRuntimeKey(cr.Type, workerName),
 					Namespace: b.Shoot.SeedNamespace,
 				},
 			}
@@ -59,8 +61,8 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 					if cr.ProviderConfig != nil {
 						toApply.Spec.ProviderConfig = &cr.ProviderConfig.RawExtension
 					}
-					toApply.Spec.WorkerPool.Name = worker.Name
-					toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{gardencorev1beta1constants.LabelWorkerPool: worker.Name, gardencorev1beta1constants.LabelWorkerPoolDeprecated: worker.Name}
+					toApply.Spec.WorkerPool.Name = workerName
+					toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{gardencorev1beta1constants.LabelWorkerPool: workerName, gardencorev1beta1constants.LabelWorkerPoolDeprecated: workerName}
 					return nil
 				})
 				return err
