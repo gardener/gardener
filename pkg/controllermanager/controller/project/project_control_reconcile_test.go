@@ -18,7 +18,9 @@ import (
 	"context"
 	"errors"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/common"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -55,6 +57,14 @@ var _ = Describe("ProjectControlReconcile", func() {
 			extensionRole1 = "foo"
 			extensionRole2 = "bar"
 
+			listOptions = []client.ListOption{
+				client.InNamespace(namespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
+					common.ProjectName:          projectName,
+				},
+			}
+
 			rolebinding1 = rbacv1.RoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      prefix + extensionRole1,
@@ -82,28 +92,28 @@ var _ = Describe("ProjectControlReconcile", func() {
 		)
 
 		It("should do nothing because neither rolebindings nor clusterroles exist", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).Return(nil)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), gomock.Any()).Return(nil)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(nil)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).Return(nil)
 
 			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(BeNil())
 		})
 
 		It("should return an error because listing the rolebindings failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).Return(err)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(err)
 
 			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(Equal(err))
 		})
 
 		It("should return an error because listing the clusterroles failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).Return(nil)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), gomock.Any()).Return(err)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(nil)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).Return(err)
 
 			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(Equal(err))
 		})
 
 		It("should return an error because deleting a stale rolebinding failed", func() {
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
 					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
 					return nil
 				}),
@@ -115,13 +125,13 @@ var _ = Describe("ProjectControlReconcile", func() {
 
 		It("should return an error because deleting a stale clusterrole failed", func() {
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
 					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
 					return nil
 				}),
 				c.EXPECT().Delete(ctx, &rolebinding1),
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
 					list.Items = []rbacv1.ClusterRole{clusterrole1, clusterrole2}
 					return nil
 				}),
@@ -133,13 +143,13 @@ var _ = Describe("ProjectControlReconcile", func() {
 
 		It("should succeed deleting the stale rolebindings and clusterroles", func() {
 			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
 					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
 					return nil
 				}),
 				c.EXPECT().Delete(ctx, &rolebinding2),
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
 					list.Items = []rbacv1.ClusterRole{clusterrole1, clusterrole2}
 					return nil
 				}),
