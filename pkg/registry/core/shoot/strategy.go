@@ -67,31 +67,14 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	// We have introduced minimum values for the pod pids limits and have to ensure that
-	// the value is taken.
+	// Remove the conflicting "SecurityContextDeny" admission plugin if present
 	// TODO: This can be removed in a future release.
-	updateKubeletConfig(newShoot.Spec.Kubernetes.Kubelet)
-	for i, worker := range newShoot.Spec.Provider.Workers {
-		if worker.Kubernetes != nil {
-			updateKubeletConfig(newShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet)
+	if newShoot.Spec.Kubernetes.KubeAPIServer != nil {
+		for i := len(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) - 1; i >= 0; i-- {
+			if newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Name == "SecurityContextDeny" {
+				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[:i], newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i+1:]...)
+			}
 		}
-	}
-	updateKubeletConfig(oldShoot.Spec.Kubernetes.Kubelet)
-	for i, worker := range oldShoot.Spec.Provider.Workers {
-		if worker.Kubernetes != nil {
-			updateKubeletConfig(oldShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet)
-		}
-	}
-}
-
-func updateKubeletConfig(kubeletConfig *core.KubeletConfig) {
-	if kubeletConfig == nil {
-		return
-	}
-
-	if kubeletConfig.PodPIDsLimit != nil && *kubeletConfig.PodPIDsLimit < validation.PodPIDsLimitMinimum {
-		v := validation.PodPIDsLimitMinimum
-		kubeletConfig.PodPIDsLimit = &v
 	}
 }
 

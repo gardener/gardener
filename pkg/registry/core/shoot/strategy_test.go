@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
 
@@ -361,66 +360,25 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 
-		Context("pod pids limit", func() {
-			It("should enforce the minimum limit value", func() {
-				var tooSmallValue int64 = 10
-
-				shoot := newShoot("foo")
-				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
-					PodPIDsLimit: &tooSmallValue,
-				}
-				shoot.Spec.Provider.Workers = []core.Worker{
-					{
-						Kubernetes: &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								PodPIDsLimit: &tooSmallValue,
-							},
-						},
+		Context("admission plugin migration", func() {
+			It("should remove conflicting admission plugins", func() {
+				oldShoot := &core.Shoot{}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					AdmissionPlugins: []core.AdmissionPlugin{
+						{Name: "foo"},
+						{Name: "bar"},
+						{Name: "SecurityContextDeny"},
+						{Name: "baz"},
 					},
 				}
 
-				oldShoot := newShoot("foo")
-				oldShoot.Spec.Kubernetes.Kubelet = shoot.Spec.Kubernetes.Kubelet.DeepCopy()
-				oldShoot.Spec.Provider.Workers = []core.Worker{*shoot.Spec.Provider.Workers[0].DeepCopy()}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
-
-				Expect(*shoot.Spec.Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-				Expect(*oldShoot.Spec.Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-				Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-				Expect(*oldShoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-			})
-
-			It("should not touch values that are above the minimum", func() {
-				var (
-					tooSmallValue   int64 = 10
-					highEnoughValue int64 = 105
-				)
-
-				shoot := newShoot("foo")
-				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
-					PodPIDsLimit: &tooSmallValue,
-				}
-				shoot.Spec.Provider.Workers = []core.Worker{
-					{
-						Kubernetes: &core.WorkerKubernetes{
-							Kubelet: &core.KubeletConfig{
-								PodPIDsLimit: &highEnoughValue,
-							},
-						},
-					},
-				}
-
-				oldShoot := newShoot("foo")
-				oldShoot.Spec.Kubernetes.Kubelet = shoot.Spec.Kubernetes.Kubelet.DeepCopy()
-				oldShoot.Spec.Provider.Workers = []core.Worker{*shoot.Spec.Provider.Workers[0].DeepCopy()}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
-
-				Expect(*shoot.Spec.Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-				Expect(*oldShoot.Spec.Kubernetes.Kubelet.PodPIDsLimit).To(Equal(validation.PodPIDsLimitMinimum))
-				Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(highEnoughValue))
-				Expect(*oldShoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.PodPIDsLimit).To(Equal(highEnoughValue))
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
+					Equal(core.AdmissionPlugin{Name: "foo"}),
+					Equal(core.AdmissionPlugin{Name: "bar"}),
+					Equal(core.AdmissionPlugin{Name: "baz"}),
+				))
 			})
 		})
 	})
