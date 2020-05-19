@@ -264,6 +264,7 @@ func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExt
 			client.InNamespace(namespace),
 			client.MatchingLabels{
 				v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
+				common.ProjectName:          projectName,
 			},
 		); err != nil {
 			return err
