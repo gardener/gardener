@@ -39,7 +39,7 @@ type kubeconfigSecretValidator struct {
 }
 
 // NewValidateKubeconfigSecretsHandler creates a new handler for validating namespace deletions.
-func NewValidateKubeconfigSecretsHandler() func(http.ResponseWriter, *http.Request) {
+func NewValidateKubeconfigSecretsHandler() http.HandlerFunc {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))

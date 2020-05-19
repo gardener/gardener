@@ -48,7 +48,7 @@ type namespaceDeletionHandler struct {
 }
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister, shootLister gardencorelisters.ShootLister) func(http.ResponseWriter, *http.Request) {
+func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister, shootLister gardencorelisters.ShootLister) http.HandlerFunc {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))

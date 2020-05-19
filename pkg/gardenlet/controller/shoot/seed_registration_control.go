@@ -607,6 +607,15 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		tag = *gardenletImage.Tag
 	}
 
+	serverTLSCertificate, err := ioutil.ReadFile(externalConfig.Server.HTTPS.TLS.ServerCertPath)
+	if err != nil {
+		return err
+	}
+	serverTLSKey, err := ioutil.ReadFile(externalConfig.Server.HTTPS.TLS.ServerKeyPath)
+	if err != nil {
+		return err
+	}
+
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"gardenlet": map[string]interface{}{
@@ -639,6 +648,16 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 					"logLevel":              externalConfig.LogLevel,
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,
 					"featureGates":          externalConfig.FeatureGates,
+					"server": map[string]interface{}{
+						"https": map[string]interface{}{
+							"bindAddress": externalConfig.Server.HTTPS.BindAddress,
+							"port":        externalConfig.Server.HTTPS.Port,
+							"tls": map[string]interface{}{
+								"crt": string(serverTLSCertificate),
+								"key": string(serverTLSKey),
+							},
+						},
+					},
 					"seedConfig": &configv1alpha1.SeedConfig{
 						Seed: gardencorev1beta1.Seed{
 							ObjectMeta: metav1.ObjectMeta{

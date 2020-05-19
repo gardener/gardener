@@ -26,7 +26,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// Controller manages creating and renewing the lease for this Gardenlet
+// Controller manages creating and renewing the lease for this Gardenlet.
 type Controller interface {
 	Sync(string, ...metav1.OwnerReference) error
 }
@@ -39,7 +39,7 @@ type leaseController struct {
 }
 
 // NewLeaseController constructs and returns a controller.
-func NewLeaseController(nowFunc func() time.Time, client clientset.Interface, leaseDurationSeconds int32, namespace string) Controller {
+func NewLeaseController(client clientset.Interface, nowFunc func() time.Time, leaseDurationSeconds int32, namespace string) Controller {
 	var leaseClient coordclientset.LeaseInterface
 	if client != nil {
 		leaseClient = client.CoordinationV1().Leases(namespace)
@@ -64,14 +64,11 @@ func (c *leaseController) Sync(holderIdentity string, ownerReferences ...metav1.
 // tryUpdateOrCreateLease updates or creates the lease if it does not exist.
 func (c *leaseController) tryUpdateOrCreateLease(holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
 	lease, err := c.leaseClient.Get(holderIdentity, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		leaseToCreate := c.newLease(nil, holderIdentity, ownerReferences...)
-		_, err := c.leaseClient.Create(leaseToCreate)
-		if err != nil {
-			return fmt.Errorf("failed to create lease: %v", err)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			_, err2 := c.leaseClient.Create(c.newLease(nil, holderIdentity, ownerReferences...))
+			return err2
 		}
-		return nil
-	} else if err != nil {
 		return err
 	}
 
@@ -82,19 +79,18 @@ func (c *leaseController) tryUpdateOrCreateLease(holderIdentity string, ownerRef
 // newLease constructs a new lease if base is nil, or returns a copy of base
 // with desired state asserted on the copy.
 func (c *leaseController) newLease(base *coordinationv1.Lease, holderIdentity string, ownerReferences ...metav1.OwnerReference) *coordinationv1.Lease {
-	var lease *coordinationv1.Lease
-	if base == nil {
-		lease = &coordinationv1.Lease{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      holderIdentity,
-				Namespace: c.namespace,
-			},
-			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.StringPtr(holderIdentity),
-				LeaseDurationSeconds: pointer.Int32Ptr(c.leaseDurationSeconds),
-			},
-		}
-	} else {
+	lease := &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      holderIdentity,
+			Namespace: c.namespace,
+		},
+		Spec: coordinationv1.LeaseSpec{
+			HolderIdentity:       pointer.StringPtr(holderIdentity),
+			LeaseDurationSeconds: pointer.Int32Ptr(c.leaseDurationSeconds),
+		},
+	}
+
+	if base != nil {
 		lease = base.DeepCopy()
 	}
 
@@ -104,5 +100,6 @@ func (c *leaseController) newLease(base *coordinationv1.Lease, holderIdentity st
 			lease.OwnerReferences = ownerReferences
 		}
 	}
+
 	return lease
 }

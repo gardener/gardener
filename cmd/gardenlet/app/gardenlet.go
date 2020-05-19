@@ -36,11 +36,15 @@ import (
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
+	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/server"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/version"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -222,6 +226,7 @@ type Gardenlet struct {
 	Logger                 *logrus.Logger
 	Recorder               record.EventRecorder
 	LeaderElection         *leaderelection.LeaderElectionConfig
+	HealthManager          healthz.Manager
 }
 
 func discoveryFromGardenletConfiguration(cfg *config.GardenletConfiguration, kubeconfig []byte) (discovery.CachedDiscoveryInterface, error) {
@@ -377,8 +382,24 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
+	// Initialize /healthz manager.
+	g.HealthManager = healthz.NewPeriodicHealthz(seedcontroller.LeaseResyncGracePeriodSeconds * time.Second)
+	g.HealthManager.Set(true)
+
+	// Start HTTP server.
+	go server.
+		NewBuilder().
+		WithBindAddress(g.Config.Server.HTTPS.BindAddress).
+		WithPort(g.Config.Server.HTTPS.Port).
+		WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
+		WithHandler("/metrics", promhttp.Handler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(g.HealthManager)).
+		Build().
+		Start(ctx)
+
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) {
+		g.HealthManager.Start()
 		g.startControllers(ctx)
 	}
 
@@ -418,6 +439,7 @@ func (g *Gardenlet) startControllers(ctx context.Context) {
 		g.Identity,
 		g.GardenNamespace,
 		g.Recorder,
+		g.HealthManager,
 	).Run(ctx)
 }
 

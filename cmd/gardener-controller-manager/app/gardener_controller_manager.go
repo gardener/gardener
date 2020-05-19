@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"time"
 
@@ -33,10 +32,11 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllermanager/server/handlers/webhooks"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
-	"github.com/gardener/gardener/pkg/server/handlers"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -49,6 +49,7 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -328,23 +329,46 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) {
+		var (
+			projects        = g.K8sGardenCoreInformers.Core().V1beta1().Projects()
+			projectInformer = projects.Informer()
+			shoots          = g.K8sGardenCoreInformers.Core().V1beta1().Shoots()
+			shootInformer   = shoots.Informer()
+		)
+
+		g.K8sGardenCoreInformers.Start(ctx.Done())
+		if !cache.WaitForCacheSync(ctx.Done(), projectInformer.HasSynced, shootInformer.HasSynced) {
+			panic("Timed out waiting for Garden caches to sync")
+		}
+
+		// Start webhook server
+		go server.
+			NewBuilder().
+			WithBindAddress(g.Config.Server.HTTPS.BindAddress).
+			WithPort(g.Config.Server.HTTPS.Port).
+			WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
+			WithHandler("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projects.Lister(), shoots.Lister())).
+			WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
+			Build().
+			Start(ctx)
+
+		// Start controllers
 		g.startControllers(ctx)
 	}
 
-	// Start HTTP server
-	var (
-		projectInformer = g.K8sGardenCoreInformers.Core().V1beta1().Projects()
-		shootInformer   = g.K8sGardenCoreInformers.Core().V1beta1().Shoots()
+	// Initialize /healthz manager.
+	healthManager := healthz.NewDefaultHealthz()
+	healthManager.Start()
 
-		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
-			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), shootInformer.Lister()),
-			"/webhooks/validate-kubeconfig-secrets": webhooks.NewValidateKubeconfigSecretsHandler(),
-		}
-	)
-
-	go server.ServeHTTP(ctx, g.Config.Server.HTTP.Port, g.Config.Server.HTTP.BindAddress)
-	go server.ServeHTTPS(ctx, g.K8sGardenCoreInformers, httpsHandlers, g.Config.Server.HTTPS.Port, g.Config.Server.HTTPS.BindAddress, g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath, shootInformer.Informer(), projectInformer.Informer())
-	handlers.UpdateHealth(true)
+	// Start HTTP server.
+	go server.
+		NewBuilder().
+		WithBindAddress(g.Config.Server.HTTP.BindAddress).
+		WithPort(g.Config.Server.HTTP.Port).
+		WithHandler("/metrics", promhttp.Handler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
+		Build().
+		Start(ctx)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {

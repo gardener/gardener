@@ -21,6 +21,7 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
+        checksum/secret-gardenlet-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
         checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
         {{- end }}
@@ -91,6 +92,16 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
+            scheme: HTTPS
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
         {{- if .Values.global.gardenlet.resources }}
         resources:
 {{ toYaml .Values.global.gardenlet.resources | indent 10 }}
@@ -124,6 +135,9 @@ spec:
         {{- end }}
         - name: gardenlet-config
           mountPath: /etc/gardenlet/config
+        - name: gardenlet-cert
+          mountPath: /etc/gardenlet/srv
+          readOnly: true
 {{- if .Values.global.gardenlet.additionalVolumeMounts }}
 {{ toYaml .Values.global.gardenlet.additionalVolumeMounts | indent 8 }}
 {{- end }}
@@ -152,6 +166,9 @@ spec:
       - name: gardenlet-config
         configMap:
           name: gardenlet-configmap
+      - name: gardenlet-cert
+        secret:
+          secretName: gardenlet-cert
 {{- if .Values.global.gardenlet.additionalVolumes }}
 {{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
 {{- end }}

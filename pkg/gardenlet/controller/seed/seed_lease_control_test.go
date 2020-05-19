@@ -20,7 +20,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
@@ -31,12 +30,9 @@ import (
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -44,12 +40,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	componentbaseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-func TestSeedLeaseControlReconcile(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedLeaseControlReconcile")
-}
 
 var _ = Describe("SeedLeaseControlReconcile", func() {
 	var (
@@ -120,7 +113,15 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 			err: syncFail,
 		}
 
-		controller = Controller{k8sGardenClient: k8sGardenClient, seedLister: lister, seedLeaseQueue: seedLeaseQueue, getSeedClient: fakeClientSeedFunc, config: gardenletConfig, seedLeaseControl: seedLeaseControl}
+		controller = Controller{
+			k8sGardenClient:  k8sGardenClient,
+			seedLister:       lister,
+			seedLeaseQueue:   seedLeaseQueue,
+			getSeedClient:    fakeClientSeedFunc,
+			config:           gardenletConfig,
+			seedLeaseControl: seedLeaseControl,
+			leaseMap:         make(map[string]bool),
+		}
 		Expect(indexer.Add(seed)).NotTo(HaveOccurred())
 	})
 
@@ -133,6 +134,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		BeforeEach(func() {
 			lister = &failingSeedLister{}
 		})
+
 		It("propagates the error when list request fails", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).To(HaveOccurred())
@@ -147,6 +149,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		It("returns error if connection to Seed is unsuccessful", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).To(HaveOccurred())
+			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, false))
 		})
 	})
 
@@ -154,18 +157,19 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		BeforeEach(func() {
 			syncFail = fmt.Errorf("dummy error")
 		})
+
 		It("propagates the error when lease fails to update", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).To(HaveOccurred())
+			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, false))
 		})
 	})
 
 	Context("#leaseSync", func() {
-		BeforeEach(func() {
-		})
 		It("updates the lease without error", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, true))
 		})
 	})
 
@@ -178,9 +182,11 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 				},
 			}
 		})
+
 		It("updated seed Condition if already exists", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, true))
 		})
 	})
 })

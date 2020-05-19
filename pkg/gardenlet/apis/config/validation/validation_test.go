@@ -31,6 +31,18 @@ var _ = Describe("GardenletConfiguration", func() {
 	BeforeEach(func() {
 		cfg = &config.GardenletConfiguration{
 			SeedConfig: &config.SeedConfig{},
+			Server: &config.ServerConfiguration{
+				HTTPS: config.HTTPSServer{
+					Server: config.Server{
+						BindAddress: "0.0.0.0",
+						Port:        2720,
+					},
+					TLS: config.TLSServer{
+						ServerCertPath: "/path1",
+						ServerKeyPath:  "/path2",
+					},
+				},
+			},
 		}
 	})
 
@@ -62,6 +74,37 @@ var _ = Describe("GardenletConfiguration", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("seedSelector/seedConfig"),
+			}))))
+		})
+
+		It("should forbid not specifying a server configuration", func() {
+			cfg.Server = nil
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("server"),
+			}))))
+		})
+
+		It("should forbid invalid server configuration", func() {
+			cfg.Server = &config.ServerConfiguration{}
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("server.https.bindAddress"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("server.https.port"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("server.https.tls.serverCertPath"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("server.https.tls.serverKeyPath"),
 			}))))
 		})
 	})

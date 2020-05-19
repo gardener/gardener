@@ -139,6 +139,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*HTTPSServer)(nil), (*config.HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(a.(*HTTPSServer), b.(*config.HTTPSServer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.HTTPSServer)(nil), (*HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(a.(*config.HTTPSServer), b.(*HTTPSServer), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*LeaderElectionConfiguration)(nil), (*config.LeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(a.(*LeaderElectionConfiguration), b.(*config.LeaderElectionConfiguration), scope)
 	}); err != nil {
@@ -179,6 +189,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*Server)(nil), (*config.Server)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Server_To_config_Server(a.(*Server), b.(*config.Server), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.Server)(nil), (*Server)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_Server_To_v1alpha1_Server(a.(*config.Server), b.(*Server), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ServerConfiguration)(nil), (*config.ServerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(a.(*ServerConfiguration), b.(*config.ServerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ServerConfiguration)(nil), (*ServerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(a.(*config.ServerConfiguration), b.(*ServerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ShootCareControllerConfiguration)(nil), (*config.ShootCareControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(a.(*ShootCareControllerConfiguration), b.(*config.ShootCareControllerConfiguration), scope)
 	}); err != nil {
@@ -216,6 +246,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.ShootStateSyncControllerConfiguration)(nil), (*ShootStateSyncControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(a.(*config.ShootStateSyncControllerConfiguration), b.(*ShootStateSyncControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TLSServer)(nil), (*config.TLSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TLSServer_To_config_TLSServer(a.(*TLSServer), b.(*config.TLSServer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.TLSServer)(nil), (*TLSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TLSServer_To_v1alpha1_TLSServer(a.(*config.TLSServer), b.(*TLSServer), scope)
 	}); err != nil {
 		return err
 	}
@@ -457,6 +497,7 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	out.Discovery = (*config.DiscoveryConfiguration)(unsafe.Pointer(in.Discovery))
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
+	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.SeedConfig = (*config.SeedConfig)(unsafe.Pointer(in.SeedConfig))
 	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
@@ -517,6 +558,7 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	out.Discovery = (*DiscoveryConfiguration)(unsafe.Pointer(in.Discovery))
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
+	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.SeedConfig = (*SeedConfig)(unsafe.Pointer(in.SeedConfig))
 	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
@@ -578,6 +620,36 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 // Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration is an autogenerated conversion function.
 func Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(in *config.GardenletControllerConfiguration, out *GardenletControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_HTTPSServer_To_config_HTTPSServer(in *HTTPSServer, out *config.HTTPSServer, s conversion.Scope) error {
+	if err := Convert_v1alpha1_Server_To_config_Server(&in.Server, &out.Server, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_TLSServer_To_config_TLSServer(&in.TLS, &out.TLS, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer is an autogenerated conversion function.
+func Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(in *HTTPSServer, out *config.HTTPSServer, s conversion.Scope) error {
+	return autoConvert_v1alpha1_HTTPSServer_To_config_HTTPSServer(in, out, s)
+}
+
+func autoConvert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServer, out *HTTPSServer, s conversion.Scope) error {
+	if err := Convert_config_Server_To_v1alpha1_Server(&in.Server, &out.Server, s); err != nil {
+		return err
+	}
+	if err := Convert_config_TLSServer_To_v1alpha1_TLSServer(&in.TLS, &out.TLS, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer is an autogenerated conversion function.
+func Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServer, out *HTTPSServer, s conversion.Scope) error {
+	return autoConvert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in, out, s)
 }
 
 func autoConvert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(in *LeaderElectionConfiguration, out *config.LeaderElectionConfiguration, s conversion.Scope) error {
@@ -674,6 +746,52 @@ func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerCo
 // Convert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration is an autogenerated conversion function.
 func Convert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(in *config.SeedControllerConfiguration, out *SeedControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_Server_To_config_Server(in *Server, out *config.Server, s conversion.Scope) error {
+	out.BindAddress = in.BindAddress
+	out.Port = in.Port
+	return nil
+}
+
+// Convert_v1alpha1_Server_To_config_Server is an autogenerated conversion function.
+func Convert_v1alpha1_Server_To_config_Server(in *Server, out *config.Server, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Server_To_config_Server(in, out, s)
+}
+
+func autoConvert_config_Server_To_v1alpha1_Server(in *config.Server, out *Server, s conversion.Scope) error {
+	out.BindAddress = in.BindAddress
+	out.Port = in.Port
+	return nil
+}
+
+// Convert_config_Server_To_v1alpha1_Server is an autogenerated conversion function.
+func Convert_config_Server_To_v1alpha1_Server(in *config.Server, out *Server, s conversion.Scope) error {
+	return autoConvert_config_Server_To_v1alpha1_Server(in, out, s)
+}
+
+func autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *ServerConfiguration, out *config.ServerConfiguration, s conversion.Scope) error {
+	if err := Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *ServerConfiguration, out *config.ServerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in, out, s)
+}
+
+func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
+	if err := Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration is an autogenerated conversion function.
+func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(in *ShootCareControllerConfiguration, out *config.ShootCareControllerConfiguration, s conversion.Scope) error {
@@ -794,4 +912,26 @@ func autoConvert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootS
 // Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration is an autogenerated conversion function.
 func Convert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in *config.ShootStateSyncControllerConfiguration, out *ShootStateSyncControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ShootStateSyncControllerConfiguration_To_v1alpha1_ShootStateSyncControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {
+	out.ServerCertPath = in.ServerCertPath
+	out.ServerKeyPath = in.ServerKeyPath
+	return nil
+}
+
+// Convert_v1alpha1_TLSServer_To_config_TLSServer is an autogenerated conversion function.
+func Convert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in, out, s)
+}
+
+func autoConvert_config_TLSServer_To_v1alpha1_TLSServer(in *config.TLSServer, out *TLSServer, s conversion.Scope) error {
+	out.ServerCertPath = in.ServerCertPath
+	out.ServerKeyPath = in.ServerKeyPath
+	return nil
+}
+
+// Convert_config_TLSServer_To_v1alpha1_TLSServer is an autogenerated conversion function.
+func Convert_config_TLSServer_To_v1alpha1_TLSServer(in *config.TLSServer, out *TLSServer, s conversion.Scope) error {
+	return autoConvert_config_TLSServer_To_v1alpha1_TLSServer(in, out, s)
 }

@@ -15,8 +15,6 @@
 package config
 
 import (
-	"time"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +47,8 @@ type GardenletConfiguration struct {
 	LogLevel *string
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	KubernetesLogLevel *klog.Level
+	// Server defines the configuration of the HTTP server.
+	Server *ServerConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
@@ -262,17 +262,32 @@ type SeedConfig struct {
 	gardencorev1beta1.Seed
 }
 
-const (
-	// GardenletDefaultLockObjectNamespace is the default lock namespace for leader election.
-	GardenletDefaultLockObjectNamespace = "garden"
+// ServerConfiguration contains details for the HTTP(S) servers.
+type ServerConfiguration struct {
+	// HTTPS is the configuration for the HTTPS server.
+	HTTPS HTTPSServer
+}
 
-	// GardenletDefaultLockObjectName is the default lock name for leader election.
-	GardenletDefaultLockObjectName = "gardenlet-leader-election"
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
+	// BindAddress is the IP address on which to listen for the specified port.
+	BindAddress string
+	// Port is the port on which to serve unsecured, unauthenticated access.
+	Port int
+}
 
-	// DefaultBackupEntryDeletionGracePeriodHours is a constant for the default number of hours the Backup Entry should be kept after shoot is deleted.
-	// By default we set this to 0 so that then BackupEntryController will trigger deletion immediately.
-	DefaultBackupEntryDeletionGracePeriodHours = 0
+// HTTPSServer is the configuration for the HTTPSServer server.
+type HTTPSServer struct {
+	// Server is the configuration for the bind address and the port.
+	Server
+	// TLSServer contains information about the TLS configuration for a HTTPS server.
+	TLS TLSServer
+}
 
-	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
-	DefaultDiscoveryTTL = 10 * time.Second
-)
+// TLSServer contains information about the TLS configuration for a HTTPS server.
+type TLSServer struct {
+	// ServerCertPath is the path to the server certificate file.
+	ServerCertPath string
+	// ServerKeyPath is the path to the private key file.
+	ServerKeyPath string
+}

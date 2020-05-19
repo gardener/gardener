@@ -16,7 +16,6 @@ package lease
 
 import (
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -33,11 +32,6 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 )
-
-func TestLeaseController(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "LeaseController")
-}
 
 var _ = Describe("LeaseController", func() {
 	var (
@@ -77,7 +71,7 @@ var _ = Describe("LeaseController", func() {
 
 	Describe("#leaseSync", func() {
 		It("should fail if clientset is nil on sync", func() {
-			leaseController := NewLeaseController(fakeNowFunc, nil, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(nil, fakeNowFunc, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())
@@ -85,14 +79,14 @@ var _ = Describe("LeaseController", func() {
 
 		It("should not fail as clientset is set", func() {
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should create new lease without ownerRef", func() {
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
@@ -104,7 +98,7 @@ var _ = Describe("LeaseController", func() {
 		})
 
 		It("should create new lease with ownerRef", func() {
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName, ownerRef)).NotTo(HaveOccurred())
 
 			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
@@ -119,7 +113,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).To(HaveOccurred())
 		})
@@ -129,7 +123,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).To(HaveOccurred())
 		})
@@ -139,7 +133,7 @@ var _ = Describe("LeaseController", func() {
 			lease.Spec.RenewTime = fakeTime
 			Expect(k8sClientSet.Tracker().Add(lease)).NotTo(HaveOccurred())
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
 			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
@@ -155,7 +149,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())
@@ -169,7 +163,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, apierrors.NewConflict(schema.GroupResource{}, holderName, fmt.Errorf("error conflict"))
 			})
 
-			leaseController := NewLeaseController(fakeNowFunc, k8sClientSet, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())
