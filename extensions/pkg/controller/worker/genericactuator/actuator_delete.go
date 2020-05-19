@@ -22,13 +22,13 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
-
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -88,10 +88,7 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	if err := a.waitUntilMachineResourcesDeleted(timeoutCtx, worker, workerDelegate); err != nil {
+	if err := a.waitUntilMachineResourcesDeleted(ctx, worker, workerDelegate); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
@@ -161,14 +158,14 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		countMachineClassSecrets = -1
 	)
 
-	return wait.PollUntil(5*time.Second, func() (bool, error) {
+	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		msg := ""
 
 		// Check whether all machines have been deleted.
 		if countMachines != 0 {
 			existingMachines := &machinev1alpha1.MachineList{}
 			if err := a.client.List(ctx, existingMachines, client.InNamespace(worker.Namespace)); err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			countMachines = len(existingMachines.Items)
 			msg += fmt.Sprintf("%d machines, ", countMachines)
@@ -178,7 +175,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		if countMachineSets != 0 {
 			existingMachineSets := &machinev1alpha1.MachineSetList{}
 			if err := a.client.List(ctx, existingMachineSets, client.InNamespace(worker.Namespace)); err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			countMachineSets = len(existingMachineSets.Items)
 			msg += fmt.Sprintf("%d machine sets, ", countMachineSets)
@@ -188,7 +185,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		if countMachineDeployments != 0 {
 			existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
 			if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			countMachineDeployments = len(existingMachineDeployments.Items)
 			msg += fmt.Sprintf("%d machine deployments, ", countMachineDeployments)
@@ -196,7 +193,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 			// Check whether an operation failed during the deletion process.
 			for _, existingMachineDeployment := range existingMachineDeployments.Items {
 				for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
-					return false, fmt.Errorf("Machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+					return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
 				}
 			}
 		}
@@ -205,11 +202,11 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		if countMachineClasses != 0 {
 			machineClassList := workerDelegate.MachineClassList()
 			if err := a.client.List(ctx, machineClassList, client.InNamespace(worker.Namespace)); err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			machineClasses, err := meta.ExtractList(machineClassList)
 			if err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			countMachineClasses = len(machineClasses)
 			msg += fmt.Sprintf("%d machine classes, ", countMachineClasses)
@@ -220,7 +217,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 			count := 0
 			existingMachineClassSecrets, err := a.listMachineClassSecrets(ctx, worker.Namespace)
 			if err != nil {
-				return false, err
+				return retryutils.SevereError(err)
 			}
 			for _, machineClassSecret := range existingMachineClassSecrets.Items {
 				if len(machineClassSecret.Finalizers) != 0 {
@@ -232,9 +229,11 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		}
 
 		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
-			a.logger.Info(fmt.Sprintf("Waiting until the following machine resources have been processed: %s", strings.TrimSuffix(msg, ", ")), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-			return false, nil
+			msg := fmt.Sprintf("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
+			a.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+			return retryutils.MinorError(errors.New(msg))
 		}
-		return true, nil
-	}, ctx.Done())
+
+		return retryutils.Ok()
+	})
 }
