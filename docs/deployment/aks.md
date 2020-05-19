@@ -552,7 +552,7 @@ etc. logs and many tasks will keep repeating:
 ```
 time="2018-06-09T07:35:45Z" level=info msg="[SHOOT RECONCILE] garden-dev/johndoe-azure"
 time="2018-06-09T07:35:46Z" level=info msg="Starting flow Shoot cluster creation" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
-time="2018-06-09T07:35:46Z" level=info msg="Executing (*Botanist).DeployExternalDomainDNSRecord" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
+time="2018-06-09T07:35:46Z" level=info msg="Executing (*Botanist).botanist.Shoot.Components.DNS.External{Provider/Entry}.Deploy" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:46Z" level=info msg="Executing (*Botanist).DeployNamespace" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:46Z" level=info msg="Executing (*Botanist).DeployKubeAPIServerService" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
 time="2018-06-09T07:35:46Z" level=info msg="Executing (*Botanist).DeployBackupNamespaceFromShoot" opid=VIBBBGFx shoot=garden-dev/johndoe-azure
@@ -607,14 +607,12 @@ Events:
   Normal   Reconciling     1h    gardener-controller-manager  [BrXWiztO] Reconciling Shoot cluster state
   Normal   Reconciling     59m   gardener-controller-manager  [rBFsfwU5] Reconciling Shoot cluster state
   Normal   Reconciling     59m   gardener-controller-manager  [2HAbm45D] Reconciling Shoot cluster state
-  Warning  ReconcileError  48m   gardener-controller-manager  [2HAbm45D] Failed to reconcile Shoot cluster state: Errors occurred during flow execution: '(*Botanist).EnsureIngressDNSRecord' returned '`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)'
   Normal   Reconciling     48m   gardener-controller-manager  [S1QA0ksz] Reconciling Shoot cluster state
   Normal   Reconciling     47m   gardener-controller-manager  [lvcSKy1Q] Reconciling Shoot cluster state
   Normal   Reconciling     47m   gardener-controller-manager  [MddMyk8W] Reconciling Shoot cluster state
   Normal   Reconciling     47m   gardener-controller-manager  [XDAAWABd] Reconciling Shoot cluster state
   Normal   Reconciling     46m   gardener-controller-manager  [6HYH9Psz] Reconciling Shoot cluster state
   Normal   Reconciling     46m   gardener-controller-manager  [rhL38ym4] Reconciling Shoot cluster state
-  Warning  ReconcileError  35m   gardener-controller-manager  [rhL38ym4] Failed to reconcile Shoot cluster state: Errors occurred during flow execution: '(*Botanist).EnsureIngressDNSRecord' returned '`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)'
   Normal   Reconciling     35m   gardener-controller-manager  [BOt4Nvso] Reconciling Shoot cluster state
   Normal   Reconciling     35m   gardener-controller-manager  [JPtmXmxD] Reconciling Shoot cluster state
   Normal   Reconciling     34m   gardener-controller-manager  [ldHsVA6G] Reconciling Shoot cluster state
@@ -707,11 +705,11 @@ issues:
   health: Ready
   status: johndoe-azure
     lastError: "Failed to reconcile Shoot cluster state: Errors occurred during flow
-      execution: '(*Botanist).DeployExternalDomainDNSRecord' returned 'Terraform execution
+      execution: '(*Botanist).Shoot.Components.DNS.External{Provider/Entry}.Destroy' returned 'Terraform execution
 	  ...
     lastOperation:
       description: "Failed to reconcile Shoot cluster state: Errors occurred during
-        flow execution: '(*Botanist).DeployExternalDomainDNSRecord' returned 'Terraform
+        flow execution: '(*Botanist).Shoot.Components.DNS.External{Provider/Entry}.Destroy' returned 'Terraform
 		...
       lastUpdateTime: 2018-06-03 09:48:00 +0100 IST
       progress: 100

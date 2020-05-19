@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -23,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -81,13 +83,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 	}
 
 	var (
-		defaultTimeout     = 30 * time.Second
-		defaultInterval    = 5 * time.Second
-		dnsEnabled         = !o.Shoot.DisableDNS
-		managedExternalDNS = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != "unmanaged"
-		managedInternalDNS = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != "unmanaged"
-		allowBackup        = o.Seed.Info.Spec.Backup != nil
-		staticNodesCIDR    = o.Shoot.Info.Spec.Networking.Nodes != nil
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
+		dnsEnabled      = !o.Shoot.DisableDNS
+		allowBackup     = o.Seed.Info.Spec.Backup != nil
+		staticNodesCIDR = o.Shoot.Info.Spec.Networking.Nodes != nil
 
 		allTasks                       = controllerutils.GetTasks(o.Shoot.Info.Annotations)
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
@@ -129,18 +129,13 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(dnsEnabled && managedInternalDNS && !o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DeployInternalDNS).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilKubeAPIServerServiceIsReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).DoIf(dnsEnabled && !o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord),
+			Name:         "Deploying external domain",
+			Fn:           flow.TaskFn(botanist.DeployExternalDNS).DoIf(!o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
@@ -287,10 +282,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(dnsEnabled && managedExternalDNS && !o.Shoot.HibernationEnabled).RetryUntilTimeout(defaultInterval, 10*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployManagedResources),
+		nginxLBReady = g.Add(flow.Task{
+			Name:         "Waiting until nginx ingress LoadBalancer is ready",
+			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(botanist.Shoot.NginxIngressEnabled()).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients),
+		})
+		ensureIngressDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Ensuring nginx ingress domain record",
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord),
+			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
@@ -315,6 +315,16 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying External DNS Entry", // delete DNS entries during hibernation.
+			Fn:           flow.TaskFn(botanist.Shoot.Components.DNS.ExternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying Internal DNS Entry", // delete DNS entries during hibernation.
+			Fn:           flow.TaskFn(botanist.Shoot.Components.DNS.InternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		deployExtensionResources = g.Add(flow.Task{
@@ -367,8 +377,17 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.RestartControlPlanePods).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
-		f = g.Compile()
 	)
+
+	for k, v := range botanist.Shoot.Components.DNS.AdditionalProviders {
+		_ = g.Add(flow.Task{
+			Name:         fmt.Sprintf("Ensuring additional DNSProvider %q", k),
+			Fn:           flow.TaskFn(component.OpWaiter(v).Deploy).DoIf(!o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, ensureIngressDomainDNSRecord),
+		})
+	}
+
+	f := g.Compile()
 
 	if err := f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress, ErrorContext: errorContext, ErrorCleaner: o.CleanShootTaskError}); err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)

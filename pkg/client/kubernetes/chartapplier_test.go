@@ -20,6 +20,7 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,13 +54,13 @@ var _ = Describe("chart applier", func() {
 		ctx = context.TODO()
 
 		c = fake.NewFakeClient()
-		d := &fakeDiscovery{
-			groupListFn: func() *metav1.APIGroupList {
+		d := &test.FakeDiscovery{
+			GroupListFn: func() *metav1.APIGroupList {
 				return &metav1.APIGroupList{
 					Groups: []metav1.APIGroup{v1Group},
 				}
 			},
-			resourceMapFn: func() map[string]*metav1.APIResourceList {
+			ResourceMapFn: func() map[string]*metav1.APIResourceList {
 				return map[string]*metav1.APIResourceList{
 					"v1": {
 						GroupVersion: "v1",
@@ -84,7 +85,9 @@ var _ = Describe("chart applier", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		renderer := cr.New(engine.New(), cap)
-		ca = kubernetes.NewChartApplier(renderer, newTestApplier(c, d))
+		a, err := test.NewTestApplier(c, d)
+		Expect(err).ToNot(HaveOccurred())
+		ca = kubernetes.NewChartApplier(renderer, a)
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 	})
 

@@ -5,8 +5,8 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
 spec:
-  {{- if .Values.ownerId }}
-  ownerId: {{ .Values.ownerId }}
+  {{- if .Values.ownerID }}
+  ownerId: {{ .Values.ownerID }}
   {{- end }}
   dnsName: {{ .Values.dnsName | quote }}
   ttl: {{ .Values.ttl }}

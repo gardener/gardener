@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
@@ -60,6 +61,8 @@ type Shoot struct {
 
 	Networks *Networks
 
+	Components *Components
+
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
 	Extensions                map[string]Extension
 	InfrastructureStatus      []byte
@@ -67,6 +70,21 @@ type Shoot struct {
 	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
+}
+
+// Components contains different components deployed
+type Components struct {
+	DNS *DNS
+}
+
+// DNS contains references to internal and external DNSProvider and DNSEntry deployers.
+type DNS struct {
+	ExternalProvider    component.DeployWaiter
+	ExternalEntry       component.DeployWaiter
+	InternalProvider    component.DeployWaiter
+	InternalEntry       component.DeployWaiter
+	AdditionalProviders map[string]component.DeployWaiter
+	NginxEntry          component.DeployWaiter
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

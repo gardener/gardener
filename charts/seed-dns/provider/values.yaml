@@ -1,7 +1,8 @@
 name: internal
 purpose: internal
 provider: ""
-# providerLabels: # YAML formated labels used for provider
+# labels:
+#   foo: bar
 secretData: {}
 domains:
   include: []

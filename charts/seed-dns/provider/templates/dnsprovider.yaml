@@ -4,6 +4,10 @@ kind: Secret
 metadata:
   name: extensions-dns-{{ .Values.name }}
   namespace: {{ .Release.Namespace }}
+{{- if .Values.labels }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+{{- end }}
 type: Opaque
 data:
 {{ toYaml .Values.secretData | indent 2 }}
@@ -17,9 +21,9 @@ metadata:
   annotations:
     dns.gardener.cloud/realms: "{{ .Release.Namespace }},"
 {{- end }}
-{{- if .Values.providerLabels }}
+{{- if .Values.labels }}
   labels:
-{{ toYaml .Values.providerLabels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 {{- end }}
 spec:
   type: {{ .Values.provider }}

@@ -33,9 +33,12 @@ import (
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
 // object.
 func New(o *operation.Operation) (*Botanist, error) {
-	b := &Botanist{
-		Operation: o,
-	}
+	var (
+		err error
+		b   = &Botanist{
+			Operation: o,
+		}
+	)
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
 	if o.Shoot != nil && o.Shoot.Info.Spec.DNS != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
@@ -53,9 +56,21 @@ func New(o *operation.Operation) (*Botanist, error) {
 		}
 	}
 
-	if err := b.InitializeSeedClients(); err != nil {
+	if err = b.InitializeSeedClients(); err != nil {
 		return nil, err
 	}
+
+	o.Shoot.Components.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.Client())
+
+	o.Shoot.Components.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(context.TODO(), b.K8sGardenClient.Client(), b.K8sSeedClient.Client())
+	if err != nil {
+		return nil, err
+	}
+
+	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
 
 	return b, nil
 }

@@ -103,8 +103,10 @@ var _ = Describe("Helper functions", func() {
 
 		It("succeeds when multiple DeployWaiter are passed", func() {
 			waiter = OpDestroy(c, c2)
-			c.EXPECT().Destroy(ctx).Times(1)
-			c2.EXPECT().Destroy(ctx).Times(1)
+			gomock.InOrder(
+				c.EXPECT().Destroy(ctx).Times(1),
+				c2.EXPECT().Destroy(ctx).Times(1),
+			)
 
 			Expect(waiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
@@ -139,8 +141,10 @@ var _ = Describe("Helper functions", func() {
 				})
 
 				It("when underlying WaitCleanup fails", func() {
-					c.EXPECT().Destroy(ctx).Times(1)
-					c.EXPECT().WaitCleanup(ctx).Return(err)
+					gomock.InOrder(
+						c.EXPECT().Destroy(ctx).Times(1),
+						c.EXPECT().WaitCleanup(ctx).Return(err),
+					)
 				})
 			})
 			Context("error is returned when calling Destroy", func() {
@@ -153,30 +157,40 @@ var _ = Describe("Helper functions", func() {
 				})
 
 				It("when underlying WaitCleanup fails", func() {
-					c.EXPECT().Destroy(ctx).Times(1)
-					c.EXPECT().WaitCleanup(ctx).Return(err)
+					gomock.InOrder(
+						c.EXPECT().Destroy(ctx).Times(1),
+						c.EXPECT().WaitCleanup(ctx).Return(err),
+					)
 				})
 			})
 
 			It("no error is returned when calling Deploy", func() {
-				c.EXPECT().Destroy(ctx).Times(1)
-				c.EXPECT().WaitCleanup(ctx).Times(1)
+				gomock.InOrder(
+					c.EXPECT().Destroy(ctx).Times(1),
+					c.EXPECT().WaitCleanup(ctx).Times(1),
+				)
 				Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred())
 			})
 
 			It("no error is returned when calling Destroy", func() {
-				c.EXPECT().Destroy(ctx).Times(1)
-				c.EXPECT().WaitCleanup(ctx).Times(1)
+
+				gomock.InOrder(
+					c.EXPECT().Destroy(ctx).Times(1),
+					c.EXPECT().WaitCleanup(ctx).Times(1),
+				)
 				Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred())
 			})
 		})
 
 		It("succeeds when multiple DeployWaiter are passed", func() {
 			deployer = OpWaiter(c, c2)
-			c.EXPECT().Destroy(ctx).Times(1)
-			c.EXPECT().WaitCleanup(ctx).Times(1)
-			c2.EXPECT().Destroy(ctx).Times(1)
-			c2.EXPECT().WaitCleanup(ctx).Times(1)
+
+			gomock.InOrder(
+				c.EXPECT().Destroy(ctx).Times(1),
+				c.EXPECT().WaitCleanup(ctx).Times(1),
+				c2.EXPECT().Destroy(ctx).Times(1),
+				c2.EXPECT().WaitCleanup(ctx).Times(1),
+			)
 
 			Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred())
 		})
@@ -211,8 +225,10 @@ var _ = Describe("Helper functions", func() {
 				})
 
 				It("when underlying Wait fails", func() {
-					c.EXPECT().Deploy(ctx).Times(1)
-					c.EXPECT().Wait(ctx).Return(err)
+					gomock.InOrder(
+						c.EXPECT().Deploy(ctx).Times(1),
+						c.EXPECT().Wait(ctx).Return(err),
+					)
 				})
 			})
 			Context("error is returned when calling Destroy", func() {
@@ -225,31 +241,38 @@ var _ = Describe("Helper functions", func() {
 				})
 
 				It("when underlying WaitCleanup fails", func() {
-					c.EXPECT().Destroy(ctx).Times(1)
-					c.EXPECT().WaitCleanup(ctx).Return(err)
+					gomock.InOrder(
+						c.EXPECT().Destroy(ctx).Times(1),
+						c.EXPECT().WaitCleanup(ctx).Return(err),
+					)
 				})
 			})
 
 			It("no error is returned when calling Deploy", func() {
-				c.EXPECT().Deploy(ctx).Times(1)
-				c.EXPECT().Wait(ctx).Times(1)
+				gomock.InOrder(
+					c.EXPECT().Deploy(ctx).Times(1),
+					c.EXPECT().Wait(ctx).Times(1),
+				)
 				Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred())
 			})
 
 			It("no error is returned when calling Destroy", func() {
-				c.EXPECT().Destroy(ctx).Times(1)
-				c.EXPECT().WaitCleanup(ctx).Times(1)
+				gomock.InOrder(
+					c.EXPECT().Destroy(ctx).Times(1),
+					c.EXPECT().WaitCleanup(ctx).Times(1),
+				)
 				Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred())
 			})
 		})
 
 		It("succeeds when multiple DeployWaiter are passed", func() {
 			deployer = OpWaiter(c, c2)
-			c.EXPECT().Destroy(ctx).Times(1)
-			c.EXPECT().WaitCleanup(ctx).Times(1)
-			c2.EXPECT().Destroy(ctx).Times(1)
-			c2.EXPECT().WaitCleanup(ctx).Times(1)
-
+			gomock.InOrder(
+				c.EXPECT().Destroy(ctx).Times(1),
+				c.EXPECT().WaitCleanup(ctx).Times(1),
+				c2.EXPECT().Destroy(ctx).Times(1),
+				c2.EXPECT().WaitCleanup(ctx).Times(1),
+			)
 			Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred())
 		})
 	})
