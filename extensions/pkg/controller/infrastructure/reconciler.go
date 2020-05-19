@@ -145,8 +145,7 @@ func (r *reconciler) reconcile(ctx context.Context, infrastructure *extensionsv1
 func (r *reconciler) delete(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(infrastructure, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting infrastructure causes a no-op as there is no finalizer.", "infrastructure", infrastructure.Name)
@@ -169,8 +168,9 @@ func (r *reconciler) delete(ctx context.Context, infrastructure *extensionsv1alp
 
 	r.logger.Info("Removing finalizer.", "infrastructure", infrastructure.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, infrastructure); err != nil {
-		r.logError(infrastructure, err, EventInfrastructureMigration, "Error removing finalizer from Infrastructure", "infrastructure", fmt.Sprintf("%s/%s", infrastructure.Namespace, infrastructure.Name))
-		return reconcile.Result{}, err
+		msg := "Error removing finalizer from Infrastructure"
+		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, fmt.Sprintf("%s: %+v", msg, err))
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -193,14 +193,16 @@ func (r *reconciler) migrate(ctx context.Context, infrastructure *extensionsv1al
 
 	r.logger.Info("Removing finalizer.", "infrastructure", fmt.Sprintf("%s/%s", infrastructure.Namespace, infrastructure.Name))
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, infrastructure); err != nil {
-		r.logError(infrastructure, err, EventInfrastructureMigration, "Error removing finalizer from Infrastructure", "infrastructure", fmt.Sprintf("%s/%s", infrastructure.Namespace, infrastructure.Name))
-		return reconcile.Result{}, err
+		msg := "Error removing finalizer from Infrastructure"
+		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, fmt.Sprintf("%s: %+v", msg, err))
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, infrastructure, v1beta1constants.GardenerOperation); err != nil {
-		r.logError(infrastructure, err, EventInfrastructureMigration, "Error removing annotation from Infrastructure", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate), "infrastructure", fmt.Sprintf("%s/%s", infrastructure.Namespace, infrastructure.Name))
-		return reconcile.Result{}, err
+		msg := "Error removing annotation from Infrastructure"
+		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, fmt.Sprintf("%s: %+v", msg, err))
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -223,8 +225,9 @@ func (r *reconciler) restore(ctx context.Context, infrastructure *extensionsv1al
 
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, infrastructure, v1beta1constants.GardenerOperation); err != nil {
-		r.logError(infrastructure, err, EventInfrastructureRestoration, "Error removing annotation from Infrastructure", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate), "infrastructure", fmt.Sprintf("%s/%s", infrastructure.Namespace, infrastructure.Name))
-		return reconcile.Result{}, err
+		msg := "Error removing annotation from Infrastructure"
+		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureRestoration, fmt.Sprintf("%s: %+v", msg, err))
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	err := r.updateStatusSuccess(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, EventInfrastructureRestoration, "Successfully restored infrastructure")
@@ -240,7 +243,7 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, infrastructure 
 }
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, event, description string) error {
-	r.logError(infrastructure, err, event, description, "infrastructure", infrastructure.Name)
+	r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, event, fmt.Sprintf("%s: %+v", description, err))
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, infrastructure, func() error {
 		infrastructure.Status.ObservedGeneration = infrastructure.Generation
 		infrastructure.Status.LastOperation, infrastructure.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
@@ -255,11 +258,6 @@ func (r *reconciler) updateStatusSuccess(ctx context.Context, infrastructure *ex
 		infrastructure.Status.LastOperation, infrastructure.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
 		return nil
 	})
-}
-
-func (r *reconciler) logError(infrastructure *extensionsv1alpha1.Infrastructure, err error, event, msg string, keysAndValues ...interface{}) {
-	r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, event, fmt.Sprintf("%s: %+v", msg, err))
-	r.logger.Error(err, msg, keysAndValues...)
 }
 
 func (r *reconciler) logInfo(infrastructure *extensionsv1alpha1.Infrastructure, event, msg string, keysAndValues ...interface{}) {

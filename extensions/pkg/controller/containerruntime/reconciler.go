@@ -168,10 +168,9 @@ func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.Contain
 
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cr, v1beta1constants.GardenerOperation); err != nil {
-		msg := "Error removing annotation from Network"
+		msg := "Error removing annotation from ContainerRuntime"
 		r.recorder.Eventf(cr, corev1.EventTypeWarning, EventContainerRuntimeRestoration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "network", cr.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 	return reconcile.Result{}, nil
 }
@@ -179,8 +178,7 @@ func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.Contain
 func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(cr, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting container runtime causes a no-op as there is no finalizer.", "containerruntime", cr.Name)
@@ -202,8 +200,7 @@ func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.Containe
 
 	r.logger.Info("Removing finalizer.", "containerruntime", cr.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, cr); err != nil {
-		r.logger.Error(err, "Error removing finalizer from the container runtime resource", "containerruntime", cr.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the container runtime resource: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -225,16 +222,14 @@ func (r *reconciler) migrate(ctx context.Context, cr *extensionsv1alpha1.Contain
 
 	r.logger.Info("Removing all finalizers.", "containerruntime", cr.Name)
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, cr); err != nil {
-		r.logger.Error(err, "Error removing finalizers from the container runtime resource", "containerruntime", cr.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the container runtime resource: %+v", err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cr, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from ContainerRuntime"
 		r.recorder.Eventf(cr, corev1.EventTypeWarning, EventContainerRuntimeMigration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "containerruntime", cr.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -250,7 +245,6 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, cr *extensionsv
 }
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, cr *extensionsv1alpha1.ContainerRuntime, lastOperationType gardencorev1beta1.LastOperationType, eventReason, description string) error {
-	r.logger.Error(err, description, "containerruntime", cr.Name)
 	r.recorder.Eventf(cr, corev1.EventTypeWarning, eventReason, "%s: %+v", description, err)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cr, func() error {
 		cr.Status.ObservedGeneration = cr.Generation

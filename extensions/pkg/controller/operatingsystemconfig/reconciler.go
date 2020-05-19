@@ -93,8 +93,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		r.logger.Error(err, "Could not fetch OperatingSystemConfig")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not fetch OperatingSystemConfig: %+v", err)
 	}
 
 	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
@@ -181,8 +180,7 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, osc, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from OperationSystemConfig", "osc", osc.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from OperationSystemConfig: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -191,8 +189,7 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(osc, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting operating system config causes a no-op as there is no finalizer.", "osc", osc.Name)
@@ -214,8 +211,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 
 	r.logger.Info("Removing finalizer.", "osc", osc.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, osc); err != nil {
-		r.logger.Error(err, "Error removing finalizer from operating system config", "osc", osc.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from OperationSystemConfig: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -224,8 +220,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(osc, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Migrating operating system config causes a no-op as there is no finalizer.", "osc", osc.Name)
@@ -247,13 +242,11 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 
 	r.logger.Info("Removing finalizer.", "osc", osc.Name)
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, osc); err != nil {
-		r.logger.Error(err, "Error removing all finalizers from operating system config", "osc", osc.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("Error removing all finalizers from OperationSystemConfig: %+v", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, osc, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from OperationSystemConfig", "osc", osc.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from OperationSystemConfig: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -266,7 +259,6 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, osc *extensions
 }
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, osc *extensionsv1alpha1.OperatingSystemConfig, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	r.logger.Error(err, description, "osc", osc.Name)
 	osc.Status.ObservedGeneration = osc.Generation
 	osc.Status.LastOperation, osc.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
 	return r.client.Status().Update(ctx, osc)

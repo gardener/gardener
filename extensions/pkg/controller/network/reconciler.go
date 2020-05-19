@@ -163,8 +163,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from Network"
 		r.recorder.Eventf(network, corev1.EventTypeWarning, EventNetworkRestoration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "network", network.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -173,8 +172,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(network, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting network causes a no-op as there is no finalizer.", "network", network.Name)
@@ -198,8 +196,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 
 	r.logger.Info("Removing finalizer.", "network", network.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, network); err != nil {
-		r.logger.Error(err, "Error removing finalizer from the Network resource", "network", network.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network resource: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -221,16 +218,14 @@ func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Ne
 
 	r.logger.Info("Removing all finalizers.", "network", network.Name)
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, network); err != nil {
-		r.logger.Error(err, "Error removing finalizers from the Network resource", "network", network.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the Network resource: %+v", err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from Network"
 		r.recorder.Eventf(network, corev1.EventTypeWarning, EventNetworkRestoration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "network", network.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 	return reconcile.Result{}, nil
 }
@@ -246,7 +241,6 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, network *extens
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, eventReason, description string) error {
 	r.recorder.Eventf(network, corev1.EventTypeWarning, eventReason, "%s: %+v", description, err)
-	r.logger.Error(err, description, "network", network.Name)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, network, func() error {
 		network.Status.ObservedGeneration = network.Generation
 		network.Status.LastOperation, network.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)

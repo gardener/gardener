@@ -137,7 +137,6 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 	if err != nil {
 		msg := "Error reconciling controlplane"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -169,7 +168,6 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 	if err != nil {
 		msg := "Error restoring controlplane"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -188,8 +186,7 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from ControlPlane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -206,7 +203,6 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 		msg := "Error migrating controlplane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeMigrate, msg)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -219,16 +215,14 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 
 	r.logger.Info("Removing all finalizer.", "controlplane", cp.Name)
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, cp); err != nil {
-		r.logger.Error(err, "Error removing finalizers from ControlPlane", "controlplane", cp.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers from ControlPlane: %+v", err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from ControlPlane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil
@@ -237,8 +231,7 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(cp, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting controlplane causes a no-op as there is no finalizer.", "controlplane", cp.Name)
@@ -256,7 +249,6 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 		msg := "Error deleting controlplane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
-		r.logger.Error(err, msg, "controlplane", cp.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -269,8 +261,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 
 	r.logger.Info("Removing finalizer.", "controlplane", cp.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
-		r.logger.Error(err, "Error removing finalizer from ControlPlane", "controlplane", cp.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from ControlPlane: %+v", err)
 	}
 
 	return reconcile.Result{}, nil

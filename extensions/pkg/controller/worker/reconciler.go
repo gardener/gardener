@@ -114,7 +114,6 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, worker *extensi
 }
 
 func (r *reconciler) updateStatusError(ctx context.Context, err error, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) {
-	r.logger.Error(err, description, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	updateErr := extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, worker, func() error {
 		worker.Status.ObservedGeneration = worker.Generation
 		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, extensionscontroller.ReconcileErrCauseOrErr(err))), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
@@ -135,8 +134,7 @@ func (r *reconciler) updateStatusSuccess(ctx context.Context, worker *extensions
 func (r *reconciler) removeFinalizerFromWorker(worker *extensionsv1alpha1.Worker) error {
 	r.logger.Info("Removing finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
 	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
-		r.logger.Error(err, "Error removing finalizer from Worker", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		return err
+		return fmt.Errorf("error removing finalizer from Worker: %+v", err)
 	}
 	return nil
 }
@@ -161,8 +159,7 @@ func (r *reconciler) migrate(worker *extensionsv1alpha1.Worker, cluster *extensi
 
 	// remove operation annotation 'migrate'
 	if err := removeAnnotation(r.ctx, r.client, worker, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from Worker", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Worker: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -171,8 +168,7 @@ func (r *reconciler) migrate(worker *extensionsv1alpha1.Worker, cluster *extensi
 func (r *reconciler) delete(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(worker, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting worker causes a no-op as there is no finalizer.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
@@ -229,8 +225,7 @@ func (r *reconciler) restore(worker *extensionsv1alpha1.Worker, cluster *extensi
 
 	// remove operation annotation 'restore'
 	if err := removeAnnotation(r.ctx, r.client, worker, v1beta1constants.GardenerOperation); err != nil {
-		r.logger.Error(err, "Error removing annotation from Worker", "annotation", fmt.Sprintf("%s/%s", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore), "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from Worker: %+v", err)
 	}
 
 	// requeue to triger reconciliation

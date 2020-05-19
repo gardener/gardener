@@ -129,12 +129,10 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to ensure finalizer on backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 
 	r.logger.Info("Starting the reconciliation of backupentry", "backupentry", be.Name)
@@ -142,7 +140,6 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 	if err := r.actuator.Reconcile(ctx, be); err != nil {
 		msg := "Error reconciling backupentry"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
-		r.logger.Error(err, msg, "backupentry", be.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -167,12 +164,10 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to ensure finalizer on backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 
 	r.logger.Info("Starting the restoration of backupentry", "backupentry", be.Name)
@@ -180,7 +175,6 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	if err := r.actuator.Restore(ctx, be); err != nil {
 		msg := "Error restoring backupentry"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
-		r.logger.Error(err, msg, "backupentry", be.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -194,8 +188,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from BackupEntry"
 		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 	return reconcile.Result{}, nil
 }
@@ -203,8 +196,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(be, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting backupentry causes a no-op as there is no finalizer.", "backupentry", be.Name)
@@ -222,7 +214,6 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 		msg := "Error deleting backupentry"
 		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
-		r.logger.Error(err, msg, "backupentry", be.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -235,18 +226,15 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to remove finalizer on backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on backup entry secret: %+v", err)
 	}
 
 	r.logger.Info("Removing finalizer.", "backupentry", be.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, be); err != nil {
-		r.logger.Error(err, "Error removing finalizer from backupentry", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupentry: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -263,7 +251,6 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 		msg := "Error migrating backupentry"
 		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, gardencorev1beta1.LastOperationTypeMigrate, msg)
-		r.logger.Error(err, msg, "backupentry", be.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -276,26 +263,22 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to remove finalizer on backup entry secret", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on backup entry secret: %+v", err)
 	}
 
 	r.logger.Info("Removing all finalizers.", "backupentry", be.Name)
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, be); err != nil {
-		r.logger.Error(err, "Error removing all finalizers from backupentry", "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from backupentry: %+v", err)
 	}
 
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from BackupEntry"
 		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
-		r.logger.Error(err, msg, "backupentry", be.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
 	return reconcile.Result{}, nil

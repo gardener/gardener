@@ -106,8 +106,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, bb); err != nil {
-		r.logger.Error(err, "failed to ensure finalizer on backup bucket", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
@@ -117,12 +116,10 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup bucket secret", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to ensure finalizer on bucket secret", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
 	}
 
 	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", bb.Name)
@@ -130,7 +127,6 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	if err := r.actuator.Reconcile(ctx, bb); err != nil {
 		msg := "Error reconciling backupbucket"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
-		r.logger.Error(err, msg, "backupbucket", bb.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -147,8 +143,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
 	hasFinalizer, err := extensionscontroller.HasFinalizer(bb, FinalizerName)
 	if err != nil {
-		r.logger.Error(err, "Could not instantiate finalizer deletion")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
 	}
 	if !hasFinalizer {
 		r.logger.Info("Deleting backupbucket causes a no-op as there is no finalizer.", "backupbucket", bb.Name)
@@ -166,7 +161,6 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		msg := "Error deleting backupbucket"
 		r.recorder.Eventf(bb, corev1.EventTypeWarning, EventBackupBucketDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
-		r.logger.Error(err, msg, "backupbucket", bb.Name)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -179,18 +173,15 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 
 	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
-		r.logger.Error(err, "failed to get backup bucket secret", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
-		r.logger.Error(err, "failed to remove finalizer on bucket secret", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
 	}
 
 	r.logger.Info("Removing finalizer.", "backupbucket", bb.Name)
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, bb); err != nil {
-		r.logger.Error(err, "Error removing finalizer from backupbucket", "backupbucket", bb.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupbucket: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
