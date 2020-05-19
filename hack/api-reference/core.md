@@ -1512,6 +1512,20 @@ string
 <p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -6084,6 +6098,20 @@ string
 <p>Zones is a list of availability zones in this region.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>labels</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
+It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
+quality, reliability, access restrictions, etc.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
@@ -7001,6 +7029,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
 </td>
 </tr>
 </tbody>

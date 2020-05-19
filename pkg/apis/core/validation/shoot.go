@@ -124,6 +124,9 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
 	}
+	if spec.SeedSelector != nil {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.SeedSelector, fldPath.Child("seedSelector"))...)
+	}
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
 		if meta.Namespace == v1beta1constants.GardenNamespace {

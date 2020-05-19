@@ -48,11 +48,11 @@ E.g. if the shoots wants a cluster in AWS eu-north-1, the scheduler picks all Se
 In the last step, the scheduler picks the one seed having the least shoots currently deployed.
 
 In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
-Subsequently the Gardener Controller Manager picks up and starts to create the cluster on the specified seed.
+Subsequently, the Gardenlet picks up and starts to create the cluster on the specified seed.
 
 ### Special handling based on shoot cluster purpose
 
-Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [this document](../usage/shoot_purposes.md) for more information.
+Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [this document](../usage/shoot_purposes.md) for more information).
 
 In case the shoot has the `testing` purpose then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
 The region does not matter, i.e., `testing` shoots may also be scheduled on a seed in a complete different region if it is better for balancing the whole Gardener system.
@@ -68,6 +68,13 @@ It filters out `Seed`s
 * whose labels don't match the `.spec.seedSelector` field of the `CloudProfile` that is used in the `Shoot` (there might be multiple environments for the same provider type, e.g., you might have multiple OpenStack systems connected to Gardener)
 
 After this filtering process the least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
+
+## `seedSelector` field in the `Shoot` specification
+
+Similar to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
+It allows the user to provide a label selector that must match the labels of `Seed`s in order to be scheduled to one of them.
+The labels on `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
+If provided, the Gardener scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
 
 ## Failure to determine a suitable seed
 

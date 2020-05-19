@@ -1377,6 +1377,12 @@ message Region {
   // +patchStrategy=merge
   // +optional
   repeated AvailabilityZone zones = 2;
+
+  // Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
+  // It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
+  // quality, reliability, access restrictions, etc.
+  // +optional
+  map<string, string> labels = 3;
 }
 
 message SecretBinding {
@@ -1690,6 +1696,10 @@ message ShootSpec {
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
   // +optional
   optional string seedName = 14;
+
+  // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 15;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
