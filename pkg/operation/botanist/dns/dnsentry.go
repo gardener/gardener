@@ -110,9 +110,13 @@ func (d *dnsEntry) Wait(ctx context.Context) error {
 		if msg := entry.Status.Message; msg != nil {
 			message = *msg
 		}
+		entryErr := fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", d.values.Name, status, message)
 
 		d.logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", d.values.Name, status, message)
-		return retry.MinorError(fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", d.values.Name, status, message))
+		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
+			return retry.SevereError(entryErr)
+		}
+		return retry.MinorError(entryErr)
 	}); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", d.values.Name, err.Error(), status, message))
 	}

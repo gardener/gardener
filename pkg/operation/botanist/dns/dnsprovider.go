@@ -117,9 +117,13 @@ func (d *dnsProvider) Wait(ctx context.Context) error {
 		if msg := provider.Status.Message; msg != nil {
 			message = *msg
 		}
+		providerErr := fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", d.values.Name, status, message)
 
 		d.logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", d.values.Name, status, message)
-		return retry.MinorError(fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", d.values.Name, status, message))
+		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
+			return retry.SevereError(providerErr)
+		}
+		return retry.MinorError(providerErr)
 	}); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", d.values.Name, err.Error(), status, message))
 	}
