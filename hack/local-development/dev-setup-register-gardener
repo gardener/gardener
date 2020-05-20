@@ -35,11 +35,20 @@ SETTINGS_APISERVICE_NAME="v1alpha1.settings.gardener.cloud"
 
 CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
 CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
+CONTROLLER_MANAGER_SERVICE_PORT=443
+
+CONTROLLER_MANAGER_EXTERNALNAME=docker.for.mac.localhost
+if [[ "$(uname -s)" != *"Darwin"* ]]; then
+  CONTROLLER_MANAGER_EXTERNALNAME=gardener.localhost
+fi
 
 if [[ $(k8s_env) == "$NODELESS" ]]; then
-  APISERVER_SERVICE_PORT=8443
+  APISERVER_SERVICE_PORT=$API_SERVER_SECURE_PORT
   APISERVICE_PORT_STRING="    port: $APISERVER_SERVICE_PORT"
+
+  CONTROLLER_MANAGER_SERVICE_PORT=$CONTROLLER_MANAGER_SECURE_PORT
 fi
+CONTROLLER_MANAGER_PORT_STRING="      port: $CONTROLLER_MANAGER_SERVICE_PORT"
 
 if kubectl get apiservice "$CORE_V1ALPHA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1ALPHA1_APISERVICE_NAME --wait=false
@@ -54,21 +63,21 @@ if kubectl get apiservice "$SETTINGS_APISERVICE_NAME" &> /dev/null; then
   kubectl patch  apiservice $SETTINGS_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 
-if kubectl get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
-  kubectl delete service $APISERVER_SERVICE_NAME
+if kubectl -n garden get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
+  kubectl -n garden delete service $APISERVER_SERVICE_NAME
 fi
-if kubectl get service "$CONTROLLER_MANAGER_SERVICE_NAME" &> /dev/null; then
-  kubectl delete service $CONTROLLER_MANAGER_SERVICE_NAME
+if kubectl -n garden get service "$CONTROLLER_MANAGER_SERVICE_NAME" &> /dev/null; then
+  kubectl -n garden delete service $CONTROLLER_MANAGER_SERVICE_NAME
 fi
-if kubectl get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
-  kubectl delete endpoints $APISERVER_ENDPOINT_NAME
+if kubectl -n garden get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl -n garden delete endpoints $APISERVER_ENDPOINT_NAME
 fi
-if kubectl get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
-  kubectl delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
+if kubectl -n garden get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl -n garden delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
 fi
 
 if [[ $(k8s_env) == "$NODELESS" ]]; then
-cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
 metadata:
@@ -77,6 +86,15 @@ metadata:
 spec:
   type: ExternalName
   externalName: $APISERVER_EXTERNALNAME
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: $CONTROLLER_MANAGER_SERVICE_NAME
+  namespace: garden
+spec:
+  type: ExternalName
+  externalName: $CONTROLLER_MANAGER_EXTERNALNAME
 EOF
 else
   cat <<EOF | kubectl apply -f -
@@ -90,10 +108,6 @@ spec:
   - protocol: TCP
     port: 443
     targetPort: $API_SERVER_SECURE_PORT
-EOF
-fi
-
-cat <<EOF | kubectl apply -f -
 ---
 kind: Service
 apiVersion: v1
@@ -108,8 +122,12 @@ spec:
     targetPort: 2718
   - name: https
     protocol: TCP
-    port: 443
-    targetPort: 2719
+    port: $CONTROLLER_MANAGER_SERVICE_PORT
+    targetPort: $CONTROLLER_MANAGER_SECURE_PORT
+EOF
+fi
+
+cat <<EOF | kubectl apply -f -
 ---
 kind: Endpoints
 apiVersion: v1
@@ -134,7 +152,7 @@ subsets:
   - name: http
     port: 2718
   - name: https
-    port: 2719
+    port: $CONTROLLER_MANAGER_SECURE_PORT
 EOF
 
 cat <<EOF | kubectl apply -f -
@@ -207,6 +225,7 @@ webhooks:
       namespace: garden
       name: gardener-controller-manager
       path: /webhooks/validate-namespace-deletion
+$CONTROLLER_MANAGER_PORT_STRING
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVYWEyY0ZPL0NTVnJ2cThPLzBnZXVNdFhMT3NJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFlRncweE9EQTRNVFl5TURNeU1EQmFGdzB5Ck16QTRNVFV5TURNeU1EQmFNRWd4Q3pBSkJnTlZCQVlUQWxWVE1Rc3dDUVlEVlFRSUV3SkRRVEVXTUJRR0ExVUUKQnhNTlUyRnVJRVp5WVc1amFYTmpiekVVTUJJR0ExVUVBeE1MWlhoaGJYQnNaUzV1WlhRd2dnRWlNQTBHQ1NxRwpTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDNUM4L3ZoWHVFeWQwZlQ2YmxIcGtrbERiY251ckQ0SzZTCmJGaGRMWmVHQ0krdktXMzRPdEFzOFNwQXZrSmsxL0FPZ0ZsZFBGaTdGYThZbWdKQ3piR255bEZxcXJhd2RCaEgKdFZZeENBZTE0dTJTZGlxMXNPZ3VyRHRRM0doK0V1NXUrUDBsMTZ5MGR5UXhsNGREdHdIZno0anJOVmFkbldEYwpULytQUHNkNDZpMCtjT1loa0RrN1I1NEV1Rysxa1hha0c0c1hWcEt5MVRNd295bnJCVmg0MkwzYnNrcXJWbnBUCitnY0F6Q3RvaWE4WFJKL2pob3NjWHRSMHIxdEtpM2cxSjRxQTd1WDRJOXJUc2dPQmNrMGV4SlBSZ0Vtd3VPNUYKc1o0NEU4TUlveCtGVkg5TkRUY0JkSVQ5NVhVbGNhbkhKK1Baa1JVWFp5c2lNOWxuSWpCakFnTUJBQUdqUWpCQQpNQTRHQTFVZER3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCUVVKVTJJCmlDcll0dEhoTmhqNWh3c1FJK01JbGpBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVRlOTNldkVBSThtZGlwZG0KanBGQjkrMFczQzJrTzEvQ3RCdWpOM1B2ZWc5OGxVOXBrS2lVOVdRL3orYlpEV3pUeklTdlYzMk9WSkNtUVN6cgpWRFJUMDNjbGpQaUJYOW9GNTc3TTE2TzNacnZQV3QxUXo2WHptYk9hdjVidkJXaTlpVWRMSEptOHA2Q0RIS1lYCklEZXdsVUg4K0FGaU10d0xlcjRRZFdRUnkrMGlOZG5YQjhCYnZ3QmxhcU1oUlphancyaW83eUdaZ3FXVmI5cnkKNlRsNnF1ZVpaazJOeUszSURtbTdhMWV4TFhQUjh2U2QyUUI2YlNCTVI3NXAvRm1jVkN1VzY0MlRZTnEwUW9VcwpXOXlUM3YxcHhRZlhraTZWTGQ3L3Y4QnhwTlEzazFWM01LWGlLOEIwOEdzRDZJa2s5R2dNVmNkWDRaQmVtWmYzCjBjVUQyUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 - name: validate-kubeconfig-secrets.gardener.cloud
   rules:
@@ -228,6 +247,7 @@ webhooks:
       namespace: garden
       name: gardener-controller-manager
       path: /webhooks/validate-kubeconfig-secrets
+$CONTROLLER_MANAGER_PORT_STRING
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVYWEyY0ZPL0NTVnJ2cThPLzBnZXVNdFhMT3NJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFlRncweE9EQTRNVFl5TURNeU1EQmFGdzB5Ck16QTRNVFV5TURNeU1EQmFNRWd4Q3pBSkJnTlZCQVlUQWxWVE1Rc3dDUVlEVlFRSUV3SkRRVEVXTUJRR0ExVUUKQnhNTlUyRnVJRVp5WVc1amFYTmpiekVVTUJJR0ExVUVBeE1MWlhoaGJYQnNaUzV1WlhRd2dnRWlNQTBHQ1NxRwpTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDNUM4L3ZoWHVFeWQwZlQ2YmxIcGtrbERiY251ckQ0SzZTCmJGaGRMWmVHQ0krdktXMzRPdEFzOFNwQXZrSmsxL0FPZ0ZsZFBGaTdGYThZbWdKQ3piR255bEZxcXJhd2RCaEgKdFZZeENBZTE0dTJTZGlxMXNPZ3VyRHRRM0doK0V1NXUrUDBsMTZ5MGR5UXhsNGREdHdIZno0anJOVmFkbldEYwpULytQUHNkNDZpMCtjT1loa0RrN1I1NEV1Rysxa1hha0c0c1hWcEt5MVRNd295bnJCVmg0MkwzYnNrcXJWbnBUCitnY0F6Q3RvaWE4WFJKL2pob3NjWHRSMHIxdEtpM2cxSjRxQTd1WDRJOXJUc2dPQmNrMGV4SlBSZ0Vtd3VPNUYKc1o0NEU4TUlveCtGVkg5TkRUY0JkSVQ5NVhVbGNhbkhKK1Baa1JVWFp5c2lNOWxuSWpCakFnTUJBQUdqUWpCQQpNQTRHQTFVZER3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCUVVKVTJJCmlDcll0dEhoTmhqNWh3c1FJK01JbGpBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVRlOTNldkVBSThtZGlwZG0KanBGQjkrMFczQzJrTzEvQ3RCdWpOM1B2ZWc5OGxVOXBrS2lVOVdRL3orYlpEV3pUeklTdlYzMk9WSkNtUVN6cgpWRFJUMDNjbGpQaUJYOW9GNTc3TTE2TzNacnZQV3QxUXo2WHptYk9hdjVidkJXaTlpVWRMSEptOHA2Q0RIS1lYCklEZXdsVUg4K0FGaU10d0xlcjRRZFdRUnkrMGlOZG5YQjhCYnZ3QmxhcU1oUlphancyaW83eUdaZ3FXVmI5cnkKNlRsNnF1ZVpaazJOeUszSURtbTdhMWV4TFhQUjh2U2QyUUI2YlNCTVI3NXAvRm1jVkN1VzY0MlRZTnEwUW9VcwpXOXlUM3YxcHhRZlhraTZWTGQ3L3Y4QnhwTlEzazFWM01LWGlLOEIwOEdzRDZJa2s5R2dNVmNkWDRaQmVtWmYzCjBjVUQyUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 EOF
 fi
