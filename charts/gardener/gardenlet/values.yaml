@@ -110,15 +110,16 @@ global:
         https:
           bindAddress: 0.0.0.0
           port: 2720
-          tls:
-            crt: |
-              -----BEGIN CERTIFICATE-----
-              ...
-              -----END CERTIFICATE-----
-            key: |
-              -----BEGIN RSA PRIVATE KEY-----
-              ...
-              -----END RSA PRIVATE KEY-----
+        # optional, will be self-generated during startup when empty
+        # tls:
+        #   crt: |
+        #     -----BEGIN CERTIFICATE-----
+        #     ...
+        #     -----END CERTIFICATE-----
+        #   key: |
+        #     -----BEGIN RSA PRIVATE KEY-----
+        #     ...
+        #     -----END RSA PRIVATE KEY-----
       featureGates: {}
     # seedSelector: {}
     # seedConfig: {}

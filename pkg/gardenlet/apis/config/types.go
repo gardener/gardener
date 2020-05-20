@@ -274,8 +274,9 @@ type Server struct {
 type HTTPSServer struct {
 	// Server is the configuration for the bind address and the port.
 	Server
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer
+	// TLSServer contains information about the TLS configuration for a HTTPS server. If empty then a proper server
+	// certificate will be self-generated during startup.
+	TLS *TLSServer
 }
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.

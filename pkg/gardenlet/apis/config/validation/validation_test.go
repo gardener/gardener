@@ -37,10 +37,6 @@ var _ = Describe("GardenletConfiguration", func() {
 						BindAddress: "0.0.0.0",
 						Port:        2720,
 					},
-					TLS: config.TLSServer{
-						ServerCertPath: "/path1",
-						ServerKeyPath:  "/path2",
-					},
 				},
 			},
 		}
@@ -93,19 +89,16 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			errorList := ValidateGardenletConfiguration(cfg)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.https.bindAddress"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.https.port"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.https.tls.serverCertPath"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server.https.tls.serverKeyPath"),
-			}))))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("server.https.bindAddress"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("server.https.port"),
+				})),
+			))
 		})
 	})
 })

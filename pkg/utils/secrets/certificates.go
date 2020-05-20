@@ -21,8 +21,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -354,4 +356,51 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 	}
 
 	return generatedSecrets, certificateAuthorities, nil
+}
+
+// SelfGenerateTLSServerCertificate generates a new CA certificate and signs a server certificate with it. It'll store
+// the generated CA + server certificate bytes into a temporary directory with the default filenames, e.g. `DataKeyCertificateCA`.
+// The function will return the *Certificate object as well as the path of the temporary directory where the
+// certificates are stored.
+func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certificate, string, error) {
+	tempDir, err := ioutil.TempDir("", "self-generated-server-certificates-")
+	if err != nil {
+		return nil, "", err
+	}
+
+	caCertificateConfig := &CertificateSecretConfig{
+		Name:       name,
+		CommonName: name,
+		CertType:   CACert,
+	}
+	caCertificate, err := caCertificateConfig.GenerateCertificate()
+	if err != nil {
+		return nil, "", err
+	}
+	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyCertificateCA), caCertificate.CertificatePEM, 0644); err != nil {
+		return nil, "", err
+	}
+	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyPrivateKeyCA), caCertificate.PrivateKeyPEM, 0644); err != nil {
+		return nil, "", err
+	}
+
+	certificateConfig := &CertificateSecretConfig{
+		Name:       name,
+		CommonName: name,
+		DNSNames:   dnsNames,
+		CertType:   ServerCert,
+		SigningCA:  caCertificate,
+	}
+	certificate, err := certificateConfig.GenerateCertificate()
+	if err != nil {
+		return nil, "", err
+	}
+	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyCertificate), certificate.CertificatePEM, 0644); err != nil {
+		return nil, "", err
+	}
+	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyPrivateKey), certificate.PrivateKeyPEM, 0644); err != nil {
+		return nil, "", err
+	}
+
+	return certificate, tempDir, nil
 }

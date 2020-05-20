@@ -324,8 +324,10 @@ type Server struct {
 type HTTPSServer struct {
 	// Server is the configuration for the bind address and the port.
 	Server `json:",inline"`
-	// TLSServer contains information about the TLS configuration for a HTTPS server.
-	TLS TLSServer `json:"tls"`
+	// TLSServer contains information about the TLS configuration for a HTTPS server. If empty then a proper server
+	// certificate will be self-generated during startup.
+	// +optional
+	TLS *TLSServer `json:"tls,omitempty"`
 }
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.
