@@ -30,12 +30,14 @@ Please make sure you have installed the following requirements:
 
 - GNU Core Utils
 - GNU Tar
+- GNU Sed
 
 Brew command:
-$ brew install coreutils gnu-tar
+$ brew install coreutils gnu-tar gnu-sed
 
 Please allow them to be used without their "g" prefix:
 $ export PATH=/usr/local/opt/coreutils/libexec/gnubin:\$PATH
 $ export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:\$PATH
+$ export PATH=/usr/local/opt/gnu-sed/libexec/gnubin:\$PATH
 EOM
 fi
