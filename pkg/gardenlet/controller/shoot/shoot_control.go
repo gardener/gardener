@@ -42,7 +42,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
@@ -407,22 +406,12 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow)
 	)
 
-	// need retry logic, because the scheduler is acting on it at the same time and cached object might not be up to date
-	updatedShoot, err := kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(curShoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		finalizers := sets.NewString(curShoot.Finalizers...)
-		if finalizers.Has(gardencorev1beta1.GardenerName) {
-			return curShoot, nil
+	if !controllerutils.HasFinalizer(shoot, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), shoot.DeepCopy(), gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
 		}
-
-		finalizers.Insert(gardencorev1beta1.GardenerName)
-		curShoot.Finalizers = finalizers.UnsortedList()
-
-		return curShoot, nil
-	})
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
+		return reconcile.Result{}, nil
 	}
-	shoot = updatedShoot
 
 	logger.WithFields(logrus.Fields{
 		"operationType":              operationType,
@@ -476,6 +465,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
+	var err error
 	o.Shoot.Info, err = c.updateShootStatusOperationStart(o.Shoot.Info, o.Shoot.SeedNamespace, operationType)
 	if err != nil {
 		return reconcile.Result{}, err
