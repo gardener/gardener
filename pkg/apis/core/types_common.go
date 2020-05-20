@@ -59,6 +59,8 @@ const (
 	LastOperationTypeReconcile LastOperationType = "Reconcile"
 	// LastOperationTypeDelete indicates a 'delete' operation.
 	LastOperationTypeDelete LastOperationType = "Delete"
+	// LastOperationTypeRestore indicates a 'restore' operation.
+	LastOperationTypeRestore LastOperationType = "Restore"
 )
 
 // LastOperationState is a string alias.

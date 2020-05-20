@@ -21,6 +21,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -61,7 +62,7 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 			return reconcile.Result{}, err
 		}
 
-		if extensionObject.GetDeletionTimestamp() != nil {
+		if shouldSkipExtensionObjectSync(extensionObject, kind, &req, s.log) {
 			return reconcile.Result{}, nil
 		}
 
@@ -98,6 +99,19 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 		s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{}, nil
 	}
+}
+
+func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object, kind string, req *reconcile.Request, log *logrus.Entry) bool {
+	if extensionObject.GetDeletionTimestamp() != nil {
+		return true
+	}
+
+	annotations := extensionObject.GetAnnotations()
+	if annotations != nil {
+		operationAnnotation := annotations[v1beta1constants.GardenerOperation]
+		return operationAnnotation == v1beta1constants.GardenerOperationWaitForState
+	}
+	return false
 }
 
 func updateShootStateExtensionState(extensionState *runtime.RawExtension, shootState *gardencorev1alpha1.ShootState, kind string, name string, purpose *string) error {

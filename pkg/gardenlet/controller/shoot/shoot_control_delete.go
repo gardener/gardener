@@ -483,7 +483,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 }
 
 func (c *Controller) removeFinalizerFrom(shoot *gardencorev1beta1.Shoot) error {
-	newShoot, err := c.updateShootStatusOperationSuccess(shoot, "")
+	newShoot, err := c.updateShootStatusOperationSuccess(shoot, "", gardencorev1beta1.LastOperationTypeDelete)
 	if err != nil {
 		return err
 	}

@@ -15,10 +15,14 @@
 package kubernetes
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -26,9 +30,67 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 )
+
+// NewPodExecutor returns a podExecutor
+func NewPodExecutor(config *rest.Config) PodExecutor {
+	return &podExecutor{
+		config: config,
+	}
+}
+
+// PodExecutor is the pod executor interface
+type PodExecutor interface {
+	Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error)
+}
+
+type podExecutor struct {
+	config *rest.Config
+}
+
+// Execute executes a command on a pod
+func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error) {
+	client, err := corev1client.NewForConfig(p.config)
+	if err != nil {
+		return nil, err
+	}
+
+	var stdout, stderr bytes.Buffer
+	request := client.RESTClient().
+		Post().
+		Resource("pods").
+		Name(name).
+		Namespace(namespace).
+		SubResource("exec").
+		Param("container", containerName).
+		Param("command", command).
+		Param("stdin", "true").
+		Param("stdout", "true").
+		Param("stderr", "true").
+		Param("tty", "false").
+		Context(ctx)
+
+	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialized the command exector: %v", err)
+	}
+
+	err = executor.Stream(remotecommand.StreamOptions{
+		Stdin:  strings.NewReader(commandArg),
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return &stderr, err
+	}
+
+	return &stdout, nil
+}
 
 // GetPodLogs retrieves the pod logs of the pod of the given name with the given options.
 func GetPodLogs(podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {

@@ -118,6 +118,16 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 	})
 }
 
+// WaitUntilKubeAPIServerScaledDown waits until the kube-apiserver pod(s) are scaled to zero.
+func (b *Botanist) WaitUntilKubeAPIServerScaledDown(ctx context.Context) error {
+	return WaitUntilDeploymentScaledToDesiredReplicas(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, 0)
+}
+
+// WaitUntilGardenerResourceManagerScalesDown waits until the gardener-resource-manager pod(s) are scaled to zero.
+func (b *Botanist) WaitUntilGardenerResourceManagerScalesDown(ctx context.Context) error {
+	return WaitUntilDeploymentScaledToDesiredReplicas(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, 0)
+}
+
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
 func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -420,5 +430,30 @@ func (b *Botanist) WaitUntilRequiredExtensionsReady(ctx context.Context) error {
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
+	})
+}
+
+// WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.
+func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		deployment := &appsv1.Deployment{}
+		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if deployment.Generation != deployment.Status.ObservedGeneration {
+			return retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)", name,
+				deployment.Status.ObservedGeneration, deployment.Generation))
+		}
+
+		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
+			return retry.SevereError(fmt.Errorf("waiting for deployment %q to scale failed. spec.replicas does not match the desired replicas", name))
+		}
+
+		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", name, deployment.Status.AvailableReplicas, desiredReplicas))
 	})
 }

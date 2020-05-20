@@ -174,17 +174,23 @@ func IsControllerInstallationSuccessful(controllerInstallation gardencorev1alpha
 	return installed && healthy
 }
 
-// ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
+// ComputeOperationType checks the <lastOperation> and determines whether it is Create, Delete, Reconcile, Migrate or Restore operation
 func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1alpha1.LastOperation) gardencorev1alpha1.LastOperationType {
 	switch {
 	case meta.Annotations[v1alpha1constants.GardenerOperation] == v1alpha1constants.GardenerOperationMigrate:
 		return gardencorev1alpha1.LastOperationTypeMigrate
+	case meta.Annotations[v1alpha1constants.GardenerOperation] == v1alpha1constants.GardenerOperationRestore:
+		return gardencorev1alpha1.LastOperationTypeRestore
 	case meta.DeletionTimestamp != nil:
 		return gardencorev1alpha1.LastOperationTypeDelete
 	case lastOperation == nil:
 		return gardencorev1alpha1.LastOperationTypeCreate
 	case (lastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded):
 		return gardencorev1alpha1.LastOperationTypeCreate
+	case (lastOperation.Type == gardencorev1alpha1.LastOperationTypeMigrate && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded):
+		return gardencorev1alpha1.LastOperationTypeMigrate
+	case (lastOperation.Type == gardencorev1alpha1.LastOperationTypeRestore && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded):
+		return gardencorev1alpha1.LastOperationTypeRestore
 	}
 	return gardencorev1alpha1.LastOperationTypeReconcile
 }

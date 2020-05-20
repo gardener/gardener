@@ -41,12 +41,13 @@ const InfrastructureDefaultTimeout = 5 * time.Minute
 // cluster. Gardener waits until an external controller did reconcile the cluster successfully.
 func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	var (
-		lastOperation                       = b.Shoot.Info.Status.LastOperation
-		creationPhase                       = lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate
-		shootIsWakingUp                     = !gardencorev1beta1helper.HibernationIsEnabled(b.Shoot.Info) && b.Shoot.Info.Status.IsHibernated
-		requestInfrastructureReconciliation = creationPhase || shootIsWakingUp || controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
-
-		infrastructure = &extensionsv1alpha1.Infrastructure{
+		operation                      = v1beta1constants.GardenerOperationReconcile
+		lastOperation                  = b.Shoot.Info.Status.LastOperation
+		creationPhase                  = lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate
+		shootIsWakingUp                = !gardencorev1beta1helper.HibernationIsEnabled(b.Shoot.Info) && b.Shoot.Info.Status.IsHibernated
+		restorePhase                   = b.isRestorePhase()
+		requestInfrastructureOperation = creationPhase || shootIsWakingUp || restorePhase || controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
+		infrastructure                 = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.Shoot.Info.Name,
 				Namespace: b.Shoot.SeedNamespace,
@@ -61,9 +62,13 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		}
 	}
 
+	if restorePhase {
+		operation = v1beta1constants.GardenerOperationWaitForState
+	}
+
 	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
-		if requestInfrastructureReconciliation {
-			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		if requestInfrastructureOperation {
+			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 		}
 
@@ -81,7 +86,15 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if restorePhase {
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), infrastructure, &infrastructure.ObjectMeta, &infrastructure.Status.DefaultStatus, extensionsv1alpha1.InfrastructureResource, infrastructure.Name, nil)
+	}
+
+	return nil
 }
 
 // DestroyInfrastructure deletes the `Infrastructure` extension resource in the shoot namespace in the seed cluster,

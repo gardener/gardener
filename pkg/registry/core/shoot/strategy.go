@@ -98,6 +98,10 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			if val, ok := common.GetShootOperationAnnotation(newShoot.Annotations); ok && val == common.ShootOperationRetry {
 				mustIncrease = true
 			}
+		case core.LastOperationStatePending:
+			if newShoot.Status.LastOperation.Type == core.LastOperationTypeRestore {
+				mustIncrease = true
+			}
 		default:
 			// The shoot state is not failed and the reconcile or rotate-credentials annotation is set.
 			if val, ok := common.GetShootOperationAnnotation(newShoot.Annotations); ok {

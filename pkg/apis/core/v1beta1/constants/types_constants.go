@@ -112,7 +112,8 @@ const (
 	// GardenerOperationRestore is a constant for the value of the operation annotation describing a restoration
 	// operation.
 	GardenerOperationRestore = "restore"
-	// GardenerOperationWaitForState is a constant for the value of the operation annotation for waiting a state
+	// GardenerOperationWaitForState is a constant for the value of the operation annotation describing a wait
+	// operation.
 	GardenerOperationWaitForState = "wait-for-state"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.

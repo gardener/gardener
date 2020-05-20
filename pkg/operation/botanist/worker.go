@@ -39,7 +39,9 @@ const WorkerDefaultTimeout = 10 * time.Minute
 // cluster. Gardener waits until an external controller did reconcile the resource successfully.
 func (b *Botanist) DeployWorker(ctx context.Context) error {
 	var (
-		worker = &extensionsv1alpha1.Worker{
+		operation    = v1beta1constants.GardenerOperationReconcile
+		restorePhase = b.isRestorePhase()
+		worker       = &extensionsv1alpha1.Worker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.Shoot.Info.Name,
 				Namespace: b.Shoot.SeedNamespace,
@@ -134,10 +136,13 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		})
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+	if restorePhase {
+		operation = v1beta1constants.GardenerOperationWaitForState
+	}
 
+	_, err = controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: b.Shoot.Info.Spec.Provider.Type,
@@ -155,7 +160,15 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if restorePhase {
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), worker, &worker.ObjectMeta, &worker.Status.DefaultStatus, extensionsv1alpha1.WorkerResource, worker.Name, worker.GetExtensionSpec().GetExtensionPurpose())
+	}
+
+	return nil
 }
 
 // DestroyWorker deletes the `Worker` extension resource in the shoot namespace in the seed cluster,
