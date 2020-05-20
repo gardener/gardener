@@ -225,8 +225,10 @@ var _ = Describe("health", func() {
 
 	Context("CheckExtensionObject", func() {
 		DescribeTable("extension objects",
-			func(obj extensionsv1alpha1.Object, match types.GomegaMatcher) {
-				Expect(health.CheckExtensionObject(obj)).To(match)
+			func(obj extensionsv1alpha1.Object, match1, match2 types.GomegaMatcher) {
+				val1, val2 := health.CheckExtensionObject(obj)
+				Expect(val1).To(match1)
+				Expect(val2).To(match2)
 			},
 			Entry("healthy",
 				&extensionsv1alpha1.Infrastructure{
@@ -238,7 +240,7 @@ var _ = Describe("health", func() {
 						},
 					},
 				},
-				Succeed()),
+				BeTrue(), Succeed()),
 			Entry("generation outdated",
 				&extensionsv1alpha1.Infrastructure{
 					ObjectMeta: metav1.ObjectMeta{
@@ -252,7 +254,7 @@ var _ = Describe("health", func() {
 						},
 					},
 				},
-				HaveOccurred()),
+				BeFalse(), HaveOccurred()),
 			Entry("gardener operation ongoing",
 				&extensionsv1alpha1.Infrastructure{
 					ObjectMeta: metav1.ObjectMeta{
@@ -268,7 +270,7 @@ var _ = Describe("health", func() {
 						},
 					},
 				},
-				HaveOccurred()),
+				BeFalse(), HaveOccurred()),
 			Entry("last error non-nil",
 				&extensionsv1alpha1.Infrastructure{
 					Status: extensionsv1alpha1.InfrastructureStatus{
@@ -282,10 +284,10 @@ var _ = Describe("health", func() {
 						},
 					},
 				},
-				HaveOccurred()),
+				BeTrue(), HaveOccurred()),
 			Entry("no last operation",
 				&extensionsv1alpha1.Infrastructure{},
-				HaveOccurred()),
+				BeFalse(), HaveOccurred()),
 			Entry("last operation not succeeded",
 				&extensionsv1alpha1.Infrastructure{
 					Status: extensionsv1alpha1.InfrastructureStatus{
@@ -296,7 +298,7 @@ var _ = Describe("health", func() {
 						},
 					},
 				},
-				HaveOccurred()),
+				BeFalse(), HaveOccurred()),
 		)
 	})
 })

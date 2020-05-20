@@ -96,14 +96,14 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 
 		for _, etcd := range etcdList.Items {
 			switch {
+			case etcd.Status.LastError != nil:
+				return retry.SevereError(fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
 			case etcd.DeletionTimestamp != nil:
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s unexpectedly has a deletion timestamp", etcd.Name))
 			case etcd.Status.ObservedGeneration == nil || etcd.Generation != *etcd.Status.ObservedGeneration:
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation pending", etcd.Name))
 			case metav1.HasAnnotation(etcd.ObjectMeta, v1beta1constants.GardenerOperation):
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
-			case etcd.Status.LastError != nil:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
 			case !utils.IsTrue(etcd.Status.Ready):
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
 			}

@@ -19,18 +19,18 @@ import (
 	"net/http"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 )
@@ -265,10 +265,10 @@ func CheckSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardene
 }
 
 // CheckExtensionObject checks if an extension Object is healthy or not.
-func CheckExtensionObject(o runtime.Object) error {
+func CheckExtensionObject(o runtime.Object) (bool, error) {
 	obj, ok := o.(extensionsv1alpha1.Object)
 	if !ok {
-		return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
+		return retry.SevereError(fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o))
 	}
 
 	status := obj.GetExtensionStatus()
@@ -276,10 +276,10 @@ func CheckExtensionObject(o runtime.Object) error {
 }
 
 // CheckBackupBucket checks if an backup bucket Object is healthy or not.
-func CheckBackupBucket(bb runtime.Object) error {
+func CheckBackupBucket(bb runtime.Object) (bool, error) {
 	obj, ok := bb.(*gardencorev1beta1.BackupBucket)
 	if !ok {
-		return fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", bb)
+		return retry.SevereError(fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", bb))
 	}
 	return checkExtensionObject(obj.Generation, obj.Status.ObservedGeneration, obj.Annotations, obj.Status.LastError, obj.Status.LastOperation)
 }
@@ -290,28 +290,28 @@ func CheckBackupBucket(bb runtime.Object) error {
 // * No gardener.cloud/operation is set
 // * No lastError is in the status
 // * A last operation is state succeeded is present
-func checkExtensionObject(generation int64, observedGeneration int64, annotations map[string]string, lastError *gardencorev1beta1.LastError, lastOperation *gardencorev1beta1.LastOperation) error {
+func checkExtensionObject(generation int64, observedGeneration int64, annotations map[string]string, lastError *gardencorev1beta1.LastError, lastOperation *gardencorev1beta1.LastOperation) (bool, error) {
+	if lastError != nil {
+		return retry.SevereError(gardencorev1beta1helper.NewErrorWithCodes(fmt.Sprintf("extension encountered error during reconciliation: %s", lastError.Description), lastError.Codes...))
+	}
+
 	if observedGeneration != generation {
-		return fmt.Errorf("observed generation outdated (%d/%d)", observedGeneration, generation)
+		return retry.MinorError(fmt.Errorf("observed generation outdated (%d/%d)", observedGeneration, generation))
 	}
 
 	if op, ok := annotations[v1beta1constants.GardenerOperation]; ok {
-		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
-	}
-
-	if lastError != nil {
-		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Sprintf("extension encountered error during reconciliation: %s", lastError.Description), lastError.Codes...)
+		return retry.MinorError(fmt.Errorf("gardener operation %q is not yet picked up by controller", op))
 	}
 
 	if lastOperation == nil {
-		return fmt.Errorf("extension did not record a last operation yet")
+		return retry.MinorError(fmt.Errorf("extension did not record a last operation yet"))
 	}
 
 	if lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		return fmt.Errorf("extension state is not succeeded but %v", lastOperation.State)
+		return retry.MinorError(fmt.Errorf("extension state is not succeeded but %v", lastOperation.State))
 	}
 
-	return nil
+	return retry.Ok()
 }
 
 // Now determines the current time.
