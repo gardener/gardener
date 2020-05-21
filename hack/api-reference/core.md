@@ -4063,6 +4063,18 @@ Kubernetes meta/v1.Duration
 Default: 1m</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>failSwapOn</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

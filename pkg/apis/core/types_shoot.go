@@ -501,6 +501,8 @@ type KubeletConfig struct {
 	// ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
 	// Default: 1m
 	ImagePullProgressDeadline *metav1.Duration
+	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
+	FailSwapOn *bool
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

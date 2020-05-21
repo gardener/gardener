@@ -60,6 +60,7 @@ spec:
     # kubernetes:
     #   kubelet:
     #     cpuCFSQuota: true
+    #     failSwapOn: true
     #     cpuManagerPolicy: none
     #     podPidsLimit: 10
     #     imagePullProgressDeadline: 1m
@@ -154,6 +155,7 @@ spec:
   #   mode: IPVS
   # kubelet:
   #   cpuCFSQuota: true
+  #   failSwapOn: true
   #   cpuManagerPolicy: none
   #   podPidsLimit: 10
   #   imagePullProgressDeadline: 1m
