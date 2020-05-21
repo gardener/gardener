@@ -231,7 +231,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
 	}
 
-	if !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) && seed != nil && seed.Spec.Backup == nil {
+	if oldShoot.Spec.SeedName != nil && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) &&
+		seed != nil && seed.Spec.Backup == nil {
 		return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because seed backup is not configured, for shoot %q", shoot.Name))
 	}
 

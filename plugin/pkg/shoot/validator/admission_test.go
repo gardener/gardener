@@ -1519,7 +1519,22 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("backup configuration on seed", func() {
-			It("it should fail to change seed name, because seed doesn't have configuration for backup", func() {
+			It("it should allow new Shoot creation when Seed doesn't have configuration for backup", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+				seed.Spec.Backup = nil
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("it should fail to change Seed name, because Seed doesn't have configuration for backup", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.SeedName = pointer.StringPtr("oldSeedName")
 				seed.Spec.Backup = nil
