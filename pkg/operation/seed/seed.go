@@ -39,7 +39,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/pkg/version"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -143,9 +142,6 @@ const (
 
 	prometheusPrefix = "p-seed"
 	prometheusTLS    = "aggregate-prometheus-tls"
-
-	kibanaPrefix = "k-seed"
-	kibanaTLS    = "kibana-tls"
 )
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
@@ -196,41 +192,6 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 		},
 	}
 
-	// Logging feature gate
-	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		secretList = append(secretList,
-			&secretsutils.CertificateSecretConfig{
-				Name: kibanaTLS,
-
-				CommonName:   "kibana",
-				Organization: []string{"garden.sapcloud.io:logging:ingress"},
-				DNSNames:     []string{seed.GetIngressFQDN(kibanaPrefix)},
-				IPAddresses:  nil,
-
-				CertType:  secretsutils.ServerCert,
-				SigningCA: certificateAuthorities[caSeed],
-				Validity:  &endUserCrtValidity,
-			},
-
-			// Secret definition for logging ingress
-			&secretsutils.BasicAuthSecretConfig{
-				Name:   "seed-logging-ingress-credentials",
-				Format: secretsutils.BasicAuthFormatNormal,
-
-				Username:       "admin",
-				PasswordLength: 32,
-			},
-			&secretsutils.BasicAuthSecretConfig{
-				Name:   "fluentd-es-sg-credentials",
-				Format: secretsutils.BasicAuthFormatNormal,
-
-				Username:                  "fluentd",
-				PasswordLength:            32,
-				BcryptPasswordHashRequest: true,
-			},
-		)
-	}
-
 	return secretList, nil
 }
 
@@ -247,11 +208,11 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 		return nil, err
 	}
 
-	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// Only necessary to renew certificates for Grafana, Prometheus
 	// TODO: (timuthy) remove in future version.
 	var (
 		renewedLabel = "cert.gardener.cloud/renewed-endpoint"
-		browserCerts = sets.NewString(grafanaTLS, kibanaTLS, prometheusTLS)
+		browserCerts = sets.NewString(grafanaTLS, prometheusTLS)
 	)
 	for name, secret := range existingSecretsMap {
 		_, ok := secret.Labels[renewedLabel]
@@ -268,7 +229,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 		return nil, err
 	}
 
-	// Only necessary to renew certificates for Grafana, Kibana, Prometheus
+	// Only necessary to renew certificates for Grafana, Prometheus
 	// TODO: (timuthy) remove in future version.
 	for name, secret := range secrets {
 		_, ok := secret.Labels[renewedLabel]
@@ -338,14 +299,10 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			common.AlertManagerImageName,
 			common.AlpineImageName,
 			common.ConfigMapReloaderImageName,
-			common.CuratorImageName,
-			common.ElasticsearchImageName,
-			common.ElasticsearchMetricsExporterImageName,
+			common.LokiImageName,
 			common.FluentBitImageName,
-			common.FluentdEsImageName,
 			common.GardenerResourceManagerImageName,
 			common.GrafanaImageName,
-			common.KibanaImageName,
 			common.PauseContainerImageName,
 			common.PrometheusImageName,
 			common.VpaAdmissionControllerImageName,
@@ -386,45 +343,16 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 
 	// Logging feature gate
 	var (
-		basicAuth             string
-		kibanaHost            string
-		sgFluentdPassword     string
-		sgFluentdPasswordHash string
-		fluentdReplicaCount   int32
-		loggingEnabled        = gardenletfeatures.FeatureGate.Enabled(features.Logging)
-		existingSecretsMap    = map[string]*corev1.Secret{}
-		filters               = strings.Builder{}
-		parsers               = strings.Builder{}
+		loggingEnabled     = gardenletfeatures.FeatureGate.Enabled(features.Logging)
+		existingSecretsMap = map[string]*corev1.Secret{}
+		filters            = strings.Builder{}
+		parsers            = strings.Builder{}
 	)
 
 	if loggingEnabled {
-		existingSecrets := &corev1.SecretList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		if err := common.DeleteOldLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
-
-		for _, secret := range existingSecrets.Items {
-			secretObj := secret
-			existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
-		}
-
-		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
-		if err != nil {
-			return err
-		}
-
-		if fluentdReplicaCount, err = GetFluentdReplicaCount(k8sSeedClient); err != nil {
-			return err
-		}
-
-		credentials := deployedSecretsMap["seed-logging-ingress-credentials"]
-		basicAuth = utils.CreateSHA1Secret(credentials.Data[secretsutils.DataKeyUserName], credentials.Data[secretsutils.DataKeyPassword])
-		kibanaHost = seed.GetIngressFQDN(kibanaPrefix)
-
-		sgFluentdCredentials := deployedSecretsMap["fluentd-es-sg-credentials"]
-		sgFluentdPassword = string(sgFluentdCredentials.Data[secretsutils.DataKeyPassword])
-		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[secretsutils.DataKeyPasswordBcryptHash])
-
 		// Read extension provider specific configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = k8sSeedClient.Client().List(context.TODO(), existingConfigMaps,
@@ -522,7 +450,6 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	if err = k8sSeedClient.Client().List(context.TODO(), nodes); err != nil {
 		return err
 	}
-	nodeCount := len(nodes.Items)
 
 	chartApplier := k8sSeedClient.ChartApplier()
 
@@ -566,7 +493,6 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	var (
 		grafanaTLSOverride    = grafanaTLS
 		prometheusTLSOverride = prometheusTLS
-		kibanaTLSOverride     = kibanaTLS
 	)
 
 	wildcardCert, err := GetWildcardCertificate(context.TODO(), k8sSeedClient.Client())
@@ -577,7 +503,6 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 	if wildcardCert != nil {
 		grafanaTLSOverride = wildcardCert.GetName()
 		prometheusTLSOverride = wildcardCert.GetName()
-		kibanaTLSOverride = wildcardCert.GetName()
 	}
 
 	imageVectorOverwrites := map[string]interface{}{}
@@ -689,49 +614,15 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 			"hostName":   grafanaHost,
 			"secretName": grafanaTLSOverride,
 		},
-		"elastic-kibana-curator": map[string]interface{}{
+		"fluent-bit": map[string]interface{}{
 			"enabled": loggingEnabled,
-			"ingress": map[string]interface{}{
-				"basicAuthSecret": basicAuth,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   kibanaHost,
-						"secretName": kibanaTLSOverride,
-					},
-				},
-			},
-			"curator": map[string]interface{}{
-				// Set curator threshold to 5Gi
-				"diskSpaceThreshold": 5 * 1024 * 1024 * 1024,
-			},
-			"elasticsearch": map[string]interface{}{
-				"objectCount": nodeCount,
-				"persistence": map[string]interface{}{
-					"size": seed.GetValidVolumeSize("100Gi"),
-				},
-			},
-			"searchguard": map[string]interface{}{
-				"users": map[string]interface{}{
-					"fluentd": map[string]interface{}{
-						"hash": sgFluentdPasswordHash,
-					},
-				},
+			"extensions": map[string]interface{}{
+				"parsers": parsers.String(),
+				"filters": filters.String(),
 			},
 		},
-		"fluentd-es": map[string]interface{}{
+		"loki": map[string]interface{}{
 			"enabled": loggingEnabled,
-			"fluentd": map[string]interface{}{
-				"replicaCount": fluentdReplicaCount,
-				"sgUsername":   "fluentd",
-				"sgPassword":   sgFluentdPassword,
-				"storage":      seed.GetValidVolumeSize("9Gi"),
-			},
-			"fluentbit": map[string]interface{}{
-				"extensions": map[string]interface{}{
-					"parsers": parsers.String(),
-					"filters": filters.String(),
-				},
-			},
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
@@ -777,30 +668,9 @@ func DesiredExcessCapacity() int {
 	return effectiveExcessCapacity * replicasToSupportSingleShoot
 }
 
-// GetFluentdReplicaCount returns fluentd stateful set replica count if it exists, otherwise - the default (1).
-// As fluentd HPA manages the number of replicas, we have to make sure to do not override HPA scaling.
-func GetFluentdReplicaCount(k8sSeedClient kubernetes.Interface) (int32, error) {
-	statefulSet := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.Client().Get(context.TODO(), kutil.Key(v1beta1constants.GardenNamespace, common.FluentdEsStatefulSetName), statefulSet); err != nil {
-		if apierrors.IsNotFound(err) {
-			// the stateful set is still not created, return the default replicas
-			return 1, nil
-		}
-
-		return -1, err
-	}
-
-	replicas := statefulSet.Spec.Replicas
-	if replicas == nil || *replicas == 0 {
-		return 1, nil
-	}
-
-	return *replicas, nil
-}
-
 // GetIngressFQDNDeprecated returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
 // end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
-// Only necessary to renew certificates for Alertmanager, Grafana, Kibana, Prometheus
+// Only necessary to renew certificates for Alertmanager, Grafana, Prometheus
 // TODO: (timuthy) remove in future version.
 func (s *Seed) GetIngressFQDNDeprecated(subDomain, shootName, projectName string) string {
 	if shootName == "" {

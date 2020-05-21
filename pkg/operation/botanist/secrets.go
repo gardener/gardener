@@ -23,8 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
@@ -326,7 +324,6 @@ const (
 	secretSuffixKubeConfig = "kubeconfig"
 	secretSuffixSSHKeyPair = v1beta1constants.SecretNameSSHKeyPair
 	secretSuffixMonitoring = "monitoring"
-	secretSuffixLogging    = "logging"
 )
 
 func computeProjectSecretName(shootName, suffix string) string {
@@ -363,14 +360,6 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 			suffix:      secretSuffixMonitoring,
 			annotations: map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 		},
-	}
-
-	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		projectSecrets = append(projectSecrets, projectSecret{
-			secretName:  "logging-ingress-credentials-users",
-			suffix:      secretSuffixLogging,
-			annotations: map[string]string{"url": "https://" + b.ComputeKibanaHost()},
-		})
 	}
 
 	for _, projectSecret := range projectSecrets {

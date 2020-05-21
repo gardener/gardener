@@ -71,9 +71,6 @@ const (
 	// DeploymentNameKubeStateMetricsSeed is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics-seed pod.
 	DeploymentNameKubeStateMetricsSeed = "kube-state-metrics-seed"
-	// DeploymentNameKibana is a constant for the name of a Kubernetes deployment object that contains
-	// the kibana-logging pod.
-	DeploymentNameKibana = "kibana-logging"
 
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
@@ -82,9 +79,7 @@ const (
 	ETCDMain = "etcd-main"
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
 	ETCDEvents = "etcd-events"
-	// StatefulSetNameElasticSearch is a constant for the name of a Kubernetes stateful set object that contains
-	// the elasticsearch-logging pod.
-	StatefulSetNameElasticSearch = "elasticsearch-logging"
+
 	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
 	// the prometheus pod.
 	StatefulSetNamePrometheus = "prometheus"
@@ -176,9 +171,6 @@ const (
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
 	// LabelNetworkPolicyToAll disables all Ingress and Egress traffic into/from this namespace when set to "disallowed".
 	LabelNetworkPolicyToAll = "networking.gardener.cloud/to-all"
-	// LabelNetworkPolicyToElasticSearch allows Ingress to the ElasticSearch API pods labeled with 'networking.gardener.cloud/to-elasticsearch=allowed',
-	// and fluentd in 'garden' namespace.
-	LabelNetworkPolicyToElasticSearch = "networking.gardener.cloud/to-elasticsearch"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"

@@ -1,0 +1,59 @@
+global:
+  images:
+    loki: image-repository:image-tag
+  fluentbit:
+    labels:
+      gardener.cloud/role: logging
+      app: fluent-bit
+      role: logging
+
+annotations: {}
+
+labels:
+  # depricated label only for the health check
+  garden.sapcloud.io/role: logging
+  gardener.cloud/role: logging
+  app: loki
+  role: logging
+
+prometheus:
+  labels:
+    app: aggregate-prometheus
+    role: monitoring
+
+storage: 30Gi
+# enable tracing for debug, need install jaeger and specify right jaeger_agent_host
+tracing:
+  jaegerAgentHost:
+
+livenessProbe:
+  httpGet:
+    path: /ready
+    port: metrics
+  initialDelaySeconds: 45
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: metrics
+  initialDelaySeconds: 45
+
+replicas: 1
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+securityContext:
+  fsGroup: 10001
+  runAsGroup: 10001
+  runAsNonRoot: true
+  runAsUser: 10001
+
+service:
+  type: ClusterIP
+  port: 3100

@@ -1,37 +1,19 @@
 # How to create log parser for container into fluent-bit
 
-If our log message is parsed correctly, it has to be showed in Kibana like this:
+If our log message is parsed correctly, it has to be showed in Grafana like this:
 
 ```jsonc
-{
-  "_source": {
-    "kubernetes": {
-      "pod_name": "calico-node-z54s9",
-      "pod_id": "c4ac4458-17e1-11e9-870f-0a114344f55b",
-      "namespace_name": "kube-system"
-    },
-    "source": "int_dataplane.go 765",
-    "log": "Finished applying updates to dataplane. msecToApply=1.325953",
-    "severity": "INF",
-    "pid": "58",
-    "@timestamp": "2019-01-16T16:06:00.543688505+00:00"
-  },
-}
+  {"log":"OpenAPI AggregationController: Processing item v1beta1.metrics.k8s.io","pid":"1","severity":"INFO","source":"controller.go:107"}
 ```
 
 Otherwise it will looks like this:
 
 ```jsonc
 {
-  "_source": {
-    "log": "2019-01-16 16:09:59.826 [INFO][66] health.go 150: Overall health summary=u0026health.HealthReport{Live:true, Ready:true}\n",
-    "kubernetes": {
-      "pod_name": "calico-node-ht6nh",
-      "namespace_name": "kube-system",
-      "pod_id": "97208bcb-15f9-11e9-bb8c-4632b18c254a",
-      },
-    },
-  },
+  "log":"{
+  \"level\":\"info\",\"ts\":\"2020-06-01T11:23:26.679Z\",\"logger\":\"gardener-resource-manager.health-reconciler\",\"msg\":\"Finished ManagedResource health checks\",\"object\":\"garden/provider-aws-dsm9r\"
+  }\n"
+  }
 }
 ```
 

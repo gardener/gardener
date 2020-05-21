@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+  annotations:
+{{ toYaml .Values.annotations | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    protocol: TCP
+    name: metrics
+    targetPort: metrics
+  selector:
+{{ toYaml .Values.labels | indent 4 }}

@@ -718,7 +718,6 @@ var setBody = `
 			deprecatedKubeAPIServerPolicy = "kube-apiserver-default"
 			deprecatedMetadataAppPolicy   = "cloud-metadata-service-deny-blacklist-app"
 			deprecatedMetadataRolePolicy  = "cloud-metadata-service-deny-blacklist-role"
-			deprecatedKibanaLogging       = "kibana-logging"
 		)
 
 		var (
@@ -736,6 +735,5 @@ var setBody = `
 		DefaultCIt(deprecatedKubeAPIServerPolicy, assertPolicyIsGone(deprecatedKubeAPIServerPolicy))
 		DefaultCIt(deprecatedMetadataAppPolicy, assertPolicyIsGone(deprecatedMetadataAppPolicy))
 		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedMetadataRolePolicy))
-		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedKibanaLogging))
 	})
 `

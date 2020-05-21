@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+  annotations:
+{{ toYaml .Values.annotations | indent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+{{ toYaml .Values.labels | indent 6 }}
+  template:
+    metadata:
+      labels:
+        networking.gardener.cloud/from-prometheus: allowed
+{{ toYaml .Values.labels | indent 8 }}
+      annotations:
+        checksum/configmap-loki-config: {{ include (print $.Template.BasePath "/loki-configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: loki
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: loki
+          image: {{ index .Values.global.images "loki" }}
+          args:
+            - "-config.file=/etc/loki/loki.yaml"
+          {{- range $key, $value := .Values.extraArgs }}
+            - "-{{ $key }}={{ $value }}"
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: loki
+              mountPath: "/data"
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          env:
+            {{- if .Values.env }}
+              {{- toYaml .Values.env | nindent 12 }}
+            {{- end }}
+            {{- if .Values.tracing.jaegerAgentHost }}
+            - name: JAEGER_AGENT_HOST
+              value: "{{ .Values.tracing.jaegerAgentHost }}"
+            {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+        - name: config
+          configMap:
+            name: loki-config
+  volumeClaimTemplates:
+    - metadata:
+        name: loki
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.storage }}

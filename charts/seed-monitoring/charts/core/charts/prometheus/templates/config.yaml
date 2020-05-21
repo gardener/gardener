@@ -642,8 +642,8 @@ data:
         regex: ^{{ .Release.Namespace }}$
 {{- end }}
 
-{{- if  (index .Values.rules.optional "elasticsearch" ).enabled }}
-    - job_name: elasticsearch-logging
+{{- if  (index .Values.rules.optional "loki" ).enabled }}
+    - job_name: loki
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints
@@ -654,14 +654,14 @@ data:
         - __meta_kubernetes_service_name
         - __meta_kubernetes_endpoint_port_name
         action: keep
-        regex: elasticsearch-logging;metrics
+        regex: loki;metrics
       # common metrics
       - action: labelmap
         regex: __meta_kubernetes_service_label_(.+)
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.elasticsearch | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.loki | indent 6 }}
 {{- end }}
 
 {{- if .Values.extensions.scrapeConfigs }}

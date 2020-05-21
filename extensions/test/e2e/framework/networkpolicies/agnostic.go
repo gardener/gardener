@@ -196,21 +196,20 @@ func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 	}
 }
 
-// ElasticSearch points to cloud-agnostic elasticsearch instance.
-func (a *Agnostic) ElasticSearch() *SourcePod {
+// LokiSearch points to cloud-agnostic loki instance.
+func (a *Agnostic) LokiSearch() *SourcePod {
 	return &SourcePod{
 		Ports: []Port{
-			{Name: "http", Port: 9200},
-			{Name: "metrics", Port: 9114},
+			{Name: "metrics", Port: 3100},
 		},
-		Pod: NewPod("elasticsearch-logging", labels.Set{
-			"app":                     "elasticsearch-logging",
-			"garden.sapcloud.io/role": "logging",
-			"role":                    "logging",
+		Pod: NewPod("loki", labels.Set{
+			"app":                 "loki",
+			"gardener.cloud/role": "logging",
+			"role":                "logging",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
-			"allow-elasticsearch",
+			"allow-loki",
 			"deny-all",
 		),
 	}
@@ -227,24 +226,6 @@ func (a *Agnostic) Grafana() *SourcePod {
 		ExpectedPolicies: sets.NewString(
 			"allow-grafana",
 			"allow-to-dns",
-			"deny-all",
-		),
-	}
-}
-
-// Kibana points to cloud-agnostic kibana instance.
-func (a *Agnostic) Kibana() *SourcePod {
-	return &SourcePod{
-		Ports: NewSinglePort(5601),
-		Pod: NewPod("kibana-logging", labels.Set{
-			"app":                     "kibana-logging",
-			"garden.sapcloud.io/role": "logging",
-			"role":                    "logging",
-		}),
-		ExpectedPolicies: sets.NewString(
-			"allow-kibana",
-			"allow-to-dns",
-			"allow-to-elasticsearch",
 			"deny-all",
 		),
 	}

@@ -16,7 +16,6 @@ package logging
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
@@ -29,16 +28,15 @@ import (
 )
 
 const (
-	logsCount uint64 = 10000
+	logsCount int = 10000
 
-	initializationTimeout           = 15 * time.Minute
-	kibanaAvailableTimeout          = 10 * time.Second
-	getLogsFromElasticsearchTimeout = 5 * time.Minute
+	initializationTimeout  = 15 * time.Minute
+	getLogsFromLokiTimeout = 5 * time.Minute
 
 	loggerDeploymentCleanupTimeout = 2 * time.Minute
 
 	fluentBitName = "fluent-bit"
-	fluentdName   = "fluentd-es"
+	lokiName      = "loki"
 	garden        = "garden"
 	logger        = "logger"
 )
@@ -51,26 +49,17 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		checkRequiredResources(ctx, f.SeedClient)
 	}, initializationTimeout)
 
-	f.Default().CIt("Kibana should be available", func(ctx context.Context) {
-		url := fmt.Sprintf("https://k.%s.%s.%s/api/status", f.Shoot.Name, f.Project.Name, f.Seed.Spec.DNS.IngressDomain)
-		loggingPassword, err := f.GetLoggingPassword(ctx)
-		framework.ExpectNoError(err)
-
-		err = framework.TestHTTPEndpointWithBasicAuth(ctx, url, framework.LoggingUserName, loggingPassword)
-		framework.ExpectNoError(err)
-	}, kibanaAvailableTimeout)
-
-	f.Beta().CIt("should get container logs from elasticsearch", func(ctx context.Context) {
+	f.Beta().CIt("should get container logs from loki", func(ctx context.Context) {
 		ginkgo.By("Calculate expected logs count")
-		search, err := f.GetElasticsearchLogs(ctx, f.ShootSeedNamespace(), logger, f.SeedClient)
+		search, err := f.GetLokiLogs(ctx, f.ShootSeedNamespace(), logger, f.SeedClient)
 		framework.ExpectNoError(err)
-		expectedLogsCount := search.Hits.Total + logsCount
+		expectedLogsCount := search.Data.Stats.Summary.TotalLinesProcessed + logsCount
 		f.Logger.Debugf("expected logs count is %d", expectedLogsCount)
 
 		ginkgo.By("Deploy the logger application")
 		loggerParams := struct {
 			HelmDeployNamespace string
-			LogsCount           uint64
+			LogsCount           int
 		}{
 			f.ShootSeedNamespace(),
 			logsCount,
@@ -86,10 +75,10 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		err = f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, f.ShootSeedNamespace(), f.SeedClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("Verify elasticsearch received logger application logs")
-		err = WaitUntilElasticsearchReceivesLogs(ctx, f, f.ShootSeedNamespace(), logger, expectedLogsCount, f.SeedClient)
+		ginkgo.By("Verify loki received logger application logs")
+		err = WaitUntilLokiReceivesLogs(ctx, f, f.ShootSeedNamespace(), logger, expectedLogsCount, f.SeedClient)
 		framework.ExpectNoError(err)
-	}, getLogsFromElasticsearchTimeout, framework.WithCAfterTest(func(ctx context.Context) {
+	}, getLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleaning up logger app resources")
 		loggerDeploymentToDelete := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{

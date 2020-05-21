@@ -59,9 +59,7 @@ allow-kube-apiserver              app=kubernetes,garden.sapcloud.io/role=control
 ```
 
 
-### Network policies for Logging & Monitoring 
-
-[Gardener provides out-of-the-box logging and monitoring](https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md) for the Shoot control plane via a stack based on prometheus, elasticsearch, kibana and grafana.
+### Network policies for Logging & Monitoring
 
 Gardener currently introduces a logging stack based on [Loki](https://github.com/grafana/loki). So this section is subject to change. 
 Please checkout [the Community Meeting for more information](https://www.youtube.com/watch?v=345b8xCcB-U&t=1166s).
@@ -69,14 +67,11 @@ Please checkout [the Community Meeting for more information](https://www.youtube
 These are the logging and monitoring related network policies:
 ```
 NAME                              POD-SELECTOR                                                             
-allow-elasticsearch               app=elasticsearch-logging,garden.sapcloud.io/role=logging,role=logging   
 allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed                        
 allow-grafana                     component=grafana,garden.sapcloud.io/role=monitoring                     
-allow-kibana                      app=kibana-logging,garden.sapcloud.io/role=logging,role=logging 
 allow-prometheus                  app=prometheus,garden.sapcloud.io/role=monitoring,role=monitoring        
-allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed 
-allow-to-elasticsearch            networking.gardener.cloud/to-elasticsearch=allowed  
-allow-elasticsearch               app=elasticsearch-logging,garden.sapcloud.io/role=logging,role=logging   
+allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed
+allow-to-loki                     networking.gardener.cloud/to-loki=allowed 
 ```
 
 Let's take for instance a look at the network policy `from-prometheus`.
@@ -102,16 +97,13 @@ The network policies in the `garden` namespace are, with a few exceptions (e.g K
 For your reference, these are all the deployed network policies.
 ```
 NAME                              POD-SELECTOR  
-allow-elasticsearch               app=elasticsearch-logging,garden.sapcloud.io/role=logging,role=logging   
-allow-fluentbit                   app=fluent-bit,garden.sapcloud.io/role=logging,role=logging              
-allow-fluentd                     app=fluentd-es,garden.sapcloud.io/role=logging,role=logging              
+allow-fluentbit                   app=fluent-bit,gardener.cloud/role=logging,role=logging              
 allow-from-aggregate-prometheus   networking.gardener.cloud/from-aggregate-prometheus=allowed              
-allow-kibana                      app=kibana-logging,garden.sapcloud.io/role=logging,role=logging          
 allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed                
 allow-to-all-shoot-apiservers     networking.gardener.cloud/to-all-shoot-apiservers=allowed                
 allow-to-blocked-cidrs            networking.gardener.cloud/to-blocked-cidrs=allowed                       
 allow-to-dns                      networking.gardener.cloud/to-dns=allowed                                 
-allow-to-elasticsearch            networking.gardener.cloud/to-elasticsearch=allowed                       
+allow-to-loki                     networking.gardener.cloud/to-loki=allowed                       
 allow-to-private-networks         networking.gardener.cloud/to-private-networks=allowed                    
 allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed                     
 allow-to-seed-apiserver           networking.gardener.cloud/to-seed-apiserver=allowed                      

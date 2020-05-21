@@ -129,14 +129,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 ## explicit
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/typed/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/dns
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/internalinterfaces
-github.com/gardener/external-dns-management/pkg/client/dns/listers/dns/v1alpha1
 # github.com/gardener/gardener-resource-manager v0.13.1
 ## explicit
 github.com/gardener/gardener-resource-manager/pkg/apis/resources

@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to bootstrap fluent-bit as daemonset
+name: fluent-bit
+version: 0.1.0

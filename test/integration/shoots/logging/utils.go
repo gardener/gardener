@@ -17,13 +17,14 @@ package logging
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 // Checks whether required logging resources are present.
@@ -34,8 +35,8 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 		return false, err
 	}
 
-	fluentd := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: garden, Name: fluentdName}, fluentd); err != nil {
+	loki := &appsv1.StatefulSet{}
+	if err := k8sSeedClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: garden, Name: lokiName}, loki); err != nil {
 		return false, err
 	}
 
@@ -50,19 +51,19 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 	}
 }
 
-// WaitUntilElasticsearchReceivesLogs waits until the elasticsearch instance in <elasticsearchNamespace> receives <expected> logs from <podName>
-func WaitUntilElasticsearchReceivesLogs(ctx context.Context, f *framework.ShootFramework, elasticsearchNamespace, podName string, expected uint64, client kubernetes.Interface) error {
+// WaitUntilLokiReceivesLogs waits until the loki instance in <lokiNamespace> receives <expected> logs from <podName>
+func WaitUntilLokiReceivesLogs(ctx context.Context, f *framework.ShootFramework, lokiNamespace, podName string, expected int, client kubernetes.Interface) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetElasticsearchLogs(ctx, elasticsearchNamespace, podName, client)
+		search, err := f.GetLokiLogs(ctx, lokiNamespace, podName, client)
 		if err != nil {
 			return retry.SevereError(err)
 		}
 
-		actual := search.Hits.Total
+		actual := search.Data.Stats.Summary.TotalLinesProcessed
 		if expected > actual {
 			f.Logger.Infof("Waiting to receive %d logs, currently received %d", expected, actual)
 			return retry.MinorError(fmt.Errorf("received only %d/%d logs", actual, expected))
-		} else if expected < search.Hits.Total {
+		} else if expected < actual {
 			return retry.SevereError(fmt.Errorf("expected to receive %d logs but was %d", expected, actual))
 		}
 

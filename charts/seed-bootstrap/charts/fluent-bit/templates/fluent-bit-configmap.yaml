@@ -1,0 +1,513 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+data:
+  fluent-bit.conf: |-
+    [SERVICE]
+        Flush           30
+        Daemon          Off
+        Log_Level       info
+        Parsers_File    parsers.conf
+        HTTP_Server     On
+        HTTP_Listen     0.0.0.0
+        HTTP_PORT       {{ .Values.ports.metrics }}
+
+    @INCLUDE input-kubernetes.conf
+    @INCLUDE input-systemd.conf
+    @INCLUDE filter-kubernetes.conf
+    @INCLUDE output.conf
+
+  input-kubernetes.conf: |
+    [INPUT]
+        Name              tail
+        Tag               kubernetes.*
+        Path              /var/log/containers/*.log
+        Exclude_Path      *_garden_fluent-bit-*.log,*_garden_loki-*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Skip_Long_Lines   On
+        Mem_Buf_Limit     12MB
+        Refresh_Interval  10
+        Ignore_Older      1800s
+
+  input-systemd.conf: |-
+    [INPUT]
+        Name            systemd
+        Tag             journald.docker
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=docker.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.kubelet
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=kubelet.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.containerd
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=containerd.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.cloud-config-downloader
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=cloud-config-downloader.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.docker-monitor
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.containerd-monitor
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=containerd-monitor.service
+
+    [INPUT]
+        Name            systemd
+        Tag             journald.kubelet-monitor
+        Path            /var/log/journal/
+        Read_From_Tail  True
+        Systemd_Filter  _SYSTEMD_UNIT=kubelet-monitor.service
+
+  filter-kubernetes.conf: |-
+    [FILTER]
+        Name record_modifier
+        Match journald.docker
+        Record hostname ${NODE_NAME}
+        Record unit docker
+
+    [FILTER]
+        Name record_modifier
+        Match journald.containerd
+        Record hostname ${NODE_NAME}
+        Record unit containerd
+
+    [FILTER]
+        Name record_modifier
+        Match journald.kubelet
+        Record hostname ${NODE_NAME}
+        Record unit kubelet
+
+    [FILTER]
+        Name record_modifier
+        Match journald.cloud-config-downloader*
+        Record hostname ${NODE_NAME}
+        Record unit cloud-config-downloader
+
+    [FILTER]
+        Name record_modifier
+        Match journald.docker-monitor
+        Record hostname ${NODE_NAME}
+        Record unit docker-monitor
+
+    [FILTER]
+        Name record_modifier
+        Match journald.containerd-monitor
+        Record hostname ${NODE_NAME}
+        Record unit containerd-monitor
+
+    [FILTER]
+        Name record_modifier
+        Match journald.kubelet-monitor
+        Record hostname ${NODE_NAME}
+        Record unit kubelet-monitor
+    
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-apiserver*kube-apiserver*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-controller-manager*kube-controller-manager*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-scheduler*cloud-kube-scheduler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*etcd*etcd*
+        Key_Name            log
+        Parser              etcdeventsParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*etcd*backup-restore*
+        Key_Name            log
+        Parser              gsacParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-scheduler*kube-scheduler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-proxy*kube-proxy*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*cluster-autoscaler*cluster-autoscaler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*alertmanager*alertmanager*
+        Key_Name            log
+        Parser              alertmanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*addons-nginx-ingress-controller*nginx-ingress-controller*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*metrics-server*metrics-server*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-state-metrics*kube-state-metrics*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*vpn-shoot*vpn-shoot*
+        Key_Name            log
+        Parser              vpnshootParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*vpn-seed*vpn-seed*
+        Key_Name            log
+        Parser              vpnshootParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*addons-kubernetes-dashboard*kubernetes-dashboard*
+        Key_Name            log
+        Parser              kubernetesdashboardParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*coredns*coredns*
+        Key_Name            log
+        Parser              corednsParser
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*node-exporter*node-exporter*
+        Key_Name            log
+        Parser              nodeexporterParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*gardener-seed-admission-controller*gardener-seed-admission-controller*
+        Key_Name            log
+        Parser              gsacParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*prometheus*prometheus*
+        Key_Name            log
+        Parser              alertmanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*grafana*grafana*
+        Key_Name            log
+        Parser              grafanaParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
+        Key_Name            log
+        Parser              addonmanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                kubernetes
+        Match               kubernetes.*
+        Kube_Tag_Prefix     kubernetes.var.log.containers.
+        Kube_URL            https://kubernetes.default.svc.cluster.local:443
+        Buffer_Size         1M
+        Labels              On
+        Annotations         Off
+        tls.verify          Off
+        K8S-Logging.Exclude On
+
+    [FILTER]
+        Name record_modifier
+        Match *
+        Record type admin
+
+    [FILTER]
+        Name record_modifier
+        Match *kube-apiserver*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *kube-controller-manager*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *kube-scheduler*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *cloud-controller-manager*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *cluster-autoscaler*
+        Record type user
+
+    [FILTER]
+        Name                lua
+        Match               kubernetes.*
+        script              modify_severity.lua
+        call                cb_modify
+
+{{ if .Values.extensions.filters }}
+{{- toString .Values.extensions.filters | indent 4 }}
+{{- end }}
+
+  output.conf: |   
+    [Output]
+        Name loki
+        Match kubernetes.*
+        Url http://loki.garden.svc:3100/loki/api/v1/push
+        LogLevel info
+        BatchWait 1
+        # (1sec)
+        BatchSize 30720
+        # (30KiB)
+        Labels {test="fluent-bit-go", lang="Golang"}
+        LineFormat json
+        DropSingleKey false
+        AutoKubernetesLabels true
+        LabelSelector gardener.cloud/role:shoot
+        RemoveKeys kubernetes,stream,type,time
+        LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
+        DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
+        DynamicHostPrefix http://loki.
+        DynamicHostSulfix .svc:3100/loki/api/v1/push
+        DynamicHostRegex shoot--
+
+    [Output]
+        Name loki
+        Match journald.*
+        Url http://loki.garden.svc:3100/loki/api/v1/push
+        LogLevel info
+        BatchWait 1
+        # (1sec)
+        BatchSize 30720
+        # (30KiB)
+        Labels {test="fluent-bit-go", lang="Golang"}
+        LineFormat json
+        DropSingleKey false
+        RemoveKeys kubernetes,steram,hostname,unit
+        LabelMapPath /fluent-bit/etc/systemd_label_map.json
+  parsers.conf: |-
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep   On
+        # Command      |  Decoder | Field | Optional Action
+        # =============|==================|=================
+        Decode_Field_As   escaped    log
+
+    [PARSER]
+        Name        kubeapiserverParser
+        Format      regex
+        Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
+        Time_Key    time
+        Time_Format %m%d %H:%M:%S.%L
+
+    [PARSER]
+        Name        etcdeventsParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+(?<severity>\w+)\s+\|\s+(?<source>[^ :]*):\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+
+    [PARSER]
+        Name        alertmanagerParser
+        Format      regex
+        Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        vpnshootParser
+        Format      regex
+        Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %a %b%t%d %H:%M:%S %Y
+
+    [PARSER]
+        Name        kubernetesdashboardParser
+        Format      regex
+        Regex       ^(?<time>\d{4}\/\d{2}\/\d{2}\s+[^\s]*)\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y/%m/%d %H:%M:%S
+
+    [PARSER]
+        Name        corednsParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
+        Time_Key    time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        nodeexporterParser
+        Format      regex
+        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"\s+source="(?<source>.*)"
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        gsacParser
+        Format      regex
+        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        grafanaParser
+        Format      regex
+        Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S%z
+
+    [PARSER]
+        Name        addonmanagerParser
+        Format      regex
+        Regex       ^(?<severity>[A-Z]+):\s(?<log>.*)
+
+
+{{ if .Values.extensions.parsers }}
+{{- toString .Values.extensions.parsers | indent 4 }}
+{{- end }}
+  
+  plugin.conf: |-
+    [PLUGINS]
+        Path /fluent-bit/plugins/out_loki.so
+  modify_severity.lua: |-
+    function cb_modify(tag, timestamp, record)
+      local unified_severity = cb_modify_unify_severity(record)
+
+      if not unified_severity then
+        return 0, 0, 0
+      end
+
+      return 1, timestamp, record
+    end
+
+    function cb_modify_unify_severity(record)
+      local modified = false
+      local severity = record["severity"]
+      if severity == nil or severity == "" then
+        return modified
+      end
+
+      severity = trim(severity):upper()
+
+      if severity == "I" or severity == "INF" or severity == "INFO" then
+        record["severity"] = "INFO"
+        modified = true
+      elseif severity == "W" or severity == "WRN" or severity == "WARN" or severity == "WARNING" then
+        record["severity"] = "WARN"
+        modified = true
+      elseif severity == "E" or severity == "ERR" or severity == "ERROR" then
+        record["severity"] = "ERR"
+        modified = true
+      elseif severity == "D" or severity == "DBG" or severity == "DEBUG" then
+        record["severity"] = "DBG"
+        modified = true
+      elseif severity == "N" or severity == "NOTICE" then
+        record["severity"] = "NOTICE"
+        modified = true
+      elseif severity == "F" or severity == "FATAL" then
+        record["severity"] = "FATAL"
+        modified = true
+      end
+
+      return modified
+    end
+
+    function trim(s)
+      return (s:gsub("^%s*(.-)%s*$", "%1"))
+    end
+
+  kubernetes_label_map.json: |-
+    {
+      "kubernetes": {
+        "container_name": "container_name",
+        "pod_name": "pod_name"
+      },
+      "type": "user",
+      "severity": "severity"
+    }
+
+  systemd_label_map.json: |-
+    {
+      "hostname": "hostname",
+      "unit": "unit"
+    }

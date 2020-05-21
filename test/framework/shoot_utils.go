@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -46,31 +45,24 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 	return fmt.Sprintf("%s.kubeconfig", f.Shoot.GetName())
 }
 
-// GetLoggingPassword returns the passwort to access the elasticseerach logging instance
-func (f *ShootFramework) GetLoggingPassword(ctx context.Context) (string, error) {
-	return GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), loggingIngressCredentials, "password")
-}
-
-// GetElasticsearchLogs gets logs for <podName> from the elasticsearch instance in <elasticsearchNamespace>
-func (f *ShootFramework) GetElasticsearchLogs(ctx context.Context, elasticsearchNamespace, podName string, client kubernetes.Interface) (*SearchResponse, error) {
-	elasticsearchLabels := labels.SelectorFromSet(labels.Set(map[string]string{
-		"app":  elasticsearchLogging,
+// GetLokiLogs gets logs for <podName> from the loki instance in <lokiNamespace>
+func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiNamespace, podName string, client kubernetes.Interface) (*SearchResponse, error) {
+	lokiLabels := labels.SelectorFromSet(labels.Set(map[string]string{
+		"app":  lokiLogging,
 		"role": "logging",
 	}))
 
-	now := time.Now()
-	index := fmt.Sprintf("logstash-admin-%d.%02d.%02d", now.Year(), now.Month(), now.Day())
-	loggingPassword, err := f.GetLoggingPassword(ctx)
+	query := fmt.Sprintf("{app=\"%s\"}", podName)
 
-	if err != nil {
-		return nil, err
-	}
+	command := fmt.Sprintf("wget 'http://localhost:%d/loki/api/v1/query_range' -O- --post-data='query=%s'", lokiPort, query)
 
-	command := fmt.Sprintf("curl http://localhost:%d/%s/_search?q=kubernetes.pod_name:%s --user %s:%s", elasticsearchPort, index, podName, LoggingUserName, loggingPassword)
 	var reader io.Reader
-	err = retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
-		reader, err = PodExecByLabel(ctx, elasticsearchLabels, elasticsearchLogging, command, elasticsearchNamespace, client)
+	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
+		var err error
+		reader, err = PodExecByLabel(ctx, lokiLabels, lokiLogging, command, lokiNamespace, client)
+
 		if err != nil {
+			f.Logger.Warn(err)
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -80,6 +72,7 @@ func (f *ShootFramework) GetElasticsearchLogs(ctx context.Context, elasticsearch
 	}
 
 	search := &SearchResponse{}
+
 	if err = json.NewDecoder(reader).Decode(search); err != nil {
 		return nil, err
 	}

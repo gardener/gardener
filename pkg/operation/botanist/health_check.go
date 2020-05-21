@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 
@@ -430,25 +431,13 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	namespace string,
-	isTestingShoot bool,
+	checkObsolete bool,
 	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardencorev1beta1.Condition, error) {
 
-	if isTestingShoot {
+	if checkObsolete {
 		return nil, nil
-	}
-
-	deploymentList, err := deploymentLister.Deployments(namespace).List(loggingSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredDeployments(condition, common.RequiredLoggingDeployments, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
-		return exitCondition, nil
 	}
 
 	statefulSetList, err := statefulSetLister.StatefulSets(namespace).List(loggingSelector)
@@ -506,7 +495,7 @@ func (b *Botanist) checkControlPlane(
 		return exitCondition, err
 	}
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, b.isLoggingHealthCheckObsolete(), condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
@@ -814,6 +803,30 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	wg.Wait()
 
 	return apiserverAvailability, controlPlane, nodes, systemComponents
+}
+
+/*Shoot clusters prior gardener v1.8 were using EFK based stack, but from this version onward Loki is used.
+On some landscapes, shoots clusters are reconciled only in their maintenance time window and to prevent failing health checks,
+they are executed only for shoots that have already been reconciled by Gardener v1.8.x+ */
+func (b *Botanist) isLoggingHealthCheckObsolete() bool {
+	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting {
+		return true
+	}
+
+	if b.Shoot == nil || b.Shoot.Info == nil {
+		return true
+	}
+
+	c, err := semver.NewConstraint("<1.8.0")
+	if err != nil {
+		return true
+	}
+
+	lastGardenerVersion, err := semver.NewVersion(b.Shoot.Info.Status.Gardener.Version)
+	if err != nil {
+		return true
+	}
+	return c.Check(lastGardenerVersion)
 }
 
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {

@@ -1,0 +1,14 @@
+groups:
+- name: loki.rules
+  rules:
+  - alert: LokiDown
+    expr: absent(up{job="loki"} == 1)
+    for: 20m
+    labels:
+      service: loki
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      description: There are no running loki pods. No logs will be collected.
+      summary: Loki is down

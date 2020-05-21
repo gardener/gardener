@@ -108,7 +108,7 @@ elif name == 'vpn':
 elif name == 'external-dns-management':
     names = ['dns-controller-manager']
 elif name == 'logging':
-    names = ['fluentd-es', 'curator-es']
+    names = ['fluent-bit']
 else:
     names = [name]
 
