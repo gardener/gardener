@@ -26,6 +26,7 @@ worker:
   kubelet:
     caCert: abcd
     cpuCFSQuota: true
+    failSwapOn: true
     cpuManagerPolicy: none
   # podPIDsLimit: 24
     imagePullProgressDeadline: 1m

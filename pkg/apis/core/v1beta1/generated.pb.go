@@ -6485,6 +6485,16 @@ func (m *KubeletConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x10
 	}
+	if m.FailSwapOn != nil {
+		i--
+		if *m.FailSwapOn {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
 	{
 		size, err := m.KubernetesConfig.MarshalToSizedBuffer(dAtA[:i])
 		if err != nil {
@@ -11290,6 +11300,9 @@ func (m *KubeletConfig) Size() (n int) {
 		l = m.ImagePullProgressDeadline.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.FailSwapOn != nil {
+		n += 2
+	}
 	return n
 }
 
@@ -13379,6 +13392,7 @@ func (this *KubeletConfig) String() string {
 	s := strings.Join([]string{`&KubeletConfig{`,
 		`KubernetesConfig:` + strings.Replace(strings.Replace(this.KubernetesConfig.String(), "KubernetesConfig", "KubernetesConfig", 1), `&`, ``, 1) + `,`,
 		`CPUCFSQuota:` + valueToStringGenerated(this.CPUCFSQuota) + `,`,
+		`FailSwapOn:` + valueToStringGenerated(this.FailSwapOn) + `,`,
 		`CPUManagerPolicy:` + valueToStringGenerated(this.CPUManagerPolicy) + `,`,
 		`EvictionHard:` + strings.Replace(this.EvictionHard.String(), "KubeletConfigEviction", "KubeletConfigEviction", 1) + `,`,
 		`EvictionMaxPodGracePeriod:` + valueToStringGenerated(this.EvictionMaxPodGracePeriod) + `,`,

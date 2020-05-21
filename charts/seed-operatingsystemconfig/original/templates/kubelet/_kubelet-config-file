@@ -57,7 +57,7 @@ evictionMinimumReclaim:
   nodefs.inodesFree: {{ .Values.worker.kubelet.evictionMinimumReclaim.nodeFSInodesFree }}
 evictionPressureTransitionPeriod: {{ .Values.worker.kubelet.evictionPressureTransitionPeriod }}
 evictionMaxPodGracePeriod: {{ .Values.worker.kubelet.evictionMaxPodGracePeriod }}
-failSwapOn: true
+failSwapOn: {{ .Values.worker.kubelet.failSwapOn }}
 {{- if .Values.worker.kubelet.featureGates }}
 featureGates:
 {{ toYaml .Values.worker.kubelet.featureGates | indent 6 }}
