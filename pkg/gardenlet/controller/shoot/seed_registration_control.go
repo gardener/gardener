@@ -325,7 +325,7 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 				Enabled: shootedSeedConfig.DisableCapacityReservation == nil || *shootedSeedConfig.DisableCapacityReservation,
 			},
 			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
-				Visible: shootedSeedConfig.Visible == nil || !*shootedSeedConfig.Visible,
+				Visible: shootedSeedConfig.Visible == nil || *shootedSeedConfig.Visible,
 			},
 			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
 				Enabled: shootedSeedConfig.DisableDNS == nil || *shootedSeedConfig.DisableDNS,
