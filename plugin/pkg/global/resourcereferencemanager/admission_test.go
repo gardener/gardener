@@ -42,7 +42,7 @@ import (
 
 type fakeAuthorizerType struct{}
 
-func (fakeAuthorizerType) Authorize(a authorizer.Attributes) (authorizer.Decision, string, error) {
+func (fakeAuthorizerType) Authorize(_ context.Context, a authorizer.Attributes) (authorizer.Decision, string, error) {
 	username := a.GetUser().GetName()
 
 	if username == "allowed-user" {

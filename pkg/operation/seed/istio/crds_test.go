@@ -22,13 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	. "github.com/gardener/gardener/test/gomega"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/helm/pkg/engine"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +49,32 @@ var _ = Describe("#CRDs", func() {
 		Expect(apiextensionsv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
-		d := &test.FakeDiscovery{}
+		d := &test.FakeDiscovery{
+			GroupListFn: func() *metav1.APIGroupList {
+				return &metav1.APIGroupList{
+					Groups: []metav1.APIGroup{{
+						Name: "apiextensions.k8s.io",
+						Versions: []metav1.GroupVersionForDiscovery{{
+							GroupVersion: "apiextensions.k8s.io/v1beta1",
+							Version:      "v1beta1",
+						}},
+					}},
+				}
+			},
+			ResourceMapFn: func() map[string]*metav1.APIResourceList {
+				return map[string]*metav1.APIResourceList{
+					"apiextensions.k8s.io/v1beta1": {
+						GroupVersion: "apiextensions.k8s.io/v1beta1",
+						APIResources: []metav1.APIResource{{
+							Name:         "customresourcedefinitions",
+							SingularName: "customresourcedefinition",
+							Namespaced:   false,
+							Kind:         "CustomResourceDefinition",
+						}},
+					},
+				}
+			},
+		}
 
 		cap, err := cr.DiscoverCapabilities(d)
 		Expect(err).ToNot(HaveOccurred())

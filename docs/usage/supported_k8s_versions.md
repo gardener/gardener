@@ -4,8 +4,9 @@ Currently, the Gardener supports the following Kubernetes versions:
 
 ## Garden cluster version
 
-:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.12.x`**.
-The reason for that is that the `Gardenlet` is reporting readiness by using a `Lease` object supported by Kubernetes version later than `1.12`, same as the `Kubelet` is using `Leases` for the `Nodes`.
+:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.16.x`**.
+The reason for that is that recent versions of the Kubernetes (extension) API server library is listing webhook configurations
+in `admissionregistration.k8s.io/v1` version which is only served in Kubernetes clusters with version 1.16 and higher.
 
 ## Seed cluster versions
 

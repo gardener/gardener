@@ -24,10 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/internal/controller/metrics"
@@ -61,13 +59,6 @@ type Controller struct {
 	// Scheme is injected by the controllerManager when controllerManager.Start is called
 	Scheme *runtime.Scheme
 
-	// informers are injected by the controllerManager when controllerManager.Start is called
-	Cache cache.Cache
-
-	// Config is the rest.Config used to talk to the apiserver.  Defaults to one of in-cluster, environment variable
-	// specified, or the ~/.kube/Config.
-	Config *rest.Config
-
 	// MakeQueue constructs the queue for this controller once the controller is ready to start.
 	// This exists because the standard Kubernetes workqueues start themselves immediately, which
 	// leads to goroutine leaks if something calls controller.New repeatedly.
@@ -85,10 +76,6 @@ type Controller struct {
 
 	// JitterPeriod allows tests to reduce the JitterPeriod so they complete faster
 	JitterPeriod time.Duration
-
-	// WaitForCacheSync allows tests to mock out the WaitForCacheSync function to return an error
-	// defaults to Cache.WaitForCacheSync
-	WaitForCacheSync func(stopCh <-chan struct{}) bool
 
 	// Started is true if the Controller has been Started
 	Started bool
@@ -170,16 +157,18 @@ func (c *Controller) Start(stop <-chan struct{}) error {
 		// Start the SharedIndexInformer factories to begin populating the SharedIndexInformer caches
 		log.Info("Starting Controller", "controller", c.Name)
 
-		// Wait for the caches to be synced before starting workers
-		if c.WaitForCacheSync == nil {
-			c.WaitForCacheSync = c.Cache.WaitForCacheSync
-		}
-		if ok := c.WaitForCacheSync(stop); !ok {
-			// This code is unreachable right now since WaitForCacheSync will never return an error
-			// Leaving it here because that could happen in the future
-			err := fmt.Errorf("failed to wait for %s caches to sync", c.Name)
-			log.Error(err, "Could not wait for Cache to sync", "controller", c.Name)
-			return err
+		for _, watch := range c.watches {
+			syncingSource, ok := watch.src.(source.SyncingSource)
+			if !ok {
+				continue
+			}
+			if err := syncingSource.WaitForSync(stop); err != nil {
+				// This code is unreachable in case of kube watches since WaitForCacheSync will never return an error
+				// Leaving it here because that could happen in the future
+				err := fmt.Errorf("failed to wait for %s caches to sync: %w", c.Name, err)
+				log.Error(err, "Could not wait for Cache to sync", "controller", c.Name)
+				return err
+			}
 		}
 
 		if c.JitterPeriod == 0 {
@@ -236,7 +225,7 @@ func (c *Controller) reconcileHandler(obj interface{}) bool {
 	// Update metrics after processing each item
 	reconcileStartTS := time.Now()
 	defer func() {
-		c.updateMetrics(time.Now().Sub(reconcileStartTS))
+		c.updateMetrics(time.Since(reconcileStartTS))
 	}()
 
 	var req reconcile.Request

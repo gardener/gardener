@@ -25,6 +25,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -40,12 +41,11 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
-	clusteropenidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
-	openidconnectpreset "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
+	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
+	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -65,6 +65,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
@@ -318,7 +319,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	}
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
 		return err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, initializers...); err != nil {
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.FeatureGate, initializers...); err != nil {
 		return err
 	}
 

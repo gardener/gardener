@@ -85,12 +85,32 @@ mktemp_kubeconfig() {
     fi
     __tmp_kubeconfig="$(mktemp)"
     kubectl config view --raw > "$__tmp_kubeconfig"
-    echo "$__tmp_kubeconfig"
 }
 
 cleanup_kubeconfig() {
     if [[ "$__tmp_kubeconfig" != "" ]]; then
         rm -f "$__tmp_kubeconfig"
         __tmp_kubeconfig=""
+    fi
+}
+
+__tmp_tls_dir=""
+mktemp_tls_dir() {
+    if [[ "$__tmp_tls_dir" != "" ]]; then
+        echo "$__tmp_tls_dir"
+        return
+    fi
+    __tmp_tls_dir="$(mktemp -d)"
+
+    local current_context="$(kubectl config view -o jsonpath='{.current-context}')"
+    local current_user="$(kubectl config view -o jsonpath='{.contexts[?(@.name == "'"$current_context"'")].context.user}')"
+    kubectl config view -o jsonpath='{.users[?(@.name == "'"$current_user"'")].user.client-certificate-data}' --raw | base64 -d > "$__tmp_tls_dir/tls.crt"
+    kubectl config view -o jsonpath='{.users[?(@.name == "'"$current_user"'")].user.client-key-data}' --raw | base64 -d > "$__tmp_tls_dir/tls.key"
+}
+
+cleanup_tls_dir() {
+    if [[ "$__tmp_tls_dir" != "" ]]; then
+        rm -rf "$__tmp_tls_dir"
+        __tmp_tls_dir=""
     fi
 }

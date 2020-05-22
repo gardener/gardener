@@ -17,7 +17,8 @@
 source $(dirname "${0}")/common/helpers
 source $(dirname "${0}")/common/local-imagevector-overwrite
 
-kubeconfig="$(mktemp_kubeconfig)"
+mktemp_kubeconfig
+kubeconfig="$__tmp_kubeconfig"
 REPO_ROOT=$(dirname $0)/../..
 trap cleanup_kubeconfig EXIT
 

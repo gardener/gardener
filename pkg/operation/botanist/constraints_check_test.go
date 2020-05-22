@@ -45,7 +45,6 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 )
@@ -58,21 +57,21 @@ type webhookTestCase struct {
 	objectSelector    *metav1.LabelSelector
 }
 
-func (w *webhookTestCase) build() webhook.WebhookAccessor {
-	wh := &admissionregistrationv1beta1.MutatingWebhook{
-		Name:          "foo-webhook",
-		FailurePolicy: w.failurePolicy,
-
-		NamespaceSelector: w.namespaceSelector,
-		ObjectSelector:    w.objectSelector,
-
-		Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-			Rule: admissionregistrationv1beta1.Rule{
-				APIGroups:   []string{w.gvr.Group},
-				Resources:   []string{w.gvr.Resource},
-				APIVersions: []string{w.gvr.Version},
-			}},
-		},
+func (w *webhookTestCase) build() (
+	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	objSelector *metav1.LabelSelector,
+	nsSelector *metav1.LabelSelector,
+	rules []admissionregistrationv1beta1.RuleWithOperations,
+) {
+	failurePolicy = w.failurePolicy
+	nsSelector = w.namespaceSelector
+	objSelector = w.objectSelector
+	rules = []admissionregistrationv1beta1.RuleWithOperations{{
+		Rule: admissionregistrationv1beta1.Rule{
+			APIGroups:   []string{w.gvr.Group},
+			Resources:   []string{w.gvr.Resource},
+			APIVersions: []string{w.gvr.Version},
+		}},
 	}
 
 	opType := admissionregistrationv1beta1.OperationAll
@@ -80,9 +79,9 @@ func (w *webhookTestCase) build() webhook.WebhookAccessor {
 		opType = *w.operationType
 	}
 
-	wh.Rules[0].Operations = []admissionregistrationv1beta1.OperationType{opType}
+	rules[0].Operations = []admissionregistrationv1beta1.OperationType{opType}
 
-	return webhook.NewMutatingWebhookAccessor("test-uid", "test-cfg", wh)
+	return
 }
 
 var _ = Describe("#IsProblematicWebhook", func() {

@@ -205,7 +205,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		if utils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
-		err = r.ensureSecretBindingReferences(a, binding)
+		err = r.ensureSecretBindingReferences(ctx, a, binding)
 
 	case core.Kind("Seed"):
 		seed, ok := a.GetObject().(*core.Seed)
@@ -430,7 +430,7 @@ func (r *ReferenceManager) ensureProjectNamespace(project *core.Project) error {
 	return nil
 }
 
-func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.Attributes, binding *core.SecretBinding) error {
+func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, attributes admission.Attributes, binding *core.SecretBinding) error {
 	readAttributes := authorizer.AttributesRecord{
 		User:            attributes.GetUserInfo(),
 		Verb:            "get",
@@ -441,7 +441,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		Name:            binding.SecretRef.Name,
 		ResourceRequest: true,
 	}
-	if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
+	if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
 		return errors.New("SecretBinding cannot reference a secret you are not allowed to read")
 	}
 
@@ -467,7 +467,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 			ResourceRequest: true,
 			Path:            "",
 		}
-		if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
+		if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
 			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
 		}
 

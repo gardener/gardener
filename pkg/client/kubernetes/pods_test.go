@@ -15,18 +15,20 @@
 package kubernetes_test
 
 import (
-	. "github.com/gardener/gardener/pkg/client/kubernetes"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
+	"io"
+	"net/http"
+	"net/url"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
-	"net/http"
-	"net/url"
+	fakerestclient "k8s.io/client-go/rest/fake"
+
+	. "github.com/gardener/gardener/pkg/client/kubernetes"
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
+	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 )
 
 var _ = Describe("Pods", func() {
@@ -50,15 +52,14 @@ var _ = Describe("Pods", func() {
 			var (
 				options = &corev1.PodLogOptions{}
 				logs    = []byte("logs")
-				client  = mockrest.NewMockHTTPClient(ctrl)
 				body    = mockio.NewMockReadCloser(ctrl)
+				client  = fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: http.StatusOK, Body: body}, nil
+				})
 			)
 
-			response := &http.Response{StatusCode: http.StatusOK, Body: body}
-
 			gomock.InOrder(
-				pods.EXPECT().GetLogs(name, options).Return(rest.NewRequest(client, http.MethodGet, &url.URL{}, "", rest.ContentConfig{}, rest.Serializers{}, nil, nil, 0)),
-				client.EXPECT().Do(gomock.Any()).Return(response, nil),
+				pods.EXPECT().GetLogs(name, options).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
 				body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
 					copy(data, logs)
 					return len(logs), io.EOF

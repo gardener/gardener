@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
@@ -41,8 +42,10 @@ func (c *FakeDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*me
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if rl, ok := c.ResourceMapFn()[groupVersion]; ok {
-		return rl, nil
+	if c.ResourceMapFn != nil {
+		if rl, ok := c.ResourceMapFn()[groupVersion]; ok {
+			return rl, nil
+		}
 	}
 
 	return nil, errors.New("doesn't exist")
@@ -53,12 +56,13 @@ func (c *FakeDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	groupList := c.GroupListFn()
-	if groupList == nil {
-		return nil, errors.New("doesn't exist")
+	if c.GroupListFn != nil {
+		if groupList := c.GroupListFn(); groupList != nil {
+			return groupList, nil
+		}
 	}
 
-	return groupList, nil
+	return nil, errors.New("doesn't exist")
 }
 
 // ServerVersion return empty version.

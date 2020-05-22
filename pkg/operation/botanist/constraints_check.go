@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	"k8s.io/apiserver/pkg/admission/plugin/webhook"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func shootHibernatedConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
@@ -64,10 +64,8 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 	}
 
 	for _, webhookConfig := range validatingWebhookConfigs.Items {
-		for i, w := range webhookConfig.Webhooks {
-			uid := fmt.Sprintf("%s/%s/%d", webhookConfig.Name, w.Name, i)
-			accessor := webhook.NewValidatingWebhookAccessor(uid, webhookConfig.Name, &w)
-			if IsProblematicWebhook(accessor) {
+		for _, w := range webhookConfig.Webhooks {
+			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules) {
 				failurePolicy := "nil"
 				if w.FailurePolicy != nil {
 					failurePolicy = string(*w.FailurePolicy)
@@ -87,10 +85,8 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 	}
 
 	for _, webhookConfig := range mutatingWebhookConfigs.Items {
-		for i, w := range webhookConfig.Webhooks {
-			uid := fmt.Sprintf("%s/%s/%d", webhookConfig.Name, w.Name, i)
-			accessor := webhook.NewMutatingWebhookAccessor(uid, webhookConfig.Name, &w)
-			if IsProblematicWebhook(accessor) {
+		for _, w := range webhookConfig.Webhooks {
+			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules) {
 				failurePolicy := "nil"
 				if w.FailurePolicy != nil {
 					failurePolicy = string(*w.FailurePolicy)
@@ -113,8 +109,13 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 // failurePolicy=Fail/nil. If the Shoot contains such a webhook, we can never wake up this shoot cluster again
 // as new nodes cannot get created/ready, or our system component pods cannot get created/ready
 // (because the webhook's backing pod is not yet running).
-func IsProblematicWebhook(w webhook.WebhookAccessor) bool {
-	if w.GetFailurePolicy() != nil && *w.GetFailurePolicy() != admissionregistrationv1beta1.Fail {
+func IsProblematicWebhook(
+	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	objSelector *metav1.LabelSelector,
+	nsSelector *metav1.LabelSelector,
+	rules []admissionregistrationv1beta1.RuleWithOperations,
+) bool {
+	if failurePolicy != nil && *failurePolicy != admissionregistrationv1beta1.Fail {
 		// in admissionregistration.k8s.io/v1 FailurePolicy is defaulted to `Fail`
 		// see https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L195
 		// and https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L324
@@ -122,10 +123,7 @@ func IsProblematicWebhook(w webhook.WebhookAccessor) bool {
 		return false
 	}
 
-	objSelector := w.GetObjectSelector()
-	nsSelector := w.GetNamespaceSelector()
-
-	for _, rule := range w.GetRules() {
+	for _, rule := range rules {
 		for _, matcher := range matchers.WebhookConstraintMatchers {
 			if matcher.Match(rule, objSelector, nsSelector) {
 				return true

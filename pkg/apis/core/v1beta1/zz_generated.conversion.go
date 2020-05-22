@@ -821,26 +821,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ProjectMember)(nil), (*core.ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectMember_To_core_ProjectMember(a.(*ProjectMember), b.(*core.ProjectMember), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.ProjectMember)(nil), (*ProjectMember)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ProjectMember_To_v1beta1_ProjectMember(a.(*core.ProjectMember), b.(*ProjectMember), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*ProjectSpec)(nil), (*core.ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(a.(*ProjectSpec), b.(*core.ProjectSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.ProjectSpec)(nil), (*ProjectSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ProjectSpec_To_v1beta1_ProjectSpec(a.(*core.ProjectSpec), b.(*ProjectSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*ProjectStatus)(nil), (*core.ProjectStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ProjectStatus_To_core_ProjectStatus(a.(*ProjectStatus), b.(*core.ProjectStatus), scope)
 	}); err != nil {

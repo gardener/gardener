@@ -16,8 +16,13 @@
 
 source $(dirname "${0}")/common/helpers
 
-kubeconfig="$(mktemp_kubeconfig)"
+mktemp_kubeconfig
+kubeconfig="$__tmp_kubeconfig"
+mktemp_tls_dir
+tls_dir="$__tmp_tls_dir"
+
 trap cleanup_kubeconfig EXIT
+trap cleanup_tls_dir EXIT
 
 apiserver_flags="
   --authentication-kubeconfig $kubeconfig \
@@ -25,6 +30,8 @@ apiserver_flags="
   --authorization-always-allow-paths=/healthz \
   --kubeconfig $kubeconfig \
   --secure-port=8443 \
+  --tls-cert-file $tls_dir/tls.crt \
+  --tls-private-key-file $tls_dir/tls.key \
   --v 2"
 
 ldflags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
@@ -38,8 +45,6 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
-          --tls-cert-file <(kind get kubeconfig | sed -n -e 's/^.*client-certificate-data: //p' | base64 -d) \
-          --tls-private-key-file <(kind get kubeconfig | sed -n -e 's/^.*client-key-data: //p' | base64 -d) \
           $apiserver_flags
         ;;
     $DOCKER_FOR_DESKTOP)
@@ -49,8 +54,6 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
-          --tls-cert-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-certificate-data\"}}{{end}}{{end}}" --raw | base64 -d) \
-          --tls-private-key-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-key-data\"}}{{end}}{{end}}" --raw | base64 -d) \
           $apiserver_flags
         ;;
     $MINIKUBE)
@@ -60,8 +63,6 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://$(minikube ip):32379 \
-          --tls-cert-file ~/.minikube/apiserver.crt \
-          --tls-private-key-file ~/.minikube/apiserver.key \
           $apiserver_flags
         ;;
     $NODELESS)
@@ -71,8 +72,6 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:22379 \
-          --tls-cert-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-certificate-data}' --raw | base64 -d) \
-          --tls-private-key-file <(kubectl config view --minify --flatten -ojsonpath='{.users[0].user.client-key-data}' --raw | base64 -d) \
           $apiserver_flags
         ;;
 esac
