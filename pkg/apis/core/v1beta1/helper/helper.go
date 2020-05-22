@@ -868,3 +868,13 @@ func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVer
 		return expirableVersion.ExpirationDate != nil && (time.Now().UTC().After(expirableVersion.ExpirationDate.UTC()) || time.Now().UTC().Equal(expirableVersion.ExpirationDate.UTC())), nil
 	}
 }
+
+// GetResourceByName returns the first NamedResourceReference with the given name in the given slice, or nil if not found.
+func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, name string) *gardencorev1beta1.NamedResourceReference {
+	for _, resource := range resources {
+		if resource.Name == name {
+			return &resource
+		}
+	}
+	return nil
+}

@@ -177,7 +177,8 @@ func (c *controllerArtifacts) addShootStateEventHandlers() {
 		artifact.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: createEnqueueFunc(artifact.shootStateQueue),
 			UpdateFunc: createEnqueueOnUpdateFunc(artifact.shootStateQueue, func(old, new extensionsv1alpha1.Object) bool {
-				return !apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetState(), old.GetExtensionStatus().GetState())
+				return !apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetState(), old.GetExtensionStatus().GetState()) ||
+					!apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetResources(), old.GetExtensionStatus().GetResources())
 			}),
 		})
 	}

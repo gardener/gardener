@@ -105,6 +105,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
+	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
@@ -470,6 +471,17 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 		if extension.Type == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "field must not be empty"))
 		}
+	}
+	return allErrs
+}
+
+func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i, resource := range resources {
+		if resource.Name == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		}
+		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
 	}
 	return allErrs
 }

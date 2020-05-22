@@ -55,18 +55,22 @@ func ValidateShootStateSpec(shootStateSpec *core.ShootStateSpec, fldPath *field.
 		}
 	}
 
-	for i, extensionResources := range shootStateSpec.Extensions {
+	for i, extension := range shootStateSpec.Extensions {
 		idxPath := fldPath.Child("extensions").Index(i)
 		kindPath := idxPath.Child("kind")
 		purposePath := idxPath.Child("purpose")
 
-		if len(extensionResources.Kind) == 0 {
-			allErrs = append(allErrs, field.Invalid(kindPath, extensionResources.Kind, "extension resource kind cannot be empty"))
+		if len(extension.Kind) == 0 {
+			allErrs = append(allErrs, field.Invalid(kindPath, extension.Kind, "extension resource kind cannot be empty"))
 		}
+		if extension.Purpose != nil && len(*extension.Purpose) == 0 {
+			allErrs = append(allErrs, field.Invalid(purposePath, extension.Purpose, "extension resource purpose cannot be empty"))
+		}
+		allErrs = append(allErrs, validateResources(extension.Resources, fldPath.Child("resources"))...)
+	}
 
-		if extensionResources.Purpose != nil && len(*extensionResources.Purpose) == 0 {
-			allErrs = append(allErrs, field.Invalid(purposePath, extensionResources.Purpose, "extension resource purpose cannot be empty"))
-		}
+	for i, resource := range shootStateSpec.Resources {
+		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.CrossVersionObjectReference, fldPath.Child("resources").Index(i))...)
 	}
 
 	return allErrs

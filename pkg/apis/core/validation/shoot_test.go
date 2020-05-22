@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -511,6 +512,48 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Type: "arbitrary",
 			}
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid resources w/o names or w/ invalid references", func() {
+			ref := core.NamedResourceReference{}
+			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.resources[0].name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.resources[0].resourceRef.kind"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.resources[0].resourceRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
+				})),
+			))
+		})
+
+		It("should allow resources w/ names and valid references", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "Secret",
+					Name:       "test-secret",
+					APIVersion: "v1",
+				},
+			}
+			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
 
 			errorList := ValidateShoot(shoot)
 

@@ -610,6 +610,11 @@ func (in *DefaultStatus) DeepCopyInto(out *DefaultStatus) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]v1beta1.NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

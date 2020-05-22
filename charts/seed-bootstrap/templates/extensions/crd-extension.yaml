@@ -124,4 +124,32 @@ spec:
             providerStatus:
               description: Provider-specific output for this control plane
               type: object
+            resources:
+              description: Resources holds a list of named resource references that can be referred to in the state by their names.
+              items:
+                properties:
+                  name:
+                    description: Name of the resource reference.
+                    type: string
+                  resourceRef:
+                    properties:
+                      kind:
+                        description: Kind of the referent.
+                        type: string
+                      name:
+                        description: Name of the referent.
+                        type: string
+                      apiVersion:
+                        description: APIVersion of the referent.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    - apiVersion
+                    type: object
+                required:
+                - name
+                - resourceRef
+                type: object
+              type: array
           type: object
