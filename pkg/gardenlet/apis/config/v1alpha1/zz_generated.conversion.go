@@ -626,9 +626,7 @@ func autoConvert_v1alpha1_HTTPSServer_To_config_HTTPSServer(in *HTTPSServer, out
 	if err := Convert_v1alpha1_Server_To_config_Server(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_TLSServer_To_config_TLSServer(&in.TLS, &out.TLS, s); err != nil {
-		return err
-	}
+	out.TLS = (*config.TLSServer)(unsafe.Pointer(in.TLS))
 	return nil
 }
 
@@ -641,9 +639,7 @@ func autoConvert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServ
 	if err := Convert_config_Server_To_v1alpha1_Server(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
-	if err := Convert_config_TLSServer_To_v1alpha1_TLSServer(&in.TLS, &out.TLS, s); err != nil {
-		return err
-	}
+	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
 	return nil
 }
 

@@ -75,9 +75,10 @@ server:
   https:
     bindAddress: 0.0.0.0
     port: 2720
-    tls:
-      serverCertPath: dev/tls/gardenlet.crt
-      serverKeyPath: dev/tls/gardenlet.key
+  # optional, will be self-generated during startup when empty
+  # tls:
+  #   serverCertPath: dev/tls/gardenlet.crt
+  #   serverKeyPath: dev/tls/gardenlet.key
 featureGates:
   Logging: true
   HVPA: true

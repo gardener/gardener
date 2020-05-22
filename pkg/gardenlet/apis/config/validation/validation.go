@@ -38,12 +38,6 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration) field.Er
 		if cfg.Server.HTTPS.Port == 0 {
 			allErrs = append(allErrs, field.Required(serverPath.Child("https", "port"), "port must be specified"))
 		}
-		if len(cfg.Server.HTTPS.TLS.ServerCertPath) == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "tls", "serverCertPath"), "tls server cert path must be specified"))
-		}
-		if len(cfg.Server.HTTPS.TLS.ServerKeyPath) == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "tls", "serverKeyPath"), "tls server key path must be specified"))
-		}
 	}
 
 	return allErrs

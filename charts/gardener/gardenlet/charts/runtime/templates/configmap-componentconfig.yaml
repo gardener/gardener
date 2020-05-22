@@ -127,9 +127,11 @@ data:
       https:
         bindAddress: {{ required ".Values.global.gardenlet.config.server.https.bindAddress is required" .Values.global.gardenlet.config.server.https.bindAddress }}
         port: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
+        {{- if .Values.global.gardenlet.config.server.https.tls }}
         tls:
           serverCertPath: /etc/gardenlet/srv/gardenlet.crt
           serverKeyPath: /etc/gardenlet/srv/gardenlet.key
+        {{- end }}
     {{- if .Values.global.gardenlet.config.featureGates }}
     featureGates:
 {{ toYaml .Values.global.gardenlet.config.featureGates | indent 6 }}

@@ -21,7 +21,9 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
+        {{- if .Values.global.gardenlet.config.server.https.tls }}
         checksum/secret-gardenlet-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.gardenlet.imageVectorOverwrite }}
         checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
         {{- end }}
@@ -135,9 +137,11 @@ spec:
         {{- end }}
         - name: gardenlet-config
           mountPath: /etc/gardenlet/config
+        {{- if .Values.global.gardenlet.config.server.https.tls }}
         - name: gardenlet-cert
           mountPath: /etc/gardenlet/srv
           readOnly: true
+        {{- end }}
 {{- if .Values.global.gardenlet.additionalVolumeMounts }}
 {{ toYaml .Values.global.gardenlet.additionalVolumeMounts | indent 8 }}
 {{- end }}
@@ -166,9 +170,11 @@ spec:
       - name: gardenlet-config
         configMap:
           name: gardenlet-configmap
+      {{- if .Values.global.gardenlet.config.server.https.tls }}
       - name: gardenlet-cert
         secret:
           secretName: gardenlet-cert
+      {{- end }}
 {{- if .Values.global.gardenlet.additionalVolumes }}
 {{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}
 {{- end }}

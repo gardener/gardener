@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -42,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -380,13 +382,34 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	defer controllerCancel()
 	defer g.cleanup()
 
-	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
-
 	// Initialize /healthz manager.
 	g.HealthManager = healthz.NewPeriodicHealthz(seedcontroller.LeaseResyncGracePeriodSeconds * time.Second)
 	g.HealthManager.Set(true)
 
-	// Start HTTP server.
+	// Start HTTPS server.
+	if g.Config.Server.HTTPS.TLS == nil {
+		g.Logger.Info("No TLS server certificates provided... self-generating them now...")
+
+		_, tempDir, err := secrets.SelfGenerateTLSServerCertificate(
+			"gardenlet",
+			[]string{
+				"gardenlet",
+				fmt.Sprintf("gardenlet.%s", v1beta1constants.GardenNamespace),
+				fmt.Sprintf("gardenlet.%s.svc", v1beta1constants.GardenNamespace),
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		g.Config.Server.HTTPS.TLS = &config.TLSServer{
+			ServerCertPath: filepath.Join(tempDir, secrets.DataKeyCertificate),
+			ServerKeyPath:  filepath.Join(tempDir, secrets.DataKeyPrivateKey),
+		}
+
+		g.Logger.Info("TLS server certificates successfully self-generated.")
+	}
+
 	go server.
 		NewBuilder().
 		WithBindAddress(g.Config.Server.HTTPS.BindAddress).
@@ -402,6 +425,8 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		g.HealthManager.Start()
 		g.startControllers(ctx)
 	}
+
+	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {
