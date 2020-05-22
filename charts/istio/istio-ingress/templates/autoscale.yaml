@@ -1,0 +1,19 @@
+apiVersion: {{ include "hpaversion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: istio-ingressgateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  maxReplicas: 5
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: istio-ingressgateway
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80

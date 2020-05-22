@@ -506,6 +506,21 @@ const (
 	// DependencyWatchdogImageName is the name of the dependency-watchdog image
 	DependencyWatchdogImageName = "dependency-watchdog"
 
+	// IstioProxyImageName is the image of Istio proxy image
+	IstioProxyImageName = "istio-proxy"
+
+	// IstioIstiodImageName is the image of Istio istiod image
+	IstioIstiodImageName = "istio-istiod"
+
+	// IstioNamespace is the istio-system namespace
+	IstioNamespace = "istio-system"
+
+	// IstioIngressGatewayNamespace is the istio-ingress namespace
+	IstioIngressGatewayNamespace = "istio-ingress"
+
+	// IstioIngressGatewayServiceName is the name of the Service used for SNI to the Shoot API Servers.
+	IstioIngressGatewayServiceName = "istio-ingressgateway"
+
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
 

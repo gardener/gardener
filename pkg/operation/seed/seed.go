@@ -18,6 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/seed/istio"
 	"path/filepath"
 	"strings"
 
@@ -318,7 +320,10 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
-	const chartName = "seed-bootstrap"
+	const (
+		chartName      = "seed-bootstrap"
+		istioChartName = "istio"
+	)
 
 	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
 	if err != nil {
@@ -621,6 +626,45 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	imageVectorOverwrites := map[string]interface{}{}
 	for name, data := range componentImageVectors {
 		imageVectorOverwrites[name] = data
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		istiodImage, err := imageVector.FindImage(common.IstioIstiodImageName)
+		if err != nil {
+			return err
+		}
+
+		igwImage, err := imageVector.FindImage(common.IstioProxyImageName)
+		if err != nil {
+			return err
+		}
+
+		istioCRDs := istio.NewIstioCRD(chartApplier, "charts")
+		istiod := istio.NewIstiod(
+			&istio.IstiodValues{
+				TrustDomain: "cluster.local",
+				Image:       istiodImage.String(),
+			},
+			common.IstioNamespace,
+			chartApplier,
+			"charts",
+			k8sSeedClient.Client(),
+		)
+		igw := istio.NewIngressGateway(
+			&istio.IngressValues{
+				TrustDomain:     "cluster.local",
+				Image:           igwImage.String(),
+				IstiodNamespace: common.IstioNamespace,
+			},
+			common.IstioIngressGatewayNamespace,
+			chartApplier,
+			"charts",
+			k8sSeedClient.Client(),
+		)
+
+		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(context.TODO()); err != nil {
+			return err
+		}
 	}
 
 	values := kubernetes.Values(map[string]interface{}{

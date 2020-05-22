@@ -1,0 +1,27 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: istiod
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - watch
+  - list
+  - update
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - watch
+  - list

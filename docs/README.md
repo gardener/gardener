@@ -26,6 +26,7 @@
 * [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
+* [ManagedIstio Feature Gate](usage/istio.md)
 
 ## Proposals
 
@@ -50,6 +51,7 @@
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
+* [Feature Gates in Gardener](development/feature_gates.md)
 
 ## Extensions
 

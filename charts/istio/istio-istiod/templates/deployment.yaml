@@ -1,0 +1,141 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: istiod
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+{{ .Values.labels | toYaml | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ .Values.labels | toYaml | indent 8 }}
+      annotations:
+        sidecar.istio.io/inject: "false"
+        checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: istiod
+      securityContext:
+        fsGroup: 1337
+      containers:
+      - name: discovery
+        image: "{{ .Values.image }}"
+        imagePullPolicy: IfNotPresent
+        args:
+        - "discovery"
+        - --monitoringAddr=
+        - --secureGrpcAddr=
+        - --grpcAddr=
+        - --httpAddr=localhost:8080
+        - --httpsAddr=:15017
+        - --log_output_level=all:warn,ads:error
+        - --domain={{ .Values.trustDomain }}
+        - --trust-domain={{ .Values.trustDomain }}
+        - --keepaliveMaxServerConnectionAge=30m
+        ports:
+        - containerPort: 15012
+        - containerPort: 15017
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - -s
+            - http://localhost:8080/ready
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+        env:
+        - name: JWT_POLICY
+          value: third-party-jwt
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: PILOT_TRACE_SAMPLING
+          value: "0.1"
+        - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_OUTBOUND
+          value: "false"
+        - name: PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_INBOUND
+          value: "false"
+        - name: INJECTION_WEBHOOK_CONFIG_NAME
+          value: istio-sidecar-injector
+        - name: ISTIOD_ADDR
+          value: istiod.{{ .Release.Namespace }}.svc:15012
+        - name: VALIDATION_WEBHOOK_CONFIG_NAME
+          value: istiod
+        - name: PILOT_EXTERNAL_GALLEY
+          value: "false"
+        - name: CLUSTER_ID
+          value: "Kubernetes"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 128Mi
+          limits:
+            cpu: 1000m
+            memory: 2048Mi
+        securityContext:
+          runAsUser: 1337
+          runAsGroup: 1337
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/istio/config
+        - name: istio-token
+          mountPath: /var/run/secrets/tokens
+          readOnly: true
+        - name: local-certs
+          mountPath: /var/run/secrets/istio-dns
+      volumes:
+      # Technically not needed on this pod - but it helps debugging/testing SDS
+      # Should be removed after everything works.
+      - emptyDir:
+          medium: Memory
+        name: local-certs
+      - name: istio-token
+        projected:
+          sources:
+            - serviceAccountToken:
+                audience: istio-ca
+                expirationSeconds: 43200
+                path: istio-token
+      - name: config-volume
+        configMap:
+          name: istio
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                {{- range $key, $value := .Values.labels }}
+                - key: {{ $key }}
+                  operator: In
+                  values:
+                  - {{ $value }}
+                {{- end }}
+              topologyKey: "kubernetes.io/hostname"

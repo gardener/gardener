@@ -1,0 +1,16 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: istio-ingressgateway-sds
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - watch
+  - list

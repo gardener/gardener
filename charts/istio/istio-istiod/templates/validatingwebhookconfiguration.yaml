@@ -1,0 +1,33 @@
+apiVersion: {{ include "webhookadmissionregistration" . }}
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istiod
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+webhooks:
+  - name: validation.istio.io
+    clientConfig:
+      service:
+        name: istiod
+        namespace: {{ .Release.Namespace }}
+        path: "/validate"
+      caBundle: "" # patched at runtime when the webhook is ready.
+    rules:
+      - operations:
+        - CREATE
+        - UPDATE
+        apiGroups:
+        - config.istio.io
+        - rbac.istio.io
+        - security.istio.io
+        - authentication.istio.io
+        - networking.istio.io
+        apiVersions:
+        - "*"
+        resources:
+        - "*"
+    # Fail open until the validation webhook is ready. The webhook controller
+    # will update this to `Fail` and patch in the `caBundle` when the webhook
+    # endpoint is ready.
+    failurePolicy: Ignore
+    sideEffects: None
