@@ -93,12 +93,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if errors.IsNotFound(err) {
 			return r.resultWithRequeue(), nil
 		}
-		return r.resultWithRequeue(), err
+		return reconcile.Result{}, err
 	}
 
 	acc, err := extensions.Accessor(extension.DeepCopyObject())
 	if err != nil {
-		return r.resultWithRequeue(), err
+		return reconcile.Result{}, err
 	}
 
 	if acc.GetDeletionTimestamp() != nil {
@@ -141,13 +141,13 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 	if err != nil {
 		r.logger.Info("Failed to execute healthChecks. Updating each HealthCheckCondition for the extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition types", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
-			conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
-			if err != nil {
-				return r.resultWithRequeue(), err
+			conditionBuilder, buildErr := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
+			if buildErr != nil {
+				return reconcile.Result{}, buildErr
 			}
 
-			if err := r.updateExtensionConditionFailedToExecute(ctx, conditionBuilder, healthConditionType, extension, r.registeredExtension.groupVersionKind.Kind, err); err != nil {
-				return r.resultWithRequeue(), err
+			if updateErr := r.updateExtensionConditionFailedToExecute(ctx, conditionBuilder, healthConditionType, extension, r.registeredExtension.groupVersionKind.Kind, err); updateErr != nil {
+				return reconcile.Result{}, updateErr
 			}
 		}
 		return r.resultWithRequeue(), nil
@@ -156,7 +156,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 	for _, healthCheckResult := range *healthCheckResults {
 		conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthCheckResult.HealthConditionType))
 		if err != nil {
-			return r.resultWithRequeue(), err
+			return reconcile.Result{}, err
 		}
 
 		var logger logr.InfoLogger
@@ -170,21 +170,21 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 			if healthCheckResult.FailedChecks > 0 {
 				r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 				if err := r.updateExtensionConditionToConditionCheckError(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, r.registeredExtension.groupVersionKind.Kind, healthCheckResult); err != nil {
-					return r.resultWithRequeue(), err
+					return reconcile.Result{}, err
 				}
 				continue
 			}
 
 			logger.Info("Health check for extension resource progressing or unsuccessful.", "kind", fmt.Sprintf("%s.%s.%s", r.registeredExtension.groupVersionKind.Kind, r.registeredExtension.groupVersionKind.Group, r.registeredExtension.groupVersionKind.Version), "name", request.Name, "namespace", request.Namespace, "failed", healthCheckResult.FailedChecks, "progressing", healthCheckResult.ProgressingChecks, "successful", healthCheckResult.SuccessfulChecks, "details", healthCheckResult.GetDetails())
 			if err := r.updateExtensionConditionToUnsuccessful(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, healthCheckResult); err != nil {
-				return r.resultWithRequeue(), err
+				return reconcile.Result{}, err
 			}
 			continue
 		}
 
 		logger.Info("Health check for extension resource successful.", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 		if err := r.updateExtensionConditionToSuccessful(ctx, conditionBuilder, healthCheckResult.HealthConditionType, extension, healthCheckResult); err != nil {
-			return r.resultWithRequeue(), err
+			return reconcile.Result{}, err
 		}
 	}
 
