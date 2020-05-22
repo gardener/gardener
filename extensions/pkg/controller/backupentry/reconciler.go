@@ -92,13 +92,14 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
+	shootTechnicalID, _ := ExtractShootDetailsFromBackupEntryName(be.Name)
+	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, shootTechnicalID)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "namespace", request.Namespace, "name", be.Name)
+		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "namespace", shootTechnicalID, "name", be.Name)
 		return reconcile.Result{}, nil
 	}
 

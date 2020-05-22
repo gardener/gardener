@@ -239,7 +239,7 @@ func (r *reconciler) updateExtensionConditionToUnsuccessful(ctx context.Context,
 func (r *reconciler) updateExtensionConditionToSuccessful(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, healthCheckResult Result) error {
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionTrue).
-		WithReason(ReasonUnsuccessful).
+		WithReason(ReasonSuccessful).
 		WithMessage(fmt.Sprintf("(%d/%d) Health checks successful", healthCheckResult.SuccessfulChecks, healthCheckResult.SuccessfulChecks))
 	return r.updateExtensionCondition(ctx, conditionBuilder, healthConditionType, extension)
 }

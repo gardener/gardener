@@ -87,16 +87,6 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop reconciling BackupBucket of failed Shoot.", "namespace", request.Namespace, "name", bb.Name)
-		return reconcile.Result{}, nil
-	}
-
 	if bb.DeletionTimestamp != nil {
 		return r.delete(r.ctx, bb)
 	}
