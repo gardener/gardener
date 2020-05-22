@@ -142,7 +142,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
 		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
 

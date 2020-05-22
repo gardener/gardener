@@ -142,6 +142,9 @@ type GardenletControllerConfiguration struct {
 	// ShootStateSync defines the configuration of the ShootStateController controller
 	// +optional
 	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
+	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller
+	// +optional
+	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration `json:"seedAPIServerNetworkPolicy,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -222,6 +225,15 @@ type ShootStateSyncControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
+// controller.
+type SeedAPIServerNetworkPolicyControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot
