@@ -473,7 +473,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 	} else {
-		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -482,7 +482,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 
 	if !hvpaEnabled {
-		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -538,6 +538,12 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	} else {
 		alertManagerConfig["enabled"] = false
 		if err := common.DeleteAlertmanager(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
+			return err
+		}
+	}
+
+	if !seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled {
+		if err := common.DeleteReserveExcessCapacity(context.TODO(), k8sSeedClient.Client()); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

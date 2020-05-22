@@ -42,6 +42,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -371,6 +372,30 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	}
 
 	return nil
+}
+
+// DeleteReserveExcessCapacity deletes the deployment and priority class for excess capacity
+func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) error {
+	if k8sClient == nil {
+		return errors.New("must provide non-nil kubernetes client to common.DeleteReserveExcessCapacity")
+	}
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "reserve-excess-capacity",
+			Namespace: v1beta1constants.GardenNamespace,
+		},
+	}
+	if err := k8sClient.Delete(ctx, deploy); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	priorityClass := &schedulingv1beta1.PriorityClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener-reserve-excess-capacity",
+		},
+	}
+	return client.IgnoreNotFound(k8sClient.Delete(ctx, priorityClass))
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
