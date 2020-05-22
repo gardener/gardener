@@ -462,11 +462,6 @@ func (in *SeedControllerConfiguration) DeepCopyInto(out *SeedControllerConfigura
 		*out = new(int)
 		**out = **in
 	}
-	if in.ReserveExcessCapacity != nil {
-		in, out := &in.ReserveExcessCapacity, &out.ReserveExcessCapacity
-		*out = new(bool)
-		**out = **in
-	}
 	if in.SyncPeriod != nil {
 		in, out := &in.SyncPeriod, &out.SyncPeriod
 		*out = new(v1.Duration)

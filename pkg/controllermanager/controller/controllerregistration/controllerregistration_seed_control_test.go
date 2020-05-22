@@ -228,7 +228,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			},
 		}
 
-		seedWithoutTaints = &gardencorev1beta1.Seed{
+		seedWithShootDNSEnabled = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: seedName,
 			},
@@ -238,10 +238,15 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 				Backup: &gardencorev1beta1.SeedBackup{
 					Provider: type8,
+				},
+				Settings: &gardencorev1beta1.SeedSettings{
+					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+						Enabled: true,
+					},
 				},
 			},
 		}
-		seedWithTaints = &gardencorev1beta1.Seed{
+		seedWithShootDNSDisabled = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: seedName,
 			},
@@ -252,8 +257,10 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				Backup: &gardencorev1beta1.SeedBackup{
 					Provider: type8,
 				},
-				Taints: []gardencorev1beta1.SeedTaint{
-					{Key: gardencorev1beta1.SeedTaintDisableDNS},
+				Settings: &gardencorev1beta1.SeedSettings{
+					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+						Enabled: false,
+					},
 				},
 			},
 		}
@@ -556,10 +563,10 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 	Describe("#computeKindTypesForShoots", func() {
 		It("should correctly compute the result for a seed without DNS taint", func() {
-			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithoutTaints, controllerRegistrationList, internalDomain, nil)
+			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				// seedWithoutTaints types
+				// seedWithShootDNSEnabled types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
 				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
@@ -586,10 +593,10 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 		})
 
 		It("should correctly compute the result for a seed with DNS taint", func() {
-			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithTaints, controllerRegistrationList, internalDomain, nil)
+			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSDisabled, controllerRegistrationList, internalDomain, nil)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				// seedWithTaints types
+				// seedWithShootDNSDisabled types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
 				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
@@ -697,7 +704,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{})).Return(fakeErr)
 
-				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
 
 				Expect(err).To(Equal(fakeErr))
 			})
@@ -715,13 +722,13 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
 					common.RegistrationSpecHash: "b24405c0d68a538e",
-					common.SeedSpecHash:         "70d90aa0670092bc",
+					common.SeedSpecHash:         "6668c8b5c30659ab",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
 				installation3.Labels = map[string]string{
 					common.RegistrationSpecHash: "b24405c0d68a538e",
-					common.SeedSpecHash:         "70d90aa0670092bc",
+					common.SeedSpecHash:         "6668c8b5c30659ab",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -730,7 +737,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Update(ctx, installation3)
 
-				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithoutTaints, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
 
 				Expect(err).NotTo(HaveOccurred())
 			})

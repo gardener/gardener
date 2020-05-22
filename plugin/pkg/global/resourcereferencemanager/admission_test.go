@@ -112,6 +112,11 @@ var _ = Describe("resourcereferencemanager", func() {
 						Name:      secretName,
 						Namespace: namespace,
 					},
+					Settings: &core.SeedSettings{
+						ShootDNS: &core.SeedSettingShootDNS{
+							Enabled: true,
+						},
+					},
 				},
 			}
 			quota = core.Quota{
@@ -390,32 +395,36 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject adding the disable-dns taint because shoots reference the seed", func() {
+			It("should reject changing the shoot dns setting because shoots reference the seed", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 
 				newSeed := seed.DeepCopy()
-				newSeed.Spec.Taints = append(newSeed.Spec.Taints, core.SeedTaint{
-					Key: core.SeedTaintDisableDNS,
-				})
+				newSeed.Spec.Settings = &core.SeedSettings{
+					ShootDNS: &core.SeedSettingShootDNS{
+						Enabled: false,
+					},
+				}
 
 				attrs := admission.NewAttributesRecord(newSeed, &seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("may not add/remove \"" + core.SeedTaintDisableDNS + "\" taint when shoots are still referencing to a seed"))
+				Expect(err.Error()).To(ContainSubstring("may not change shoot DNS enablement setting when shoots are still referencing to a seed"))
 			})
 
-			It("should accept adding the disable-dns taint because no shoots reference the seed", func() {
+			It("should accept changing the shoot dns setting because no shoots reference the seed", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
 				newSeed := seed.DeepCopy()
-				newSeed.Spec.Taints = append(newSeed.Spec.Taints, core.SeedTaint{
-					Key: core.SeedTaintDisableDNS,
-				})
+				newSeed.Spec.Settings = &core.SeedSettings{
+					ShootDNS: &core.SeedSettingShootDNS{
+						Enabled: false,
+					},
+				}
 
 				attrs := admission.NewAttributesRecord(newSeed, &seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 

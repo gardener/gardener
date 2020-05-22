@@ -35,8 +35,18 @@ spec:
   #   services: 100.64.0.0/13
     blockCIDRs:
     - 169.254.169.254/32
+  settings:
+    excessCapacity:
+      enabled: true # this seed will deploy excess-capacity-reservation pods
+    scheduling:
+      visible: true # the gardener-scheduler will consider this seed for shoots
+    shootDNS:
+      enabled: true # all shoots on this seed will use DNS, if disabled they'll just use the plain IPs/hostnames
 # taints:
-# - key: seed.gardener.cloud/disable-dns                  # all shoots on this seed won't use any DNS, just the plain IPs/hostnames
+# - key: seed.gardener.cloud/protected # only shoots in the `garden` namespace can use this seed
+# - key: <some-key>
+# DEPRECATED: The below keys are deprecated in favor of the `.spec.settings` section. Please don't use them anymore and
+# switch to the new seed settings.
 # - key: seed.gardener.cloud/protected                    # only shoots in the `garden` namespace can use this seed
 # - key: seed.gardener.cloud/invisible                    # the gardener-scheduler won't consider this seed for shoots
 # - key: seed.gardener.cloud/disable-capacity-reservation # this seed will not deploy excess-capacity-reservation pods

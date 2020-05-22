@@ -75,6 +75,9 @@ type SeedSpec struct {
 	// Volume contains settings for persistentvolumes created in the seed cluster.
 	// +optional
 	Volume *SeedVolume `json:"volume,omitempty" protobuf:"bytes,8,opt,name=volume"`
+	// Settings contains certain settings for this seed cluster.
+	// +optional
+	Settings *SeedSettings `json:"settings,omitempty" protobuf:"bytes,9,opt,name=settings"`
 }
 
 // SeedStatus is the status of a Seed.
@@ -154,6 +157,42 @@ type SeedProvider struct {
 	Region string `json:"region" protobuf:"bytes,3,opt,name=region"`
 }
 
+// SeedSettings contains certain settings for this seed cluster.
+type SeedSettings struct {
+	// ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
+	// +optional
+	ExcessCapacityReservation *SeedSettingExcessCapacityReservation `json:"excessCapacityReservation,omitempty" protobuf:"bytes,1,opt,name=excessCapacityReservation"`
+	// Scheduling controls settings for scheduling decisions for the seed.
+	// +optional
+	Scheduling *SeedSettingScheduling `json:"scheduling,omitempty" protobuf:"bytes,2,opt,name=scheduling"`
+	// ShootDNS controls the shoot DNS settings for the seed.
+	// +optional
+	ShootDNS *SeedSettingShootDNS `json:"shootDNS,omitempty" protobuf:"bytes,3,opt,name=shootDNS"`
+}
+
+// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
+// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
+// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+type SeedSettingExcessCapacityReservation struct {
+	// Enabled controls whether the excess capacity reservation should be enabled.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingShootDNS controls the shoot DNS settings for the seed.
+type SeedSettingShootDNS struct {
+	// Enabled controls whether the DNS for shoot clusters should be enabled. When disabled then all shoots using the
+	// seed won't get any DNS providers, DNS records, and no DNS extension controller is required to be installed here.
+	// This is useful for environments where DNS is not required.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingScheduling controls settings for scheduling decisions for the seed.
+type SeedSettingScheduling struct {
+	// Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
+	// are not considered by the scheduler.
+	Visible bool `json:"visible" protobuf:"bytes,1,opt,name=visible"`
+}
+
 // SeedTaint describes a taint on a seed.
 type SeedTaint struct {
 	// Key is the taint key to be applied to a seed.
@@ -164,20 +203,23 @@ type SeedTaint struct {
 }
 
 const (
-	// SeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
+	// DeprecatedSeedTaintDisableCapacityReservation is a constant for a taint key on a seed that marks it for disabling
+	// excess capacity reservation. This can be useful for seed clusters which only host shooted seeds to reduce
+	// costs.
+	// deprecated
+	DeprecatedSeedTaintDisableCapacityReservation = "seed.gardener.cloud/disable-capacity-reservation"
+	// DeprecatedSeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
 	// using this seed won't get any DNS providers, DNS records, and no DNS extension controller is required to
 	// be installed here. This is useful for environment where DNS is not required.
-	SeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
+	// deprecated
+	DeprecatedSeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
+	// DeprecatedSeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
+	// are not considered by the gardener-scheduler.
+	// deprecated
+	DeprecatedSeedTaintInvisible = "seed.gardener.cloud/invisible"
 	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
 	// may only be used by shoots in the `garden` namespace.
 	SeedTaintProtected = "seed.gardener.cloud/protected"
-	// SeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
-	// are not considered by the gardener-scheduler.
-	SeedTaintInvisible = "seed.gardener.cloud/invisible"
-	// SeedTaintDisableCapacityReservation is a constant for a taint key on a seed that marks it for disabling
-	// excess capacity reservation. This can be useful for seed clusters which only host shooted seeds to reduce
-	// costs.
-	SeedTaintDisableCapacityReservation = "seed.gardener.cloud/disable-capacity-reservation"
 )
 
 // SeedVolume contains settings for persistentvolumes created in the seed cluster.

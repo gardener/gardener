@@ -174,4 +174,54 @@ var _ = Describe("Defaults", func() {
 			Expect(deployment.Policy).To(Equal(deploymentCopy.Policy))
 		})
 	})
+
+	Describe("#SetDefaults_Seed", func() {
+		var obj *Seed
+
+		BeforeEach(func() {
+			obj = &Seed{}
+		})
+
+		It("should default the seed settings (w/o taints)", func() {
+			SetDefaults_Seed(obj)
+
+			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
+		})
+
+		It("should default the seed settings (w/ taints)", func() {
+			obj.Spec.Taints = []SeedTaint{
+				{Key: DeprecatedSeedTaintDisableCapacityReservation},
+				{Key: DeprecatedSeedTaintInvisible},
+				{Key: DeprecatedSeedTaintDisableDNS},
+			}
+
+			SetDefaults_Seed(obj)
+
+			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeFalse())
+			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeFalse())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeFalse())
+		})
+
+		It("should not default the seed settings because they were provided", func() {
+			var (
+				excessCapacityReservation = false
+				scheduling                = true
+				shootDNS                  = false
+			)
+
+			obj.Spec.Settings = &SeedSettings{
+				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
+				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
+				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
+			}
+
+			SetDefaults_Seed(obj)
+
+			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
+			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
+		})
+	})
 })

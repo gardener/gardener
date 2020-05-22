@@ -179,7 +179,7 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
 			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
 			WithProjectName(gardenObj.Project.Name).
-			WithDisableDNS(gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)).
+			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
 			Build(ctx, c)

@@ -631,6 +631,11 @@ var _ = Describe("shoot", func() {
 						Provider: gardencorev1beta1.SeedProvider{
 							Type: seedProvider,
 						},
+						Settings: &gardencorev1beta1.SeedSettings{
+							ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+								Enabled: true,
+							},
+						},
 					},
 				}
 				shoot = &gardencorev1beta1.Shoot{
@@ -710,9 +715,7 @@ var _ = Describe("shoot", func() {
 			})
 
 			It("should compute the correct list of required extensions (seed disables DNS)", func() {
-				seed.Spec.Taints = []gardencorev1beta1.SeedTaint{
-					{Key: gardencorev1beta1.SeedTaintDisableDNS},
-				}
+				seed.Spec.Settings.ShootDNS.Enabled = false
 
 				result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 

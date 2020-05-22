@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -66,6 +67,8 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 	if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
 		newSeed.Generation = oldSeed.Generation + 1
 	}
+
+	migrateSettings(newSeed, oldSeed)
 }
 
 // Validate validates the given object.
@@ -123,4 +126,93 @@ func (s StatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.O
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
+}
+
+func migrateSettings(newSeed, oldSeed *core.Seed) {
+	var (
+		taintsToAdd    []string
+		taintsToRemove []string
+	)
+
+	// excess capacity reservation
+	if !helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintDisableCapacityReservation) && helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintDisableCapacityReservation) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.ExcessCapacityReservation = &core.SeedSettingExcessCapacityReservation{Enabled: false}
+	} else if helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintDisableCapacityReservation) && !helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintDisableCapacityReservation) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.ExcessCapacityReservation = &core.SeedSettingExcessCapacityReservation{Enabled: true}
+	}
+
+	if !helper.SeedSettingExcessCapacityReservationEnabled(oldSeed.Spec.Settings) && helper.SeedSettingExcessCapacityReservationEnabled(newSeed.Spec.Settings) {
+		taintsToRemove = append(taintsToRemove, core.DeprecatedSeedTaintDisableCapacityReservation)
+	} else if helper.SeedSettingExcessCapacityReservationEnabled(oldSeed.Spec.Settings) && !helper.SeedSettingExcessCapacityReservationEnabled(newSeed.Spec.Settings) {
+		taintsToAdd = append(taintsToAdd, core.DeprecatedSeedTaintDisableCapacityReservation)
+	}
+
+	// scheduling visibility
+	if !helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintInvisible) && helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintInvisible) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.Scheduling = &core.SeedSettingScheduling{Visible: false}
+	} else if helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintInvisible) && !helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintInvisible) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.Scheduling = &core.SeedSettingScheduling{Visible: true}
+	}
+
+	if !helper.SeedSettingSchedulingVisible(oldSeed.Spec.Settings) && helper.SeedSettingSchedulingVisible(newSeed.Spec.Settings) {
+		taintsToRemove = append(taintsToRemove, core.DeprecatedSeedTaintInvisible)
+	} else if helper.SeedSettingSchedulingVisible(oldSeed.Spec.Settings) && !helper.SeedSettingSchedulingVisible(newSeed.Spec.Settings) {
+		taintsToAdd = append(taintsToAdd, core.DeprecatedSeedTaintInvisible)
+	}
+
+	// disable dns
+	if !helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintDisableDNS) && helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintDisableDNS) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.ShootDNS = &core.SeedSettingShootDNS{Enabled: false}
+	} else if helper.TaintsHave(oldSeed.Spec.Taints, core.DeprecatedSeedTaintDisableDNS) && !helper.TaintsHave(newSeed.Spec.Taints, core.DeprecatedSeedTaintDisableDNS) {
+		if newSeed.Spec.Settings == nil {
+			newSeed.Spec.Settings = &core.SeedSettings{}
+		}
+		newSeed.Spec.Settings.ShootDNS = &core.SeedSettingShootDNS{Enabled: true}
+	}
+
+	if !helper.SeedSettingShootDNSEnabled(oldSeed.Spec.Settings) && helper.SeedSettingShootDNSEnabled(newSeed.Spec.Settings) {
+		taintsToRemove = append(taintsToRemove, core.DeprecatedSeedTaintDisableDNS)
+	} else if helper.SeedSettingShootDNSEnabled(oldSeed.Spec.Settings) && !helper.SeedSettingShootDNSEnabled(newSeed.Spec.Settings) {
+		taintsToAdd = append(taintsToAdd, core.DeprecatedSeedTaintDisableDNS)
+	}
+
+	// add taints
+	for _, taint := range taintsToAdd {
+		addTaint := true
+		for _, t := range newSeed.Spec.Taints {
+			if t.Key == taint {
+				addTaint = false
+				break
+			}
+		}
+		if addTaint {
+			newSeed.Spec.Taints = append(newSeed.Spec.Taints, core.SeedTaint{
+				Key: taint,
+			})
+		}
+	}
+
+	// remove taints
+	for _, taint := range taintsToRemove {
+		for i := len(newSeed.Spec.Taints) - 1; i >= 0; i-- {
+			if newSeed.Spec.Taints[i].Key == taint {
+				newSeed.Spec.Taints = append(newSeed.Spec.Taints[:i], newSeed.Spec.Taints[i+1:]...)
+			}
+		}
+	}
 }

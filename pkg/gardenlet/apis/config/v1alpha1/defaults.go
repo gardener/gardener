@@ -247,11 +247,6 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 		obj.ConcurrentSyncs = &v
 	}
 
-	trueVar := true
-	if obj.ReserveExcessCapacity == nil {
-		obj.ReserveExcessCapacity = &trueVar
-	}
-
 	if obj.SyncPeriod == nil {
 		v := DefaultControllerSyncPeriod
 		obj.SyncPeriod = &v

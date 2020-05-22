@@ -94,10 +94,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
 	}
 
-	var (
-		supportedTaintKeys = sets.NewString(core.SeedTaintDisableCapacityReservation, core.SeedTaintDisableDNS, core.SeedTaintProtected, core.SeedTaintInvisible, core.SeedTaintDisableCapacityReservation)
-		foundTaintKeys     = sets.NewString()
-	)
+	var foundTaintKeys = sets.NewString()
 
 	for i, taint := range seedSpec.Taints {
 		idxPath := fldPath.Child("taints").Index(i)
@@ -106,9 +103,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 		}
 		if foundTaintKeys.Has(taint.Key) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("key"), taint.Key))
-		}
-		if !supportedTaintKeys.Has(taint.Key) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("key"), taint.Key, supportedTaintKeys.List()))
 		}
 		foundTaintKeys.Insert(taint.Key)
 	}

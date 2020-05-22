@@ -133,6 +133,21 @@ func TaintsHave(taints []core.SeedTaint, key string) bool {
 	return false
 }
 
+// SeedSettingExcessCapacityReservationEnabled returns true if the 'excess capacity reservation' setting is enabled.
+func SeedSettingExcessCapacityReservationEnabled(settings *core.SeedSettings) bool {
+	return settings == nil || settings.ExcessCapacityReservation == nil || settings.ExcessCapacityReservation.Enabled
+}
+
+// SeedSettingSchedulingVisible returns true if the 'scheduling' setting is set to 'visible'.
+func SeedSettingSchedulingVisible(settings *core.SeedSettings) bool {
+	return settings == nil || settings.Scheduling == nil || settings.Scheduling.Visible
+}
+
+// SeedSettingShootDNSEnabled returns true if the 'shoot dns' setting is enabled.
+func SeedSettingShootDNSEnabled(settings *core.SeedSettings) bool {
+	return settings == nil || settings.ShootDNS == nil || settings.ShootDNS.Enabled
+}
+
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	if shoot.Spec.DNS == nil {

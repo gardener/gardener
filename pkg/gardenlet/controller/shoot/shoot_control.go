@@ -285,7 +285,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFromSecretBindingLister(c.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Lister()).
 		WithProjectName(project.Name).
-		WithDisableDNS(gardencorev1beta1helper.TaintsHave(seedObj.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS)).
+		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
 		Build(ctx, c.k8sGardenClient.Client())

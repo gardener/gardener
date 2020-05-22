@@ -295,4 +295,37 @@ var _ = Describe("helper", func() {
 			},
 		}, true),
 	)
+
+	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
+		func(settings *core.SeedSettings, expectation bool) {
+			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
+		},
+
+		Entry("setting is nil", nil, true),
+		Entry("excess capacity reservation is nil", &core.SeedSettings{}, true),
+		Entry("excess capacity reservation 'enabled' is false", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: false}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: true}}, true),
+	)
+
+	DescribeTable("#SeedSettingSchedulingVisible",
+		func(settings *core.SeedSettings, expectation bool) {
+			Expect(SeedSettingSchedulingVisible(settings)).To(Equal(expectation))
+		},
+
+		Entry("setting is nil", nil, true),
+		Entry("scheduling is nil", &core.SeedSettings{}, true),
+		Entry("scheduling 'visible' is false", &core.SeedSettings{Scheduling: &core.SeedSettingScheduling{Visible: false}}, false),
+		Entry("scheduling 'visible' is true", &core.SeedSettings{Scheduling: &core.SeedSettingScheduling{Visible: true}}, true),
+	)
+
+	DescribeTable("#SeedSettingShootDNSEnabled",
+		func(settings *core.SeedSettings, expectation bool) {
+			Expect(SeedSettingShootDNSEnabled(settings)).To(Equal(expectation))
+		},
+
+		Entry("setting is nil", nil, true),
+		Entry("shoot dns is nil", &core.SeedSettings{}, true),
+		Entry("shoot dns 'enabled' is false", &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: false}}, false),
+		Entry("shoot dns 'enabled' is true", &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: true}}, true),
+	)
 })

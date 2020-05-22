@@ -30,6 +30,4 @@ type Builder struct {
 type Seed struct {
 	Info   *gardencorev1beta1.Seed
 	Secret *corev1.Secret
-
-	reserveExcessCapacity bool
 }

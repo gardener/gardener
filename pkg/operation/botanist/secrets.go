@@ -93,7 +93,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		endUserCrtValidity = common.EndUserCrtValidity
 	)
 
-	if gardencorev1beta1helper.TaintsHave(b.Seed.Info.Spec.Taints, gardencorev1beta1.SeedTaintDisableDNS) {
+	if !b.Seed.Info.Spec.Settings.ShootDNS.Enabled {
 		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
 			apiServerIPAddresses = append(apiServerIPAddresses, addr)
 		} else {

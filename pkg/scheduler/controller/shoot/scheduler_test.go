@@ -66,6 +66,14 @@ var _ = Describe("Scheduler_Control", func() {
 					Pods:     "10.20.0.0/16",
 					Services: "10.30.0.0/16",
 				},
+				Settings: &gardencorev1beta1.SeedSettings{
+					Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+						Visible: true,
+					},
+					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+						Enabled: true,
+					},
+				},
 			},
 			Status: gardencorev1beta1.SeedStatus{
 				Conditions: []gardencorev1beta1.Condition{
@@ -569,8 +577,10 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to invisibility", func() {
 			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 
-			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{
-				{Key: gardencorev1beta1.SeedTaintInvisible},
+			seed.Spec.Settings = &gardencorev1beta1.SeedSettings{
+				Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+					Visible: false,
+				},
 			}
 			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 

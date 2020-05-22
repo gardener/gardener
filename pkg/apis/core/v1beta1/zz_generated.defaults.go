@@ -36,6 +36,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&ProjectList{}, func(obj interface{}) { SetObjectDefaults_ProjectList(obj.(*ProjectList)) })
 	scheme.AddTypeDefaultingFunc(&SecretBinding{}, func(obj interface{}) { SetObjectDefaults_SecretBinding(obj.(*SecretBinding)) })
 	scheme.AddTypeDefaultingFunc(&SecretBindingList{}, func(obj interface{}) { SetObjectDefaults_SecretBindingList(obj.(*SecretBindingList)) })
+	scheme.AddTypeDefaultingFunc(&Seed{}, func(obj interface{}) { SetObjectDefaults_Seed(obj.(*Seed)) })
+	scheme.AddTypeDefaultingFunc(&SeedList{}, func(obj interface{}) { SetObjectDefaults_SeedList(obj.(*SeedList)) })
 	scheme.AddTypeDefaultingFunc(&Shoot{}, func(obj interface{}) { SetObjectDefaults_Shoot(obj.(*Shoot)) })
 	scheme.AddTypeDefaultingFunc(&ShootList{}, func(obj interface{}) { SetObjectDefaults_ShootList(obj.(*ShootList)) })
 	return nil
@@ -95,6 +97,17 @@ func SetObjectDefaults_SecretBindingList(in *SecretBindingList) {
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_SecretBinding(a)
+	}
+}
+
+func SetObjectDefaults_Seed(in *Seed) {
+	SetDefaults_Seed(in)
+}
+
+func SetObjectDefaults_SeedList(in *SeedList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_Seed(a)
 	}
 }
 

@@ -77,7 +77,6 @@ data:
       seed:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.seed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.seed.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seed.syncPeriod is required" .Values.global.gardenlet.config.controllers.seed.syncPeriod }}
-        reserveExcessCapacity: {{ required ".Values.global.gardenlet.config.controllers.seed.reserveExcessCapacity is required" .Values.global.gardenlet.config.controllers.seed.reserveExcessCapacity }}
       {{- end }}
       shoot:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shoot.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shoot.concurrentSyncs }}
