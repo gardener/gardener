@@ -16,7 +16,6 @@ package seedadmission
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,7 +23,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -32,7 +30,6 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -58,43 +55,17 @@ func ValidateExtensionDeletion(ctx context.Context, c client.Client, logger *log
 		return nil
 	}
 
-	// Older Kubernetes versions don't provide the object neither in OldObject nor in the Object field. In this case
-	// we have to look it up ourselves.
-	var (
-		obj       runtime.Object
-		err       error
-		operation = "DELETE"
-	)
+	var operation string
 
-	switch {
-	case request.OldObject.Raw != nil:
-		o := &unstructured.Unstructured{}
-		err = json.Unmarshal(request.OldObject.Raw, o)
-		obj = o
-
-	case request.Object.Raw != nil:
-		o := &unstructured.Unstructured{}
-		err = json.Unmarshal(request.Object.Raw, o)
-		obj = o
-
-	case request.Name == "":
-		o := &unstructured.UnstructuredList{}
-		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
-		o.SetKind(request.Kind.Kind + "List")
-		err = c.List(ctx, o, client.InNamespace(request.Namespace))
-		obj = o
-		operation = "DELETECOLLECTION"
-
-	default:
-		o := &unstructured.Unstructured{}
-		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
-		o.SetKind(request.Kind.Kind)
-		err = c.Get(ctx, kutil.Key(request.Namespace, request.Name), o)
-		obj = o
-	}
-
+	obj, err := getRequestObject(ctx, c, request)
 	if err != nil {
 		return client.IgnoreNotFound(err)
+	}
+
+	if strings.HasSuffix(obj.GetObjectKind().GroupVersionKind().Kind, "List") {
+		operation = "DELETECOLLECTION"
+	} else {
+		operation = "DELETE"
 	}
 
 	entryLogger := gardenlogger.

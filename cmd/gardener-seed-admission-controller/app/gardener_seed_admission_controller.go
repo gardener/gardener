@@ -138,7 +138,9 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 		deserializer,
 		k8sClient.Client(),
 	}
+
 	mux.HandleFunc("/webhooks/validate-extension-crd-deletion", seedAdmissionController.validateExtensionCRDDeletion)
+	mux.HandleFunc("/webhooks/mutate-pods", seedAdmissionController.mutatePods)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", bindAddress, port),
@@ -161,11 +163,18 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 	logger.Info("HTTPS servers stopped.")
 }
 
-func respond(w http.ResponseWriter, response admission.Response) {
+func respond(w http.ResponseWriter, request *admission.Request, response admission.Response) {
+	if request != nil {
+		if err := response.Complete(*request); err != nil {
+			logger.Error(err)
+		}
+	}
+
 	jsonResponse, err := json.Marshal(admissionv1beta1.AdmissionReview{Response: &response.AdmissionResponse})
 	if err != nil {
 		logger.Error(err)
 	}
+
 	if _, err := w.Write(jsonResponse); err != nil {
 		logger.Error(err)
 	}
@@ -195,7 +204,7 @@ func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseW
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		err := fmt.Errorf("contentType=%s, expect %s", contentType, "application/json")
 		logger.Errorf(err.Error())
-		respond(w, admission.Errored(http.StatusBadRequest, err))
+		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
 		return receivedReview, err
 	}
 
@@ -203,7 +212,7 @@ func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseW
 	if _, _, err := g.codecs.Decode(body, nil, &receivedReview); err != nil {
 		err = fmt.Errorf("invalid request body (error decoding body): %+v", err)
 		logger.Errorf(err.Error())
-		respond(w, admission.Errored(http.StatusBadRequest, err))
+		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
 		return receivedReview, err
 	}
 
@@ -211,15 +220,8 @@ func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseW
 	if receivedReview.Request == nil {
 		err := fmt.Errorf("invalid request body (missing admission request)")
 		logger.Errorf(err.Error())
-		respond(w, admission.Errored(http.StatusBadRequest, err))
+		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
 		return receivedReview, err
-	}
-
-	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
-	if receivedReview.Request.Operation != admissionv1beta1.Delete {
-		msg := "operation is no DELETE operation"
-		respond(w, admission.Allowed(msg))
-		return receivedReview, errors.New(msg)
 	}
 
 	return receivedReview, nil
@@ -231,14 +233,37 @@ func (g *GardenerSeedAdmissionController) validateExtensionCRDDeletion(w http.Re
 		return
 	}
 
+	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
+	if receivedReview.Request.Operation != admissionv1beta1.Delete {
+		respond(w, nil, admission.Allowed("operation is no DELETE operation"))
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
 	if err := seedadmission.ValidateExtensionDeletion(ctx, g.client, logger, receivedReview.Request); err != nil {
 		logger.Errorf(err.Error())
-		respond(w, admission.Errored(http.StatusBadRequest, err))
+		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
 		return
 	}
 
-	respond(w, admission.Allowed(""))
+	respond(w, nil, admission.Allowed(""))
+}
+
+func (g *GardenerSeedAdmissionController) mutatePods(w http.ResponseWriter, r *http.Request) {
+	receivedReview, err := g.handleAdmissionReview(w, r)
+	if err != nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	patches, err := seedadmission.MutatePod(ctx, g.client, logger, receivedReview.Request)
+	if err != nil {
+		logger.Errorf(err.Error())
+		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
+	}
+	respond(w, &admission.Request{AdmissionRequest: *receivedReview.Request}, admission.Patched("", patches...))
 }
