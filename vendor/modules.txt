@@ -122,7 +122,7 @@ github.com/gardener/controller-manager-library/pkg/kutil
 github.com/gardener/controller-manager-library/pkg/logger
 github.com/gardener/controller-manager-library/pkg/resources
 github.com/gardener/controller-manager-library/pkg/utils
-# github.com/gardener/etcd-druid v0.1.15
+# github.com/gardener/etcd-druid v0.3.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.7
@@ -247,7 +247,6 @@ github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 # github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f
-## explicit
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
 # github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -277,7 +276,7 @@ github.com/hpcloud/tail/ratelimiter
 github.com/hpcloud/tail/util
 github.com/hpcloud/tail/watch
 github.com/hpcloud/tail/winfile
-# github.com/huandu/xstrings v1.3.0
+# github.com/huandu/xstrings v1.3.1
 ## explicit
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.8
@@ -668,7 +667,7 @@ honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
-# k8s.io/api v0.16.8 => k8s.io/api v0.16.8
+# k8s.io/api v0.17.0 => k8s.io/api v0.16.8
 ## explicit
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1

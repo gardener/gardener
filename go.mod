@@ -7,7 +7,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.1.5
 	github.com/coreos/etcd v3.3.17+incompatible
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/gardener/etcd-druid v0.1.15
+	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.7
 	github.com/gardener/gardener-resource-manager v0.10.0
 	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
@@ -19,9 +19,8 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.3
 	github.com/googleapis/gnostic v0.3.1
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/huandu/xstrings v1.3.0
+	github.com/huandu/xstrings v1.3.1
 	github.com/json-iterator/go v1.1.9
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.10.1
@@ -41,7 +40,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.16.8
+	k8s.io/api v0.17.0
 	k8s.io/apiextensions-apiserver v0.17.0
 	k8s.io/apimachinery v0.17.0
 	k8s.io/apiserver v0.16.8

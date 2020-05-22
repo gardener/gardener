@@ -133,8 +133,8 @@ type EtcdSpec struct {
 	// It must match the pod template's labels.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
 	Selector *metav1.LabelSelector `json:"selector"`
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
+	// +required
+	Labels map[string]string `json:"labels"`
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// +required
