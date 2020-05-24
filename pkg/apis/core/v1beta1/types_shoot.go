@@ -625,7 +625,7 @@ type KubeletConfig struct {
 	ImagePullProgressDeadline *metav1.Duration `json:"imagePullProgressDeadline,omitempty" protobuf:"bytes,12,opt,name=imagePullProgressDeadline"`
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	// +optional
-	FailSwapOn *bool `json:"failSwapOn,omitempty" protobuf:"varint,12,opt,name=failSwapOn"`
+	FailSwapOn *bool `json:"failSwapOn,omitempty" protobuf:"varint,13,opt,name=failSwapOn"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
