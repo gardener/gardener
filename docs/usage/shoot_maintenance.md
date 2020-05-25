@@ -30,7 +30,7 @@ You can change it later, of course.
 ## Automatic Version Updates
 
 The `.spec.maintenance.autoUpdate` field in the shoot specification allows you to control how/whether automatic updates of Kubernetes patch and machine image versions are performed.
-During the maintenance, Gardener checks if there are newer versions available, and if you opt-in, then your shoot will be updated accordingly.
+Machine image versions are updated per worker pool.
 
 ```yaml
 spec:
@@ -40,8 +40,19 @@ spec:
       machineImageVersion: true
 ```
 
-Please refer to [this document](../proposals/05-versioning-policy.md) that describes the exact versioning policy.
+During the daily maintenance, the Gardener Controller Manager updates the Shoot's Kubernetes and machine image version if any of the following criteria applies:
+ - there is a higher version available and the Shoot opted-in for automatic version updates
+ - the currently used version is `expired`
+ 
+Gardener creates events with type `MaintenanceDone` on the Shoot describing the action performed during maintenance including the reason why an update has been triggered.
 
+```yaml
+MaintenanceDone  Updated image of worker-pool 'coreos-xy' from 'coreos' version 'xy' to version 'abc'. Reason: AutoUpdate of MachineImage configured.
+MaintenanceDone  Updated Kubernetes version '0.0.1' to version '0.0.5'. This is an increase in the patch level. Reason: AutoUpdate of Kubernetes version configured.
+MaintenanceDone  Updated Kubernetes version '0.0.5' to version '0.1.5'. This is an increase in the minor level. Reason: Kubernetes version expired - force update required.
+```
+
+Please refer to [this document](./shoot_versions.md) for more information about Kubernetes and machine image versions in Gardener.
 ## Cluster Reconciliation
 
 Gardener administrators/operators can configure the Gardenlet in a way that it only reconciles shoot clusters during their maintenance time windows.

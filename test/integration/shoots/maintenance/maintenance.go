@@ -61,6 +61,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
+
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -239,6 +240,9 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testMachineImage, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
+			// give controller caches time to sync
+			time.Sleep(10 * time.Second)
+
 			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
@@ -282,6 +286,9 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
+			// give controller caches time to sync
+			time.Sleep(10 * time.Second)
+
 			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
@@ -305,6 +312,9 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			// let Shoot's Kubernetes version expire
 			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
+
+			// give controller caches time to sync
+			time.Sleep(10 * time.Second)
 
 			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
