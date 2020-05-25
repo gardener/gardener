@@ -25,7 +25,27 @@ The corresponding `ShootTolerationRestriction` admission plugin (cf. Kubernetes'
 
 ### Whitelist
 
-If a shoot gets created or updated with tolerations then it is validated that only those tolerations may be used which were added to either a) the `Project`'s `.spec.tolerations.whitelist`, or b) to the global whitelist in the `ShootTolerationRestriction`'s admission config (see [this example](https://github.com/rfranzke/gardener/blob/feature/tolerations/example/20-admissionconfig.yaml#L7-L14)).  
+If a shoot gets created or updated with tolerations then it is validated that only those tolerations may be used which were added to either a) the `Project`'s `.spec.tolerations.whitelist`, or b) to the global whitelist in the `ShootTolerationRestriction`'s admission config (see [this example](https://github.com/rfranzke/gardener/blob/feature/tolerations/example/20-admissionconfig.yaml#L7-L14)).
+
+⚠️ Please note that the tolerations whitelist of `Project`s can only be changed if the user trying to change it is bound to the `modify-spec-tolerations-whitelist` custom RBAC role, e.g. via the following `ClusterRole`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: full-project-modification-access
+rules:
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - projects
+  verbs:
+  - create
+  - patch
+  - update
+  - modify-spec-tolerations-whitelist
+  - delete
+```  
 
 ### Defaults
 

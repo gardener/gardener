@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
@@ -162,6 +163,7 @@ func (o *Options) complete() error {
 	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	shootstatedeletionvalidator.Register(o.Recommended.Admission.Plugins)
+	customverbauthorizer.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
@@ -176,6 +178,7 @@ func (o *Options) complete() error {
 		openidconnectpreset.PluginName,
 		clusteropenidconnectpreset.PluginName,
 		shootstatedeletionvalidator.PluginName,
+		customverbauthorizer.PluginName,
 	}
 	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
 
