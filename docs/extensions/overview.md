@@ -1,9 +1,9 @@
 # Extensibility overview
 
-Currently, everything is developed in-tree, i.e., all cloud providers and the configuration for all the supported operating systems are released together with the Gardener core itself.
-The project has grown to a size where it gets more and more difficult to add new providers and to maintain the existing code base.
-As a consequence, in order to become more agile and flexible again, we proposed [GEP-1](../proposals/01-extensibility.md) (Gardener Enhancement Proposal).
-The document describes a future architecture and envisions to keep the Gardener core logic independent of provider-specific knowledge (similar to what Kubernetes is trying to achieve with their [out-of-tree cloud providers](https://github.com/kubernetes/enhancements/issues/88) or their [CSI volume plugins](https://github.com/kubernetes/community/pull/1258)).
+Initially, everything was developed in-tree in the Gardener project. All cloud providers and the configuration for all the supported operating systems were released together with the Gardener core itself.
+But as the project grew, it got more and more difficult to add new providers and maintain the existing code base.
+As a consequence and in order to become agile and flexible again, we proposed [GEP-1](../proposals/01-extensibility.md) (Gardener Enhancement Proposal).
+The document describes an out-of-tree extension architecture that keeps the Gardener core logic independent of provider-specific knowledge (similar to what Kubernetes has achieved with [out-of-tree cloud providers](https://github.com/kubernetes/enhancements/issues/88) or with [CSI volume plugins](https://github.com/kubernetes/community/pull/1258)).
 
 ## Basic concepts
 
@@ -127,20 +127,10 @@ Of course, it would have needed to create a `ConfigMap` containing the cloud con
 (Please note for this special example: The Kubernetes community is also working on making the `kube-controller-manager` provider-independent.
 However, there will most probably be still components other than the `kube-controller-manager` which need to be adapted by extensions.)
 
-If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts please work through [GEP-1](../proposals/01-extensibility.md).
-We are looking forward to your feedback if you have any!
+If you are interested in writing an extension, or generally in digging deeper to find out the nitty-gritty details of the extension concepts please read [GEP-1](../proposals/01-extensibility.md).
+We are truly looking forward to your feedback!
 
 ## Current status
 
-We have started implementing GEP-1 and are in the process of getting experience with the first extensions.
-Based on the resources discussed in GEP-1 the following table provides information about which parts of the domain-specific knowledge that is/was in-tree has been moved out already:
+Meanwhile, the out-of-tree extension architecture of Gardener is in place and has been productively validated. We are tracking all internal and external extensions of Gardener in the repo: [Gardener Extensions Library](https://github.com/gardener/gardener/tree/master/extensions#known-extension-implementations).
 
-| Status             | Resource                | Providers                                                                            |
-|--------------------|-------------------------|--------------------------------------------------------------------------------------|
-| :white_check_mark: | `DNS`                   | [alicloud-dns<br>aws-route53<br>azure-dns<br>google-clouddns<br> openstack-designate<br> Cloudflare DNS](https://github.com/gardener/external-dns-management) |
-| :white_check_mark: | `OperatingSystemConfig` | [coreos](https://github.com/gardener/gardener-extension-os-coreos), [coreos-alicloud](https://github.com/gardener/gardener-extension-os-coreos-alicloud), [suse-jeos](https://github.com/gardener/gardener-extension-os-suse-jeos), [garden-linux](https://github.com/gardener/gardener-extension-os-gardenlinux) |
-| :white_check_mark: | `BackupInfrastructure`  | alicloud<br>aws<br>azure<br>gcp<br>openstack<br>vSphere<br>(any S3 compatible)                                         |
-| :white_check_mark: | `ControlPlane`          | alicloud<br>aws<br>azure<br>gcp<br>openstack<br>metal-stack<br>packet WIP<br>vSphere WIP<br>local (discontinued/replaced)        |
-| :white_check_mark: | `Infrastructure`        | [alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)<br>[aws](https://github.com/gardener/gardener-extension-provider-aws)<br>[azure](https://github.com/gardener/gardener-extension-provider-azure)<br>[gcp](https://github.com/gardener/gardener-extension-provider-gcp)<br>[openstack](https://github.com/gardener/gardener-extension-provider-openstack)<br>[metal-stack](https://github.com/metal-stack/gardener-extension-provider-metal)<br>[packet](https://github.com/gardener/gardener-extension-provider-packet) WIP<br>[vSphere](https://github.com/gardener/gardener-extension-provider-vsphere) WIP<br>local (discontinued/replaced) |
-| :white_check_mark: | `Worker`                | [alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)<br>[aws](https://github.com/gardener/gardener-extension-provider-aws)<br>[azure](https://github.com/gardener/gardener-extension-provider-azure)<br>[gcp](https://github.com/gardener/gardener-extension-provider-gcp)<br>[openstack](https://github.com/gardener/gardener-extension-provider-openstack)<br>[metal-stack](https://github.com/metal-stack/gardener-extension-provider-metal)<br>[packet](https://github.com/gardener/gardener-extension-provider-packet) WIP<br>[vSphere](https://github.com/gardener/gardener-extension-provider-vsphere) WIP<br>local (discontinued/replaced) |
-| :white_check_mark: | `Extension`             | [certificate-service](https://github.com/gardener/gardener-extension-shoot-cert-service)<br>[dns-service](https://github.com/gardener/gardener-extension-shoot-dns-service)<br>[calico](https://github.com/gardener/gardener-extension-networking-calico)<br>[cilium](https://github.com/gardener/gardener-extension-networking-cilium)<br>[gVisor](https://github.com/gardener/gardener-extension-runtime-gvisor) |
