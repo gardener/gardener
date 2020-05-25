@@ -22,7 +22,6 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -41,8 +40,11 @@ type artifact struct {
 	newListObjFunc func() runtime.Object
 	informer       cache.SharedIndexInformer
 
-	controllerInstallationExtensionQueue workqueue.RateLimitingInterface
-	shootStateQueue                      workqueue.RateLimitingInterface
+	controllerInstallationExtensionQueue       workqueue.RateLimitingInterface
+	controllerInstallationUpdateEventPredicate func(newObj, oldObj interface{}) bool
+
+	shootStateQueue                workqueue.RateLimitingInterface
+	shootStateUpdateEventPredicate func(newObj, oldObj interface{}) bool
 }
 
 func (c *controllerArtifacts) initialize(dnsInformers dnsinformers.SharedInformerFactory, extensionsInformers extensionsinformers.SharedInformerFactory) {
@@ -62,85 +64,123 @@ func (c *controllerArtifacts) initialize(dnsInformers dnsinformers.SharedInforme
 
 	c.registerExtensionControllerArtifacts(
 		dnsv1alpha1.DNSProviderKind,
-		func() runtime.Object { return &dnsv1alpha1.DNSProvider{} },
-		func() runtime.Object { return &dnsv1alpha1.DNSProviderList{} },
-		dnsProviderInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &dnsv1alpha1.DNSProvider{} },
+			newListObjFunc: func() runtime.Object { return &dnsv1alpha1.DNSProviderList{} },
+			informer:       dnsProviderInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: func(newObj, oldObj interface{}) bool {
+				var (
+					newExtensionObj, ok1 = newObj.(*dnsv1alpha1.DNSProvider)
+					oldExtensionObj, ok2 = oldObj.(*dnsv1alpha1.DNSProvider)
+				)
+				return ok1 && ok2 && oldExtensionObj.Spec.Type != newExtensionObj.Spec.Type
+			},
+		},
 		false, true,
 	)
 
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.BackupBucketResource,
-		func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
-		func() runtime.Object { return &extensionsv1alpha1.BackupBucketList{} },
-		backupBucketInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.BackupBucketList{} },
+			informer:       backupBucketInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+		},
 		false, true,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.BackupEntryResource,
-		func() runtime.Object { return &extensionsv1alpha1.BackupEntry{} },
-		func() runtime.Object { return &extensionsv1alpha1.BackupEntryList{} },
-		backupEntryInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.BackupEntry{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.BackupEntryList{} },
+			informer:       backupEntryInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.ContainerRuntimeResource,
-		func() runtime.Object { return &extensionsv1alpha1.ContainerRuntime{} },
-		func() runtime.Object { return &extensionsv1alpha1.ContainerRuntimeList{} },
-		containerRuntimeInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.ContainerRuntime{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.ContainerRuntimeList{} },
+			informer:       containerRuntimeInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.ControlPlaneResource,
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlaneList{} },
-		controlPlaneInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.ControlPlaneList{} },
+			informer:       controlPlaneInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.ExtensionResource,
-		func() runtime.Object { return &extensionsv1alpha1.Extension{} },
-		func() runtime.Object { return &extensionsv1alpha1.ExtensionList{} },
-		extensionInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.Extension{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.ExtensionList{} },
+			informer:       extensionInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.InfrastructureResource,
-		func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
-		func() runtime.Object { return &extensionsv1alpha1.InfrastructureList{} },
-		infrastructureInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.InfrastructureList{} },
+			informer:       infrastructureInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.NetworkResource,
-		func() runtime.Object { return &extensionsv1alpha1.Network{} },
-		func() runtime.Object { return &extensionsv1alpha1.NetworkList{} },
-		networkInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.Network{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.NetworkList{} },
+			informer:       networkInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.OperatingSystemConfigResource,
-		func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
-		func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfigList{} },
-		operatingSystemConfigInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfigList{} },
+			informer:       operatingSystemConfigInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 	c.registerExtensionControllerArtifacts(
 		extensionsv1alpha1.WorkerResource,
-		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
-		func() runtime.Object { return &extensionsv1alpha1.WorkerList{} },
-		workerInformer.Informer(),
+		&artifact{
+			newObjFunc:     func() runtime.Object { return &extensionsv1alpha1.Worker{} },
+			newListObjFunc: func() runtime.Object { return &extensionsv1alpha1.WorkerList{} },
+			informer:       workerInformer.Informer(),
+			controllerInstallationUpdateEventPredicate: extensionTypeChanged,
+			shootStateUpdateEventPredicate:             extensionStateOrResourcesChanged,
+		},
 		false, false,
 	)
 }
 
-func (c *controllerArtifacts) registerExtensionControllerArtifacts(kind string, newObjFunc, newListObjFunc func() runtime.Object, informer cache.SharedIndexInformer, disableControllerInstallationControl, disableShootStateSyncControl bool) {
-	c.hasSyncedFuncs = append(c.hasSyncedFuncs, informer.HasSynced)
-
-	artifact := &artifact{
-		newObjFunc:     newObjFunc,
-		newListObjFunc: newListObjFunc,
-		informer:       informer,
-	}
+func (c *controllerArtifacts) registerExtensionControllerArtifacts(kind string, artifact *artifact, disableControllerInstallationControl, disableShootStateSyncControl bool) {
+	c.hasSyncedFuncs = append(c.hasSyncedFuncs, artifact.informer.HasSynced)
 
 	if !disableControllerInstallationControl {
 		artifact.controllerInstallationExtensionQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), fmt.Sprintf("controllerinstallation-extension-%s", kind))
@@ -159,10 +199,8 @@ func (c *controllerArtifacts) addControllerInstallationEventHandlers() {
 		}
 
 		artifact.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc: createEnqueueFunc(artifact.controllerInstallationExtensionQueue),
-			UpdateFunc: createEnqueueOnUpdateFunc(artifact.controllerInstallationExtensionQueue, func(old, new extensionsv1alpha1.Object) bool {
-				return old.GetExtensionSpec().GetExtensionType() != new.GetExtensionSpec().GetExtensionType()
-			}),
+			AddFunc:    createEnqueueFunc(artifact.controllerInstallationExtensionQueue),
+			UpdateFunc: createEnqueueOnUpdateFunc(artifact.controllerInstallationExtensionQueue, artifact.controllerInstallationUpdateEventPredicate),
 			DeleteFunc: createEnqueueFunc(artifact.controllerInstallationExtensionQueue),
 		})
 	}
@@ -175,11 +213,8 @@ func (c *controllerArtifacts) addShootStateEventHandlers() {
 		}
 
 		artifact.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc: createEnqueueFunc(artifact.shootStateQueue),
-			UpdateFunc: createEnqueueOnUpdateFunc(artifact.shootStateQueue, func(old, new extensionsv1alpha1.Object) bool {
-				return !apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetState(), old.GetExtensionStatus().GetState()) ||
-					!apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetResources(), old.GetExtensionStatus().GetResources())
-			}),
+			AddFunc:    createEnqueueFunc(artifact.shootStateQueue),
+			UpdateFunc: createEnqueueOnUpdateFunc(artifact.shootStateQueue, artifact.shootStateUpdateEventPredicate),
 		})
 	}
 }

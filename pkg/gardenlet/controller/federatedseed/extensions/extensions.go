@@ -27,6 +27,7 @@ import (
 
 	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
 	"github.com/sirupsen/logrus"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -151,14 +152,9 @@ func createEnqueueFunc(queue workqueue.RateLimitingInterface) func(extensionObje
 	}
 }
 
-func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(old, new extensionsv1alpha1.Object) bool) func(newExtensionObject, oldExtensionObject interface{}) {
+func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(new, old interface{}) bool) func(newExtensionObject, oldExtensionObject interface{}) {
 	return func(newObj, oldObj interface{}) {
-		var (
-			newExtensionObj, ok1 = newObj.(extensionsv1alpha1.Object)
-			oldExtensionObj, ok2 = oldObj.(extensionsv1alpha1.Object)
-		)
-
-		if ok1 && ok2 && !predicateFunc(oldExtensionObj, newExtensionObj) {
+		if predicateFunc != nil && !predicateFunc(newObj, oldObj) {
 			return
 		}
 
@@ -172,4 +168,31 @@ func enqueue(queue workqueue.RateLimitingInterface, obj interface{}) {
 		return
 	}
 	queue.Add(key)
+}
+
+func extensionStateOrResourcesChanged(newObj, oldObj interface{}) bool {
+	return extensionPredicateFunc(
+		func(new, old extensionsv1alpha1.Object) bool {
+			return !apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetState(), old.GetExtensionStatus().GetState()) ||
+				!apiequality.Semantic.DeepEqual(new.GetExtensionStatus().GetResources(), old.GetExtensionStatus().GetResources())
+		},
+	)(newObj, oldObj)
+}
+
+func extensionTypeChanged(newObj, oldObj interface{}) bool {
+	return extensionPredicateFunc(
+		func(new, old extensionsv1alpha1.Object) bool {
+			return old.GetExtensionSpec().GetExtensionType() != new.GetExtensionSpec().GetExtensionType()
+		},
+	)(newObj, oldObj)
+}
+
+func extensionPredicateFunc(f func(extensionsv1alpha1.Object, extensionsv1alpha1.Object) bool) func(interface{}, interface{}) bool {
+	return func(newObj, oldObj interface{}) bool {
+		var (
+			newExtensionObj, ok1 = newObj.(extensionsv1alpha1.Object)
+			oldExtensionObj, ok2 = oldObj.(extensionsv1alpha1.Object)
+		)
+		return ok1 && ok2 && f(oldExtensionObj, newExtensionObj)
+	}
 }
