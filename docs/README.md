@@ -17,17 +17,18 @@
 ## Usage
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
-* [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
-* [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [Gardener configuration and usage](usage/configuration.md)
+* [`ManagedIstio` feature](usage/istio.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
-* [Supported Kubernetes versions](usage/supported_k8s_versions.md)
-* [Shoot Maintenance](usage/shoot_maintenance.md)
+* [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
+* [Shoot Maintenance](usage/shoot_maintenance.md)
+* [Supported Kubernetes versions](usage/supported_k8s_versions.md)
+* [Tolerations](usage/tolerations.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
-* [ManagedIstio Feature Gate](usage/istio.md)
+* [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 
 ## Proposals
 

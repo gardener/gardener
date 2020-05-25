@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -220,10 +219,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	needCheckForProtectedSeed := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
-	// Check whether seed is protected or not only if the shoot.spec.seedName has been updated. In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
-	if needCheckForProtectedSeed && shoot.Namespace != v1beta1constants.GardenNamespace && seed != nil && helper.TaintsHave(seed.Spec.Taints, core.SeedTaintProtected) {
-		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a protected seed"))
+	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
+	if mustCheckIfTaintsTolerated && seed != nil && !helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
+		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
 	}
 
 	// We don't allow shoot to be created on the seed which is already marked to be deleted.

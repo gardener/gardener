@@ -133,6 +133,46 @@ func TaintsHave(taints []core.SeedTaint, key string) bool {
 	return false
 }
 
+// TaintsAreTolerated returns true when all the given taints are tolerated by the given tolerations. It ignores the
+// deprecated taints that were migrated into the new `settings` field in the Seed specification.
+func TaintsAreTolerated(taints []core.SeedTaint, tolerations []core.Toleration) bool {
+	var relevantTaints []core.SeedTaint
+	for _, taint := range taints {
+		if taint.Key == core.DeprecatedSeedTaintDisableDNS || taint.Key == core.DeprecatedSeedTaintInvisible || taint.Key == core.DeprecatedSeedTaintDisableCapacityReservation {
+			continue
+		}
+		relevantTaints = append(relevantTaints, taint)
+	}
+
+	if len(relevantTaints) == 0 {
+		return true
+	}
+	if len(relevantTaints) > len(tolerations) {
+		return false
+	}
+
+	tolerationKeyValues := make(map[string]string, len(tolerations))
+	for _, toleration := range tolerations {
+		v := ""
+		if toleration.Value != nil {
+			v = *toleration.Value
+		}
+		tolerationKeyValues[toleration.Key] = v
+	}
+
+	for _, taint := range relevantTaints {
+		tolerationValue, ok := tolerationKeyValues[taint.Key]
+		if !ok {
+			return false
+		}
+		if taint.Value != nil && *taint.Value != tolerationValue {
+			return false
+		}
+	}
+
+	return true
+}
+
 // SeedSettingExcessCapacityReservationEnabled returns true if the 'excess capacity reservation' setting is enabled.
 func SeedSettingExcessCapacityReservationEnabled(settings *core.SeedSettings) bool {
 	return settings == nil || settings.ExcessCapacityReservation == nil || settings.ExcessCapacityReservation.Enabled

@@ -30,6 +30,9 @@ spec:
         checksum/secret-gardener-apiserver-encryption-config: {{ include (print $.Template.BasePath "/apiserver/secret-gardener-apiserver-encryption-config.yaml") . | sha256sum }}
         {{- end }}
         checksum/secret-gardener-apiserver-kubeconfig: {{ include (print $.Template.BasePath "/apiserver/secret-kubeconfig.yaml") . | sha256sum }}
+        {{- if .Values.global.apiserver.admissionConfig }}
+        checksum/configmap-gardener-apiserver-admission-config: {{ include (print $.Template.BasePath "/apiserver/configmap-admission-config.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.apiserver.podAnnotations }}
 {{ toYaml .Values.global.apiserver.podAnnotations | indent 8 }}
         {{- end }}
@@ -71,6 +74,9 @@ spec:
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver
+        {{- if .Values.global.apiserver.admissionConfig }}
+        - --admission-control-config-file=/etc/gardener-apiserver/admission/configuration.yaml
+        {{- end }}
         {{- if .Values.global.apiserver.audit.dynamicConfiguration }}
         - --audit-dynamic-configuration={{ .Values.global.apiserver.audit.dynamicConfiguration }}
         {{- end }}
@@ -234,6 +240,10 @@ spec:
         - name: gardener-audit-webhook-config
           mountPath: /etc/gardener-apiserver/auditwebhook
         {{- end }}
+        {{- if .Values.global.apiserver.admissionConfig }}
+        - name: gardener-apiserver-admission-config
+          mountPath: /etc/gardener-apiserver/admission
+        {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.3.12
@@ -294,6 +304,11 @@ spec:
       - name: gardener-audit-webhook-config
         secret:
           secretName: gardener-audit-webhook-config
+      {{- end }}
+      {{- if .Values.global.apiserver.admissionConfig }}
+      - name: gardener-apiserver-admission-config
+        configMap:
+          name: gardener-apiserver-admission-config
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---

@@ -99,6 +99,11 @@ type ShootSpec struct {
 	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
 	// +optional
 	Resources []NamedResourceReference `json:"resources,omitempty" protobuf:"bytes,16,rep,name=resources"`
+	// Tolerations contains the tolerations for taints on seed clusters.
+	// +patchMergeKey=key
+	// +patchStrategy=merge
+	// +optional
+	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

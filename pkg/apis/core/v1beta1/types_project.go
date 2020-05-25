@@ -77,6 +77,9 @@ type ProjectSpec struct {
 	// A nil value means that Gardener will determine the name of the namespace.
 	// +optional
 	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,6,opt,name=namespace"`
+	// Tolerations contains the tolerations for taints on seed clusters.
+	// +optional
+	Tolerations *ProjectTolerations `json:"tolerations,omitempty" protobuf:"bytes,7,opt,name=tolerations"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -101,6 +104,30 @@ type ProjectMember struct {
 	// Roles represents the list of roles of this member.
 	// +optional
 	Roles []string `json:"roles,omitempty" protobuf:"bytes,3,rep,name=roles"`
+}
+
+// ProjectTolerations contains the tolerations for taints on seed clusters.
+type ProjectTolerations struct {
+	// Defaults contains a list of tolerations that are added to the shoots in this project by default.
+	// +patchMergeKey=key
+	// +patchStrategy=merge
+	// +optional
+	Defaults []Toleration `json:"defaults,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,1,rep,name=defaults"`
+	// Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note
+	// that this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.
+	// +patchMergeKey=key
+	// +patchStrategy=merge
+	// +optional
+	Whitelist []Toleration `json:"whitelist,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,2,rep,name=whitelist"`
+}
+
+// Toleration is a toleration for a seed taint.
+type Toleration struct {
+	// Key is the toleration key to be applied to a project or shoot.
+	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
+	// Value is the toleration value corresponding to the toleration key.
+	// +optional
+	Value *string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
 const (

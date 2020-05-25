@@ -117,6 +117,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember":                         schema_pkg_apis_core_v1alpha1_ProjectMember(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectSpec":                           schema_pkg_apis_core_v1alpha1_ProjectSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectStatus":                         schema_pkg_apis_core_v1alpha1_ProjectStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectTolerations":                    schema_pkg_apis_core_v1alpha1_ProjectTolerations(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider":                              schema_pkg_apis_core_v1alpha1_Provider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                        schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Quota":                                 schema_pkg_apis_core_v1alpha1_Quota(ref),
@@ -152,6 +153,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateList":                        schema_pkg_apis_core_v1alpha1_ShootStateList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateSpec":                        schema_pkg_apis_core_v1alpha1_ShootStateSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStatus":                           schema_pkg_apis_core_v1alpha1_ShootStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration":                            schema_pkg_apis_core_v1alpha1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume":                                schema_pkg_apis_core_v1alpha1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType":                            schema_pkg_apis_core_v1alpha1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                schema_pkg_apis_core_v1alpha1_Worker(ref),
@@ -237,6 +239,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember":                          schema_pkg_apis_core_v1beta1_ProjectMember(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectSpec":                            schema_pkg_apis_core_v1beta1_ProjectSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectStatus":                          schema_pkg_apis_core_v1beta1_ProjectStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations":                     schema_pkg_apis_core_v1beta1_ProjectTolerations(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider":                               schema_pkg_apis_core_v1beta1_Provider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig":                         schema_pkg_apis_core_v1beta1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Quota":                                  schema_pkg_apis_core_v1beta1_Quota(ref),
@@ -268,6 +271,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                          schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                              schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                            schema_pkg_apis_core_v1beta1_ShootStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                             schema_pkg_apis_core_v1beta1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                 schema_pkg_apis_core_v1beta1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                             schema_pkg_apis_core_v1beta1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                 schema_pkg_apis_core_v1beta1_Worker(ref),
@@ -4133,11 +4137,17 @@ func schema_pkg_apis_core_v1alpha1_ProjectSpec(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations contains the default tolerations and a whitelist for taints on seed clusters.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectTolerations"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember", "k8s.io/api/rbac/v1.Subject"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectMember", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectTolerations", "k8s.io/api/rbac/v1.Subject"},
 	}
 }
 
@@ -4165,6 +4175,59 @@ func schema_pkg_apis_core_v1alpha1_ProjectStatus(ref common.ReferenceCallback) c
 				},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ProjectTolerations(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectTolerations contains the tolerations for taints on seed clusters.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"defaults": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Defaults contains a list of tolerations that are added to the shoots in this project by default.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+					"whitelist": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note that this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
 	}
 }
 
@@ -5480,12 +5543,31 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							},
 						},
 					},
+					"tolerations": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations contains the tolerations for taints on seed clusters.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -5762,6 +5844,34 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Toleration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Toleration is a toleration for a seed taint.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"key": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Key is the toleration key to be applied to a project or shoot.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"value": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Value is the toleration value corresponding to the toleration key.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"key"},
+			},
+		},
 	}
 }
 
@@ -9496,11 +9606,17 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations contains the tolerations for taints on seed clusters.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember", "k8s.io/api/rbac/v1.Subject"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations", "k8s.io/api/rbac/v1.Subject"},
 	}
 }
 
@@ -9528,6 +9644,59 @@ func schema_pkg_apis_core_v1beta1_ProjectStatus(ref common.ReferenceCallback) co
 				},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ProjectTolerations(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProjectTolerations contains the tolerations for taints on seed clusters.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"defaults": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Defaults contains a list of tolerations that are added to the shoots in this project by default.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+					"whitelist": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note that this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 
@@ -10800,12 +10969,31 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							},
 						},
 					},
+					"tolerations": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "key",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations contains the tolerations for taints on seed clusters.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -10926,6 +11114,34 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_Toleration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Toleration is a toleration for a seed taint.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"key": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Key is the toleration key to be applied to a project or shoot.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"value": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Value is the toleration value corresponding to the toleration key.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"key"},
+			},
+		},
 	}
 }
 

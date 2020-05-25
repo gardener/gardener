@@ -1,0 +1,14 @@
+---
+apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- name: ShootTolerationRestriction
+  configuration:
+    apiVersion: shoottolerationrestriction.admission.gardener.cloud/v1alpha1
+    kind: Configuration
+    defaults:
+    - key: foo
+    whitelist:
+    - key: foo
+    - key: bar
+      value: baz

@@ -180,7 +180,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.taints[1].key"),
+					"Field": Equal("spec.taints[1]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),

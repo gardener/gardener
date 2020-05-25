@@ -239,7 +239,7 @@ var _ = Describe("validator", func() {
 				oldShoot.Spec.SeedName = nil
 			})
 
-			It("create should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
+			It("create should pass because the Seed specified in shoot manifest does not have any taints", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -249,7 +249,7 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("update should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
+			It("update should pass because the Seed specified in shoot manifest does not have any taints", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -259,10 +259,11 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("update should pass because the Seed is now protected but the same while shoot has never been in garden namespace", func() {
+			It("update should pass because the Seed has new non-tolerated taints that were added after the shoot was scheduled to it", func() {
 				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 				oldShoot.Spec.SeedName = shoot.Spec.SeedName
 				shoot.Spec.Provider.Workers[0].Maximum += 1
+
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -272,8 +273,21 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("update should fail because the new Seed specified in shoot manifest is protected while shoot is not in garden namespace", func() {
+			It("create should fail because the Seed specified in shoot manifest has non-tolerated taints", func() {
 				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(BeForbiddenError())
+			})
+
+			It("update should fail because the new Seed specified in shoot manifest has non-tolerated taints", func() {
+				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -283,7 +297,10 @@ var _ = Describe("validator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("create should pass because shoot is not in garden namespace and seed is not protected", func() {
+			It("create should pass because shoot tolerates all taints of the seed", func() {
+				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+				shoot.Spec.Tolerations = []core.Toleration{{Key: core.SeedTaintProtected}}
+
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -293,31 +310,9 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("update should pass because shoot is not in garden namespace and seed is not protected", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("create should fail because shoot is not in garden namespace and seed is protected", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("update should fail because shoot is not in garden namespace and seed is protected", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+			It("update should pass because shoot tolerates all taints of the seed", func() {
+				seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
+				shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.StringPtr("bar")}}
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -325,69 +320,6 @@ var _ = Describe("validator", func() {
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("create should pass because shoot is in garden namespace and seed is protected", func() {
-				ns := "garden"
-				shoot.Namespace = ns
-				project.Spec.Namespace = &ns
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because shoot is in garden namespace and seed is protected", func() {
-				ns := "garden"
-				shoot.Namespace = ns
-				project.Spec.Namespace = &ns
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("create should pass because shoot is in garden namespace and seed is not protected", func() {
-				ns := "garden"
-				shoot.Namespace = ns
-				project.Spec.Namespace = &ns
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because shoot is in garden namespace and seed is not protected", func() {
-				ns := "garden"
-				shoot.Namespace = ns
-				project.Spec.Namespace = &ns
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

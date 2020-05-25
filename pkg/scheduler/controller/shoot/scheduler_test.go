@@ -18,7 +18,6 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -464,6 +463,19 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
+		It("should fail because it cannot find a seed cluster due to non-tolerated taints", func() {
+			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "foo"}}
+			shoot.Spec.Tolerations = nil
+
+			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+
 		It("should fail because it cannot find a seed cluster due to no shoot networks specified and no defaults", func() {
 			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -475,32 +487,6 @@ var _ = Describe("Scheduler_Control", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
-		})
-
-		It("should fail because it cannot find an unprotected seed cluster for a shoot not in garden namespace", func() {
-			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
-			shoot.Namespace = "garden-foo"
-			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: gardencorev1beta1.SeedTaintProtected}}
-
-			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
-
-			Expect(err).To(HaveOccurred())
-			Expect(bestSeed).To(BeNil())
-		})
-
-		It("should succeed because it considers a protected seed cluster for a shoot in garden namespace", func() {
-			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
-			shoot.Namespace = v1beta1constants.GardenNamespace
-			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: gardencorev1beta1.SeedTaintProtected}}
-
-			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bestSeed.Name).To(Equal(seed.Name))
 		})
 
 		It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {

@@ -122,3 +122,12 @@ func TestEmail(email string) bool {
 func IsTrue(value *bool) bool {
 	return value != nil && *value
 }
+
+// IDForKeyWithOptionalValue returns an identifier for the given key + optional value.
+func IDForKeyWithOptionalValue(key string, value *string) string {
+	v := ""
+	if value != nil {
+		v = "=" + *value
+	}
+	return key + v
+}
