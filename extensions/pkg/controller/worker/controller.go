@@ -87,7 +87,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	return addStateUpdatingController(mgr, args.ControllerOptions)
+	return addStateUpdatingController(mgr, args.ControllerOptions, args.Type)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -108,19 +108,26 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Worker{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }
 
-func addStateUpdatingController(mgr manager.Manager, options controller.Options) error {
-	stateActuator := NewStateActuator(log.Log.WithName("worker-state-actuator"))
-	stateReconciler := NewStateReconciler(mgr, stateActuator)
-	addStateUpdatingControllerOptions := controller.Options{
-		MaxConcurrentReconciles: options.MaxConcurrentReconciles,
-		Reconciler:              stateReconciler,
-	}
-	predicates := []predicate.Predicate{
-		extensionspredicate.Or(
-			MachineStatusHasChanged(),
-			predicate.GenerationChangedPredicate{},
-		),
-	}
+func addStateUpdatingController(mgr manager.Manager, options controller.Options, extensionType string) error {
+	var (
+		stateActuator   = NewStateActuator(log.Log.WithName("worker-state-actuator"))
+		stateReconciler = NewStateReconciler(mgr, stateActuator)
+
+		addStateUpdatingControllerOptions = controller.Options{
+			MaxConcurrentReconciles: options.MaxConcurrentReconciles,
+			Reconciler:              stateReconciler,
+		}
+
+		machinePredicates = []predicate.Predicate{
+			extensionspredicate.Or(
+				MachineStatusHasChanged(),
+				predicate.GenerationChangedPredicate{},
+			),
+		}
+		workerPredicates = []predicate.Predicate{
+			extensionspredicate.HasType(extensionType),
+		}
+	)
 
 	ctrl, err := controller.New(StateUpdatingControllerName, mgr, addStateUpdatingControllerOptions)
 	if err != nil {
@@ -128,12 +135,12 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options)
 	}
 
 	if err := ctrl.Watch(&source.Kind{Type: &machinev1alpha1.MachineSet{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(MachineSetToWorkerMapper(nil), extensionshandler.UpdateWithNew),
-	}, predicates...); err != nil {
+		ToRequests: extensionshandler.SimpleMapper(MachineSetToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+	}, machinePredicates...); err != nil {
 		return err
 	}
 
 	return ctrl.Watch(&source.Kind{Type: &machinev1alpha1.Machine{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(MachineToWorkerMapper(nil), extensionshandler.UpdateWithNew),
-	}, predicates...)
+		ToRequests: extensionshandler.SimpleMapper(MachineToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+	}, machinePredicates...)
 }
