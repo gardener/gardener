@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -255,6 +256,12 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1be
 			candidateErrors[seed.Name] = fmt.Errorf("seed does not support DNS")
 			continue
 		}
+
+		if shoot.Namespace != v1beta1constants.GardenNamespace && gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected) {
+			candidateErrors[seed.Name] = fmt.Errorf("seed is protected but shoot is not in garden namespace")
+			continue
+		}
+
 		candidates = append(candidates, seed)
 	}
 
