@@ -322,13 +322,13 @@ func prepareSeedConfig(ctx context.Context, k8sGardenClient kubernetes.Interface
 		},
 		Settings: &gardencorev1beta1.SeedSettings{
 			ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-				Enabled: shootedSeedConfig.DisableCapacityReservation == nil || *shootedSeedConfig.DisableCapacityReservation,
+				Enabled: shootedSeedConfig.DisableCapacityReservation == nil || !*shootedSeedConfig.DisableCapacityReservation,
 			},
 			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 				Visible: shootedSeedConfig.Visible == nil || *shootedSeedConfig.Visible,
 			},
 			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-				Enabled: shootedSeedConfig.DisableDNS == nil || *shootedSeedConfig.DisableDNS,
+				Enabled: shootedSeedConfig.DisableDNS == nil || !*shootedSeedConfig.DisableDNS,
 			},
 		},
 		Taints: taints,
