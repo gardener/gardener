@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "namespace", shootTechnicalID, "name", be.Name)
+		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "name", be.Name)
 		return reconcile.Result{}, nil
 	}
 
