@@ -168,6 +168,10 @@ type SeedSettings struct {
 	// ShootDNS controls the shoot DNS settings for the seed.
 	// +optional
 	ShootDNS *SeedSettingShootDNS `json:"shootDNS,omitempty" protobuf:"bytes,3,opt,name=shootDNS"`
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the
+	// seed.
+	// +optional
+	LoadBalancerServices *SeedSettingLoadBalancerServices `json:"loadBalancerServices,omitempty" protobuf:"bytes,4,opt,name=loadBalancerServices"`
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -191,6 +195,14 @@ type SeedSettingScheduling struct {
 	// Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
 	// are not considered by the scheduler.
 	Visible bool `json:"visible" protobuf:"bytes,1,opt,name=visible"`
+}
+
+// SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+// seed.
+type SeedSettingLoadBalancerServices struct {
+	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,1,rep,name=annotations"`
 }
 
 // SeedTaint describes a taint on a seed.

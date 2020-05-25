@@ -149,6 +149,9 @@ type SeedSettings struct {
 	Scheduling *SeedSettingScheduling
 	// ShootDNS controls the shoot DNS settings for the seed.
 	ShootDNS *SeedSettingShootDNS
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the
+	// seed.
+	LoadBalancerServices *SeedSettingLoadBalancerServices
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -172,6 +175,13 @@ type SeedSettingScheduling struct {
 	// Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
 	// are not considered by the scheduler.
 	Visible bool
+}
+
+// SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+// seed.
+type SeedSettingLoadBalancerServices struct {
+	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+	Annotations map[string]string
 }
 
 // SeedTaint describes a taint on a seed.

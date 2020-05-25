@@ -113,6 +113,10 @@ func (b *Builder) Build() (*Seed, error) {
 		seed.Secret = seedSecret
 	}
 
+	if seedObject.Spec.Settings != nil && seedObject.Spec.Settings.LoadBalancerServices != nil {
+		seed.LoadBalancerServiceAnnotations = seedObject.Spec.Settings.LoadBalancerServices.Annotations
+	}
+
 	return seed, nil
 }
 
@@ -320,10 +324,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
-	const (
-		chartName      = "seed-bootstrap"
-		istioChartName = "istio"
-	)
+	const chartName = "seed-bootstrap"
 
 	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
 	if err != nil {
@@ -655,6 +656,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 				TrustDomain:     "cluster.local",
 				Image:           igwImage.String(),
 				IstiodNamespace: common.IstioNamespace,
+				Annotations:     seed.LoadBalancerServiceAnnotations,
 			},
 			common.IstioIngressGatewayNamespace,
 			chartApplier,

@@ -133,6 +133,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":  schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":       schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                 schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                   schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings":                          schema_pkg_apis_core_v1alpha1_SeedSettings(ref),
@@ -251,6 +252,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                  schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings":                           schema_pkg_apis_core_v1beta1_SeedSettings(ref),
@@ -4819,6 +4821,34 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref comm
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4886,11 +4916,17 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"),
 						},
 					},
+					"loadBalancerServices": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"},
 	}
 }
 
@@ -10112,6 +10148,34 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into every load balancer service object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10179,11 +10243,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"),
 						},
 					},
+					"loadBalancerServices": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"},
 	}
 }
 

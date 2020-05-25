@@ -6,6 +6,9 @@ metadata:
   annotations:
     service.alpha.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+{{- if .Values.annotations }}
+{{ .Values.annotations | toYaml | indent 4 }}
+{{- end }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:

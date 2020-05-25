@@ -41,3 +41,12 @@ By setting the `.spec.settings.shootDNS.enabled` field this behavior can be cont
 The taint keys are still supported for backwards compatibility but deprecated and will be removed in a future version.
 The rationale behind it is the implementation of tolerations similar to Kubernetes tolerations.
 More information about it can be found in [#2193](https://github.com/gardener/gardener/issues/2193).
+
+## Load Balancer Services
+
+Gardener creates certain Kubernetes `Service` objects of type `LoadBalancer` in the seed cluster.
+Most prominently, they are used for exposing the shoot control planes, namely the kube-apiserver of the shoot clusters.
+In most cases, the cloud-controller-manager (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
+[This document](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) provides a good overview and many examples.
+
+By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.

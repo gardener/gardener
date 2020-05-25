@@ -128,6 +128,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 		}
 	}
 
+	if seedSpec.Settings != nil && seedSpec.Settings.LoadBalancerServices != nil {
+		allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
+	}
+
 	return allErrs
 }
 

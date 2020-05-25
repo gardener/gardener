@@ -1,7 +1,8 @@
 labels:
   app: istio-ingressgateway
   istio: ingressgateway
-image: docker.io/istio/proxyv2:1.5.1
+annotations: {}
+image: to-be-injected-by-imagevector
 trustDomain: cluster.local
 istiodNamespace: istio-system
 deployNamespace: false

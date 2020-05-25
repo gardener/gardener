@@ -741,8 +741,13 @@ func (b *Botanist) DeployNetworkPolicies(ctx context.Context) error {
 
 // DeployKubeAPIServerService deploys kube-apiserver service.
 func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
-	const name = "kube-apiserver-service"
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name)
+	var (
+		name   = "kube-apiserver-service"
+		values = map[string]interface{}{
+			"annotations": b.Seed.LoadBalancerServiceAnnotations,
+		}
+	)
+	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.

@@ -15,6 +15,8 @@
 package validation_test
 
 import (
+	"strings"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
@@ -273,6 +275,68 @@ var _ = Describe("Seed Validation Tests", func() {
 				"Field":  Equal("spec.networks.shootDefaults.services"),
 				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
 			}))
+		})
+
+		Context("settings", func() {
+			It("should allow valid load balancer service annotations", func() {
+				seed.Spec.Settings = &core.SeedSettings{
+					LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+						Annotations: map[string]string{
+							"simple":                          "bar",
+							"now-with-dashes":                 "bar",
+							"1-starts-with-num":               "bar",
+							"1234":                            "bar",
+							"simple/simple":                   "bar",
+							"now-with-dashes/simple":          "bar",
+							"now-with-dashes/now-with-dashes": "bar",
+							"now.with.dots/simple":            "bar",
+							"now-with.dashes-and.dots/simple": "bar",
+							"1-num.2-num/3-num":               "bar",
+							"1234/5678":                       "bar",
+							"1.2.3.4/5678":                    "bar",
+							"UpperCase123":                    "bar",
+						},
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should prevent invalid load balancer service annotations", func() {
+				seed.Spec.Settings = &core.SeedSettings{
+					LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
+						Annotations: map[string]string{
+							"nospecialchars^=@":      "bar",
+							"cantendwithadash-":      "bar",
+							"only/one/slash":         "bar",
+							strings.Repeat("a", 254): "bar",
+						},
+					},
+				}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.annotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.settings.loadBalancerServices.annotations"),
+					})),
+				))
+			})
 		})
 
 		It("should fail updating immutable fields", func() {
