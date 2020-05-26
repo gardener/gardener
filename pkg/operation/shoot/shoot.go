@@ -34,6 +34,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -191,6 +192,8 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.Networks = networks
+
+	shoot.ResourceRefs = getResourceRefs(shootObject)
 
 	return shoot, nil
 }
@@ -586,4 +589,13 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	}
 
 	return requiredExtensions
+}
+
+// getResourceRefs returns resource references from the Shoot spec as map[string]autoscalingv1.CrossVersionObjectReference.
+func getResourceRefs(shoot *gardencorev1beta1.Shoot) map[string]autoscalingv1.CrossVersionObjectReference {
+	resourceRefs := make(map[string]autoscalingv1.CrossVersionObjectReference)
+	for _, r := range shoot.Spec.Resources {
+		resourceRefs[r.Name] = r.ResourceRef
+	}
+	return resourceRefs
 }

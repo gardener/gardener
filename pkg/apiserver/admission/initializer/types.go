@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
@@ -62,6 +63,12 @@ type WantsKubeClientset interface {
 	admission.InitializationValidator
 }
 
+// WantsDynamicClient defines a function which sets a dynamic client for admission plugins that need it.
+type WantsDynamicClient interface {
+	SetDynamicClient(dynamic.Interface)
+	admission.InitializationValidator
+}
+
 // WantsAuthorizer defines a function which sets an authorizer for admission plugins that need it.
 type WantsAuthorizer interface {
 	SetAuthorizer(authorizer.Authorizer)
@@ -78,6 +85,8 @@ type pluginInitializer struct {
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface
+
+	dynamicClient dynamic.Interface
 
 	authorizer authorizer.Authorizer
 }

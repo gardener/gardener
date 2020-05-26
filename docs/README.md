@@ -87,6 +87,7 @@
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
 * [Extending project roles](extensions/project-roles.md)
+* [Referenced resources](extensions/referenced-resources.md)
 
 ## Testing
 

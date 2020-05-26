@@ -22,13 +22,15 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
@@ -74,13 +76,13 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, workerObj *extensionsv1alpha1.Worker) error {
 	a.logger.Info("Deleting the machine-controller-manager", "worker", fmt.Sprintf("%s/%s", workerObj.Namespace, workerObj.Name))
 
-	if err := extensionscontroller.DeleteManagedResource(ctx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
+	if err := managedresources.DeleteManagedResource(ctx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", util.ObjectName(workerObj))
 	}
 
 	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	if err := extensionscontroller.WaitUntilManagedResourceDeleted(timeoutCtx3, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
+	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx3, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
 		return errors.Wrapf(err, "error while waiting for managed resource containing mcm for '%s' to be deleted", util.ObjectName(workerObj))
 	}
 

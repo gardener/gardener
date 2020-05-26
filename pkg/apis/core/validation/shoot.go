@@ -477,9 +477,14 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 
 func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	names := make(map[string]bool)
 	for i, resource := range resources {
 		if resource.Name == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		} else if names[resource.Name] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), resource.Name))
+		} else {
+			names[resource.Name] = true
 		}
 		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
 	}

@@ -544,6 +544,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		It("should forbid resources with non-unique names", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "Secret",
+					Name:       "test-secret",
+					APIVersion: "v1",
+				},
+			}
+			shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.resources[1].name"),
+				})),
+			))
+		})
+
 		It("should allow resources w/ names and valid references", func() {
 			ref := core.NamedResourceReference{
 				Name: "test",

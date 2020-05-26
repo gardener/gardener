@@ -61,6 +61,7 @@ import (
 	"k8s.io/apiserver/pkg/server/resourceconfig"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -207,8 +208,13 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		if err != nil {
 			return nil, err
 		}
-
 		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+
+		// dynamic client
+		dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
+		if err != nil {
+			return nil, err
+		}
 
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
@@ -218,6 +224,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 				o.SettingsInformerFactory,
 				o.KubeInformerFactory,
 				kubeClient,
+				dynamicClient,
 				gardenerAPIServerConfig.Authorization.Authorizer,
 			),
 		}, nil

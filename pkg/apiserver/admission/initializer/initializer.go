@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
@@ -34,6 +35,7 @@ func New(
 	settingsInformers settingsinformer.SharedInformerFactory,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
+	dynamicClient dynamic.Interface,
 	authz authorizer.Authorizer,
 ) admission.PluginInitializer {
 	return pluginInitializer{
@@ -46,6 +48,8 @@ func New(
 
 		kubeInformers: kubeInformers,
 		kubeClient:    kubeClient,
+
+		dynamicClient: dynamicClient,
 
 		authorizer: authz,
 	}
@@ -74,6 +78,10 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 	}
 	if wants, ok := plugin.(WantsKubeClientset); ok {
 		wants.SetKubeClientset(i.kubeClient)
+	}
+
+	if wants, ok := plugin.(WantsDynamicClient); ok {
+		wants.SetDynamicClient(i.dynamicClient)
 	}
 
 	if wants, ok := plugin.(WantsAuthorizer); ok {

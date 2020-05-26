@@ -36,9 +36,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -60,6 +62,7 @@ func Register(plugins *admission.Plugins) {
 type ReferenceManager struct {
 	*admission.Handler
 	kubeClient          kubernetes.Interface
+	dynamicClient       dynamic.Interface
 	authorizer          authorizer.Authorizer
 	secretLister        kubecorev1listers.SecretLister
 	configMapLister     kubecorev1listers.ConfigMapLister
@@ -76,6 +79,7 @@ var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
+	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -140,6 +144,11 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 // SetKubeClientset gets the clientset from the Kubernetes client.
 func (r *ReferenceManager) SetKubeClientset(c kubernetes.Interface) {
 	r.kubeClient = c
+}
+
+// SetDynamicClient sets the dynamic client.
+func (r *ReferenceManager) SetDynamicClient(c dynamic.Interface) {
+	r.dynamicClient = c
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -257,7 +266,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			annotations[common.GardenCreatedByDeprecated] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
 		}
-		err = r.ensureShootReferences(shoot)
+		err = r.ensureShootReferences(ctx, a, shoot)
 
 	case core.Kind("Project"):
 		project, ok := a.GetObject().(*core.Project)
@@ -502,7 +511,7 @@ func (r *ReferenceManager) ensureSeedReferences(seed *core.Seed) error {
 	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
-func (r *ReferenceManager) ensureShootReferences(shoot *core.Shoot) error {
+func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, shoot *core.Shoot) error {
 	if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
 		return err
 	}
@@ -524,6 +533,48 @@ func (r *ReferenceManager) ensureShootReferences(shoot *core.Shoot) error {
 			return err
 		}
 		kubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = auditPolicy.ResourceVersion
+	}
+
+	for _, resource := range shoot.Spec.Resources {
+		// Get the APIResource for the current resource
+		apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		if err != nil {
+			return err
+		}
+		if apiResource == nil {
+			return fmt.Errorf("shoot resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		}
+
+		// Parse APIVersion to GroupVersion
+		gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
+		if err != nil {
+			return err
+		}
+
+		// Check if the resource is namespaced
+		if !apiResource.Namespaced {
+			return fmt.Errorf("failed to resolve shoot resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
+		}
+
+		// Check if the user is allowed to read the resource
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        gv.Group,
+			APIVersion:      gv.Version,
+			Resource:        apiResource.Name,
+			Namespace:       shoot.Namespace,
+			Name:            resource.ResourceRef.Name,
+			ResourceRequest: true,
+		}
+		if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
+			return errors.New("shoot cannot reference a resource you are not allowed to read")
+		}
+
+		// Check if the resource actually exists
+		if err := r.lookupResource(gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
+			return fmt.Errorf("failed to resolve shoot resource reference %q: %v", resource.Name, err)
+		}
 	}
 
 	return nil
@@ -568,5 +619,25 @@ func (r *ReferenceManager) lookupSecret(namespace, name string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (r *ReferenceManager) getAPIResource(groupVersion, kind string) (*metav1.APIResource, error) {
+	resources, err := r.kubeClient.Discovery().ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		return nil, err
+	}
+	for _, apiResource := range resources.APIResources {
+		if apiResource.Kind == kind {
+			return &apiResource, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *ReferenceManager) lookupResource(resource schema.GroupVersionResource, namespace, name string) error {
+	if _, err := r.dynamicClient.Resource(resource).Namespace(namespace).Get(name, metav1.GetOptions{}); err != nil {
+		return err
+	}
 	return nil
 }
