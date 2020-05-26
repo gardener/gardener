@@ -553,7 +553,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[1m])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[2m])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,

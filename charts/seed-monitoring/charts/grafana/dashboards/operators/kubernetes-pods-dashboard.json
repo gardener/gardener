@@ -169,7 +169,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"$container\",pod=~\"$pod\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"$container\",pod=~\"$pod\"}[2m]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -283,7 +283,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{pod=~\"$pod\"}[1m])) by (pod)",
+          "expr": "sum(rate(container_network_receive_bytes_total{pod=~\"$pod\"}[2m])) by (pod)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Received",
@@ -291,7 +291,7 @@
           "step": 20
         },
         {
-          "expr": "- sum(rate(container_network_transmit_bytes_total{pod=~\"$pod\"}[1m])) by (pod)",
+          "expr": "- sum(rate(container_network_transmit_bytes_total{pod=~\"$pod\"}[2m])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Sent",
