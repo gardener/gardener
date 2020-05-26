@@ -816,7 +816,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod, container)",
+          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[2m])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
@@ -826,7 +826,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Container Disk Read Operations (1m rate)",
+      "title": "Container Disk Read Operations (2m rate)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -900,7 +900,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[1m])) by(pod, container)",
+          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[2m])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
@@ -910,7 +910,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Container Disk Write Operations (1m rate)",
+      "title": "Container Disk Write Operations (2m rate)",
       "tooltip": {
         "shared": true,
         "sort": 0,
