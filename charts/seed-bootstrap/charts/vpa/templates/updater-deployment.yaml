@@ -36,7 +36,7 @@ spec:
         args:
         - --min-replicas=1
         - --eviction-tolerance=1
-        - --evict-after-oom-treshold=48h
+        - --evict-after-oom-threshold=48h
         - --v=2
         - --stderrthreshold=info
         resources:

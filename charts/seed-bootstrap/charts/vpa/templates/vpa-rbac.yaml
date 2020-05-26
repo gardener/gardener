@@ -58,6 +58,14 @@ rules:
   - list
   - watch
   - patch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -104,8 +112,8 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
-  - "extensions"
   - "apps"
+  - "extensions"
   resources:
   - replicasets
   verbs:
@@ -172,6 +180,13 @@ metadata:
   labels:
 {{ toYaml .Values.labels | indent 4 }}
 rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*/scale'
+  verbs:
+  - get
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -292,6 +307,16 @@ rules:
   resources:
   - verticalpodautoscalers
   verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - create
+  - update
   - get
   - list
   - watch
