@@ -53,4 +53,5 @@ webhooks:
       path: /webhooks/validate-kubeconfig-secrets
     {{- end }}
     caBundle: {{ required ".Values.global.controller.config.server.https.tls.caBundle is required" (b64enc .Values.global.controller.config.server.https.tls.caBundle) }}
+  sideEffects: None
 {{- end }}
