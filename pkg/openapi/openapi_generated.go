@@ -2721,6 +2721,13 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"failSwapOn": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -7820,6 +7827,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 						SchemaProps: spec.SchemaProps{
 							Description: "ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled. Default: 1m",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"failSwapOn": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
