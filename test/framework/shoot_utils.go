@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -218,6 +219,11 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{}
 		}
 		shoot.Spec.Hibernation.Enabled = &cfg.startHibernated
+	}
+
+	// allow privileged containers defaults to true
+	if cfg.allowPrivilegedContainers != nil {
+		shoot.Spec.Kubernetes.AllowPrivilegedContainers = cfg.allowPrivilegedContainers
 	}
 
 	if clearExtensions {
