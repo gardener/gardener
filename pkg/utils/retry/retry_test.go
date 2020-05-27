@@ -15,19 +15,21 @@
 package retry_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	mockutilcontext "github.com/gardener/gardener/pkg/mock/gardener/utils/context"
-
 	mockretry "github.com/gardener/gardener/pkg/mock/gardener/utils/retry"
 	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
 	. "github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/golang/mock/gomock"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 )
 
 func TestRetry(t *testing.T) {
@@ -259,6 +261,18 @@ var _ = Describe("Retry", func() {
 			Expect(err).To(BeIdenticalTo(minorErr))
 		})
 	})
+
+	DescribeTable("#MinorOrSevereError",
+		func(retryCountUntilSevere, threshold int, minorOrSevereErr error, matcher types.GomegaMatcher) {
+			done, err := MinorOrSevereError(retryCountUntilSevere, threshold, minorOrSevereErr)
+
+			Expect(done).To(matcher)
+			Expect(err).To(BeIdenticalTo(minorOrSevereErr))
+		},
+		Entry("count below threshold", 0, 1, errors.New("foo"), BeFalse()),
+		Entry("count exactly threshold", 1, 1, errors.New("foo"), BeFalse()),
+		Entry("count above threshold", 2, 1, errors.New("foo"), BeTrue()),
+	)
 
 	Describe("#Ok", func() {
 		It("should return done=true and no error", func() {

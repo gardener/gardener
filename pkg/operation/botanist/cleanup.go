@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -46,9 +45,6 @@ import (
 )
 
 const (
-	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
-
 	// Provider is the kubernetes provider label.
 	Provider = "provider"
 	// KubernetesProvider is the 'kubernetes' value of the Provider label.

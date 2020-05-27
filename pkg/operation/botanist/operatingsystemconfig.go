@@ -375,6 +375,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 		b.Shoot.SeedNamespace,
 		name,
 		DefaultInterval,
+		15*time.Second,
 		30*time.Second,
 		func(obj runtime.Object) error {
 			o, ok := obj.(*extensionsv1alpha1.OperatingSystemConfig)

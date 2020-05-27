@@ -101,6 +101,7 @@ func (b *Botanist) WaitUntilNetworkIsReady(ctx context.Context) error {
 		b.Shoot.SeedNamespace,
 		b.Shoot.Info.Name,
 		DefaultInterval,
+		DefaultSevereThreshold,
 		NetworkDefaultTimeout,
 		nil,
 	)

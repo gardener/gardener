@@ -120,6 +120,7 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 		b.Shoot.SeedNamespace,
 		b.Shoot.Info.Name,
 		DefaultInterval,
+		DefaultSevereThreshold,
 		InfrastructureDefaultTimeout,
 		func(obj runtime.Object) error {
 			infrastructure, ok := obj.(*extensionsv1alpha1.Infrastructure)
