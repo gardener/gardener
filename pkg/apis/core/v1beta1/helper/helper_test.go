@@ -1175,5 +1175,71 @@ var _ = Describe("helper", func() {
 				),
 			)
 		})
+
+		DescribeTable("#UpsertLastError",
+			func(lastErrors []gardencorev1beta1.LastError, lastError gardencorev1beta1.LastError, expected []gardencorev1beta1.LastError) {
+				Expect(UpsertLastError(lastErrors, lastError)).To(Equal(expected))
+			},
+
+			Entry(
+				"insert",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+				gardencorev1beta1.LastError{TaskID: pointer.StringPtr("foo"), Description: "error"},
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("bar")},
+					{TaskID: pointer.StringPtr("foo"), Description: "error"},
+				},
+			),
+			Entry(
+				"update",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("foo"), Description: "error"},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+				gardencorev1beta1.LastError{TaskID: pointer.StringPtr("foo"), Description: "new-error"},
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("foo"), Description: "new-error"},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+			),
+		)
+
+		DescribeTable("#DeleteLastErrorByTaskID",
+			func(lastErrors []gardencorev1beta1.LastError, taskID string, expected []gardencorev1beta1.LastError) {
+				Expect(DeleteLastErrorByTaskID(lastErrors, taskID)).To(Equal(expected))
+			},
+
+			Entry(
+				"task id not found",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+				"foo",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+			),
+			Entry(
+				"task id found",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("foo")},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+				"foo",
+				[]gardencorev1beta1.LastError{
+					{},
+					{TaskID: pointer.StringPtr("bar")},
+				},
+			),
+		)
 	})
 })
