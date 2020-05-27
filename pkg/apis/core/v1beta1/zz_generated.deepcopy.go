@@ -1422,6 +1422,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.FailSwapOn != nil {
+		in, out := &in.FailSwapOn, &out.FailSwapOn
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

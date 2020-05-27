@@ -830,6 +830,10 @@ message KubeletConfig {
   // +optional
   // Default: 1m
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration imagePullProgressDeadline = 12;
+
+  // FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
+  // +optional
+  optional bool failSwapOn = 13;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
