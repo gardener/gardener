@@ -24,7 +24,10 @@ APISERVER_ENDPOINT_NAME="gardener-apiserver"
 APISERVER_SERVICE_PORT=443
 APISERVICE_PORT_STRING=""
 
-APISERVER_EXTERNALNAME=gardener.localhost
+APISERVER_EXTERNALNAME=docker.for.mac.localhost
+if [[ "$(uname -s)" != *"Darwin"* ]]; then
+  APISERVER_EXTERNALNAME=gardener.localhost
+fi
 
 CORE_V1ALPHA1_APISERVICE_NAME="v1alpha1.core.gardener.cloud"
 CORE_V1BETA1_APISERVICE_NAME="v1beta1.core.gardener.cloud"
@@ -37,7 +40,6 @@ if [[ $(k8s_env) == "$NODELESS" ]]; then
   APISERVER_SERVICE_PORT=8443
   APISERVICE_PORT_STRING="    port: $APISERVER_SERVICE_PORT"
 fi
-
 
 if kubectl get apiservice "$CORE_V1ALPHA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1ALPHA1_APISERVICE_NAME --wait=false

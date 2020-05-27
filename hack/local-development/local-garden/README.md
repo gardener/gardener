@@ -10,9 +10,8 @@ Local-Garden consists of the following main directories:
 - *Certificates:* This directory contains all the certificates/keys/configs required for this setup.
 - *Kubeconfigs:* Contains the necessary configuration required for creating the admin and the controller-manager kubeconfigs.
 
-The rest of the directory consists of scripts to run the nodeless cluster components `kube-api-server`, `kube-controller-manager`,
+The rest of the directory consists of scripts to run the node-less cluster components `kube-apiserver`, `kube-controller-manager`,
 `etcd`. As well as scripts required for the Gardener aggregated API-server `gardener-etcd` and `apply-proxy-rbac`.
-
 
 The below figure describes how these components interact with one another.
 ![](img/2020-01-23-10-03-21.png)
