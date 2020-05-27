@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-LABEL=${1:-local-garden}
-
+LABEL="${1:-local-garden}"
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
 IMAGE=k8s.gcr.io/kube-controller-manager:v1.17.3
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys -v $SCRIPTPATH/kubeconfigs/default-controller-manager.conf:/kubeconfig"
-
 
 echo "Starting gardener-dev kube-controller-manager!"
 docker run -d --name kube-controller-manager -l $LABEL --network gardener-dev --rm $MOUNTS $IMAGE /usr/local/bin/kube-controller-manager \

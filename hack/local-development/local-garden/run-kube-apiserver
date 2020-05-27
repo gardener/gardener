@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-
-IP_ROUTE=$(ip route get 1)
-IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
-
-DNS_NAME=gardener.localhost
-HOSTS_LINE=$DNS_NAME:$IP_ADDRESS
+IP_ROUTE=""
+IP_ADDRESS=""
+ADD_HOSTS=""
+if [[ "$(uname -s)" != *"Darwin"* ]]; then
+  IP_ROUTE=$(ip route get 1)
+  IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+  ADD_HOSTS="--add-host gardener.localhost:$IP_ADDRESS"
+fi
 
 LABEL=${1:-local-garden}
 
@@ -17,7 +19,7 @@ ETCD_PORT=12379
 LISTEN_PORT="2443"
 
 echo "Starting gardener-dev kube-apiserver!"
-docker run -d --name kube-apiserver -l $LABEL --add-host $HOSTS_LINE --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS $IMAGE /usr/local/bin/kube-apiserver \
+docker run -d --name kube-apiserver -l $LABEL $ADD_HOSTS --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS $IMAGE /usr/local/bin/kube-apiserver \
   --etcd-servers="https://etcd:$ETCD_PORT" \
   --storage-media-type='application/json' \
   --authorization-mode="Node,RBAC" \

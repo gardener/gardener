@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
-KUBECONFIGPATH=$SCRIPTPATH/kubeconfigs/default-admin.conf
+KUBECONFIGPATH="$(dirname $0)/kubeconfigs/default-admin.conf"
 
 cat <<EOF | KUBECONFIG=$KUBECONFIGPATH kubectl apply -f -
 ---
@@ -19,7 +18,6 @@ metadata:
     gardener.cloud/role: admin
 rules:
 - apiGroups:
-  - garden.sapcloud.io
   - core.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
