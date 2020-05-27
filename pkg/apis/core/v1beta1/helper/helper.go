@@ -878,3 +878,38 @@ func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, nam
 	}
 	return nil
 }
+
+// UpsertLastError adds a 'last error' to the given list of existing 'last errors' if it does not exist yet. Otherwise,
+// it updates it.
+func UpsertLastError(lastErrors []gardencorev1beta1.LastError, lastError gardencorev1beta1.LastError) []gardencorev1beta1.LastError {
+	var (
+		out   []gardencorev1beta1.LastError
+		found bool
+	)
+
+	for _, lastErr := range lastErrors {
+		if lastErr.TaskID != nil && lastError.TaskID != nil && *lastErr.TaskID == *lastError.TaskID {
+			out = append(out, lastError)
+			found = true
+		} else {
+			out = append(out, lastErr)
+		}
+	}
+
+	if !found {
+		out = append(out, lastError)
+	}
+
+	return out
+}
+
+// DeleteLastErrorByTaskID removes the 'last error' with the given task ID from the given 'last error' list.
+func DeleteLastErrorByTaskID(lastErrors []gardencorev1beta1.LastError, taskID string) []gardencorev1beta1.LastError {
+	var out []gardencorev1beta1.LastError
+	for _, lastErr := range lastErrors {
+		if lastErr.TaskID == nil || taskID != *lastErr.TaskID {
+			out = append(out, lastErr)
+		}
+	}
+	return out
+}

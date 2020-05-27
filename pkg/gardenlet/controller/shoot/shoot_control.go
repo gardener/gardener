@@ -258,6 +258,8 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
 }
 
+const taskID = "initializeOperation"
+
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
 	gardenObj, err := garden.
 		NewBuilder().
@@ -345,7 +347,7 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, shoot.Status.LastErrors...)
+		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -449,7 +451,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, shoot.Status.LastErrors...)
+		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -586,6 +588,7 @@ func (c *Controller) updateShootStatusOperationStart(shoot *gardencorev1beta1.Sh
 				shoot.Status.TechnicalID = shootNamespace
 			}
 
+			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 			shoot.Status.Gardener = *c.identity
 			shoot.Status.ObservedGeneration = shoot.Generation
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -699,4 +702,18 @@ func migrateDNSProviders(ctx context.Context, c client.Client, o *operation.Oper
 	}
 	updated := o.Shoot.Info.ObjectMeta.Generation > o.Shoot.Info.Status.ObservedGeneration
 	return updated, nil
+}
+
+func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {
+	var incompleteDNSConfigError *shootpkg.IncompleteDNSConfigError
+
+	if errors.As(err, &incompleteDNSConfigError) {
+		return gardencorev1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{
+			TaskID:      pointer.StringPtr(taskID),
+			Description: err.Error(),
+			Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem},
+		})
+	}
+
+	return lastErrors
 }
