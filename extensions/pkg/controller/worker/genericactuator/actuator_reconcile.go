@@ -311,7 +311,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 // available by the machine-controller-manager. It polls the status every 5 seconds.
 func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, cluster *controller.Cluster, worker *extensionsv1alpha1.Worker, wantedMachineDeployments worker.MachineDeployments) error {
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-		var numHealthyDeployments, numUpdated, numDesired, numberOfAwakeMachines int32
+		var numHealthyDeployments, numUpdated, numAvailable, numDesired, numberOfAwakeMachines int32
 
 		// Get the list of all existing machine deployments
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -319,7 +319,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			return retryutils.SevereError(err)
 		}
 
-		// Collect the numbers of ready and desired replicas.
+		// Collect the numbers of available and desired replicas.
 		for _, existingMachineDeployment := range existingMachineDeployments.Items {
 			// Filter out all machine deployments that are not desired (any more).
 			if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
@@ -334,19 +334,20 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
-			// ready replicas as desired (specified in the .spec.replicas). However, if we see any error in the
+			// available replicas as desired (specified in the .spec.replicas). However, if we see any error in the
 			// status of the deployment then we return it.
 			for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
 				return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
-			// ready replicas as desired (specified in the .spec.replicas).
+			// available replicas as desired (specified in the .spec.replicas).
 			if workerhealthcheck.CheckMachineDeployment(&existingMachineDeployment) == nil {
 				numHealthyDeployments++
 			}
 			numDesired += existingMachineDeployment.Spec.Replicas
 			numUpdated += existingMachineDeployment.Status.UpdatedReplicas
+			numAvailable += existingMachineDeployment.Status.AvailableReplicas
 		}
 
 		var msg string
@@ -356,7 +357,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			if numUpdated >= numDesired && int(numHealthyDeployments) == len(wantedMachineDeployments) {
 				return retryutils.Ok()
 			}
-			msg = fmt.Sprintf("Waiting until all desired machines are ready (%d/%d machine objects up-to-date, %d/%d machinedeployments available)...", numUpdated, numDesired, numHealthyDeployments, len(wantedMachineDeployments))
+			msg = fmt.Sprintf("Waiting until all desired machines are available (%d/%d machine objects available, %d/%d machinedeployments available)...", numAvailable, numDesired, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
