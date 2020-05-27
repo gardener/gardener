@@ -78,24 +78,33 @@ func DefaultIntervalFactory() IntervalFactory {
 }
 
 // SevereError indicates an operation was not successful due to the given error and cannot be retried.
-func SevereError(severeErr error) (done bool, err error) {
+func SevereError(severeErr error) (bool, error) {
 	return true, severeErr
 }
 
 // MinorError indicates an operation was not successful due to the given error but can be retried.
-func MinorError(minorErr error) (done bool, err error) {
+func MinorError(minorErr error) (bool, error) {
 	return false, minorErr
 }
 
 // Ok indicates that an operation was successful and does not need to be retried.
-func Ok() (done bool, err error) {
+func Ok() (bool, error) {
 	return true, nil
 }
 
 // NotOk indicates that an operation was not successful but can be retried.
 // It does not indicate an error. For better error reporting, consider MinorError.
-func NotOk() (done bool, err error) {
+func NotOk() (bool, error) {
 	return false, nil
+}
+
+// MinorOrSevereError returns a "severe" error in case the retry count exceeds the threshold. Otherwise, it returns
+// a "minor" error.
+func MinorOrSevereError(retryCountUntilSevere, threshold int, err error) (bool, error) {
+	if retryCountUntilSevere > threshold {
+		return SevereError(err)
+	}
+	return MinorError(err)
 }
 
 type retryError struct {

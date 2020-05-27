@@ -498,6 +498,7 @@ func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) 
 		b.Shoot.SeedNamespace,
 		name,
 		DefaultInterval,
+		DefaultSevereThreshold,
 		ControlPlaneDefaultTimeout,
 		func(o runtime.Object) error {
 			obj, ok := o.(extensionsv1alpha1.Object)

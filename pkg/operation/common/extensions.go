@@ -44,6 +44,7 @@ func WaitUntilExtensionCRReady(
 	namespace string,
 	name string,
 	interval time.Duration,
+	severeThreshold time.Duration,
 	timeout time.Duration,
 	postReadyFunc func(runtime.Object) error,
 ) error {
@@ -57,6 +58,7 @@ func WaitUntilExtensionCRReady(
 		namespace,
 		name,
 		interval,
+		severeThreshold,
 		timeout,
 		postReadyFunc,
 	)
@@ -68,26 +70,37 @@ func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
 	logger *logrus.Entry,
-	healthFunc func(obj runtime.Object) (bool, error),
+	healthFunc func(obj runtime.Object) error,
 	newObjFunc func() runtime.Object,
 	kind string,
 	namespace string,
 	name string,
 	interval time.Duration,
+	severeThreshold time.Duration,
 	timeout time.Duration,
 	postReadyFunc func(runtime.Object) error,
 ) error {
-	var lastObservedError error
+	var (
+		errorWithCode         *gardencorev1beta1helper.ErrorWithCodes
+		lastObservedError     error
+		retryCountUntilSevere int
+	)
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
+		retryCountUntilSevere++
+
 		obj := newObjFunc()
 		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if retry, err := healthFunc(obj); err != nil {
+		if err := healthFunc(obj); err != nil {
+			lastObservedError = err
 			logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
-			return retry, err
+			if errors.As(err, &errorWithCode) {
+				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), err)
+			}
+			return retry.MinorError(err)
 		}
 
 		if postReadyFunc != nil {

@@ -28,23 +28,24 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-type errorWithCodes struct {
+// ErrorWithCodes contains error codes and an error message.
+type ErrorWithCodes struct {
 	message string
 	codes   []gardencorev1beta1.ErrorCode
 }
 
 // NewErrorWithCodes creates a new error that additionally exposes the given codes via the Coder interface.
 func NewErrorWithCodes(message string, codes ...gardencorev1beta1.ErrorCode) error {
-	return &errorWithCodes{message, codes}
+	return &ErrorWithCodes{message, codes}
 }
 
 // Codes returns all error codes.
-func (e *errorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
+func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
 // Error returns the error message.
-func (e *errorWithCodes) Error() string {
+func (e *ErrorWithCodes) Error() string {
 	return e.message
 }
 
@@ -72,7 +73,7 @@ func DetermineError(err error, message string) error {
 	if codes == nil {
 		return errors.New(errMsg)
 	}
-	return &errorWithCodes{errMsg, codes}
+	return &ErrorWithCodes{errMsg, codes}
 }
 
 // DetermineErrorCodes determines error codes based on the given error.

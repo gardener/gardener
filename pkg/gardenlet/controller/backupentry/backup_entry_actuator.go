@@ -39,8 +39,9 @@ import (
 )
 
 const (
-	defaultTimeout  = 30 * time.Second
-	defaultInterval = 5 * time.Second
+	defaultTimeout         = 30 * time.Second
+	defaultSevereThreshold = 15 * time.Second
+	defaultInterval        = 5 * time.Second
 )
 
 // Actuator acts upon BackupEntry resources.
@@ -147,6 +148,7 @@ func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, back
 		"",
 		a.backupEntry.Spec.BucketName,
 		defaultInterval,
+		defaultSevereThreshold,
 		defaultTimeout,
 		func(obj runtime.Object) error {
 			bb, ok := obj.(*gardencorev1beta1.BackupBucket)
@@ -244,6 +246,7 @@ func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) 
 		a.backupEntry.Namespace,
 		a.backupEntry.Name,
 		defaultInterval,
+		defaultSevereThreshold,
 		defaultTimeout,
 		nil,
 	)

@@ -194,6 +194,7 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 		b.Shoot.SeedNamespace,
 		b.Shoot.Info.Name,
 		DefaultInterval,
+		DefaultSevereThreshold,
 		WorkerDefaultTimeout,
 		func(obj runtime.Object) error {
 			worker, ok := obj.(*extensionsv1alpha1.Worker)
