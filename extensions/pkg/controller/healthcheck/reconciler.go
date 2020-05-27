@@ -210,7 +210,7 @@ func (r *reconciler) updateExtensionConditionToConditionCheckError(ctx context.C
 func (r *reconciler) updateExtensionConditionToUnsuccessful(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object, healthCheckResult Result) error {
 	var (
 		numberOfChecks = healthCheckResult.UnsuccessfulChecks + healthCheckResult.ProgressingChecks + healthCheckResult.SuccessfulChecks
-		detail         = fmt.Sprintf("Health check summary: %d/%d unsuccessful, %d/%d progressing, %d/%d successful. ", healthCheckResult.UnsuccessfulChecks, numberOfChecks, healthCheckResult.ProgressingChecks, numberOfChecks, healthCheckResult.SuccessfulChecks, numberOfChecks)
+		detail         = fmt.Sprintf("Health check summary: %d/%d unsuccessful, %d/%d progressing, %d/%d successful. %v", healthCheckResult.UnsuccessfulChecks, numberOfChecks, healthCheckResult.ProgressingChecks, numberOfChecks, healthCheckResult.SuccessfulChecks, numberOfChecks, healthCheckResult.GetDetails())
 		status         = gardencorev1beta1.ConditionFalse
 		reason         = ReasonUnsuccessful
 	)
