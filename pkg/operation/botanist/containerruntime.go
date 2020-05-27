@@ -100,6 +100,7 @@ func (b *Botanist) WaitUntilContainerRuntimeResourcesReady(ctx context.Context) 
 					b.Shoot.SeedNamespace,
 					getContainerRuntimeKey(containerRuntime.Type, worker.Name),
 					DefaultInterval,
+					DefaultSevereThreshold,
 					shoot.ExtensionDefaultTimeout,
 					nil,
 				)

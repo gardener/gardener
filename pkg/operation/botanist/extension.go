@@ -95,6 +95,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 				extension.Namespace,
 				extension.Name,
 				DefaultInterval,
+				DefaultSevereThreshold,
 				extension.Timeout,
 				nil,
 			)

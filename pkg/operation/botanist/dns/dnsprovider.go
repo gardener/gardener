@@ -97,9 +97,14 @@ func (d *dnsProvider) Wait(ctx context.Context) error {
 	var (
 		status  string
 		message string
+
+		retryCountUntilSevere int
+		interval              = 5 * time.Second
+		severeThreshold       = 15 * time.Second
+		timeout               = 2 * time.Minute
 	)
 
-	if err := d.waiter.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
+	if err := d.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		provider := &dnsv1alpha1.DNSProvider{}
 		if err := d.client.Get(
 			ctx,
@@ -121,8 +126,9 @@ func (d *dnsProvider) Wait(ctx context.Context) error {
 
 		d.logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", d.values.Name, status, message)
 		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
-			return retry.SevereError(providerErr)
+			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), providerErr)
 		}
+
 		return retry.MinorError(providerErr)
 	}); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", d.values.Name, err.Error(), status, message))

@@ -39,8 +39,9 @@ import (
 )
 
 const (
-	defaultTimeout  = 30 * time.Second
-	defaultInterval = 5 * time.Second
+	defaultTimeout         = 30 * time.Second
+	defaultInterval        = 5 * time.Second
+	defaultSevereThreshold = 15 * time.Second
 )
 
 // Actuator acts upon BackupBucket resources.
@@ -197,6 +198,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		"",
 		a.backupBucket.Name,
 		defaultInterval,
+		defaultSevereThreshold,
 		defaultTimeout,
 		func(obj runtime.Object) error {
 			backupBucket, ok := obj.(*extensionsv1alpha1.BackupBucket)

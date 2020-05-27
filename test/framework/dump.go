@@ -198,7 +198,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 // dumpGardenerExtensions prints all gardener extension crds in the shoot namespace
 func (f *GardenerFramework) dumpGardenerExtension(extension v1alpha1.Object) {
-	if _, err := health.CheckExtensionObject(extension); err != nil {
+	if err := health.CheckExtensionObject(extension); err != nil {
 		f.Logger.Printf("%s of type %s is %s - Error: %s", extension.GetName(), extension.GetExtensionSpec().GetExtensionType(), unhealthy, err.Error())
 	} else {
 		f.Logger.Printf("%s of type %s is %s", extension.GetName(), extension.GetExtensionSpec().GetExtensionType(), healthy)

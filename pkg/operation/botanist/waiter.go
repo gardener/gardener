@@ -78,7 +78,16 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 
 // WaitUntilEtcdReady waits until the etcd statefulsets indicate readiness in their statuses.
 func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+	var (
+		retryCountUntilSevere int
+		interval              = 5 * time.Second
+		severeThreshold       = 30 * time.Second
+		timeout               = 5 * time.Minute
+	)
+
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		retryCountUntilSevere++
+
 		etcdList := &druidv1alpha1.EtcdList{}
 		if err := b.K8sSeedClient.Client().List(ctx, etcdList,
 			client.InNamespace(b.Shoot.SeedNamespace),
@@ -97,7 +106,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 		for _, etcd := range etcdList.Items {
 			switch {
 			case etcd.Status.LastError != nil:
-				return retry.SevereError(fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
+				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
 			case etcd.DeletionTimestamp != nil:
 				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s unexpectedly has a deletion timestamp", etcd.Name))
 			case etcd.Status.ObservedGeneration == nil || etcd.Generation != *etcd.Status.ObservedGeneration:
