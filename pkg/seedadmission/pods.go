@@ -88,23 +88,22 @@ func mutateShootControlPlanePodAnnotations(ctx context.Context, c client.Client,
 		"fluentbit.io/exclude": "true",
 	}
 
-	for key, value := range annotationsToAdd {
-		if originalAnnotations == nil || originalAnnotations[key] == "" {
-			patch = append(patch, jsonpatch.JsonPatchOperation{
-				Operation: "add",
-				Path:      "/metadata/annotations",
-				Value: map[string]string{
-					key: value,
-				},
-			})
-		} else {
+	if originalAnnotations != nil {
+		for key, value := range annotationsToAdd {
 			patch = append(patch, jsonpatch.JsonPatchOperation{
 				Operation: "replace",
 				Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
 				Value:     value,
 			})
 		}
+		return patch, nil
 	}
+
+	patch = append(patch, jsonpatch.JsonPatchOperation{
+		Operation: "add",
+		Path:      "/metadata/annotations",
+		Value:     annotationsToAdd,
+	})
 	return patch, nil
 }
 

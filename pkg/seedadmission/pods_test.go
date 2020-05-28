@@ -44,10 +44,10 @@ import (
 )
 
 type DescribeTableArgs struct {
-	ExpectedPatche *jsonpatch.JsonPatchOperation
-	Annotations    map[string]string
-	Cluster        *extensionsv1alpha1.Cluster
-	Object         *runtime.Object
+	ExpectedPatch *jsonpatch.JsonPatchOperation
+	Annotations   map[string]string
+	Cluster       *extensionsv1alpha1.Cluster
+	Object        *runtime.Object
 }
 
 var _ = Describe("Pods", func() {
@@ -181,31 +181,31 @@ var _ = Describe("Pods", func() {
 					patches, err := MutatePod(ctx, c, logger, request)
 					Expect(err).ToNot(HaveOccurred(), resourceToId(resource))
 
-					if args.ExpectedPatche != nil {
-						Expect(patches).To(ConsistOf(*args.ExpectedPatche))
+					if args.ExpectedPatch != nil {
+						Expect(patches).To(ConsistOf(*args.ExpectedPatch))
 					} else {
 						Expect(patches).To(BeNil())
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheAddFluentBitExludeTrue,
-					Annotations:    nil,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					Annotations:   nil,
+					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheReplaceFluentBitExludeTrue,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       testingCluster,
 				}),
 				Entry("It should not add annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    nil,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   nil,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 				Entry("It should not replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 			)
 		})
@@ -263,31 +263,31 @@ var _ = Describe("Pods", func() {
 					patches, err := MutatePod(ctx, c, logger, request)
 					Expect(err).ToNot(HaveOccurred(), resourceToId(resource))
 
-					if args.ExpectedPatche != nil {
-						Expect(patches).To(ConsistOf(*args.ExpectedPatche))
+					if args.ExpectedPatch != nil {
+						Expect(patches).To(ConsistOf(*args.ExpectedPatch))
 					} else {
 						Expect(patches).To(BeNil())
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheAddFluentBitExludeTrue,
-					Annotations:    nil,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					Annotations:   nil,
+					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheReplaceFluentBitExludeTrue,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       testingCluster,
 				}),
 				Entry("It should not add annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    nil,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   nil,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 				Entry("It should not replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 			)
 		})
@@ -361,31 +361,36 @@ var _ = Describe("Pods", func() {
 					patches, err := MutatePod(ctx, c, logger, request)
 					Expect(err).ToNot(HaveOccurred(), resourceToId(resource))
 
-					if args.ExpectedPatche != nil {
-						Expect(patches).To(ConsistOf(*args.ExpectedPatche))
+					if args.ExpectedPatch != nil {
+						Expect(patches).To(ConsistOf(*args.ExpectedPatch))
 					} else {
 						Expect(patches).To(BeNil())
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheAddFluentBitExludeTrue,
-					Annotations:    nil,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					Annotations:   nil,
+					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: espectedPatcheReplaceFluentBitExludeTrue,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        testingCluster,
+					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       testingCluster,
+				}),
+				Entry("It should replace annotation to object w/o Fluent Bit excluder", DescribeTableArgs{
+					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					Annotations:   map[string]string{"foo": "bar"},
+					Cluster:       testingCluster,
 				}),
 				Entry("It should not add annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    nil,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   nil,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 				Entry("It should not replace annotation to object", DescribeTableArgs{
-					ExpectedPatche: nil,
-					Annotations:    annotationFluentBitExludeTrue,
-					Cluster:        developmentNotHibernatedCluster,
+					ExpectedPatch: nil,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       developmentNotHibernatedCluster,
 				}),
 			)
 
