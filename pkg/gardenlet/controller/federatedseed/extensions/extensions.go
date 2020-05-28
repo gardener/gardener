@@ -193,6 +193,6 @@ func extensionPredicateFunc(f func(extensionsv1alpha1.Object, extensionsv1alpha1
 			newExtensionObj, ok1 = newObj.(extensionsv1alpha1.Object)
 			oldExtensionObj, ok2 = oldObj.(extensionsv1alpha1.Object)
 		)
-		return ok1 && ok2 && f(oldExtensionObj, newExtensionObj)
+		return ok1 && ok2 && f(newExtensionObj, oldExtensionObj)
 	}
 }
