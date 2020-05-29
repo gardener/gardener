@@ -247,6 +247,24 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	return nil
 }
 
+// WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
+func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
+	if err := b.DeployKubeAPIServerService(ctx); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
+		return err
+	}
+	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	c := b.K8sSeedClient.Client()
@@ -276,8 +294,15 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if err := b.scaleControlPlaneDeploymentsToZero(ctx, c); err != nil {
-		return err
+	deployments := []string{
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+	}
+	for _, deployment := range deployments {
+		if err := kubernetes.ScaleDeployment(ctx, c, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
@@ -321,12 +346,13 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
-// PrepareControlPlaneDeploymentsForMigration scales the kube-apiserver, kube-controller-manager and gardener-resource-manager to zero and deletes the hvpa for the kube-apiserver
-func (b *Botanist) PrepareControlPlaneDeploymentsForMigration(ctx context.Context) error {
+// PrepareKubeAPIServerForMigration deletes the kube-apiserverand deletes its hvpa
+func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
-	return b.scaleControlPlaneDeploymentsToZero(ctx, b.K8sSeedClient.Client())
+
+	return b.DeleteKubeAPIServer(ctx)
 }
 
 func (b *Botanist) scaleControlPlaneDeploymentsToZero(ctx context.Context, c client.Client) error {

@@ -129,12 +129,18 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 
 // WaitUntilKubeAPIServerScaledDown waits until the kube-apiserver pod(s) are scaled to zero.
 func (b *Botanist) WaitUntilKubeAPIServerScaledDown(ctx context.Context) error {
-	return WaitUntilDeploymentScaledToDesiredReplicas(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, 0)
-}
-
-// WaitUntilGardenerResourceManagerScalesDown waits until the gardener-resource-manager pod(s) are scaled to zero.
-func (b *Botanist) WaitUntilGardenerResourceManagerScalesDown(ctx context.Context) error {
-	return WaitUntilDeploymentScaledToDesiredReplicas(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, 0)
+	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		deploy := &appsv1.Deployment{}
+		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return retry.Ok()
+		case err == nil:
+			return retry.MinorError(err)
+		default:
+			return retry.SevereError(err)
+		}
+	})
 }
 
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.

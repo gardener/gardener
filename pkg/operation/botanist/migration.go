@@ -16,6 +16,8 @@ package botanist
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -26,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,7 +80,7 @@ func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 
 func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc func(obj runtime.Object) error) ([]flow.TaskFn, error) {
 	var fns []flow.TaskFn
-	for _, listObj := range extensions.GetShootCRsLists() {
+	for _, listObj := range extensions.GetShootNamespacedCRsLists() {
 		listObjCopy := listObj
 		if err := b.K8sSeedClient.Client().List(ctx, listObjCopy, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 			return nil, err
@@ -143,4 +146,38 @@ func (b *Botanist) isRestorePhase() bool {
 	}
 
 	return b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
+}
+
+// AnnotateBackupEntryInSeedForMigration annotates the BackupEntry with gardener.cloud/operation=migrate
+func (b *Botanist) AnnotateBackupEntryInSeedForMigration(ctx context.Context) error {
+	var (
+		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+		backupEntry = &extensionsv1alpha1.BackupEntry{}
+	)
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
+	return b.K8sSeedClient.Client().Update(ctx, backupEntry)
+}
+
+// WaitForBackupEntryOperationMigrateToSucceed waits until BackupEntry has lastOperation equal to Migrate=Succeeded
+func (b *Botanist) WaitForBackupEntryOperationMigrateToSucceed(ctx context.Context) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
+		var (
+			name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+			backupEntry = &extensionsv1alpha1.BackupEntry{}
+		)
+
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
+			return retry.SevereError(fmt.Errorf("waiting for lastOperation to be Migrate Succeeded for BackupEntry %q failed with: %v", name, err))
+		}
+
+		lastOperation := backupEntry.Status.LastOperation
+		if lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+			return retry.Ok()
+		}
+		return retry.MinorError(fmt.Errorf("BackupEntry %q lastOperation status is not yet Succeeded, but [%v]", name, lastOperation))
+	})
 }
