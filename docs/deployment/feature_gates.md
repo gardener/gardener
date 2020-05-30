@@ -61,7 +61,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 
 ## List of feature gates
 
-* `Logging` enables logging stack for Shoot clusters.
+* `Logging` enables logging stack for Seed clusters.
 * `HVPA` enables simultaneous horizontal and vertical scaling in Seed Clusters.
 * `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in shooted Seed clusters.
 
