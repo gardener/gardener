@@ -17,7 +17,7 @@ webhooks:
   failurePolicy: Fail
   namespaceSelector:
     matchLabels:
-      garden.sapcloud.io/role: project
+      gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-controller-manager.garden/webhooks/validate-namespace-deletion
@@ -42,7 +42,7 @@ webhooks:
   failurePolicy: Fail
   namespaceSelector:
     matchLabels:
-      garden.sapcloud.io/role: project
+      gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-controller-manager.garden/webhooks/validate-kubeconfig-secrets
