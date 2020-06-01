@@ -202,7 +202,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		waitUntilAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waits until kube-apiserver doesn't exist",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerScaledDown),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerIsDeleted),
 			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
 		})
 		annotateExtensionCRsForMigration = g.Add(flow.Task{

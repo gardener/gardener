@@ -72,7 +72,7 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), network, &network.ObjectMeta, &network.Status.DefaultStatus, extensionsv1alpha1.NetworkResource, network.Name, network.GetExtensionSpec().GetExtensionPurpose())
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), network, extensionsv1alpha1.NetworkResource)
 	}
 
 	return nil

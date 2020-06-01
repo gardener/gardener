@@ -127,8 +127,8 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 	})
 }
 
-// WaitUntilKubeAPIServerScaledDown waits until the kube-apiserver pod(s) are scaled to zero.
-func (b *Botanist) WaitUntilKubeAPIServerScaledDown(ctx context.Context) error {
+// WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted
+func (b *Botanist) WaitUntilKubeAPIServerIsDeleted(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 		deploy := &appsv1.Deployment{}
 		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy)

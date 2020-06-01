@@ -70,11 +70,6 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 		return fmt.Errorf("shoot %s has not yet been scheduled on a Seed", key)
 	}
 
-	// if shoot is not yet created or being migrated
-	if shoot.Spec.SeedName != shoot.Status.SeedName {
-		return fmt.Errorf("shoot %s is being not yet created or being migrated", key)
-	}
-
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
 	if seedName := confighelper.SeedNameFromSeedConfig(c.config.SeedConfig); (len(seedName) > 0 && *shoot.Spec.SeedName != seedName) || (len(seedName) == 0 && !controllerutils.SeedLabelsMatch(c.seedLister, *shoot.Spec.SeedName, c.config.SeedSelector)) {
 		return nil

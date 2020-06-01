@@ -69,7 +69,7 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 			})
 
 			if restorePhase {
-				return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), &toApply, &toApply.ObjectMeta, &toApply.Status.DefaultStatus, extensionsv1alpha1.ExtensionResource, toApply.Name, toApply.GetExtensionSpec().GetExtensionPurpose())
+				return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), &toApply, extensionsv1alpha1.ExtensionResource)
 			}
 
 			return err

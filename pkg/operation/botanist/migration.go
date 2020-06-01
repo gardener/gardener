@@ -93,22 +93,23 @@ func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc fun
 	return fns, nil
 }
 
-func (b *Botanist) restoreExtensionObject(ctx context.Context, client client.Client, obj runtime.Object, objMeta *metav1.ObjectMeta, objStatus *extensionsv1alpha1.DefaultStatus, resourceKind, resourceName string, purpose *string) error {
-	if err := b.restoreExtensionObjectState(ctx, client, obj, objStatus, resourceKind, objMeta.GetName(), purpose); err != nil {
+func (b *Botanist) restoreExtensionObject(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object, resourceKind string) error {
+	if err := b.restoreExtensionObjectState(ctx, client, extensionObj, resourceKind, extensionObj.GetName(), extensionObj.GetExtensionSpec().GetExtensionPurpose()); err != nil {
 		return err
 	}
-	return b.annotateExtensionObjectWithOperationRestore(ctx, client, obj, objMeta)
+
+	return annotateExtensionObjectWithOperationRestore(ctx, client, extensionObj)
 }
 
-func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client client.Client, extensionObj runtime.Object, objStatus *extensionsv1alpha1.DefaultStatus, resourceKind, resourceName string, purpose *string) error {
+func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object, resourceKind, resourceName string, purpose *string) error {
 	return kutil.TryUpdateStatus(ctx, k8sretry.DefaultBackoff, client, extensionObj, func() error {
 		var resourceRefs []autoscalingv1.CrossVersionObjectReference
 		if b.ShootState.Spec.Extensions != nil {
 			list := gardencorev1alpha1helper.ExtensionResourceStateList(b.ShootState.Spec.Extensions)
-			extensionResourceState := list.Get(resourceKind, &resourceName, purpose)
-			if extensionResourceState != nil {
-				objStatus.State = extensionResourceState.State
-				objStatus.Resources = extensionResourceState.Resources
+			if extensionResourceState := list.Get(resourceKind, &resourceName, purpose); extensionResourceState != nil {
+				extensionStatus := extensionObj.GetExtensionStatus()
+				extensionStatus.SetState(extensionResourceState.State)
+				extensionStatus.SetResources(extensionResourceState.Resources)
 				for _, r := range extensionResourceState.Resources {
 					resourceRefs = append(resourceRefs, r.ResourceRef)
 				}
@@ -133,9 +134,9 @@ func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client clien
 	})
 }
 
-func (b *Botanist) annotateExtensionObjectWithOperationRestore(ctx context.Context, client client.Client, extensionObj runtime.Object, objMeta *metav1.ObjectMeta) error {
+func annotateExtensionObjectWithOperationRestore(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object) error {
 	return kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, client, extensionObj, func() error {
-		metav1.SetMetaDataAnnotation(objMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore)
+		kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore)
 		return nil
 	})
 }

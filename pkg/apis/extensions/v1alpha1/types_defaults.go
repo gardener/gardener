@@ -103,7 +103,17 @@ func (d *DefaultStatus) GetState() *runtime.RawExtension {
 	return d.State
 }
 
+// SetState implements Status.
+func (d *DefaultStatus) SetState(state *runtime.RawExtension) {
+	d.State = state
+}
+
 // GetResources implements Status.
 func (d *DefaultStatus) GetResources() []gardencorev1beta1.NamedResourceReference {
 	return d.Resources
+}
+
+// SetResources implements Status.
+func (d *DefaultStatus) SetResources(namedResourceReference []gardencorev1beta1.NamedResourceReference) {
+	d.Resources = namedResourceReference
 }

@@ -184,6 +184,15 @@ var _ = Describe("Accessor", func() {
 				})
 			})
 
+			Describe("#SetState", func() {
+				It("should set the extensions state", func() {
+					state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+					acc.SetState(state)
+					Expect(acc.GetState()).To(Equal(state))
+				})
+			})
+
 			Describe("#GetResources", func() {
 				It("should get the resources", func() {
 					var (
@@ -221,6 +230,26 @@ var _ = Describe("Accessor", func() {
 					acc.SetConditions(conditions)
 					getConditions := acc.GetConditions()
 					Expect(getConditions).To(Equal(conditions))
+				})
+			})
+
+			Describe("#SetNamedResourceReferences", func() {
+				It("should set the named resource references", func() {
+					var (
+						acc                    = mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+						namedResourceReference = []gardencorev1beta1.NamedResourceReference{
+							{
+								Name: "test_name",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									Kind:       "Secret",
+									Name:       "test_name",
+									APIVersion: "v1",
+								},
+							},
+						}
+					)
+					acc.SetResources(namedResourceReference)
+					Expect(acc.GetResources()).To(Equal(namedResourceReference))
 				})
 			})
 		})

@@ -91,7 +91,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), infrastructure, &infrastructure.ObjectMeta, &infrastructure.Status.DefaultStatus, extensionsv1alpha1.InfrastructureResource, infrastructure.Name, nil)
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), infrastructure, extensionsv1alpha1.InfrastructureResource)
 	}
 
 	return nil
