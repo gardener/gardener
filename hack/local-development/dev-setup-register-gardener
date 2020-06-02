@@ -220,6 +220,9 @@ webhooks:
     resources:
     - namespaces
   failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      gardener.cloud/role: project
   clientConfig:
     service:
       namespace: garden
@@ -241,7 +244,7 @@ $CONTROLLER_MANAGER_PORT_STRING
   failurePolicy: Fail
   namespaceSelector:
     matchLabels:
-      garden.sapcloud.io/role: project
+      gardener.cloud/role: project
   clientConfig:
     service:
       namespace: garden
