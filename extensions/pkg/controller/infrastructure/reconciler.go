@@ -114,7 +114,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case infrastructure.DeletionTimestamp != nil:
 		return r.delete(r.ctx, infrastructure, cluster)
 	case infrastructure.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, infrastructure, cluster, operationType)
+		return r.restore(r.ctx, infrastructure, cluster)
 	default:
 		return r.reconcile(r.ctx, infrastructure, cluster, operationType)
 	}
@@ -208,18 +208,18 @@ func (r *reconciler) migrate(ctx context.Context, infrastructure *extensionsv1al
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, infrastructure); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, infrastructure, operationType, "Restoring the infrastructure"); err != nil {
+	if err := r.updateStatusProcessing(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Restoring the infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logInfo(infrastructure, EventInfrastructureRestoration, "Restoring the infrastructure", "infrastructure", infrastructure.Name)
 	if err := r.actuator.Restore(ctx, infrastructure, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, operationType, EventInfrastructureRestoration, "Error restoring infrastructure"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeRestore, EventInfrastructureRestoration, "Error restoring infrastructure"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -230,7 +230,7 @@ func (r *reconciler) restore(ctx context.Context, infrastructure *extensionsv1al
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
-	err := r.updateStatusSuccess(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, EventInfrastructureRestoration, "Successfully restored infrastructure")
+	err := r.updateStatusSuccess(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, EventInfrastructureRestoration, "Successfully restored infrastructure")
 
 	return reconcile.Result{}, err
 }

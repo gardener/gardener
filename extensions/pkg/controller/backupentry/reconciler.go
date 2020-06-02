@@ -113,7 +113,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case be.DeletionTimestamp != nil:
 		return r.delete(r.ctx, be)
 	case be.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, be, operationType)
+		return r.restore(r.ctx, be)
 	default:
 		return r.reconcile(r.ctx, be, operationType)
 	}
@@ -154,12 +154,12 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, be); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, be, operationType, "Restoring the backupentry"); err != nil {
+	if err := r.updateStatusProcessing(ctx, be, gardencorev1beta1.LastOperationTypeRestore, "Restoring the backupentry"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -175,14 +175,14 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryRestoration, "Restoring the backupentry")
 	if err := r.actuator.Restore(ctx, be); err != nil {
 		msg := "Error restoring backupentry"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
+		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, gardencorev1beta1.LastOperationTypeRestore, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully restored backupentry"
 	r.logger.Info(msg, "backupentry", be.Name)
 	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryRestoration, msg)
-	if err := r.updateStatusSuccess(ctx, be, operationType, msg); err != nil {
+	if err := r.updateStatusSuccess(ctx, be, gardencorev1beta1.LastOperationTypeRestore, msg); err != nil {
 		return reconcile.Result{}, err
 	}
 	// remove operation annotation 'restore'

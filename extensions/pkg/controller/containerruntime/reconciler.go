@@ -122,7 +122,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case cr.DeletionTimestamp != nil:
 		return r.delete(r.ctx, cr, cluster)
 	case cr.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, cr, cluster, operationType)
+		return r.restore(r.ctx, cr, cluster)
 	default:
 		return r.reconcile(r.ctx, cr, cluster, operationType)
 	}
@@ -148,21 +148,21 @@ func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.Conta
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cr); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, cr, operationType, EventContainerRuntimeRestoration, "Restoring the container runtime"); err != nil {
+	if err := r.updateStatusProcessing(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, EventContainerRuntimeRestoration, "Restoring the container runtime"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, cr, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cr, operationType, EventContainerRuntimeRestoration, "Error restoring container runtime"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cr, gardencorev1beta1.LastOperationTypeRestore, EventContainerRuntimeRestoration, "Error restoring container runtime"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, cr, operationType, EventContainerRuntimeRestoration, "Successfully restored container runtime"); err != nil {
+	if err := r.updateStatusSuccess(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, EventContainerRuntimeRestoration, "Successfully restored container runtime"); err != nil {
 		return reconcile.Result{}, err
 	}
 

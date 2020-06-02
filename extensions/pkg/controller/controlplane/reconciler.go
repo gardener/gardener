@@ -116,7 +116,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case cp.DeletionTimestamp != nil:
 		return r.delete(r.ctx, cp, cluster)
 	case cp.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, cp, cluster, operationType)
+		return r.restore(r.ctx, cp, cluster)
 	default:
 		return r.reconcile(r.ctx, cp, cluster, operationType)
 	}
@@ -153,12 +153,12 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, cp, operationType, "Restoring the controlplane"); err != nil {
+	if err := r.updateStatusProcessing(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Restoring the controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -167,14 +167,14 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 	requeue, err := r.actuator.Restore(ctx, cp, cluster)
 	if err != nil {
 		msg := "Error restoring controlplane"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
+		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeRestore, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully restored controlplane"
 	r.logger.Info(msg, "controlplane", cp.Name)
 	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneRestoration, msg)
-	if err := r.updateStatusSuccess(ctx, cp, operationType, msg); err != nil {
+	if err := r.updateStatusSuccess(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, msg); err != nil {
 		return reconcile.Result{}, err
 	}
 
