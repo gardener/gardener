@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/golang/mock/gomock"
@@ -243,6 +244,36 @@ var _ = Describe("Actuator", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(Equal([]error{fakeErr}))
+		})
+	})
+
+	Describe("#removeWantedDeploymentWithoutState", func() {
+		var (
+			mdWithoutState = worker.MachineDeployment{ClassName: "gcp", Name: "md-without-state"}
+			mdWithState    = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &worker.MachineDeploymentState{Replicas: 3}}
+		)
+
+		It("should not panic for MachineDeployments without state", func() {
+			removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState})
+		})
+
+		It("should not panic for empty slice of MachineDeployments", func() {
+			removeWantedDeploymentWithoutState(make(worker.MachineDeployments, 0))
+		})
+
+		It("should not panic MachineDeployments is nil", func() {
+			removeWantedDeploymentWithoutState(nil)
+		})
+
+		It("should not return nil if MachineDeployments are reduced to zero", func() {
+			Expect(removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState})).NotTo(BeNil())
+		})
+
+		It("should return only MachineDeployments with states", func() {
+			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithState})
+
+			Expect(len(reducedMDs)).To(Equal(1))
+			Expect(reducedMDs[0]).To(Equal(mdWithState))
 		})
 	})
 })
