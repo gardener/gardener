@@ -1,5 +1,7 @@
 # Gardener Versioning Policy
 
+Please refer to [this document](../usage/shoot_versions.md) for the documentation of the implementation of this GEP.
+
 ## Goal
 
 - As a Garden operator I would like to define a clear Kubernetes version policy, which informs my users about deprecated or expired Kubernetes versions.

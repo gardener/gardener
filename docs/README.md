@@ -24,6 +24,7 @@
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
+* [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [ManagedIstio Feature Gate](usage/istio.md)
