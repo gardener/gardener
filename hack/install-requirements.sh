@@ -23,22 +23,17 @@ curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/insta
 curl -s "https://raw.githubusercontent.com/helm/helm/v2.13.1/scripts/get" | bash -s -- --version 'v2.13.1'
 
 if [[ "$(uname -s)" == *"Darwin"* ]]; then
-	  cat <<EOM
+  cat <<EOM
 You are running in a MAC OS environment!
-
 Please make sure you have installed the following requirements:
-
 - GNU Core Utils
 - GNU Tar
 - GNU Sed
-
 Brew command:
 $ brew install coreutils gnu-tar gnu-sed
-
 Please allow them to be used without their "g" prefix:
 $ export PATH=/usr/local/opt/coreutils/libexec/gnubin:\$PATH
 $ export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:\$PATH
 $ export PATH=/usr/local/opt/gnu-sed/libexec/gnubin:\$PATH
 EOM
 fi
-
