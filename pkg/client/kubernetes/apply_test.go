@@ -202,7 +202,7 @@ spec:
 				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				var actualCM corev1.ConfigMap
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "c"}, &actualCM)
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "c", Namespace: "n"}, &actualCM)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cm).To(DeepDerivativeEqual(actualCM))
 			})
@@ -211,10 +211,10 @@ spec:
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
 				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm", Namespace: "test-ns"}, &corev1.ConfigMap{})
 				Expect(err).NotTo(HaveOccurred())
 
-				err = c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
+				err = c.Get(context.TODO(), client.ObjectKey{Name: "test-pod", Namespace: "test-ns"}, &corev1.Pod{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -697,7 +697,7 @@ spec:
 				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
 
 				var actualCMWithNamespace corev1.ConfigMap
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "test"}, &actualCMWithNamespace)
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test", Namespace: "b"}, &actualCMWithNamespace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualCMWithNamespace.Namespace).To(Equal("b"))
 			})
@@ -749,17 +749,17 @@ spec:
 			})
 
 			It("should delete configmap", func() {
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm", Namespace: "test-ns"}, &corev1.ConfigMap{})
 				Expect(err).To(BeNotFoundError())
 			})
 
 			It("should delete pod", func() {
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-pod", Namespace: "test-ns"}, &corev1.Pod{})
 				Expect(err).To(BeNotFoundError())
 			})
 
 			It("should keep configmap which should not be deleted", func() {
-				err := c.Get(context.TODO(), client.ObjectKey{Name: "should-not-be-deleted-cm"}, &corev1.ConfigMap{})
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "should-not-be-deleted-cm", Namespace: "test-ns"}, &corev1.ConfigMap{})
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

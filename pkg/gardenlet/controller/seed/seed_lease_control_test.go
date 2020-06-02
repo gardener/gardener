@@ -37,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -79,10 +80,12 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		k8sGardenClient.EXPECT().RESTClient().Return(seedRESTClient)
 
 		body = mockio.NewMockReadCloser(ctrl)
-		request := rest.NewRequest(httpMockClient, http.MethodGet, &url.URL{}, "", rest.
-			ContentConfig{}, rest.Serializers{}, nil, nil, 0)
 		response = &http.Response{StatusCode: http.StatusOK, Body: body}
-		seedRESTClient.EXPECT().Get().Return(request.AbsPath("/healthz"))
+		fakeHTTPClient := fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+			return response, nil
+		})
+		request := rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, fakeHTTPClient)
+		seedRESTClient.EXPECT().Get().Return(request)
 		body.EXPECT().Read(gomock.Any()).Return(0, io.EOF).AnyTimes()
 		body.EXPECT().Close().AnyTimes()
 

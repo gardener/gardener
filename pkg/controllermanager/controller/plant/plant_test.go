@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
+	fakerestclient "k8s.io/client-go/rest/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -126,19 +127,20 @@ var _ = Describe("Plant", func() {
 			var (
 				apiServerAvailable = gardencorev1beta1helper.InitCondition(gardencorev1beta1.PlantAPIServerAvailable)
 				restMockClient     = mockrest.NewMockInterface(ctrl)
-				httpMockClient     = mockrest.NewMockHTTPClient(ctrl)
 				body               = mockio.NewMockReadCloser(ctrl)
 				healthChecker      = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
 
-				request = rest.NewRequest(httpMockClient, http.MethodGet, &url.URL{}, "", rest.ContentConfig{}, rest.Serializers{}, nil, nil, 0)
-			)
+				fakeHTTPClient = fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+					response.Body = body
+					return response, nil
+				})
 
-			response.Body = body
+				request = rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, fakeHTTPClient)
+			)
 
 			gomock.InOrder(
 				discoveryMockclient.EXPECT().RESTClient().Return(restMockClient),
 				restMockClient.EXPECT().Get().Return(request.AbsPath("/healthz")),
-				httpMockClient.EXPECT().Do(gomock.Any()).Return(response, nil),
 				body.EXPECT().Read(gomock.Any()).Return(0, io.EOF).AnyTimes(),
 				body.EXPECT().Close(),
 			)

@@ -16,7 +16,8 @@
 
 source $(dirname "${0}")/common/helpers
 
-kubeconfig="$(mktemp_kubeconfig)"
+mktemp_kubeconfig
+kubeconfig="$__tmp_kubeconfig"
 trap cleanup_kubeconfig EXIT
 
 GO111MODULE=on \
