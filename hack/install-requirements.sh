@@ -25,12 +25,16 @@ curl -s "https://raw.githubusercontent.com/helm/helm/v2.13.1/scripts/get" | bash
 if [[ "$(uname -s)" == *"Darwin"* ]]; then
   cat <<EOM
 You are running in a MAC OS environment!
+
 Please make sure you have installed the following requirements:
+
 - GNU Core Utils
 - GNU Tar
 - GNU Sed
+
 Brew command:
 $ brew install coreutils gnu-tar gnu-sed
+
 Please allow them to be used without their "g" prefix:
 $ export PATH=/usr/local/opt/coreutils/libexec/gnubin:\$PATH
 $ export PATH=/usr/local/opt/gnu-tar/libexec/gnubin:\$PATH
