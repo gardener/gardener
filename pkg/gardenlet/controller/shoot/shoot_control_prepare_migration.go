@@ -157,9 +157,24 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 
 		g = flow.NewGraph("Shoot's control plane preparation for migration")
 
+		ensureShootStateExists = g.Add(flow.Task{
+			Name: "Ensuring that ShootState exists",
+			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		loadSecrets = g.Add(flow.Task{
+			Name:         "Loading existing secrets into ShootState",
+			Fn:           flow.TaskFn(botanist.LoadExistingSecretsIntoShootState),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
+		generateSecrets = g.Add(flow.Task{
+			Name:         "Generating secrets and saving them into ShootState",
+			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets),
+			Dependencies: flow.NewTaskIDs(loadSecrets, ensureShootStateExists),
+		})
 		deploySecrets = g.Add(flow.Task{
-			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets).DoIf(nonTerminatingNamespace),
+			Name:         "Deploying Shoot certificates / keys",
+			Fn:           flow.TaskFn(botanist.DeploySecrets).DoIf(nonTerminatingNamespace),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets, loadSecrets),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",

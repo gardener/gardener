@@ -191,7 +191,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
-		_ = g.Add(flow.Task{
+		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
@@ -204,9 +204,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Name: "Deploying cloud provider account secret",
 			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
 		})
+		loadSecrets = g.Add(flow.Task{
+			Name:         "Loading existing secrets into ShootState",
+			Fn:           flow.TaskFn(botanist.LoadExistingSecretsIntoShootState).SkipIf(shootNamespaceInDeletion),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
+		generateSecrets = g.Add(flow.Task{
+			Name:         "Generating secrets and saving them into ShootState",
+			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets).SkipIf(shootNamespaceInDeletion),
+			Dependencies: flow.NewTaskIDs(loadSecrets, ensureShootStateExists),
+		})
 		deploySecrets = g.Add(flow.Task{
-			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
+			Name:         "Deploying Shoot certificates / keys",
+			Fn:           flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, loadSecrets, generateSecrets),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-

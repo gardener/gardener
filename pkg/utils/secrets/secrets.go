@@ -38,7 +38,6 @@ func (s *Secrets) Deploy(
 	gcs gardenerkubernetes.Interface,
 	namespace string,
 ) (map[string]*corev1.Secret, error) {
-
 	// Get existing secrets in the namespace
 	existingSecrets, err := getSecrets(cs, namespace)
 	if err != nil {

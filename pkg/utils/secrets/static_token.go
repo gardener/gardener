@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
 const (
@@ -73,6 +72,60 @@ func (s *StaticTokenSecretConfig) Generate() (Interface, error) {
 	return s.GenerateStaticToken()
 }
 
+// GenerateInfoData implements ConfigInterface.
+func (s *StaticTokenSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
+	tokens := make(map[string]string)
+
+	for tokenID := range s.Tokens {
+		token, err := utils.GenerateRandomString(128)
+		if err != nil {
+			return nil, err
+		}
+		tokens[tokenID] = token
+	}
+
+	return NewStaticTokenInfoData(tokens), nil
+
+}
+
+// GenerateFromInfoData implements ConfigInterface.
+func (s *StaticTokenSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+	data, ok := infoData.(*StaticTokenInfoData)
+	if !ok {
+		return nil, fmt.Errorf("could not convert InfoData entry %s to StaticTokenInfoData", s.Name)
+	}
+	tokens := make([]Token, 0, len(s.Tokens))
+
+	for tokenID, token := range data.Tokens {
+		tokens = append(tokens, Token{
+			Username: s.Tokens[tokenID].Username,
+			UserID:   s.Tokens[tokenID].UserID,
+			Groups:   s.Tokens[tokenID].Groups,
+			Token:    token,
+		})
+	}
+
+	return &StaticToken{
+		Name:   s.Name,
+		Tokens: tokens,
+	}, nil
+}
+
+// LoadFromSecretData implements infodata.Loader.
+func (s *StaticTokenSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
+	staticToken, err := LoadStaticTokenFromCSV(s.Name, secretData[DataKeyStaticTokenCSV])
+	if err != nil {
+		return nil, err
+	}
+
+	tokens := make(map[string]string)
+	for _, token := range staticToken.Tokens {
+		tokens[token.UserID] = token.Token
+	}
+
+	return NewStaticTokenInfoData(tokens), nil
+}
+
 // GenerateStaticToken computes a random token of length 64.
 func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 	tokens := make([]Token, 0, len(s.Tokens))
@@ -95,35 +148,6 @@ func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 		Name:   s.Name,
 		Tokens: tokens,
 	}, nil
-}
-
-// GenerateAndAppend appends required tokens to the existing static tokens list.
-func (b *StaticToken) GenerateAndAppend(s *StaticTokenSecretConfig) (*StaticToken, error) {
-	for _, tokenConfig := range s.Tokens {
-		token, err := utils.GenerateRandomString(128)
-		if err != nil {
-			return nil, err
-		}
-
-		b.Tokens = append(b.Tokens, Token{
-			Username: tokenConfig.Username,
-			UserID:   tokenConfig.UserID,
-			Groups:   tokenConfig.Groups,
-			Token:    token,
-		})
-	}
-
-	return b, nil
-}
-
-// RemoveTokens removes outdated tokens from the existing static tokens list.
-func (b *StaticToken) RemoveTokens(userIDs ...string) {
-	userIDsSet := sets.NewString(userIDs...)
-	for i := len(b.Tokens) - 1; i >= 0; i-- {
-		if userIDsSet.Has(b.Tokens[i].UserID) {
-			b.Tokens = append(b.Tokens[:i], b.Tokens[i+1:]...)
-		}
-	}
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

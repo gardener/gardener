@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
 const (
@@ -60,6 +61,62 @@ func (s *ControlPlaneSecretConfig) GetName() string {
 // Generate implements ConfigInterface.
 func (s *ControlPlaneSecretConfig) Generate() (Interface, error) {
 	return s.GenerateControlPlane()
+}
+
+// GenerateInfoData implements ConfigInterface
+func (s *ControlPlaneSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
+	cert, err := s.CertificateSecretConfig.GenerateCertificate()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cert.PrivateKeyPEM) == 0 && len(cert.CertificatePEM) == 0 {
+		return nil, nil
+	}
+
+	return NewCertificateInfoData(cert.PrivateKeyPEM, cert.CertificatePEM), nil
+}
+
+// GenerateFromInfoData implements ConfigInterface
+func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+	data, ok := infoData.(*CertificateInfoData)
+	if !ok {
+		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
+	}
+
+	certificate := &Certificate{
+		Name: s.Name,
+		CA:   s.SigningCA,
+
+		PrivateKeyPEM:  data.PrivateKey,
+		CertificatePEM: data.Certificate,
+	}
+
+	controlPlane := &ControlPlane{
+		Name: s.Name,
+
+		Certificate: certificate,
+		BasicAuth:   s.BasicAuth,
+		Token:       s.Token,
+	}
+
+	if s.KubeConfigRequest != nil {
+		kubeconfig, err := generateKubeconfig(s, certificate)
+		if err != nil {
+			return nil, err
+		}
+		controlPlane.Kubeconfig = kubeconfig
+	}
+
+	return controlPlane, nil
+}
+
+// LoadFromSecretData implements infodata.Loader
+func (s *ControlPlaneSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
+	privateKeyPEM := secretData[fmt.Sprintf("%s.key", s.Name)]
+	certificatePEM := secretData[fmt.Sprintf("%s.crt", s.Name)]
+
+	return NewCertificateInfoData(privateKeyPEM, certificatePEM), nil
 }
 
 // GenerateControlPlane computes a secret for a control plane component of the clusters managed by Gardener.

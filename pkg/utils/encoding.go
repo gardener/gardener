@@ -63,6 +63,24 @@ func EncodePrivateKeyInPKCS8(key *rsa.PrivateKey) ([]byte, error) {
 	}), nil
 }
 
+// DecodeRSAPrivateKeyFromPKCS8 takes a byte slice, decodes it from the PKCS8 format, tries to convert it
+// to an rsa.PrivateKey object, and returns it. In case an error occurs, it returns the error.
+func DecodeRSAPrivateKeyFromPKCS8(bytes []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(bytes)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return nil, errors.New("could not decode the PEM-encoded RSA private key")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	rsaKey, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		return nil, errors.New("the decoded key is not an RSA private key")
+	}
+	return rsaKey, nil
+}
+
 // DecodePrivateKey takes a byte slice, decodes it from the PEM format, converts it to an rsa.PrivateKey
 // object, and returns it. In case an error occurs, it returns the error.
 func DecodePrivateKey(bytes []byte) (*rsa.PrivateKey, error) {

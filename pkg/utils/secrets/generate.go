@@ -22,11 +22,20 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
 // The function returns a map with all of the successfully deployed wanted secrets plus those already deployed (only from the wantedSecretsList).
 func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
+	return GenerateClusterSecretsWithFunc(ctx, k8sClusterClient.Client(), existingSecretsMap, wantedSecretsList, namespace, func(s ConfigInterface) (Interface, error) {
+		return s.Generate()
+	})
+}
+
+// GenerateClusterSecretsWithFunc will try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
+// The function will used the SecretsGeneratorFunc to create the secret Interface from the wantedSecret configs.
+func GenerateClusterSecretsWithFunc(ctx context.Context, k8sClusterClient client.Client, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string, SecretsGeneratorFunc func(s ConfigInterface) (Interface, error)) (map[string]*corev1.Secret, error) {
 	type secretOutput struct {
 		secret *corev1.Secret
 		err    error
@@ -51,7 +60,7 @@ func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Int
 		go func(s ConfigInterface) {
 			defer wg.Done()
 
-			obj, err := s.Generate()
+			obj, err := SecretsGeneratorFunc(s)
 			if err != nil {
 				results <- &secretOutput{err: err}
 				return
@@ -70,7 +79,7 @@ func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Int
 				Type: secretType,
 				Data: obj.SecretData(),
 			}
-			err = k8sClusterClient.Client().Create(ctx, secret)
+			err = k8sClusterClient.Create(ctx, secret)
 			results <- &secretOutput{secret: secret, err: err}
 		}(s)
 	}

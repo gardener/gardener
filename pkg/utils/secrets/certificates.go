@@ -30,6 +30,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,6 +105,69 @@ func (s *CertificateSecretConfig) GetName() string {
 // Generate implements ConfigInterface.
 func (s *CertificateSecretConfig) Generate() (Interface, error) {
 	return s.GenerateCertificate()
+}
+
+// GenerateInfoData implements ConfigInterface
+func (s *CertificateSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
+	data, err := s.GenerateCertificate()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data.PrivateKeyPEM) == 0 && len(data.CertificatePEM) == 0 {
+		return nil, nil
+	}
+
+	infoData := NewCertificateInfoData(data.PrivateKeyPEM, data.CertificatePEM)
+	return infoData, nil
+}
+
+// GenerateFromInfoData implements ConfigInterface
+func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+	data, ok := infoData.(*CertificateInfoData)
+	if !ok {
+		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
+	}
+	certificateObj := &Certificate{
+		Name: s.Name,
+		CA:   s.SigningCA,
+
+		PrivateKeyPEM:  data.PrivateKey,
+		CertificatePEM: data.Certificate,
+	}
+
+	var err error
+	if s.PKCS == PKCS1 {
+		certificateObj.PrivateKey, err = utils.DecodePrivateKey(data.PrivateKey)
+	} else if s.PKCS == PKCS8 {
+		certificateObj.PrivateKey, err = utils.DecodeRSAPrivateKeyFromPKCS8(data.PrivateKey)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	certificateObj.Certificate, err = utils.DecodeCertificate(data.Certificate)
+	if err != nil {
+		return nil, err
+	}
+	return certificateObj, nil
+}
+
+// LoadFromSecretData implements infodata.Loader
+func (s *CertificateSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
+	var (
+		privateKeyPEM  []byte
+		certificatePEM []byte
+	)
+	if s.CertType == CACert {
+		privateKeyPEM = secretData[DataKeyPrivateKeyCA]
+		certificatePEM = secretData[DataKeyCertificateCA]
+	} else {
+		privateKeyPEM = secretData[DataKeyPrivateKey]
+		certificatePEM = secretData[DataKeyCertificate]
+	}
+
+	return NewCertificateInfoData(privateKeyPEM, certificatePEM), nil
 }
 
 // GenerateCertificate computes a CA, server, or client certificate based on the configuration.
@@ -350,7 +414,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 		certificateAuthorities[out.secret.Name] = out.certificate
 	}
 
-	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
+	// Wait and check whether an error occurred during the parallel processing of the Secret creation.
 	if len(errorList) > 0 {
 		return nil, nil, fmt.Errorf("errors occurred during certificate authority generation: %+v", errorList)
 	}
