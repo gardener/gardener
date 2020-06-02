@@ -34,7 +34,6 @@ import (
 )
 
 type kubeconfigSecretValidator struct {
-	scheme *runtime.Scheme
 	codecs serializer.CodecFactory
 }
 
@@ -44,7 +43,7 @@ func NewValidateKubeconfigSecretsHandler() http.HandlerFunc {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
-	h := &kubeconfigSecretValidator{scheme, serializer.NewCodecFactory(scheme)}
+	h := &kubeconfigSecretValidator{serializer.NewCodecFactory(scheme)}
 	return h.ValidateKubeconfigSecrets
 }
 

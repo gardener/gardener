@@ -43,7 +43,6 @@ type namespaceDeletionHandler struct {
 	projectLister gardencorelisters.ProjectLister
 	shootLister   gardencorelisters.ShootLister
 
-	scheme *runtime.Scheme
 	codecs serializer.CodecFactory
 }
 
@@ -53,7 +52,7 @@ func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, p
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
-	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, shootLister, scheme, serializer.NewCodecFactory(scheme)}
+	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, shootLister, serializer.NewCodecFactory(scheme)}
 	return h.ValidateNamespaceDeletion
 }
 

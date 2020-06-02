@@ -108,14 +108,14 @@ var _ = Describe("Pods", func() {
 		annotationFluentBitExludeTrue := map[string]string{
 			"fluentbit.io/exclude": "true",
 		}
-		espectedPatcheAddFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
+		expectedPatchAddFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
 			Operation: "add",
 			Path:      "/metadata/annotations",
 			Value: map[string]string{
 				key: "true",
 			},
 		}
-		espectedPatcheReplaceFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
+		expectedPatchReplaceFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
 			Operation: "replace",
 			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
 			Value:     "true",
@@ -188,12 +188,12 @@ var _ = Describe("Pods", func() {
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchAddFluentBitExludeTrue,
 					Annotations:   nil,
 					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchReplaceFluentBitExludeTrue,
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
@@ -270,12 +270,12 @@ var _ = Describe("Pods", func() {
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchAddFluentBitExludeTrue,
 					Annotations:   nil,
 					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchReplaceFluentBitExludeTrue,
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
@@ -368,17 +368,17 @@ var _ = Describe("Pods", func() {
 					}
 				},
 				Entry("It should add annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheAddFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchAddFluentBitExludeTrue,
 					Annotations:   nil,
 					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchReplaceFluentBitExludeTrue,
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
 				Entry("It should replace annotation to object w/o Fluent Bit excluder", DescribeTableArgs{
-					ExpectedPatch: espectedPatcheReplaceFluentBitExludeTrue,
+					ExpectedPatch: expectedPatchReplaceFluentBitExludeTrue,
 					Annotations:   map[string]string{"foo": "bar"},
 					Cluster:       testingCluster,
 				}),
