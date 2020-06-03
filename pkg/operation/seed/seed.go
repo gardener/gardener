@@ -23,7 +23,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -560,15 +559,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 	}
 	nodeCount := len(nodes.Items)
 
-	chartRenderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
+	chartApplier := k8sSeedClient.ChartApplier()
 
 	var (
 		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)

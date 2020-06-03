@@ -33,11 +33,11 @@ type ChartApplier interface {
 // chartApplier is a structure that contains a chart renderer and a manifest applier.
 type chartApplier struct {
 	chartrenderer.Interface
-	ApplierInterface
+	Applier
 }
 
 // NewChartApplier returns a new chart applier.
-func NewChartApplier(renderer chartrenderer.Interface, applier ApplierInterface) ChartApplier {
+func NewChartApplier(renderer chartrenderer.Interface, applier Applier) ChartApplier {
 	return &chartApplier{renderer, applier}
 }
 
@@ -80,10 +80,6 @@ func (c *chartApplier) Apply(ctx context.Context, chartPath, namespace, name str
 		manifestReader = NewNamespaceSettingReader(manifestReader, namespace)
 	}
 
-	if err != nil {
-		return err
-	}
-
 	return c.ApplyManifest(ctx, manifestReader, applyOpts.MergeFuncs)
 }
 
@@ -108,9 +104,6 @@ func (c *chartApplier) Delete(ctx context.Context, chartPath, namespace, name st
 		manifestReader = NewNamespaceSettingReader(manifestReader, namespace)
 	}
 
-	if err != nil {
-		return err
-	}
 	return c.DeleteManifest(ctx, manifestReader)
 }
 

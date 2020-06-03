@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -25,9 +26,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Applier returns the applier of this Clientset.
-func (c *Clientset) Applier() ApplierInterface {
+// Applier returns the Applier of this Clientset.
+func (c *Clientset) Applier() Applier {
 	return c.applier
+}
+
+// ChartRenderer returns a ChartRenderer populated with the cluster's Capabilities.
+func (c *Clientset) ChartRenderer() chartrenderer.Interface {
+	return c.chartRenderer
+}
+
+// ChartApplier returns a ChartApplier using the clientset's ChartRenderer and Applier.
+func (c *Clientset) ChartApplier() ChartApplier {
+	return c.chartApplier
 }
 
 // RESTConfig will return the config attribute of the Client object.

@@ -27,7 +27,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -272,17 +271,7 @@ func (o *Operation) InitializeSeedClients() error {
 		return err
 	}
 	o.K8sSeedClient = k8sSeedClient
-
-	renderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-
-	o.ChartApplierSeed = kubernetes.NewChartApplier(renderer, applier)
+	o.ChartApplierSeed = k8sSeedClient.ChartApplier()
 	return nil
 }
 
@@ -337,16 +326,7 @@ func (o *Operation) InitializeShootClients() error {
 	}
 	o.K8sShootClient = k8sShootClient
 
-	renderer, err := chartrenderer.NewForConfig(k8sShootClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(k8sShootClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-
-	o.ChartApplierShoot = kubernetes.NewChartApplier(renderer, applier)
+	o.ChartApplierShoot = k8sShootClient.ChartApplier()
 	return nil
 }
 

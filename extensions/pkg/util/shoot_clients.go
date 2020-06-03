@@ -17,20 +17,18 @@ package util
 import (
 	"context"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/engine"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -112,10 +110,7 @@ func NewClientsForShoot(ctx context.Context, c client.Client, namespace string, 
 	if err != nil {
 		return nil, err
 	}
-	shootChartApplier, err := gardener.NewChartApplierForConfig(shootRESTConfig)
-	if err != nil {
-		return nil, err
-	}
+	shootChartApplier := shootGardenerClientset.ChartApplier()
 
 	return &shootClients{
 		c:                 shootClient,
@@ -132,5 +127,5 @@ func NewChartRendererForShoot(version string) (chartrenderer.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
-	return chartrenderer.New(engine.New(), &chartutil.Capabilities{KubeVersion: v}), nil
+	return chartrenderer.NewWithServerVersion(v), nil
 }

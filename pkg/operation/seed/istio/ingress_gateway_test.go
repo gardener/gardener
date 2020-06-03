@@ -19,7 +19,6 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
 
@@ -28,9 +27,11 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/helm/pkg/engine"
+	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -54,16 +55,9 @@ var _ = Describe("ingress", func() {
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
-		d := &test.FakeDiscovery{}
+		renderer := cr.NewWithServerVersion(&version.Info{})
 
-		cap, err := cr.DiscoverCapabilities(d)
-		Expect(err).ToNot(HaveOccurred())
-
-		renderer := cr.New(engine.New(), cap)
-		a, err := test.NewTestApplier(c, d)
-		Expect(err).ToNot(HaveOccurred())
-
-		ca := kubernetes.NewChartApplier(renderer, a)
+		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 		igw = NewIngressGateway(
 			&IngressValues{

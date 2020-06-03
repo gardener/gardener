@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -184,11 +183,6 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		}
 		return err
 	}
-	chartRenderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "ChartRendererCreationFailed", fmt.Sprintf("ChartRenderer cannot be recreated for referenced Seed: %+v", err))
-		return err
-	}
 
 	var helmDeployment HelmDeployment
 	if err := json.Unmarshal(controllerRegistration.Spec.Deployment.ProviderConfig.Raw, &helmDeployment); err != nil {
@@ -242,7 +236,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		},
 	}
 
-	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
+	release, err := k8sSeedClient.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err

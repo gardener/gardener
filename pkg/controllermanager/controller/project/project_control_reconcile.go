@@ -23,7 +23,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -106,20 +105,6 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		}
 	}
 
-	chartRenderer, err := chartrenderer.NewForConfig(c.k8sGardenClient.RESTConfig())
-	if err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(c.k8sGardenClient.RESTConfig())
-	if err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
-	}
-	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
-
 	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
 	// We also create a RoleBinding in the namespace that binds all members to the gardener.cloud:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
@@ -158,7 +143,7 @@ func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLo
 		})
 	}
 
-	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
+	if err := c.k8sGardenClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":       project.Name,
 			"uid":        project.UID,

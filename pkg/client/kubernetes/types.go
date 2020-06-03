@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
@@ -35,7 +36,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -108,7 +108,9 @@ type Clientset struct {
 	restMapper meta.RESTMapper
 	restClient rest.Interface
 
-	applier ApplierInterface
+	applier       Applier
+	chartApplier  ChartApplier
+	chartRenderer chartrenderer.Interface
 
 	client client.Client
 
@@ -120,20 +122,12 @@ type Clientset struct {
 	version string
 }
 
-// Applier is a default implementation of the ApplyInterface. It applies objects with
-// by first checking whether they exist and then either creating / updating them (update happens
-// with a predefined merge logic).
-type Applier struct {
-	client     client.Client
-	restMapper *restmapper.DeferredDiscoveryRESTMapper
-}
-
 // MergeFunc determines how oldOj is merged into new oldObj.
 type MergeFunc func(newObj, oldObj *unstructured.Unstructured)
 
-// ApplierInterface is an interface which describes declarative operations to apply multiple
+// Applier is an interface which describes declarative operations to apply multiple
 // Kubernetes objects.
-type ApplierInterface interface {
+type Applier interface {
 	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options MergeFuncs) error
 	DeleteManifest(ctx context.Context, unstructured UnstructuredReader) error
 }
@@ -147,7 +141,13 @@ type Interface interface {
 	RESTClient() rest.Interface
 
 	Client() client.Client
-	Applier() ApplierInterface
+
+	// Applier returns an Applier which uses the clientset's client.
+	Applier() Applier
+	// ChartRenderer returns a ChartRenderer populated with the cluster's Capabilities.
+	ChartRenderer() chartrenderer.Interface
+	// ChartApplier returns a ChartApplier using the clientset's ChartRenderer and Applier.
+	ChartApplier() ChartApplier
 
 	Kubernetes() kubernetesclientset.Interface
 	GardenCore() gardencoreclientset.Interface
@@ -158,5 +158,6 @@ type Interface interface {
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)
 	CheckForwardPodPort(string, string, int, int) error
 
+	// Version returns the server version of the targeted Kubernetes cluster.
 	Version() string
 }

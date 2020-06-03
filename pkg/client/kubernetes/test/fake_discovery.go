@@ -23,9 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
-	memcache "k8s.io/client-go/discovery/cached/memory"
 	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -70,18 +69,12 @@ func (c *FakeDiscovery) ServerVersion() (*version.Info, error) {
 	return &version.Info{}, nil
 }
 
-// NewTestApplier create a new fake applier.
-func NewTestApplier(c client.Client, discovery discovery.DiscoveryInterface) (*kubernetes.Applier, error) {
-	tmp := kubernetes.NewControllerClient
-
-	defer func() {
-		kubernetes.NewControllerClient = tmp
-	}()
-
-	cachedDiscoveryClient := memcache.NewMemCacheClient(discovery)
-	kubernetes.NewControllerClient = func(config *rest.Config, options client.Options) (client.Client, error) {
-		return c, nil
+// NewTestApplier creates a new fake applier.
+func NewTestApplier(c client.Client, discovery discovery.DiscoveryInterface) (kubernetes.Applier, error) {
+	groupResources, err := restmapper.GetAPIGroupResources(discovery)
+	if err != nil {
+		return nil, err
 	}
 
-	return kubernetes.NewApplierInternal(nil, cachedDiscoveryClient)
+	return kubernetes.NewApplier(c, restmapper.NewDiscoveryRESTMapper(groupResources)), nil
 }
