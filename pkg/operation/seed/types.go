@@ -28,6 +28,7 @@ type Builder struct {
 
 // Seed is an object containing information about a Seed cluster.
 type Seed struct {
-	Info   *gardencorev1beta1.Seed
-	Secret *corev1.Secret
+	Info                           *gardencorev1beta1.Seed
+	Secret                         *corev1.Secret
+	LoadBalancerServiceAnnotations map[string]string
 }

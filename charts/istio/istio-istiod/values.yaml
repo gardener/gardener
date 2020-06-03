@@ -1,5 +1,5 @@
 trustDomain: cluster.local
-image: docker.io/istio/pilot:1.5.1
+image: to-be-injected-by-imagevector
 labels:
   app: istiod
   istio: pilot

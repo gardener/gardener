@@ -1548,6 +1548,14 @@ message SeedSettingExcessCapacityReservation {
   optional bool enabled = 1;
 }
 
+// SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+// seed.
+message SeedSettingLoadBalancerServices {
+  // Annotations is a map of annotations that will be injected/merged into every load balancer service object.
+  // +optional
+  map<string, string> annotations = 1;
+}
+
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
 message SeedSettingScheduling {
   // Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
@@ -1576,6 +1584,11 @@ message SeedSettings {
   // ShootDNS controls the shoot DNS settings for the seed.
   // +optional
   optional SeedSettingShootDNS shootDNS = 3;
+
+  // LoadBalancerServices controls certain settings for services of type load balancer that are created in the
+  // seed.
+  // +optional
+  optional SeedSettingLoadBalancerServices loadBalancerServices = 4;
 }
 
 // SeedSpec is the specification of a Seed.

@@ -6,6 +6,10 @@ metadata:
   labels:
     app: kubernetes
     role: apiserver
+{{- if .Values.annotations }}
+  annotations:
+{{ .Values.annotations | toYaml | indent 4 }}
+{{- end }}
 spec:
   type: {{ .Values.type }}
   selector:

@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,6 +70,7 @@ var _ = Describe("ingress", func() {
 				Image:           "foo/bar",
 				TrustDomain:     "foo.bar",
 				IstiodNamespace: "istio-test-system",
+				Annotations:     map[string]string{"foo": "bar"},
 				Ports: []corev1.ServicePort{
 					{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 				},
@@ -89,21 +89,22 @@ var _ = Describe("ingress", func() {
 	It("deploys istio-system namespace", func() {
 		actualNS := &corev1.Namespace{}
 
-		Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, actualNS)).ToNot(HaveOccurred())
+		Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, actualNS)).To(Succeed())
 
 		Expect(actualNS.Labels).To(HaveKeyWithValue("istio-operator-managed", "Reconcile"))
 		Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
 	})
 
-	DescribeTable("ingress gateway deployment has correct environment variables", func(env corev1.EnvVar) {
-		actualDeploy := &appsv1.Deployment{}
+	DescribeTable("ingress gateway deployment has correct environment variables",
+		func(env corev1.EnvVar) {
+			actualDeploy := &appsv1.Deployment{}
 
-		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
-		envs := actualDeploy.Spec.Template.Spec.Containers[0].Env
+			Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
+			envs := actualDeploy.Spec.Template.Spec.Containers[0].Env
 
-		Expect(envs).To(HaveLen(18))
-		Expect(envs).To(ContainElement(env))
-	},
+			Expect(envs).To(HaveLen(18))
+			Expect(envs).To(ContainElement(env))
+		},
 		Entry("NODE_NAME is projected", fieldEnv("NODE_NAME", "spec.nodeName")),
 		Entry("POD_NAME is projected", fieldEnv("POD_NAME", "metadata.name")),
 		Entry("POD_NAMESPACE is projected", fieldEnv("POD_NAMESPACE", "metadata.namespace")),
@@ -124,4 +125,10 @@ var _ = Describe("ingress", func() {
 		Entry("ISTIO_META_CLUSTER_ID is Kubernetes", simplEnv("ISTIO_META_CLUSTER_ID", "Kubernetes")),
 	)
 
+	It("ingress gateway service has load balancer annotations", func() {
+		svc := &corev1.Service{}
+
+		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
+		Expect(svc.Annotations).To(HaveKeyWithValue("foo", "bar"))
+	})
 })

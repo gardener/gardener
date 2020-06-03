@@ -6454,6 +6454,38 @@ bool
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServices">SeedSettingLoadBalancerServices
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
+seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingScheduling">SeedSettingScheduling
 </h3>
 <p>
@@ -6574,6 +6606,21 @@ SeedSettingShootDNS
 <td>
 <em>(Optional)</em>
 <p>ShootDNS controls the shoot DNS settings for the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>loadBalancerServices</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingLoadBalancerServices">
+SeedSettingLoadBalancerServices
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the
+seed.</p>
 </td>
 </tr>
 </tbody>
