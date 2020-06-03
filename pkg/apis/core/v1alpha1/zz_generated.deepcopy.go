@@ -1404,6 +1404,11 @@ func (in *KubeProxyConfig) DeepCopy() *KubeProxyConfig {
 func (in *KubeSchedulerConfig) DeepCopyInto(out *KubeSchedulerConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
+	if in.KubeMaxPDVols != nil {
+		in, out := &in.KubeMaxPDVols, &out.KubeMaxPDVols
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

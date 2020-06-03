@@ -96,6 +96,11 @@ spec:
         - name: metrics
           containerPort: {{ include "kube-scheduler.port" . }}
           protocol: TCP
+        {{- if .Values.kubeMaxPDVols }}
+        env:
+        - name: KUBE_MAX_PD_VOLS
+          value: {{ .Values.kubeMaxPDVols | quote }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         {{- if .Values.resources }}

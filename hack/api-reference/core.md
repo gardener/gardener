@@ -3903,6 +3903,21 @@ KubernetesConfig
 </p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeMaxPDVols</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeMaxPDVols allows to configure the <code>KUBE_MAX_PD_VOLS</code> environment variable for the kube-scheduler.
+Please find more information here: <a href="https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits">https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits</a>
+Note that using this field is considered alpha-/experimental-level and is on your own risk. You should be aware
+of all the side-effects and consequences when changing it.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig

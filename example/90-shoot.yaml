@@ -148,6 +148,7 @@ spec:
   # kubeScheduler:
   #   featureGates:
   #     SomeKubernetesFeature: true
+  #   kubeMaxPDVols: "30" # https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true

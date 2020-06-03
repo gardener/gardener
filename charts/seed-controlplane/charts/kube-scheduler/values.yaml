@@ -13,3 +13,4 @@ resources:
   limits:
     cpu: 400m
     memory: 512Mi
+#kubeMaxPDVols: "30"
