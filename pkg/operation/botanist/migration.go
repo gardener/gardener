@@ -108,7 +108,7 @@ func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client clien
 			list := gardencorev1alpha1helper.ExtensionResourceStateList(b.ShootState.Spec.Extensions)
 			if extensionResourceState := list.Get(resourceKind, &resourceName, purpose); extensionResourceState != nil {
 				extensionStatus := extensionObj.GetExtensionStatus()
-				extensionStatus.SetState(extensionResourceState.State)
+				extensionStatus.SetState(*extensionResourceState.State)
 				extensionStatus.SetResources(extensionResourceState.Resources)
 				for _, r := range extensionResourceState.Resources {
 					resourceRefs = append(resourceRefs, r.ResourceRef)
@@ -181,4 +181,18 @@ func (b *Botanist) WaitForBackupEntryOperationMigrateToSucceed(ctx context.Conte
 		}
 		return retry.MinorError(fmt.Errorf("BackupEntry %q lastOperation status is not yet Succeeded, but [%v]", name, lastOperation))
 	})
+}
+
+// DeleteBackupEntryFromSeed deletes the migrated BackupEntry from the Seed
+func (b *Botanist) DeleteBackupEntryFromSeed(ctx context.Context) error {
+	var (
+		name = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+	)
+	return common.DeleteExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
+		"",
+		name,
+	)
 }

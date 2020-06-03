@@ -186,10 +186,11 @@ var _ = Describe("Accessor", func() {
 
 			Describe("#SetState", func() {
 				It("should set the extensions state", func() {
-					state := &runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
+					state := runtime.RawExtension{Raw: []byte("{\"raw\":\"ext\"}")}
 					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
 					acc.SetState(state)
-					Expect(acc.GetState()).To(Equal(state))
+					actualState := acc.GetState()
+					Expect(*actualState).To(Equal(state))
 				})
 			})
 
