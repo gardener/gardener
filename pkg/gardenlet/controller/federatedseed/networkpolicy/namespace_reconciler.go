@@ -1,0 +1,128 @@
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package networkpolicy
+
+import (
+	"context"
+	"fmt"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
+
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/labels"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	kubenetworkingv1listers "k8s.io/client-go/listers/networking/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+// namespaceReconciler implements the reconcile.Reconcile interface for namespace reconciliation.
+type namespaceReconciler struct {
+	ctx                    context.Context
+	log                    *logrus.Entry
+	seedClient             client.Client
+	seedName               string
+	endpointsLister        kubecorev1listers.EndpointsLister
+	networkPolicyLister    kubenetworkingv1listers.NetworkPolicyLister
+	namespaceLister        corev1listers.NamespaceLister
+	shootNamespaceSelector labels.Selector
+}
+
+// newNamespaceReconciler returns the new namespace reconciler.
+func newNamespaceReconciler(ctx context.Context, seedLogger *logrus.Entry, seedClient client.Client, endpointsLister kubecorev1listers.EndpointsLister, networkPolicyLister kubenetworkingv1listers.NetworkPolicyLister, namespaceLister corev1listers.NamespaceLister, seedName string, shootNamespaceSelector labels.Selector) reconcile.Reconciler {
+	return &namespaceReconciler{
+		ctx:                    ctx,
+		seedClient:             seedClient,
+		endpointsLister:        endpointsLister,
+		networkPolicyLister:    networkPolicyLister,
+		namespaceLister:        namespaceLister,
+		log:                    seedLogger,
+		seedName:               seedName,
+		shootNamespaceSelector: shootNamespaceSelector,
+	}
+}
+
+// Reconcile reconciles namespace in order to create the "allowed-to-seed-apiserver" Network Policy
+func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	namespace, err := r.namespaceLister.Get(request.Name)
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return reconcile.Result{}, err
+		}
+		r.log.Debugf("namespace %q is not found, not trying to reconcile", namespace.Name)
+		return reconcile.Result{}, nil
+	}
+
+	// if the namespace is not the Garden or a Shoot namespace - delete the existing NetworkPolicy
+	if !(namespace.Name == v1beta1constants.GardenNamespace || r.shootNamespaceSelector.Matches(labels.Set(namespace.Labels))) {
+		policy, err := r.networkPolicyLister.NetworkPolicies(request.Name).Get(helper.AllowToSeedAPIServer)
+		if client.IgnoreNotFound(err) != nil {
+			return reconcile.Result{}, err
+		}
+		if policy != nil {
+			r.log.Infof("deleting NetworkPolicy %q from namespace %q", policy.Name, namespace.Name)
+			if err := r.seedClient.Delete(r.ctx, policy); client.IgnoreNotFound(err) != nil {
+				return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %v", policy.Name, namespace.Name, err)
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	if namespace.DeletionTimestamp != nil {
+		r.log.Debugf("Do not update NetworkPolicy %q in namespace %q - namespace has a deletion timestamp", helper.AllowToSeedAPIServer, err)
+		return reconcile.Result{}, nil
+	}
+
+	if namespace.Status.Phase != corev1.NamespaceActive {
+		r.log.Debugf("Do not update NetworkPolicy %q in namespace %q - namespace is not active", helper.AllowToSeedAPIServer, err)
+		return reconcile.Result{}, nil
+	}
+
+	r.log.Debugf("Reconciling NetworkPolicy %q in namespace %q", helper.AllowToSeedAPIServer, request.Name)
+
+	kubernetesEndpoints, err := r.endpointsLister.Endpoints(corev1.NamespaceDefault).Get("kubernetes")
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	egressRules := helper.GetEgressRules(kubernetesEndpoints)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// avoid duplicate NetworkPolicy updates
+	policy, err := r.networkPolicyLister.NetworkPolicies(request.Name).Get(helper.AllowToSeedAPIServer)
+	if client.IgnoreNotFound(err) != nil {
+		return reconcile.Result{}, err
+	}
+	if policy != nil {
+		if apiequality.Semantic.DeepEqual(policy.Spec.Egress, egressRules) {
+			r.log.Debugf("NetworkPolicy %q in namespace %q already up-to date", helper.AllowToSeedAPIServer, request.Name)
+			return reconcile.Result{}, nil
+		}
+	}
+
+	err = helper.CreateOrUpdateNetworkPolicy(r.ctx, r.seedClient, request.Name, egressRules)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	r.log.Infof("Successfully updated NetworkPolicy %q in namespace %q", helper.AllowToSeedAPIServer, request.Name)
+	return reconcile.Result{}, nil
+}

@@ -74,6 +74,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ShootStateSync != nil {
 			SetDefaults_ShootStateSyncControllerConfiguration(in.Controllers.ShootStateSync)
 		}
+		if in.Controllers.SeedAPIServerNetworkPolicy != nil {
+			SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration(in.Controllers.SeedAPIServerNetworkPolicy)
+		}
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)

@@ -115,6 +115,8 @@ type GardenletControllerConfiguration struct {
 	ShootCare *ShootCareControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
+	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller.
+	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -226,6 +228,13 @@ type ShootStateSyncControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing extension resources are
 	// synced to the ShootState resource
 	SyncPeriod *metav1.Duration
+}
+
+// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
+// controller.
+type SeedAPIServerNetworkPolicyControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

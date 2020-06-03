@@ -97,6 +97,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.Controllers.ShootStateSync = &ShootStateSyncControllerConfiguration{}
 	}
 
+	if obj.Controllers.SeedAPIServerNetworkPolicy == nil {
+		obj.Controllers.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
+	}
+
 	if obj.Discovery == nil {
 		obj.Discovery = &DiscoveryConfiguration{}
 	}
@@ -306,5 +310,14 @@ func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncContro
 	if obj.SyncPeriod == nil {
 		v := metav1.Duration{Duration: time.Minute}
 		obj.SyncPeriod = &v
+	}
+}
+
+// SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration sets defaults for the seed apiserver endpoints controller.
+func SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration(obj *SeedAPIServerNetworkPolicyControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		// only use few workers for each seed, as the API server endpoints should stay the same most of the time.
+		v := 3
+		obj.ConcurrentSyncs = &v
 	}
 }

@@ -29,12 +29,16 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
+	seedapiservernetworkpolicy "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy"
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 
 	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
 	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -56,6 +60,8 @@ type Controller struct {
 
 	numberOfRunningWorkers int
 	workerCh               chan int
+
+	lock sync.RWMutex
 }
 
 // NewFederatedSeedController creates new controller that reconciles extension resources.
@@ -72,7 +78,8 @@ func NewFederatedSeedController(k8sGardenClient kubernetes.Interface, gardenCore
 	}
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
-		controllers: make(map[string]*extensionsController),
+		extensionControllers: make(map[string]*extensionsController),
+		namespaceControllers: make(map[string]*namespaceController),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -109,7 +116,9 @@ func (c *Controller) seedUpdate(_, newObj interface{}) {
 	var newSeedObj = newObj.(*gardencorev1beta1.Seed)
 
 	newSeedBootstrappedCondition := helper.GetCondition(newSeedObj.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	_, found := c.federatedSeedControllerManager.controllers[newSeedObj.Name]
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, found := c.federatedSeedControllerManager.extensionControllers[newSeedObj.Name]
 	if !found && newSeedBootstrappedCondition != nil && newSeedBootstrappedCondition.Status == gardencorev1beta1.ConditionTrue {
 		c.addSeedToQueue(newSeedObj)
 	}
@@ -171,7 +180,12 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 			return reconcile.Result{}, nil
 		}
 
-		if err := c.federatedSeedControllerManager.createControllers(ctx, seed.GetName(), c.k8sGardenClient, c.config, c.recorder); err != nil {
+		seedLogger := logger.Logger.WithField("Seed", seed.GetName())
+		if err := c.federatedSeedControllerManager.createExtensionControllers(ctx, seedLogger, seed.GetName(), c.k8sGardenClient, c.config, c.recorder); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if err := c.federatedSeedControllerManager.createNamespaceControllers(ctx, seedLogger, seed.GetName(), c.k8sGardenClient, c.config, c.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -180,8 +194,10 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 }
 
 type federatedSeedControllerManager struct {
-	controllers map[string]*extensionsController
-	lock        sync.RWMutex
+	extensionControllers     map[string]*extensionsController
+	namespaceControllers     map[string]*namespaceController
+	extensionControllersLock sync.RWMutex
+	namespaceControllersLock sync.RWMutex
 }
 
 type extensionsController struct {
@@ -194,11 +210,25 @@ func (s *extensionsController) Stop() {
 	s.controller.Stop()
 }
 
-func (f *federatedSeedControllerManager) createControllers(ctx context.Context, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
-	if _, found := f.controllers[seedName]; found {
-		logger.Logger.Infof("Controllers are already started for seed %s", seedName)
+type namespaceController struct {
+	controller *seedapiservernetworkpolicy.Controller
+	cancelFunc context.CancelFunc
+}
+
+func (s *namespaceController) Stop() {
+	logger.Logger.Infof("Stopping extension controller")
+	s.cancelFunc()
+	s.controller.Stop()
+}
+
+func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
+	f.extensionControllersLock.Lock()
+	if _, found := f.extensionControllers[seedName]; found {
+		f.extensionControllersLock.Unlock()
+		logger.Logger.Debugf("Extension controllers are already started for seed %s", seedName)
 		return nil
 	}
+	f.extensionControllersLock.Unlock()
 
 	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seedName)
 	if err != nil {
@@ -215,48 +245,100 @@ func (f *federatedSeedControllerManager) createControllers(ctx context.Context, 
 	}
 
 	var (
-		childCtx, cancelFunc = context.WithCancel(ctx)
-		seedLogger           = logger.Logger.WithField("Seed", seedName)
-
-		dnsInformers         = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
-		extensionsInformers  = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
-		extensionsController = extensions.NewController(ctx, k8sGardenClient, k8sSeedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
+		extensionCtx, extensionCancelFunc = context.WithCancel(ctx)
+		dnsInformers                      = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
+		extensionsInformers               = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
+		extensionsController              = extensions.NewController(ctx, k8sGardenClient, k8sSeedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
 	)
 
-	logger.Logger.Infof("Run extensions controller for seed: %s", seedName)
-	if err := extensionsController.Run(childCtx, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
-		logger.Logger.Infof("There was error running the extensions controller for seed: %s", seedName)
-		cancelFunc()
+	seedLogger.Info("Run extensions controller")
+	if err := extensionsController.Run(extensionCtx, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
+		seedLogger.Infof("There was an error running the extension controllers: %v", err)
+		extensionCancelFunc()
 		return err
 	}
 
-	f.addController(seedName, extensionsController, cancelFunc)
+	f.addExtensionController(seedName, extensionsController, extensionCancelFunc)
 	return nil
 }
 
-func (f *federatedSeedControllerManager) addController(seedName string, controller *extensions.Controller, cancelFunc context.CancelFunc) {
-	logger.Logger.Infof("Adding controllers for seed %s", seedName)
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	f.controllers[seedName] = &extensionsController{
+func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
+	f.namespaceControllersLock.Lock()
+	if _, found := f.namespaceControllers[seedName]; found {
+		f.namespaceControllersLock.Unlock()
+		logger.Logger.Debugf("Namespace controllers are already started for seed %s", seedName)
+		return nil
+	}
+	f.namespaceControllersLock.Unlock()
+
+	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seedName)
+	if err != nil {
+		return err
+	}
+
+	var (
+		namespaceCtx, namespaceCancelFunc = context.WithCancel(ctx)
+		seedKubeInformerFactory           = kubeinformers.NewSharedInformerFactory(k8sSeedClient.Kubernetes(), 0)
+		// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
+		// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
+		seedDefaultNamespaceKubeInformer = kubeinformers.NewSharedInformerFactoryWithOptions(k8sSeedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
+		namespaceController              = seedapiservernetworkpolicy.NewController(ctx, k8sSeedClient, seedDefaultNamespaceKubeInformer, seedKubeInformerFactory, seedLogger, recorder, seedName)
+	)
+
+	seedLogger.Info("Run namespace controller")
+	if err := namespaceController.Run(namespaceCtx, *config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs); err != nil {
+		seedLogger.Infof("There was an error running the namespace controller: %v", err)
+		namespaceCancelFunc()
+		return err
+	}
+
+	f.addNamespaceController(seedName, namespaceController, namespaceCancelFunc)
+	return nil
+}
+
+func (f *federatedSeedControllerManager) addExtensionController(seedName string, controller *extensions.Controller, cancelFunc context.CancelFunc) {
+	logger.Logger.Debugf("Adding extension controllers for seed %s", seedName)
+	f.extensionControllersLock.Lock()
+	defer f.extensionControllersLock.Unlock()
+	f.extensionControllers[seedName] = &extensionsController{
+		controller: controller,
+		cancelFunc: cancelFunc,
+	}
+}
+
+func (f *federatedSeedControllerManager) addNamespaceController(seedName string, controller *seedapiservernetworkpolicy.Controller, cancelFunc context.CancelFunc) {
+	logger.Logger.Debugf("Adding namespace controller for seed %s", seedName)
+	f.namespaceControllersLock.Lock()
+	defer f.namespaceControllersLock.Unlock()
+	f.namespaceControllers[seedName] = &namespaceController{
 		controller: controller,
 		cancelFunc: cancelFunc,
 	}
 }
 
 func (f *federatedSeedControllerManager) removeController(seedName string) {
-	if controller, ok := f.controllers[seedName]; ok {
-		logger.Logger.Infof("Removing controllers for seed %s", seedName)
+	if controller, ok := f.extensionControllers[seedName]; ok {
+		logger.Logger.Debugf("Removing extension controller for seed %s", seedName)
 		controller.Stop()
-		f.lock.Lock()
-		defer f.lock.Unlock()
-		delete(f.controllers, seedName)
+		f.extensionControllersLock.Lock()
+		defer f.extensionControllersLock.Unlock()
+		delete(f.extensionControllers, seedName)
+	}
+	if controller, ok := f.namespaceControllers[seedName]; ok {
+		logger.Logger.Debugf("Removing namespace controller for seed %s", seedName)
+		controller.Stop()
+		f.namespaceControllersLock.Lock()
+		defer f.namespaceControllersLock.Unlock()
+		delete(f.namespaceControllers, seedName)
 	}
 }
 
 func (f *federatedSeedControllerManager) ShutDownControllers() {
 	logger.Logger.Infof("Federated controllers are being stopped")
-	for _, controller := range f.controllers {
+	for _, controller := range f.extensionControllers {
+		controller.Stop()
+	}
+	for _, controller := range f.namespaceControllers {
 		controller.Stop()
 	}
 }
