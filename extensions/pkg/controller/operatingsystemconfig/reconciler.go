@@ -116,7 +116,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case osc.DeletionTimestamp != nil:
 		return r.delete(r.ctx, osc)
 	case osc.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, osc, operationType)
+		return r.restore(r.ctx, osc)
 	default:
 		return r.reconcile(r.ctx, osc, operationType)
 	}
@@ -152,30 +152,30 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, osc); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, osc, operationType, "Restoring the operating system config"); err != nil {
+	if err := r.updateStatusProcessing(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	userData, command, units, err := r.actuator.Restore(ctx, osc)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, operationType, "Error restoring operating system config"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeRestore, "Error restoring operating system config"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	secret, err := r.createOrUpdateOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, operationType, "Could not apply secret for generated cloud config"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	setOSCStatus(osc, secret, command, units)
 
-	if err := r.updateStatusSuccess(ctx, osc, operationType, "Successfully restored operating system config"); err != nil {
+	if err := r.updateStatusSuccess(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 

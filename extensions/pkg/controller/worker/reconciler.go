@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case worker.DeletionTimestamp != nil:
 		return r.delete(worker, cluster)
 	case worker.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(worker, cluster, operationType)
+		return r.restore(worker, cluster)
 	default:
 		return r.reconcile(worker, cluster, operationType)
 	}
@@ -213,14 +213,18 @@ func (r *reconciler) reconcile(worker *extensionsv1alpha1.Worker, cluster *exten
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := r.updateStatusProcessing(r.ctx, worker, operationType, "Restoring the worker"); err != nil {
+func (r *reconciler) restore(worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+	if err := r.updateStatusProcessing(r.ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the worker"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(r.ctx, worker, cluster); err != nil {
-		r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, operationType, "Error restoring worker")
+		r.updateStatusError(r.ctx, extensionscontroller.ReconcileErrCauseOrErr(err), worker, gardencorev1beta1.LastOperationTypeRestore, "Error restoring worker")
 		return extensionscontroller.ReconcileErr(err)
+	}
+
+	if err := r.updateStatusSuccess(r.ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled worker"); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// remove operation annotation 'restore'

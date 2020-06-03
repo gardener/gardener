@@ -114,7 +114,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case network.DeletionTimestamp != nil:
 		return r.delete(r.ctx, network, cluster)
 	case network.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, network, cluster, operationType)
+		return r.restore(r.ctx, network, cluster)
 	default:
 		return r.reconcile(r.ctx, network, cluster, operationType)
 	}
@@ -141,21 +141,21 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
+func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, network); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, network, operationType, EventNetworkRestoration, "Restoring the network"); err != nil {
+	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Restoring the network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, network, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, operationType, EventNetworkRestoration, "Error restoring network"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Error restoring network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, network, operationType, EventNetworkRestoration, "Successfully restored network"); err != nil {
+	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Successfully restored network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
