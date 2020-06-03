@@ -241,12 +241,12 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy),
+			Fn:           flow.TaskFn(botanist.MigrateExternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy),
+			Fn:           flow.TaskFn(botanist.MigrateInternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		createETCDSnapshot = g.Add(flow.Task{

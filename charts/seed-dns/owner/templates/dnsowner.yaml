@@ -1,0 +1,11 @@
+---
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSOwner
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if .Values.ownerID }}
+  ownerId: {{ .Values.ownerID }}
+  {{- end }}
+  active: {{ .Values.active }}

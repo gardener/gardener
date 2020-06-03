@@ -74,8 +74,10 @@ func New(o *operation.Operation) (*Botanist, error) {
 
 	o.Shoot.Components.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.Client())
 	o.Shoot.Components.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.Client())
 	o.Shoot.Components.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.Client())
 	o.Shoot.Components.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.InternalOwner = b.DefaultInternalDNSOwner(b.K8sSeedClient.Client())
 
 	o.Shoot.Components.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(context.TODO(), b.K8sGardenClient.Client(), b.K8sSeedClient.Client())
 	if err != nil {
