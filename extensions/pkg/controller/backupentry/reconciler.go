@@ -94,7 +94,9 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	shootTechnicalID, _ := ExtractShootDetailsFromBackupEntryName(be.Name)
 	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, shootTechnicalID)
-	if err != nil {
+	// As BackupEntry continues to exist post deletion of a Shoot,
+	// we do not want to block its deletion when the Cluster is not found.
+	if client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
