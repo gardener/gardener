@@ -12,22 +12,22 @@ Each Generator implementation can use this function as shown bellow:
 ```go
 import (
 	"github.com/gobuffalo/packr"
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/os-common/generator/test"
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-         
+
 var _ Describe("My Generator Test", func(){
       var box packr.Box
 
       BeforeSuite(func() {
-     	box = packr.NewBox("/path/to/testfiles")
+            box = packr.NewBox("/path/to/testfiles")
       })
 
       Describe("Conformance Tests", test.DescribeTest(NewGenerator(),box))
 
       Describe("My other Tests", func(){
-       ...
+           ...
       })
- })
+})
 ```

@@ -12,20 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package actuator
 
 import (
@@ -33,18 +19,19 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	commonosgenerator "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CloudConfigFromOperatingSystemConfig generates a CloudConfig from an OperatingSystemConfig
 // using a Generator
-func CloudConfigFromOperatingSystemConfig(ctx context.Context, cli runtimeclient.Client, config *extensionsv1alpha1.OperatingSystemConfig, generator commonosgenerator.Generator) ([]byte, *string, error) {
+func CloudConfigFromOperatingSystemConfig(ctx context.Context, c client.Client, config *extensionsv1alpha1.OperatingSystemConfig, generator commonosgenerator.Generator) ([]byte, *string, error) {
 	files := make([]*commonosgenerator.File, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
-		data, err := DataForFileContent(ctx, cli, config.Namespace, &file.Content)
+		data, err := DataForFileContent(ctx, c, config.Namespace, &file.Content)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -67,6 +54,7 @@ func CloudConfigFromOperatingSystemConfig(ctx context.Context, cli runtimeclient
 	}
 
 	return generator.Generate(&commonosgenerator.OperatingSystemConfig{
+		Object:    config,
 		Bootstrap: config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 		CRI:       config.Spec.CRIConfig,
 		Files:     files,
@@ -76,7 +64,7 @@ func CloudConfigFromOperatingSystemConfig(ctx context.Context, cli runtimeclient
 }
 
 // DataForFileContent returns the content for a FileContent, retrieving from a Secret if necessary.
-func DataForFileContent(ctx context.Context, cli runtimeclient.Client, namespace string, content *extensionsv1alpha1.FileContent) ([]byte, error) {
+func DataForFileContent(ctx context.Context, c client.Client, namespace string, content *extensionsv1alpha1.FileContent) ([]byte, error) {
 	if inline := content.Inline; inline != nil {
 		if len(inline.Encoding) == 0 {
 			return []byte(inline.Data), nil
@@ -84,11 +72,11 @@ func DataForFileContent(ctx context.Context, cli runtimeclient.Client, namespace
 		return cloudinit.Decode(inline.Encoding, []byte(inline.Data))
 	}
 
-	key := runtimeclient.ObjectKey{Namespace: namespace, Name: content.SecretRef.Name}
 	secret := &corev1.Secret{}
-	if err := cli.Get(ctx, key, secret); err != nil {
+	if err := c.Get(ctx, kutil.Key(namespace, content.SecretRef.Name), secret); err != nil {
 		return nil, err
 	}
+
 	return secret.Data[content.SecretRef.DataKey], nil
 }
 

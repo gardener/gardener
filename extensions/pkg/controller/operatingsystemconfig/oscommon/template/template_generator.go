@@ -16,13 +16,13 @@ package template
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"path"
 	"text/template"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DefaultUnitsPath is the default CoreOS path where to store units at.
@@ -53,10 +53,12 @@ type dropInData struct {
 }
 
 type initScriptData struct {
-	CRI       *extensionsv1alpha1.CRIConfig
-	Files     []*fileData
-	Units     []*unitData
-	Bootstrap bool
+	CRI              *extensionsv1alpha1.CRIConfig
+	Files            []*fileData
+	Units            []*unitData
+	Bootstrap        bool
+	Type             string
+	AdditionalValues map[string]interface{}
 }
 
 // CloudInitGenerator generates cloud-init scripts.
@@ -64,10 +66,8 @@ type CloudInitGenerator struct {
 	cloudInitTemplate *template.Template
 	unitsPath         string
 	cmd               string
-}
 
-func b64(data []byte) string {
-	return base64.StdEncoding.EncodeToString(data)
+	additionalValuesFunc func(*extensionsv1alpha1.OperatingSystemConfig) (map[string]interface{}, error)
 }
 
 // Generate generates a cloud-init script from the given OperatingSystemConfig.
@@ -76,7 +76,7 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 	for _, file := range data.Files {
 		tFile := &fileData{
 			Path:    file.Path,
-			Content: b64(file.Content),
+			Content: utils.EncodeBase64(file.Content),
 			Dirname: path.Dir(file.Path),
 		}
 		if file.Permissions != nil {
@@ -90,7 +90,7 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 	for _, unit := range data.Units {
 		var content *string
 		if unit.Content != nil {
-			encoded := b64(unit.Content)
+			encoded := utils.EncodeBase64(unit.Content)
 			content = &encoded
 		}
 		tUnit := &unitData{
@@ -105,7 +105,7 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 			for _, dropIn := range unit.DropIns {
 				items = append(items, &dropInData{
 					Path:    path.Join(dropInPath, dropIn.Name),
-					Content: b64(dropIn.Content),
+					Content: utils.EncodeBase64(dropIn.Content),
 				})
 			}
 			tUnit.DropIns = &dropInsData{
@@ -117,13 +117,24 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 		tUnits = append(tUnits, tUnit)
 	}
 
-	var buf bytes.Buffer
-	if err := t.cloudInitTemplate.Execute(&buf, &initScriptData{
+	initScriptData := &initScriptData{
+		Type:      data.Object.Spec.Type,
 		CRI:       data.CRI,
 		Files:     tFiles,
 		Units:     tUnits,
 		Bootstrap: data.Bootstrap,
-	}); err != nil {
+	}
+
+	if t.additionalValuesFunc != nil {
+		additionalValues, err := t.additionalValuesFunc(data.Object)
+		if err != nil {
+			return nil, nil, err
+		}
+		initScriptData.AdditionalValues = additionalValues
+	}
+
+	var buf bytes.Buffer
+	if err := t.cloudInitTemplate.Execute(&buf, initScriptData); err != nil {
 		return nil, nil, err
 	}
 
@@ -137,17 +148,20 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 }
 
 // NewCloudInitGenerator creates a new CloudInitGenerator with the given units path.
-func NewCloudInitGenerator(template *template.Template, unitsPath string, cmd string) *CloudInitGenerator {
+func NewCloudInitGenerator(template *template.Template, unitsPath string, cmd string, additionalValuesFunc func(*extensionsv1alpha1.OperatingSystemConfig) (map[string]interface{}, error)) *CloudInitGenerator {
 	return &CloudInitGenerator{
-		cloudInitTemplate: template,
-		unitsPath:         unitsPath,
-		cmd:               cmd,
+		cloudInitTemplate:    template,
+		unitsPath:            unitsPath,
+		cmd:                  cmd,
+		additionalValuesFunc: additionalValuesFunc,
 	}
 }
 
+// NewTemplate creates a new template with the given name.
 func NewTemplate(name string) *template.Template {
 	return template.New(name).Funcs(template.FuncMap{
 		"isContainerDEnabled": func(cri *extensionsv1alpha1.CRIConfig) bool {
 			return cri != nil && cri.Name == extensionsv1alpha1.CRINameContainerD
-		}})
+		},
+	})
 }
