@@ -31,12 +31,12 @@ spec:
         args:
         - "discovery"
         - --monitoringAddr=
-        - --secureGrpcAddr=
         - --grpcAddr=
         - --httpAddr=localhost:8080
         - --httpsAddr=:15017
         - --log_output_level=all:warn,ads:error
         - --domain={{ .Values.trustDomain }}
+        - --plugins=authn,authz,health # remove mixer plugin
         - --trust-domain={{ .Values.trustDomain }}
         - --keepaliveMaxServerConnectionAge=30m
         ports:

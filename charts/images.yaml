@@ -229,8 +229,8 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/proxyv2
-  tag: "1.5.2"
+  tag: "1.6.0"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/pilot
-  tag: "1.5.2"
+  tag: "1.6.0"

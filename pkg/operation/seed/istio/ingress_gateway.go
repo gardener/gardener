@@ -36,14 +36,14 @@ type ingress struct {
 }
 
 // IngressValues holds values for the istio-ingress chart.
-// The only opened port is 15020.
+// The only opened port is 15021.
 type IngressValues struct {
 	TrustDomain     string            `json:"trustDomain,omitempty"`
 	Image           string            `json:"image,omitempty"`
 	Annotations     map[string]string `json:"annotations,omitempty"`
 	IstiodNamespace string            `json:"istiodNamespace,omitempty"`
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
-	// Port 15020 and 15000 cannot be used.
+	// Port 15021 and 15000 cannot be used.
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 }
 

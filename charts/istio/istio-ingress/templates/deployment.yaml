@@ -28,7 +28,7 @@ spec:
         image: {{ .Values.image }}
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 15020
+        - containerPort: 15021
         {{- range .Values.ports }}
         - containerPort: {{ .targetPort }}
         {{- end }}
@@ -44,7 +44,7 @@ spec:
         - --connectTimeout=10s
         - --serviceCluster=istio-ingressgateway
         - --proxyAdminPort=15000
-        - --statusPort=15020
+        - --statusPort=15021
         - --controlPlaneAuthPolicy=NONE
         - --discoveryAddress=istiod.{{ .Values.istiodNamespace }}.svc:15012
         - --trust-domain={{ .Values.trustDomain }}
@@ -52,7 +52,7 @@ spec:
           failureThreshold: 30
           httpGet:
             path: /healthz/ready
-            port: 15020
+            port: 15021
             scheme: HTTP
           initialDelaySeconds: 1
           periodSeconds: 2
