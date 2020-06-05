@@ -1160,9 +1160,12 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 		}
 	}
 
-	schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler
-	if schedulerConfig != nil {
+	if schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler; schedulerConfig != nil {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
+
+		if schedulerConfig.KubeMaxPDVols != nil {
+			defaultValues["kubeMaxPDVols"] = *schedulerConfig.KubeMaxPDVols
+		}
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.KubeSchedulerImageName)

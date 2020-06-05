@@ -2396,6 +2396,7 @@ func autoConvert_v1beta1_KubeSchedulerConfig_To_core_KubeSchedulerConfig(in *Kub
 	if err := Convert_v1beta1_KubernetesConfig_To_core_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
+	out.KubeMaxPDVols = (*string)(unsafe.Pointer(in.KubeMaxPDVols))
 	return nil
 }
 
@@ -2408,6 +2409,7 @@ func autoConvert_core_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(in *cor
 	if err := Convert_core_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
+	out.KubeMaxPDVols = (*string)(unsafe.Pointer(in.KubeMaxPDVols))
 	return nil
 }
 
