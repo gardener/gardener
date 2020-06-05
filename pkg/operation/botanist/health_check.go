@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -64,11 +65,9 @@ func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 }
 
 var (
-	controlPlaneSelector    = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleControlPlane)
-	systemComponentSelector = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleSystemComponent)
-	monitoringSelector      = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleMonitoring)
-	optionalAddonSelector   = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleOptionalAddon)
-	loggingSelector         = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleLogging)
+	controlPlaneSelector = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleControlPlane)
+	monitoringSelector   = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleMonitoring)
+	loggingSelector      = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleLogging)
 )
 
 // Now determines the current time.
@@ -80,18 +79,22 @@ type HealthChecker struct {
 	staleExtensionHealthCheckThreshold *metav1.Duration
 }
 
+func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.String, reason, message string) *gardencorev1beta1.Condition {
+	if missingNames := requiredNames.Difference(names); missingNames.Len() != 0 {
+		c := b.FailedCondition(condition, reason, fmt.Sprintf("%s: %v", message, missingNames.List()))
+		return &c
+	}
+
+	return nil
+}
+
 func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
 	actualNames := sets.NewString()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
 	}
 
-	if missingNames := requiredNames.Difference(actualNames); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, "DeploymentMissing", fmt.Sprintf("Missing required deployments: %v", missingNames.List()))
-		return &c
-	}
-
-	return nil
+	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "DeploymentMissing", "Missing required deployments")
 }
 
 func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
@@ -111,12 +114,7 @@ func (b *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition
 		actualNames.Insert(object.Name)
 	}
 
-	if missingNames := requiredNames.Difference(actualNames); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, "EtcdMissing", fmt.Sprintf("Missing required etcds: %v", missingNames.List()))
-		return &c
-	}
-
-	return nil
+	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "EtcdMissing", "Missing required etcds")
 }
 
 func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []*druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
@@ -146,12 +144,7 @@ func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Co
 		actualNames.Insert(object.Name)
 	}
 
-	if missingNames := requiredNames.Difference(actualNames); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, "StatefulSetMissing", fmt.Sprintf("Missing required stateful sets: %v", missingNames.List()))
-		return &c
-	}
-
-	return nil
+	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "StatefulSetMissing", "Missing required stateful sets")
 }
 
 func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []*appsv1.StatefulSet) *gardencorev1beta1.Condition {
@@ -187,10 +180,42 @@ func (b *HealthChecker) checkRequiredDaemonSets(condition gardencorev1beta1.Cond
 		actualNames.Insert(object.Name)
 	}
 
-	if missingNames := requiredNames.Difference(actualNames); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, "DaemonSetMissing", fmt.Sprintf("Missing required daemon sets: %v", missingNames.List()))
+	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "DaemonSetMissing", "Missing required daemon sets")
+}
+
+// CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
+func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+	if mr.Generation != mr.Status.ObservedGeneration {
+		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
 	}
+
+	toProcess := map[resourcesv1alpha1.ConditionType]struct{}{
+		resourcesv1alpha1.ResourcesApplied: {},
+		resourcesv1alpha1.ResourcesHealthy: {},
+	}
+
+	for _, cond := range mr.Status.Conditions {
+		_, ok := toProcess[cond.Type]
+		if !ok {
+			continue
+		}
+		if cond.Status == resourcesv1alpha1.ConditionFalse {
+			c := b.FailedCondition(condition, cond.Reason, cond.Message)
+			return &c
+		}
+		delete(toProcess, cond.Type)
+	}
+
+	if len(toProcess) > 0 {
+		var missing []string
+		for cond := range toProcess {
+			missing = append(missing, string(cond))
+		}
+		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))
+		return &c
+	}
+
 	return nil
 }
 
@@ -288,39 +313,6 @@ func (b *HealthChecker) CheckControlPlane(
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkEtcds(condition, etcds); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	return nil, nil
-}
-
-// CheckSystemComponents checks whether the system components in the given listers are complete and healthy.
-func (b *HealthChecker) CheckSystemComponents(
-	namespace string,
-	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
-	daemonSetLister kutil.DaemonSetLister,
-) (*gardencorev1beta1.Condition, error) {
-
-	deploymentList, err := deploymentLister.Deployments(namespace).List(systemComponentSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredDeployments(condition, common.RequiredSystemComponentDeployments, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	daemonSetList, err := daemonSetLister.DaemonSets(namespace).List(systemComponentSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredDaemonSets(condition, common.RequiredSystemComponentDaemonSets, daemonSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkDaemonSets(condition, daemonSetList); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -456,44 +448,6 @@ func (b *HealthChecker) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckMonitoringSystemComponents checks whether the monitoring components in the given listers are complete and healthy.
-func (b *HealthChecker) CheckMonitoringSystemComponents(
-	namespace string,
-	isTestingShoot bool,
-	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
-	daemonSetLister kutil.DaemonSetLister,
-) (*gardencorev1beta1.Condition, error) {
-
-	if isTestingShoot {
-		return nil, nil
-	}
-
-	deploymentList, err := deploymentLister.Deployments(namespace).List(monitoringSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredDeployments(condition, common.RequiredMonitoringShootDeployments, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	daemonSetList, err := daemonSetLister.DaemonSets(namespace).List(monitoringSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkRequiredDaemonSets(condition, common.RequiredMonitoringShootDaemonSets, daemonSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkDaemonSets(condition, daemonSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	return nil, nil
-}
-
 // CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringControlPlane(
 	namespace string,
@@ -527,33 +481,6 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	return nil, nil
-}
-
-// CheckOptionalAddonsSystemComponents checks whether the addons in the given listers are healthy.
-func (b *HealthChecker) CheckOptionalAddonsSystemComponents(
-	namespace string,
-	condition gardencorev1beta1.Condition,
-	deploymentLister kutil.DeploymentLister,
-	daemonSetLister kutil.DaemonSetLister,
-) (*gardencorev1beta1.Condition, error) {
-
-	deploymentList, err := deploymentLister.Deployments(namespace).List(optionalAddonSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	daemonSetList, err := daemonSetLister.DaemonSets(namespace).List(optionalAddonSelector)
-	if err != nil {
-		return nil, err
-	}
-	if exitCondition := b.checkDaemonSets(condition, daemonSetList); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -656,20 +583,20 @@ func (b *Botanist) checkSystemComponents(
 	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
-	shootDeploymentLister kutil.DeploymentLister,
-	shootDaemonSetLister kutil.DaemonSetLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
 
-	if exitCondition, err := checker.CheckSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
-		return exitCondition, err
+	for name := range common.ManagedResourcesShoot {
+		mr := &resourcesv1alpha1.ManagedResource{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), mr); err != nil {
+			return nil, err
+		}
+
+		if exitCondition := checker.CheckManagedResource(condition, mr); exitCondition != nil {
+			return exitCondition, nil
+		}
 	}
-	if exitCondition, err := checker.CheckMonitoringSystemComponents(metav1.NamespaceSystem, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-	if exitCondition, err := checker.CheckOptionalAddonsSystemComponents(metav1.NamespaceSystem, condition, shootDeploymentLister, shootDaemonSetLister); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
+
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -780,32 +707,6 @@ func makeEtcdLister(c client.Client, namespace string) kutil.EtcdLister {
 	})
 }
 
-func makeDaemonSetLister(clientset kubernetes.Interface, namespace string, options metav1.ListOptions) kutil.DaemonSetLister {
-	var (
-		once  sync.Once
-		items []*appsv1.DaemonSet
-		err   error
-
-		onceBody = func() {
-			var list *appsv1.DaemonSetList
-			list, err = clientset.AppsV1().DaemonSets(namespace).List(options)
-			if err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewDaemonSetLister(func() ([]*appsv1.DaemonSet, error) {
-		once.Do(onceBody)
-		return items, err
-	})
-}
-
 func makeNodeLister(clientset kubernetes.Interface, options metav1.ListOptions) kutil.NodeLister {
 	var (
 		once  sync.Once
@@ -870,18 +771,11 @@ var (
 		v1beta1constants.GardenRoleMonitoring,
 		v1beta1constants.GardenRoleLogging,
 	)
-	systemComponentsOptionalAddonsMonitoringSelector = mustGardenRoleLabelSelector(
-		v1beta1constants.GardenRoleSystemComponent,
-		v1beta1constants.GardenRoleOptionalAddon,
-		v1beta1constants.GardenRoleMonitoring,
-	)
 
 	seedDeploymentListOptions  = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 	seedStatefulSetListOptions = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 
-	shootDeploymentListOptions = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsMonitoringSelector.String()}
-	shootDaemonSetListOptions  = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsMonitoringSelector.String()}
-	shootNodeListOptions       = metav1.ListOptions{}
+	shootNodeListOptions = metav1.ListOptions{}
 )
 
 // NewHealthChecker creates a new health checker.
@@ -924,11 +818,8 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}
 
 	var (
-		wg sync.WaitGroup
-
-		shootDeploymentLister = makeDeploymentLister(b.K8sShootClient.Kubernetes(), metav1.NamespaceSystem, shootDeploymentListOptions)
-		shootDaemonSetLister  = makeDaemonSetLister(b.K8sShootClient.Kubernetes(), metav1.NamespaceSystem, shootDaemonSetListOptions)
-		shootNodeLister       = makeNodeLister(b.K8sShootClient.Kubernetes(), shootNodeListOptions)
+		wg              sync.WaitGroup
+		shootNodeLister = makeNodeLister(b.K8sShootClient.Kubernetes(), shootNodeListOptions)
 	)
 
 	wg.Add(4)
@@ -948,7 +839,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	go func() {
 		defer wg.Done()
-		newSystemComponents, err := b.checkSystemComponents(context.TODO(), checker, systemComponents, shootDeploymentLister, shootDaemonSetLister, extensionConditionsSystemComponentsHealthy)
+		newSystemComponents, err := b.checkSystemComponents(context.TODO(), checker, systemComponents, extensionConditionsSystemComponentsHealthy)
 		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
 	}()
 	wg.Wait()

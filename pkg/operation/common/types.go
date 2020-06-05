@@ -371,6 +371,18 @@ const (
 	// Deprecated: Use `ShootIgnore` instead.
 	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
+	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
+	ManagedResourceShootCoreName = "shoot-core"
+
+	// ManagedResourceCoreNamespaceName is the name of the core namespace managed resource.
+	ManagedResourceCoreNamespaceName = "shoot-core-namespace"
+
+	// ManagedResourceAddonsName is the name of the addons managed resource.
+	ManagedResourceAddonsName = "addons"
+
+	// ManagedResourceKymaName is the name of the Kyma managed resource.
+	ManagedResourceKymaName = "addons-kyma"
+
 	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
 	GardenerResourceManagerImageName = "gardener-resource-manager"
 
@@ -562,35 +574,12 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
-	// RequiredSystemComponentDeployments is a set of the required system components.
-	RequiredSystemComponentDeployments = sets.NewString(
-		CoreDNSDeploymentName,
-		VPNShootDeploymentName,
-		MetricsServerDeploymentName,
-	)
-
-	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
-	RequiredSystemComponentDaemonSets = sets.NewString(
-		KubeProxyDaemonSetName,
-		NodeProblemDetectorDaemonSetName,
-	)
-
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
 		v1beta1constants.DeploymentNameGrafanaOperators,
 		v1beta1constants.DeploymentNameGrafanaUsers,
 		v1beta1constants.DeploymentNameKubeStateMetricsSeed,
 		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
-	)
-
-	// RequiredMonitoringShootDeployments is a set of the required shoot monitoring deployments.
-	RequiredMonitoringShootDeployments = sets.NewString(
-		BlackboxExporterDeploymentName,
-	)
-
-	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
-	RequiredMonitoringShootDaemonSets = sets.NewString(
-		NodeExporterDaemonSetName,
 	)
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
@@ -601,5 +590,13 @@ var (
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
 		v1beta1constants.DeploymentNameKibana,
+	)
+
+	// ManagedResourcesShoot is a set of managed resource names which contain resources deployed to the shoot.
+	ManagedResourcesShoot = sets.NewString(
+		ManagedResourceCoreNamespaceName,
+		ManagedResourceShootCoreName,
+		ManagedResourceAddonsName,
+		ManagedResourceKymaName,
 	)
 )

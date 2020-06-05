@@ -80,4 +80,10 @@ const (
 
 	// ConditionCheckError is a constant for a reason in condition.
 	ConditionCheckError = "ConditionCheckError"
+	// ManagedResourceMissingConditionError is a constant for a reason in a condition that indicates
+	// one or multiple missing conditions in the observed managed resource.
+	ManagedResourceMissingConditionError = "MissingManagedResourceCondition"
+	// OutdatedStatusError is a constant for a reason in a condition that indicates
+	// that the observed generation in a status is outdated.
+	OutdatedStatusError = "OutdatedStatus"
 )
