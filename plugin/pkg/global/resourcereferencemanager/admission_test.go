@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
@@ -60,6 +62,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeClient                *fake.Clientset
 			gardenCoreInformerFactory coreinformers.SharedInformerFactory
 			fakeAuthorizer            fakeAuthorizerType
+			scheme                    *runtime.Scheme
+			dynamicClient             *dynamicfake.FakeDynamicClient
 
 			shoot core.Shoot
 
@@ -174,6 +178,31 @@ var _ = Describe("resourcereferencemanager", func() {
 							},
 						},
 					},
+					Resources: []core.NamedResourceReference{
+						{
+							Name: secretName,
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								Kind:       "Secret",
+								Name:       secretName,
+								APIVersion: "v1",
+							},
+						},
+					},
+				},
+			}
+
+			discoveryClientResources = []*metav1.APIResourceList{
+				{
+					GroupVersion: "v1",
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "secrets",
+							Namespaced: true,
+							Group:      "core",
+							Version:    "v1",
+							Kind:       "Secret",
+						},
+					},
 				},
 			}
 		)
@@ -185,7 +214,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 
-			kubeClient = &fake.Clientset{}
+			kubeClient = fake.NewSimpleClientset()
+			kubeClient.Fake = testing.Fake{Resources: discoveryClientResources}
 			admissionHandler.SetKubeClientset(kubeClient)
 
 			gardenCoreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
@@ -193,6 +223,12 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
+
+			scheme = runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
+
+			dynamicClient = dynamicfake.NewSimpleDynamicClient(scheme, &secret)
+			admissionHandler.SetDynamicClient(dynamicClient)
 
 			MissingSecretWait = 0
 
@@ -456,16 +492,17 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
+				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
+				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
+				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
+				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 			})
 
 			It("should accept because all referenced objects have been found", func() {
@@ -474,7 +511,8 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -528,6 +566,36 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced resource", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: shoot cannot reference a resource you are not allowed to read"))
+			})
+
+			It("should reject because the referenced resource does not exist", func() {
+				dynamicClient = dynamicfake.NewSimpleDynamicClient(scheme)
+				admissionHandler.SetDynamicClient(dynamicClient)
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("failed to resolve shoot resource reference")))
 			})
 		})
 

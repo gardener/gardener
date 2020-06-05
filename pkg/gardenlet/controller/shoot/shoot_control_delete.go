@@ -455,10 +455,15 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord),
 		})
+		destroyReferencedResources = g.Add(flow.Task{
+			Name:         "Deleting referenced resources",
+			Fn:           flow.TaskFn(botanist.DestroyReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders),
+		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders, deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders, destroyReferencedResources, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
