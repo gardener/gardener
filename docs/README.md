@@ -8,10 +8,12 @@
 
 ## Concepts
 
-* [Gardener API server](concepts/apiserver.md)
-* [Gardener Scheduler](concepts/scheduler.md)
-* [Gardenlet](concepts/gardenlet.md)
-* [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
+* Components
+    * [gardener-apiserver](concepts/apiserver.md)
+      * [In-Tree admission plugins](concepts/apiserver_admission_plugins.md)
+    * [gardener-scheduler](concepts/scheduler.md)
+    * [gardener-seed-admission-controller](concepts/seed-admission-controller.md)
+    * [gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 
 ## Usage
