@@ -93,6 +93,118 @@ var _ = Describe("helper", func() {
 		Entry("taint does not exist", []core.SeedTaint{{Key: "foo"}}, "bar", false),
 	)
 
+	DescribeTable("#TaintsAreTolerated",
+		func(taints []core.SeedTaint, tolerations []core.Toleration, expectation bool) {
+			Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+		},
+
+		Entry("only irrelevant taints",
+			[]core.SeedTaint{
+				{Key: core.DeprecatedSeedTaintDisableCapacityReservation},
+				{Key: core.DeprecatedSeedTaintInvisible},
+				{Key: core.DeprecatedSeedTaintDisableDNS},
+			},
+			[]core.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("no taints",
+			nil,
+			[]core.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("no tolerations",
+			[]core.SeedTaint{{Key: "foo"}},
+			nil,
+			false,
+		),
+		Entry("taints with keys only, tolerations with keys only (tolerated)",
+			[]core.SeedTaint{{Key: "foo"}},
+			[]core.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("taints with keys only, tolerations with keys only (non-tolerated)",
+			[]core.SeedTaint{{Key: "foo"}},
+			[]core.Toleration{{Key: "bar"}},
+			false,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
+			[]core.SeedTaint{{Key: "foo", Value: pointer.StringPtr("bar")}},
+			[]core.Toleration{{Key: "foo", Value: pointer.StringPtr("bar")}},
+			true,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
+			[]core.SeedTaint{{Key: "foo", Value: pointer.StringPtr("bar")}},
+			[]core.Toleration{{Key: "bar", Value: pointer.StringPtr("foo")}},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "bar"},
+				{Key: "foo", Value: pointer.StringPtr("baz")},
+			},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "foo", Value: pointer.StringPtr("bar")},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "foo", Value: pointer.StringPtr("bar")},
+				{Key: "bar", Value: pointer.StringPtr("foo")},
+			},
+			false,
+		),
+		Entry("taints > tolerations",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			false,
+		),
+		Entry("tolerations > taints",
+			[]core.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			},
+			[]core.Toleration{
+				{Key: "foo", Value: pointer.StringPtr("bar")},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "baz", Value: pointer.StringPtr("foo")},
+			},
+			true,
+		),
+	)
+
 	var (
 		unmanagedType = core.DNSUnmanaged
 		differentType = "foo"

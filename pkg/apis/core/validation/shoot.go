@@ -138,6 +138,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, allowedShootPurposes.List()))
 		}
 	}
+	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 
 	// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 	if metav1.HasAnnotation(meta, common.ShootExperimentalAddonKyma) {

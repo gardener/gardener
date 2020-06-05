@@ -896,6 +896,20 @@ string
 A nil value means that Gardener will determine the name of the namespace.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProjectTolerations">
+ProjectTolerations
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1552,6 +1566,20 @@ Kubernetes meta/v1.LabelSelector
 <td>
 <em>(Optional)</em>
 <p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
 </table>
@@ -5902,6 +5930,20 @@ string
 A nil value means that Gardener will determine the name of the namespace.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ProjectTolerations">
+ProjectTolerations
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ProjectStatus">ProjectStatus
@@ -5944,6 +5986,54 @@ ProjectPhase
 </td>
 <td>
 <p>Phase is the current phase of the project.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ProjectTolerations">ProjectTolerations
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ProjectSpec">ProjectSpec</a>)
+</p>
+<p>
+<p>ProjectTolerations contains the tolerations for taints on seed clusters.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>defaults</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defaults contains a list of tolerations that are added to the shoots in this project by default.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>whitelist</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note
+that this list may only be added by users having the <code>spec-tolerations-whitelist</code> verb for project resources.</p>
 </td>
 </tr>
 </tbody>
@@ -7362,6 +7452,20 @@ Kubernetes meta/v1.LabelSelector
 <p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
@@ -7526,6 +7630,49 @@ k8s.io/apimachinery/pkg/types.UID
 <td>
 <p>UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 It is used to compute unique hashes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.Toleration">Toleration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ProjectTolerations">ProjectTolerations</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>Toleration is a toleration for a seed taint.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>key</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Key is the toleration key to be applied to a project or shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Value is the toleration value corresponding to the toleration key.</p>
 </td>
 </tr>
 </tbody>

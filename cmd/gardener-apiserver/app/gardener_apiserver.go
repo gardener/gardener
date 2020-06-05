@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
@@ -44,6 +45,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
+	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
 
@@ -152,6 +154,7 @@ func (o *Options) complete() error {
 	resourcereferencemanager.Register(o.Recommended.Admission.Plugins)
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 	extensionvalidation.Register(o.Recommended.Admission.Plugins)
+	shoottolerationrestriction.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootdns.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
@@ -160,10 +163,12 @@ func (o *Options) complete() error {
 	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	shootstatedeletionvalidator.Register(o.Recommended.Admission.Plugins)
+	customverbauthorizer.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
 		extensionvalidation.PluginName,
+		shoottolerationrestriction.PluginName,
 		shootdns.PluginName,
 		shootquotavalidator.PluginName,
 		shootvalidator.PluginName,
@@ -173,8 +178,8 @@ func (o *Options) complete() error {
 		openidconnectpreset.PluginName,
 		clusteropenidconnectpreset.PluginName,
 		shootstatedeletionvalidator.PluginName,
+		customverbauthorizer.PluginName,
 	}
-
 	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
 
 	return nil

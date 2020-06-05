@@ -85,6 +85,8 @@ type ShootSpec struct {
 	SeedSelector *metav1.LabelSelector
 	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
 	Resources []NamedResourceReference
+	// Tolerations contains the tolerations for taints on seed clusters.
+	Tolerations []Toleration
 }
 
 func (s *Shoot) GetProviderType() string {

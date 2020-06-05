@@ -257,6 +257,74 @@ var _ = Describe("Project Validation Tests", func() {
 			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.GroupKind, "groupname", "", field.ErrorTypeNotSupported, "apiGroup"),
 		)
 
+		It("should forbid invalid tolerations", func() {
+			tolerations := []core.Toleration{
+				{},
+				{Key: "foo"},
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "baz"},
+				{Key: "baz", Value: pointer.StringPtr("baz")},
+			}
+			project.Spec.Tolerations = &core.ProjectTolerations{
+				Defaults:  tolerations,
+				Whitelist: tolerations,
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.tolerations.defaults[0].key"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.defaults[2]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.defaults[4]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.defaults[6]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.tolerations.whitelist[0].key"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.whitelist[2]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.whitelist[4]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations.whitelist[6]"),
+				})),
+			))
+		})
+
+		It("should forbid using a default toleration which is not in the whitelist", func() {
+			project.Spec.Tolerations = &core.ProjectTolerations{
+				Defaults: []core.Toleration{{Key: "foo"}},
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.tolerations.defaults[0]"),
+				})),
+			))
+		})
+
 		DescribeTable("namespace immutability",
 			func(old, new *string, matcher gomegatypes.GomegaMatcher) {
 				project.Spec.Namespace = old

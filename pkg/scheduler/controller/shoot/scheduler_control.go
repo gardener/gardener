@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -244,8 +243,11 @@ func getCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1
 }
 
 func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
-	var candidates []*gardencorev1beta1.Seed
-	candidateErrors := make(map[string]error)
+	var (
+		candidates      []*gardencorev1beta1.Seed
+		candidateErrors = make(map[string]error)
+	)
+
 	for _, seed := range seedList {
 		if disjointed, err := networksAreDisjointed(seed, shoot); !disjointed {
 			candidateErrors[seed.Name] = err
@@ -257,8 +259,8 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1be
 			continue
 		}
 
-		if shoot.Namespace != v1beta1constants.GardenNamespace && gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected) {
-			candidateErrors[seed.Name] = fmt.Errorf("seed is protected but shoot is not in garden namespace")
+		if !gardencorev1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
+			candidateErrors[seed.Name] = fmt.Errorf("shoot does not tolerate the seed's taints")
 			continue
 		}
 
@@ -266,7 +268,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1be
 	}
 
 	if candidates == nil {
-		return nil, fmt.Errorf("from %d seed cluster candidate(s), none is possible: %v", len(seedList), errorMapToString(candidateErrors))
+		return nil, fmt.Errorf("0/%d seed cluster candidate(s) are eligible for scheduling: %v", len(seedList), errorMapToString(candidateErrors))
 	}
 	return candidates, nil
 }

@@ -30,3 +30,8 @@ spec:
   # If the namespace is set then the namespace must be labelled with `gardener.cloud/role: project`
   # and `project.gardener.cloud/name: <project-name>` (<project-name>=dev in this case).
   namespace: garden-dev
+# tolerations:
+#   defaults:
+#   - key: <some-key>
+#   whitelist:
+#   - key: <some-key>

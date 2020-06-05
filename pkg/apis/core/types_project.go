@@ -63,6 +63,8 @@ type ProjectSpec struct {
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	Namespace *string
+	// Tolerations contains the default tolerations and a whitelist for taints on seed clusters.
+	Tolerations *ProjectTolerations
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -80,6 +82,23 @@ type ProjectMember struct {
 	rbacv1.Subject
 	// Roles is a list of roles of this member.
 	Roles []string
+}
+
+// ProjectTolerations contains the tolerations for taints on seed clusters.
+type ProjectTolerations struct {
+	// Defaults contains a list of tolerations that are added to the shoots in this project by default.
+	Defaults []Toleration
+	// Whitelist contains a list of tolerations that are allowed to be added to the shoots in this project. Please note
+	// that this list may only be added by users having the `spec-tolerations-whitelist` verb for project resources.
+	Whitelist []Toleration
+}
+
+// Toleration is a toleration for a seed taint.
+type Toleration struct {
+	// Key is the toleration key to be applied to a project or shoot.
+	Key string
+	// Value is the toleration value corresponding to the toleration key.
+	Value *string
 }
 
 const (

@@ -16,6 +16,7 @@ package v1beta1_test
 
 import (
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -27,6 +28,12 @@ import (
 
 var _ = Describe("Defaults", func() {
 	Describe("#SetDefaults_Project", func() {
+		var obj *Project
+
+		BeforeEach(func() {
+			obj = &Project{}
+		})
+
 		Context("api group defaulting", func() {
 			DescribeTable(
 				"should default the owner api groups",
@@ -35,11 +42,7 @@ var _ = Describe("Defaults", func() {
 						owner.Kind = kind
 					}
 
-					obj := &Project{
-						Spec: ProjectSpec{
-							Owner: owner,
-						},
-					}
+					obj.Spec.Owner = owner
 
 					SetDefaults_Project(obj)
 
@@ -86,11 +89,7 @@ var _ = Describe("Defaults", func() {
 					Roles: []string{"role"},
 				}
 
-				obj := &Project{
-					Spec: ProjectSpec{
-						Members: []ProjectMember{member1, member2, member3, member4},
-					},
-				}
+				obj.Spec.Members = []ProjectMember{member1, member2, member3, member4}
 
 				SetDefaults_Project(obj)
 
@@ -117,11 +116,7 @@ var _ = Describe("Defaults", func() {
 				},
 			}
 
-			obj := &Project{
-				Spec: ProjectSpec{
-					Members: []ProjectMember{member1, member2},
-				},
-			}
+			obj.Spec.Members = []ProjectMember{member1, member2}
 
 			SetDefaults_Project(obj)
 
@@ -129,6 +124,50 @@ var _ = Describe("Defaults", func() {
 				Expect(m.Role).NotTo(HaveLen(0))
 				Expect(m.Role).To(Equal(ProjectMemberViewer))
 			}
+		})
+
+		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/o existing project tolerations)", func() {
+			obj.Spec.Namespace = pointer.StringPtr("foo")
+
+			SetDefaults_Project(obj)
+
+			Expect(obj.Spec.Tolerations).To(BeNil())
+		})
+
+		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/ existing project tolerations)", func() {
+			obj.Spec.Namespace = pointer.StringPtr("foo")
+			obj.Spec.Tolerations = &ProjectTolerations{
+				Defaults:  []Toleration{{Key: "foo"}},
+				Whitelist: []Toleration{{Key: "bar"}},
+			}
+
+			SetDefaults_Project(obj)
+
+			Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: "foo"}}))
+			Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: "bar"}}))
+		})
+
+		It("should add the 'protected' toleration if the namespace is 'garden' (w/o existing project tolerations)", func() {
+			obj.Spec.Namespace = pointer.StringPtr(v1beta1constants.GardenNamespace)
+			obj.Spec.Tolerations = nil
+
+			SetDefaults_Project(obj)
+
+			Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: SeedTaintProtected}}))
+			Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: SeedTaintProtected}}))
+		})
+
+		It("should add the 'protected' toleration if the namespace is 'garden' (w/ existing project tolerations)", func() {
+			obj.Spec.Namespace = pointer.StringPtr(v1beta1constants.GardenNamespace)
+			obj.Spec.Tolerations = &ProjectTolerations{
+				Defaults:  []Toleration{{Key: "foo"}},
+				Whitelist: []Toleration{{Key: "bar"}},
+			}
+
+			SetDefaults_Project(obj)
+
+			Expect(obj.Spec.Tolerations.Defaults).To(Equal([]Toleration{{Key: "foo"}, {Key: SeedTaintProtected}}))
+			Expect(obj.Spec.Tolerations.Whitelist).To(Equal([]Toleration{{Key: "bar"}, {Key: SeedTaintProtected}}))
 		})
 	})
 
@@ -222,6 +261,35 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
+		})
+	})
+
+	Describe("#SetDefaults_Shoot", func() {
+		var obj *Shoot
+
+		BeforeEach(func() {
+			obj = &Shoot{}
+		})
+
+		It("should not add the 'protected' toleration if the namespace is not 'garden'", func() {
+			obj.Namespace = "foo"
+			obj.Spec.Tolerations = nil
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Tolerations).To(BeNil())
+		})
+
+		It("should add the 'protected' toleration if the namespace is 'garden'", func() {
+			obj.Namespace = "garden"
+			obj.Spec.Tolerations = []Toleration{{Key: "foo"}}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Tolerations).To(ConsistOf(
+				Equal(Toleration{Key: "foo"}),
+				Equal(Toleration{Key: SeedTaintProtected}),
+			))
 		})
 	})
 })

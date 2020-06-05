@@ -211,6 +211,46 @@ func TaintsHave(taints []gardencorev1beta1.SeedTaint, key string) bool {
 	return false
 }
 
+// TaintsAreTolerated returns true when all the given taints are tolerated by the given tolerations. It ignores the
+// deprecated taints that were migrated into the new `settings` field in the Seed specification.
+func TaintsAreTolerated(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration) bool {
+	var relevantTaints []gardencorev1beta1.SeedTaint
+	for _, taint := range taints {
+		if taint.Key == gardencorev1beta1.DeprecatedSeedTaintDisableDNS || taint.Key == gardencorev1beta1.DeprecatedSeedTaintInvisible || taint.Key == gardencorev1beta1.DeprecatedSeedTaintDisableCapacityReservation {
+			continue
+		}
+		relevantTaints = append(relevantTaints, taint)
+	}
+
+	if len(relevantTaints) == 0 {
+		return true
+	}
+	if len(relevantTaints) > len(tolerations) {
+		return false
+	}
+
+	tolerationKeyValues := make(map[string]string, len(tolerations))
+	for _, toleration := range tolerations {
+		v := ""
+		if toleration.Value != nil {
+			v = *toleration.Value
+		}
+		tolerationKeyValues[toleration.Key] = v
+	}
+
+	for _, taint := range relevantTaints {
+		tolerationValue, ok := tolerationKeyValues[taint.Key]
+		if !ok {
+			return false
+		}
+		if taint.Value != nil && *taint.Value != tolerationValue {
+			return false
+		}
+	}
+
+	return true
+}
+
 type ShootedSeed struct {
 	DisableDNS                     *bool
 	DisableCapacityReservation     *bool

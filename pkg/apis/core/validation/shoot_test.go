@@ -228,6 +228,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Monitoring: &core.Monitoring{
 						Alerting: &core.Alerting{},
 					},
+					Tolerations: []core.Toleration{
+						{Key: "foo"},
+					},
 				},
 			}
 		})
@@ -446,6 +449,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.monitoring.alerting.emailReceivers[2]"),
+				})),
+			))
+		})
+
+		It("should forbid invalid tolerations", func() {
+			shoot.Spec.Tolerations = []core.Toleration{
+				{},
+				{Key: "foo"},
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.StringPtr("baz")},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.tolerations[0].key"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations[2]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.tolerations[4]"),
 				})),
 			))
 		})

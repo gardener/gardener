@@ -16,6 +16,7 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -94,17 +95,20 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
 	}
 
-	var foundTaintKeys = sets.NewString()
+	var keyValues = sets.NewString()
 
 	for i, taint := range seedSpec.Taints {
 		idxPath := fldPath.Child("taints").Index(i)
+
 		if len(taint.Key) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("key"), "cannot be empty"))
 		}
-		if foundTaintKeys.Has(taint.Key) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("key"), taint.Key))
+
+		id := utils.IDForKeyWithOptionalValue(taint.Key, taint.Value)
+		if keyValues.Has(id) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, id))
 		}
-		foundTaintKeys.Insert(taint.Key)
+		keyValues.Insert(id)
 	}
 
 	if seedSpec.Volume != nil {

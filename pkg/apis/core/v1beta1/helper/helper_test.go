@@ -17,6 +17,10 @@ package helper_test
 import (
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -25,10 +29,6 @@ import (
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 var _ = Describe("helper", func() {
@@ -341,6 +341,118 @@ var _ = Describe("helper", func() {
 			},
 			Entry("taint exists", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "foo", true),
 			Entry("taint does not exist", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "bar", false),
+		)
+
+		DescribeTable("#TaintsAreTolerated",
+			func(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration, expectation bool) {
+				Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+			},
+
+			Entry("only irrelevant taints",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: gardencorev1beta1.DeprecatedSeedTaintDisableCapacityReservation},
+					{Key: gardencorev1beta1.DeprecatedSeedTaintInvisible},
+					{Key: gardencorev1beta1.DeprecatedSeedTaintDisableDNS},
+				},
+				[]gardencorev1beta1.Toleration{{Key: "foo"}},
+				true,
+			),
+			Entry("no taints",
+				nil,
+				[]gardencorev1beta1.Toleration{{Key: "foo"}},
+				true,
+			),
+			Entry("no tolerations",
+				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+				nil,
+				false,
+			),
+			Entry("taints with keys only, tolerations with keys only (tolerated)",
+				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+				[]gardencorev1beta1.Toleration{{Key: "foo"}},
+				true,
+			),
+			Entry("taints with keys only, tolerations with keys only (non-tolerated)",
+				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+				[]gardencorev1beta1.Toleration{{Key: "bar"}},
+				false,
+			),
+			Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
+				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.StringPtr("bar")}},
+				[]gardencorev1beta1.Toleration{{Key: "foo", Value: pointer.StringPtr("bar")}},
+				true,
+			),
+			Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
+				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.StringPtr("bar")}},
+				[]gardencorev1beta1.Toleration{{Key: "bar", Value: pointer.StringPtr("foo")}},
+				false,
+			),
+			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				true,
+			),
+			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "bar"},
+					{Key: "foo", Value: pointer.StringPtr("baz")},
+				},
+				false,
+			),
+			Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "foo", Value: pointer.StringPtr("bar")},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				true,
+			),
+			Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "foo", Value: pointer.StringPtr("bar")},
+					{Key: "bar", Value: pointer.StringPtr("foo")},
+				},
+				false,
+			),
+			Entry("taints > tolerations",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				false,
+			),
+			Entry("tolerations > taints",
+				[]gardencorev1beta1.SeedTaint{
+					{Key: "foo"},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+				},
+				[]gardencorev1beta1.Toleration{
+					{Key: "foo", Value: pointer.StringPtr("bar")},
+					{Key: "bar", Value: pointer.StringPtr("baz")},
+					{Key: "baz", Value: pointer.StringPtr("foo")},
+				},
+				true,
+			),
 		)
 
 		Describe("#ReadShootedSeed", func() {

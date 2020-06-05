@@ -17,12 +17,14 @@ package v1beta1
 import (
 	"math"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
 
@@ -53,6 +55,14 @@ func SetDefaults_Project(obj *Project) {
 		if len(member.Role) == 0 && len(member.Roles) == 0 {
 			obj.Spec.Members[i].Role = ProjectMemberViewer
 		}
+	}
+
+	if obj.Spec.Namespace != nil && *obj.Spec.Namespace == v1beta1constants.GardenNamespace {
+		if obj.Spec.Tolerations == nil {
+			obj.Spec.Tolerations = &ProjectTolerations{}
+		}
+		addTolerations(&obj.Spec.Tolerations.Whitelist, Toleration{Key: SeedTaintProtected})
+		addTolerations(&obj.Spec.Tolerations.Defaults, Toleration{Key: SeedTaintProtected})
 	}
 }
 
@@ -181,6 +191,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 		p := ShootPurposeEvaluation
 		obj.Spec.Purpose = &p
 	}
+
+	// In previous Gardener versions that weren't supporting tolerations, it was hard-coded to (only) allow shoots in the
+	// `garden` namespace to use seeds that had the 'protected' taint. In order to be backwards compatible, now with the
+	// introduction of tolerations, we add the 'protected' toleration to the garden namespace by default.
+	if obj.Namespace == v1beta1constants.GardenNamespace {
+		addTolerations(&obj.Spec.Tolerations, Toleration{Key: SeedTaintProtected})
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
@@ -256,4 +273,21 @@ func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) 
 	// by having approximately twice as many available IP addresses as possible Pods, Kubernetes is able to mitigate IP address reuse as Pods are added to and removed from a node.
 	nodeCidrRange := int32(32 - int(math.Ceil(math.Log2(float64(maxPods*2)))))
 	return &nodeCidrRange
+}
+
+func addTolerations(tolerations *[]Toleration, additionalTolerations ...Toleration) {
+	existingTolerations := sets.NewString()
+	for _, toleration := range *tolerations {
+		existingTolerations.Insert(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value))
+	}
+
+	for _, toleration := range additionalTolerations {
+		if existingTolerations.Has(toleration.Key) {
+			continue
+		}
+		if existingTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)) {
+			continue
+		}
+		*tolerations = append(*tolerations, toleration)
+	}
 }

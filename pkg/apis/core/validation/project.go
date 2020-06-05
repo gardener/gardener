@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -99,6 +100,12 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "must provide a purpose when key is present"))
 	}
 
+	if projectSpec.Tolerations != nil {
+		allErrs = append(allErrs, ValidateTolerations(projectSpec.Tolerations.Defaults, fldPath.Child("tolerations", "defaults"))...)
+		allErrs = append(allErrs, ValidateTolerations(projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "whitelist"))...)
+		allErrs = append(allErrs, ValidateTolerationsAgainstWhitelist(projectSpec.Tolerations.Defaults, projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "defaults"))...)
+	}
+
 	return allErrs
 }
 
@@ -174,6 +181,51 @@ func ValidateProjectMember(member core.ProjectMember, fldPath *field.Path) field
 			if errs := path.IsValidPathSegmentName(extensionRoleName); len(errs) > 0 {
 				allErrs = append(allErrs, field.Invalid(rolesPath, role, strings.Join(errs, ", ")))
 			}
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateTolerations validates the given tolerations.
+func ValidateTolerations(tolerations []core.Toleration, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs   field.ErrorList
+		keyValues = sets.NewString()
+	)
+
+	for i, toleration := range tolerations {
+		idxPath := fldPath.Index(i)
+
+		if len(toleration.Key) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("key"), "cannot be empty"))
+		}
+
+		id := utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)
+		if keyValues.Has(id) || keyValues.Has(toleration.Key) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, id))
+		}
+		keyValues.Insert(id)
+	}
+
+	return allErrs
+}
+
+// ValidateTolerationsAgainstWhitelist validates the given tolerations against the given whitelist.
+func ValidateTolerationsAgainstWhitelist(tolerations, whitelist []core.Toleration, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs            field.ErrorList
+		allowedTolerations = sets.NewString()
+	)
+
+	for _, toleration := range whitelist {
+		allowedTolerations.Insert(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value))
+	}
+
+	for i, toleration := range tolerations {
+		id := utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)
+		if !allowedTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, nil)) && !allowedTolerations.Has(id) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("whitelist only allows using these tolerations: %+v", allowedTolerations.UnsortedList())))
 		}
 	}
 
