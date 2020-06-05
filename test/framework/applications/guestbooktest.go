@@ -32,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -210,6 +211,11 @@ func (t *GuestBookTest) dump(ctx context.Context) {
 	err := t.framework.DumpDefaultResourcesInNamespace(ctx, identifier, t.framework.ShootClient, t.framework.Namespace)
 	if err != nil {
 		t.framework.Logger.Errorf("unable to dump guestbook resources in namespace %s: %s", t.framework.Namespace, err.Error())
+	}
+
+	labels := client.MatchingLabels{"app": "nginx-ingress", "component": "controller", "origin": "gardener"}
+	if err = t.framework.DumpLogsForPodsWithLabelsInNamespace(ctx, identifier, t.framework.ShootClient, "kube-system", labels); err != nil {
+		t.framework.Logger.Errorf("unable to dump nginx logs (from namespace %s and labels %v): %v", "kube-system", labels, err)
 	}
 }
 
