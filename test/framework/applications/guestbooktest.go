@@ -86,7 +86,7 @@ func (t *GuestBookTest) WaitUntilGuestbookDeploymentIsReady(ctx context.Context)
 // WaitUntilGuestbookURLsRespondOK waits until the deployed guestbook application can be reached via http
 func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, guestbookAppUrls []string) error {
 	defaultPollInterval := time.Minute
-	return retry.UntilTimeout(ctx, defaultPollInterval, 10*time.Minute, func(ctx context.Context) (done bool, err error) {
+	return retry.UntilTimeout(ctx, defaultPollInterval, 20*time.Minute, func(ctx context.Context) (done bool, err error) {
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := framework.HTTPGet(ctx, guestbookAppURL)
 			if err != nil {
@@ -213,7 +213,7 @@ func (t *GuestBookTest) dump(ctx context.Context) {
 	}
 }
 
-// Cleanup cleans up all resources depoyed by the guestbook test
+// Cleanup cleans up all resources deployed by the guestbook test
 func (t *GuestBookTest) Cleanup(ctx context.Context) {
 	// First dump all resources if the test has failed
 	t.dump(ctx)
