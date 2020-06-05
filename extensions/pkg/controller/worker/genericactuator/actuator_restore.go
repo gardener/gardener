@@ -33,8 +33,8 @@ import (
 )
 
 // Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
-// If there is a record in the state  corresponding to a wanted deployment then the Restore function
-// deploys that MachineDeployemnt with all related MachineSet and Machines.
+// If there is a record in the state corresponding to a wanted deployment then the Restore function
+// deploys that MachineDeployment with all related MachineSet and Machines.
 func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
@@ -157,9 +157,13 @@ func (a *genericActuator) waitUntilStatusIsUpdates(ctx context.Context, obj runt
 }
 
 func removeWantedDeploymentWithoutState(wantedMachineDeployments workercontroller.MachineDeployments) workercontroller.MachineDeployments {
-	var reducedMachineDeployments workercontroller.MachineDeployments
+	if wantedMachineDeployments == nil {
+		return nil
+	}
+
+	reducedMachineDeployments := make(workercontroller.MachineDeployments, 0)
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
-		if wantedMachineDeployment.State != nil || len(wantedMachineDeployment.State.MachineSets) < 1 {
+		if wantedMachineDeployment.State != nil && len(wantedMachineDeployment.State.MachineSets) < 1 {
 			reducedMachineDeployments = append(reducedMachineDeployments, wantedMachineDeployment)
 		}
 	}

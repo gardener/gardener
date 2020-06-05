@@ -140,7 +140,9 @@ func shouldSkipExtensionObjectSync(extensionObject extensionsv1alpha1.Object) bo
 	annotations := extensionObject.GetAnnotations()
 	if annotations != nil {
 		operationAnnotation := annotations[v1beta1constants.GardenerOperation]
-		return operationAnnotation == v1beta1constants.GardenerOperationWaitForState
+		return operationAnnotation == v1beta1constants.GardenerOperationWaitForState ||
+			operationAnnotation == v1beta1constants.GardenerOperationRestore ||
+			operationAnnotation == v1beta1constants.GardenerOperationMigrate
 	}
 	return false
 }

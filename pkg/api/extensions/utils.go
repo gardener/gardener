@@ -19,10 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GetShootCRsLists returns an empty CR list struct, for each CR used for Shoot managment
-func GetShootCRsLists() []runtime.Object {
+// GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot managment
+func GetShootNamespacedCRsLists() []runtime.Object {
 	return []runtime.Object{
-		&extensionsv1alpha1.BackupEntryList{},
 		&extensionsv1alpha1.ControlPlaneList{},
 		&extensionsv1alpha1.ExtensionList{},
 		&extensionsv1alpha1.InfrastructureList{},
