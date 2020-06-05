@@ -17,8 +17,8 @@ spec:
 {{ .Values.labels  | toYaml | indent 4 }}
   ports:
   - name: status-port
-    port: 15020
-    targetPort: 15020
+    port: 15021
+    targetPort: 15021
 {{- if .Values.ports }}
 {{ toYaml .Values.ports | indent 2 }}
 {{- end }}

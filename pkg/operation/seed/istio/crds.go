@@ -20,11 +20,17 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type crds struct {
 	kubernetes.ChartApplier
-	chartPath string
+	chartPath      string
+	client         crclient.Client
+	deprecatedCRDs []apiextensionsv1beta1.CustomResourceDefinition
 }
 
 // NewIstioCRD can be used to deploy istio CRDs.
@@ -32,14 +38,28 @@ type crds struct {
 func NewIstioCRD(
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
+	client crclient.Client,
 ) component.DeployWaiter {
 	return &crds{
 		ChartApplier: applier,
 		chartPath:    filepath.Join(chartsRootPath, "istio", "istio-crds"),
+		client:       client,
+		deprecatedCRDs: []apiextensionsv1beta1.CustomResourceDefinition{
+			// TODO: remove this after several gardener releases
+			{ObjectMeta: metav1.ObjectMeta{Name: "meshpolicies.authentication.istio.io"}},
+			// TODO: remove this after several gardener releases
+			{ObjectMeta: metav1.ObjectMeta{Name: "policies.authentication.istio.io"}},
+		},
 	}
 }
 
 func (c *crds) Deploy(ctx context.Context) error {
+	for _, deprecatedCRD := range c.deprecatedCRDs {
+		if err := crclient.IgnoreNotFound(c.client.Delete(ctx, &deprecatedCRD)); err != nil {
+			return err
+		}
+	}
+
 	return c.Apply(ctx, c.chartPath, "", "istio")
 }
 

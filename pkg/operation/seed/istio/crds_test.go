@@ -47,6 +47,7 @@ var _ = Describe("#CRDs", func() {
 
 		s := runtime.NewScheme()
 		Expect(apiextensionsv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(apiextensionsv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
 		d := &test.FakeDiscovery{
@@ -86,11 +87,20 @@ var _ = Describe("#CRDs", func() {
 		ca := kubernetes.NewChartApplier(renderer, a)
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		crd = NewIstioCRD(ca, chartsRootPath)
+		crd = NewIstioCRD(ca, chartsRootPath, c)
 
 	})
 
 	JustBeforeEach(func() {
+		deprecatedCRDs := []apiextensionsv1beta1.CustomResourceDefinition{
+			{ObjectMeta: metav1.ObjectMeta{Name: "meshpolicies.authentication.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "policies.authentication.istio.io"}},
+		}
+
+		for _, deprecated := range deprecatedCRDs {
+			Expect(c.Create(ctx, &deprecated)).ToNot(HaveOccurred())
+		}
+
 		Expect(crd.Deploy(ctx)).ToNot(HaveOccurred(), "istio crd deploy succeeds")
 	})
 
@@ -102,9 +112,6 @@ var _ = Describe("#CRDs", func() {
 				&apiextensionsv1beta1.CustomResourceDefinition{},
 			)).ToNot(HaveOccurred())
 		},
-
-		Entry("MeshPolicy", "meshpolicies.authentication.istio.io"),
-		Entry("Policy", "policies.authentication.istio.io"),
 		Entry("DestinationRule", "destinationrules.networking.istio.io"),
 		Entry("EnvoyFilter", "envoyfilters.networking.istio.io"),
 		Entry("Gateways", "gateways.networking.istio.io"),
@@ -114,6 +121,7 @@ var _ = Describe("#CRDs", func() {
 		Entry("AuthorizationPolicy", "authorizationpolicies.security.istio.io"),
 		Entry("PeerAuthentication", "peerauthentications.security.istio.io"),
 		Entry("RequestAuthentications", "requestauthentications.security.istio.io"),
+		Entry("WorkloadEntries", "workloadentries.networking.istio.io"),
 		// TODO (mvladev): Entries bellow should be moved to unused CRDs table when
 		// they are no longer used by future versions of istio.
 		Entry("HTTPAPISpec (DEPRECATED, but needed)", "httpapispecs.config.istio.io"),
@@ -139,5 +147,7 @@ var _ = Describe("#CRDs", func() {
 		Entry("Handlers", "handlers.config.istio.io"),
 		Entry("Instances", "instances.config.istio.io"),
 		Entry("Rules", "rules.config.istio.io"),
+		Entry("MeshPolicy", "meshpolicies.authentication.istio.io"),
+		Entry("Policy", "policies.authentication.istio.io"),
 	)
 })

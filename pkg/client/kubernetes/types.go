@@ -77,6 +77,7 @@ func init() {
 		resourcesscheme.AddToScheme,
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
+		apiextensionsscheme.AddToScheme,
 	)
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
