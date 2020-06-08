@@ -468,11 +468,7 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 				continue
 			}
 
-			if extension.ProviderConfig != nil {
-				providerConfig := extension.ProviderConfig.RawExtension
-				obj.Spec.ProviderConfig = &providerConfig
-			}
-
+			obj.Spec.ProviderConfig = extension.ProviderConfig
 			requiredExtensions[extension.Type] = obj
 			continue
 		}

@@ -108,8 +108,8 @@ BackupBucketProvider
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -379,8 +379,8 @@ KubernetesSettings
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -1711,8 +1711,8 @@ string
 <td>
 <code>config</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -1950,8 +1950,8 @@ BackupBucketProvider
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -2008,8 +2008,8 @@ string
 <td>
 <code>providerStatus</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -2347,8 +2347,8 @@ KubernetesSettings
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -2719,8 +2719,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -2763,8 +2763,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -2894,8 +2894,8 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>providerStatus</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -3364,8 +3364,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -5353,8 +5353,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -6083,8 +6083,8 @@ string
 <td>
 <code>controlPlaneConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -6098,8 +6098,8 @@ definition in the documentation of your provider extension.</p>
 <td>
 <code>infrastructureConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -6120,55 +6120,6 @@ definition in the documentation of your provider extension.</p>
 </td>
 <td>
 <p>Workers is a list of worker groups.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.ProviderConfig">ProviderConfig
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.AdmissionPlugin">AdmissionPlugin</a>, 
-<a href="#core.gardener.cloud/v1beta1.BackupBucketSpec">BackupBucketSpec</a>, 
-<a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
-<a href="#core.gardener.cloud/v1beta1.ContainerRuntime">ContainerRuntime</a>, 
-<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>, 
-<a href="#core.gardener.cloud/v1beta1.ControllerInstallationStatus">ControllerInstallationStatus</a>, 
-<a href="#core.gardener.cloud/v1beta1.Extension">Extension</a>, 
-<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>, 
-<a href="#core.gardener.cloud/v1beta1.Provider">Provider</a>, 
-<a href="#core.gardener.cloud/v1beta1.SeedBackup">SeedBackup</a>, 
-<a href="#core.gardener.cloud/v1beta1.SeedProvider">SeedProvider</a>, 
-<a href="#core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage</a>, 
-<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
-</p>
-<p>
-<p>ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct.
-<a href="https://github.com/kubernetes/kubernetes/issues/55890">https://github.com/kubernetes/kubernetes/issues/55890</a>
-<a href="https://github.com/kubernetes-sigs/cluster-api/issues/137">https://github.com/kubernetes-sigs/cluster-api/issues/137</a></p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>RawExtension</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<p>
-(Members of <code>RawExtension</code> are embedded into this type.)
-</p>
 </td>
 </tr>
 </tbody>
@@ -6334,8 +6285,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -6516,8 +6467,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -7158,8 +7109,8 @@ string
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>
@@ -7976,8 +7927,8 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <code>providerConfig</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ProviderConfig">
-ProviderConfig
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </a>
 </em>
 </td>

@@ -741,10 +741,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should add deploy infrastructure task because spec has changed", func() {
-				shoot.Spec.Provider.InfrastructureConfig = &core.ProviderConfig{
-					RawExtension: runtime.RawExtension{
-						Raw: []byte("infrastructure"),
-					},
+				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+					Raw: []byte("infrastructure"),
 				}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)

@@ -376,10 +376,8 @@ var _ = Describe("shoot", func() {
 		var (
 			shootNamespace = "shoot--foo--bar"
 			extensionKind  = extensionsv1alpha1.ExtensionResource
-			providerConfig = gardencorev1beta1.ProviderConfig{
-				RawExtension: runtime.RawExtension{
-					Raw: []byte("key: value"),
-				},
+			providerConfig = runtime.RawExtension{
+				Raw: []byte("key: value"),
 			}
 			fooExtensionType         = "foo"
 			fooReconciliationTimeout = metav1.Duration{Duration: 5 * time.Minute}
@@ -445,7 +443,7 @@ var _ = Describe("shoot", func() {
 								"Spec": MatchFields(IgnoreExtras, Fields{
 									"DefaultSpec": MatchAllFields(Fields{
 										"Type":           Equal(fooExtensionType),
-										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
+										"ProviderConfig": PointTo(Equal(providerConfig)),
 									}),
 								}),
 							}),
@@ -515,7 +513,7 @@ var _ = Describe("shoot", func() {
 									"Spec": MatchFields(IgnoreExtras, Fields{
 										"DefaultSpec": MatchAllFields(Fields{
 											"Type":           Equal(fooExtensionType),
-											"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
+											"ProviderConfig": PointTo(Equal(providerConfig)),
 										}),
 									}),
 								}),
@@ -552,7 +550,7 @@ var _ = Describe("shoot", func() {
 								"Spec": MatchAllFields(Fields{
 									"DefaultSpec": MatchAllFields(Fields{
 										"Type":           Equal(barExtensionType),
-										"ProviderConfig": PointTo(Equal(providerConfig.RawExtension)),
+										"ProviderConfig": PointTo(Equal(providerConfig)),
 									}),
 								}),
 							}),

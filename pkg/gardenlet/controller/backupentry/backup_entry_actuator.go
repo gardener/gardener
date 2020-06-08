@@ -201,18 +201,6 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
-	var (
-		backupBucketProviderConfig *runtime.RawExtension
-		backupBucketProviderStatus *runtime.RawExtension
-	)
-
-	if bb.Spec.ProviderConfig != nil {
-		backupBucketProviderConfig = &bb.Spec.ProviderConfig.RawExtension
-	}
-	if bb.Status.ProviderStatus != nil {
-		backupBucketProviderStatus = &bb.Status.ProviderStatus.RawExtension
-	}
-
 	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
@@ -220,9 +208,9 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		extensionBackupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           bb.Spec.Provider.Type,
-				ProviderConfig: backupBucketProviderConfig,
+				ProviderConfig: bb.Spec.ProviderConfig,
 			},
-			BackupBucketProviderStatus: backupBucketProviderStatus,
+			BackupBucketProviderStatus: bb.Status.ProviderStatus,
 			BucketName:                 a.backupEntry.Spec.BucketName,
 			Region:                     bb.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{

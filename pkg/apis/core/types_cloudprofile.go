@@ -17,6 +17,7 @@ package core
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -55,7 +56,7 @@ type CloudProfileSpec struct {
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// ProviderConfig contains provider-specific configuration for the profile.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Regions contains constraints regarding allowed values for regions and zones.
 	Regions []Region
 	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.

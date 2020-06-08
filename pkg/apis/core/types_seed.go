@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -92,7 +93,7 @@ type SeedBackup struct {
 	// Provider is a provider name.
 	Provider string
 	// ProviderConfig is the configuration passed to BackupBucket resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Region is a region name.
 	Region *string
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
@@ -136,7 +137,7 @@ type SeedProvider struct {
 	// Type is the name of the provider.
 	Type string
 	// ProviderConfig is the configuration passed to Seed resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Region is a name of a region.
 	Region string
 }

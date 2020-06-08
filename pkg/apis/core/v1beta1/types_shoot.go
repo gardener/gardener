@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -261,7 +262,7 @@ type Extension struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
 	// +optional
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
@@ -483,7 +484,7 @@ type AdmissionPlugin struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Config is the configuration of the plugin.
 	// +optional
-	Config *ProviderConfig `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -706,7 +707,7 @@ type Networking struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to network resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Pods is the CIDR of the pod network.
 	// +optional
 	Pods *string `json:"pods,omitempty" protobuf:"bytes,3,opt,name=pods"`
@@ -793,11 +794,11 @@ type Provider struct {
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
 	// +optional
-	ControlPlaneConfig *ProviderConfig `json:"controlPlaneConfig,omitempty" protobuf:"bytes,2,opt,name=controlPlaneConfig"`
+	ControlPlaneConfig *runtime.RawExtension `json:"controlPlaneConfig,omitempty" protobuf:"bytes,2,opt,name=controlPlaneConfig"`
 	// InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
 	// +optional
-	InfrastructureConfig *ProviderConfig `json:"infrastructureConfig,omitempty" protobuf:"bytes,3,opt,name=infrastructureConfig"`
+	InfrastructureConfig *runtime.RawExtension `json:"infrastructureConfig,omitempty" protobuf:"bytes,3,opt,name=infrastructureConfig"`
 	// Workers is a list of worker groups.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -837,7 +838,7 @@ type Worker struct {
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,11,opt,name=maxUnavailable"`
 	// ProviderConfig is the provider-specific configuration for this worker pool.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,12,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,12,opt,name=providerConfig"`
 	// Taints is a list of taints for all the `Node` objects in this worker pool.
 	// +optional
 	Taints []corev1.Taint `json:"taints,omitempty" protobuf:"bytes,13,rep,name=taints"`
@@ -880,7 +881,7 @@ type ShootMachineImage struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Version is the version of the shoot's image.
 	// If version is not provided, it will be defaulted to the latest version from the CloudProfile.
 	// +optional
@@ -925,7 +926,7 @@ type ContainerRuntime struct {
 
 	// ProviderConfig is the configuration passed to container runtime resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 }
 
 var (

@@ -17,6 +17,7 @@ package core
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -50,7 +51,7 @@ type BackupBucketSpec struct {
 	// Provider holds the details of cloud provider of the object store.
 	Provider BackupBucketProvider
 	// ProviderConfig is the configuration passed to BackupBucket resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference
 	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
@@ -60,7 +61,7 @@ type BackupBucketSpec struct {
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.
 type BackupBucketStatus struct {
 	// ProviderStatus is the configuration passed to BackupBucket resource.
-	ProviderStatus *ProviderConfig
+	ProviderStatus *runtime.RawExtension
 	// LastOperation holds information about the last operation on the BackupBucket.
 	LastOperation *LastOperation
 	// LastError holds information about the last occurred error during an operation.

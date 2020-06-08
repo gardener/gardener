@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -80,7 +81,7 @@ type ControllerDeployment struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig contains type-specific configuration.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *ControllerDeploymentPolicy `json:"policy,omitempty" protobuf:"bytes,3,opt,name=policy"`

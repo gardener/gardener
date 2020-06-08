@@ -17,6 +17,7 @@ package core
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -59,7 +60,7 @@ type ControllerInstallationStatus struct {
 	Conditions []Condition
 	// ProviderStatus contains type-specific status.
 	// +optional
-	ProviderStatus *ProviderConfig
+	ProviderStatus *runtime.RawExtension
 }
 
 const (

@@ -128,7 +128,7 @@ func ReadObject(file string, into apimachineryRuntime.Object) error {
 }
 
 // ParseFileAsProviderConfig parses a file as a ProviderConfig
-func ParseFileAsProviderConfig(filepath string) (*gardencorev1beta1.ProviderConfig, error) {
+func ParseFileAsProviderConfig(filepath string) (*apimachineryRuntime.RawExtension, error) {
 	data, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func ParseFileAsProviderConfig(filepath string) (*gardencorev1beta1.ProviderConf
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode ProviderConfig: %v", err)
 	}
-	return &gardencorev1beta1.ProviderConfig{RawExtension: apimachineryRuntime.RawExtension{Raw: jsonData}}, nil
+	return &apimachineryRuntime.RawExtension{Raw: jsonData}, nil
 }
 
 // ParseFileAsWorkers parses a file as a Worker configuration

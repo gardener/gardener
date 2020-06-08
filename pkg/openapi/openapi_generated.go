@@ -23,8 +23,6 @@ limitations under the License.
 package openapi
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	spec "github.com/go-openapi/spec"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,7 +117,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectStatus":                         schema_pkg_apis_core_v1alpha1_ProjectStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProjectTolerations":                    schema_pkg_apis_core_v1alpha1_ProjectTolerations(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider":                              schema_pkg_apis_core_v1alpha1_Provider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                        schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Quota":                                 schema_pkg_apis_core_v1alpha1_Quota(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaList":                             schema_pkg_apis_core_v1alpha1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaSpec":                             schema_pkg_apis_core_v1alpha1_QuotaSpec(ref),
@@ -241,7 +238,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectStatus":                          schema_pkg_apis_core_v1beta1_ProjectStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations":                     schema_pkg_apis_core_v1beta1_ProjectTolerations(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider":                               schema_pkg_apis_core_v1beta1_Provider(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig":                         schema_pkg_apis_core_v1beta1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Quota":                                  schema_pkg_apis_core_v1beta1_Quota(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                              schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                              schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
@@ -640,7 +636,7 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 					"config": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Config is the configuration of the plugin.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
@@ -648,7 +644,7 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -911,7 +907,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"secretRef": {
@@ -932,7 +928,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -946,7 +942,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 					"providerStatus": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"lastOperation": {
@@ -978,7 +974,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketStatus(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1356,7 +1352,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains provider-specific configuration for the profile.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"regions": {
@@ -1415,7 +1411,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1586,7 +1582,7 @@ func schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref common.ReferenceCallback
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to the ContainerRuntime resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
@@ -1594,7 +1590,7 @@ func schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1615,7 +1611,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains type-specific configuration.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"policy": {
@@ -1636,7 +1632,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1793,14 +1789,14 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationStatus(ref common.Refer
 					"providerStatus": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderStatus contains type-specific status.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -2195,7 +2191,7 @@ func schema_pkg_apis_core_v1alpha1_Extension(ref common.ReferenceCallback) commo
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to extension resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"disabled": {
@@ -2210,7 +2206,7 @@ func schema_pkg_apis_core_v1alpha1_Extension(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -3525,7 +3521,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to network resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"pods": {
@@ -3554,7 +3550,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -4255,13 +4251,13 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 					"controlPlaneConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete definition in the documentation of your provider extension.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"infrastructureConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete definition in the documentation of your provider extension.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"workers": {
@@ -4288,19 +4284,7 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ProviderConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct. https://github.com/kubernetes/kubernetes/issues/55890 https://github.com/kubernetes-sigs/cluster-api/issues/137",
-				Type:        v1alpha1.ProviderConfig{}.OpenAPISchemaType(),
-				Format:      v1alpha1.ProviderConfig{}.OpenAPISchemaFormat(),
-			},
-		},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -4703,7 +4687,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"region": {
@@ -4724,7 +4708,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -4858,7 +4842,7 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to Seed resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"region": {
@@ -4873,7 +4857,7 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5382,7 +5366,7 @@ func schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref common.ReferenceCallbac
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the shoot's individual configuration passed to an extension resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"version": {
@@ -5397,7 +5381,7 @@ func schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -6057,7 +6041,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the provider-specific configuration for this worker pool.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"taints": {
@@ -6118,7 +6102,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -6208,7 +6192,7 @@ func schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) 
 					"config": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Config is the configuration of the plugin.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
@@ -6216,7 +6200,7 @@ func schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -6479,7 +6463,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"secretRef": {
@@ -6500,7 +6484,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -6514,7 +6498,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 					"providerStatus": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderStatus is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"lastOperation": {
@@ -6546,7 +6530,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketStatus(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -6924,7 +6908,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains provider-specific configuration for the profile.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"regions": {
@@ -6983,7 +6967,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7154,7 +7138,7 @@ func schema_pkg_apis_core_v1beta1_ContainerRuntime(ref common.ReferenceCallback)
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to container runtime resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
@@ -7162,7 +7146,7 @@ func schema_pkg_apis_core_v1beta1_ContainerRuntime(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7183,7 +7167,7 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains type-specific configuration.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"policy": {
@@ -7204,7 +7188,7 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7361,14 +7345,14 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref common.Refere
 					"providerStatus": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderStatus contains type-specific status.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7763,7 +7747,7 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to extension resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"disabled": {
@@ -7778,7 +7762,7 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -9001,7 +8985,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to network resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"pods": {
@@ -9030,7 +9014,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -9731,13 +9715,13 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 					"controlPlaneConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete definition in the documentation of your provider extension.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"infrastructureConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete definition in the documentation of your provider extension.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"workers": {
@@ -9764,19 +9748,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ProviderConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct. https://github.com/kubernetes/kubernetes/issues/55890 https://github.com/kubernetes-sigs/cluster-api/issues/137",
-				Type:        v1beta1.ProviderConfig{}.OpenAPISchemaType(),
-				Format:      v1beta1.ProviderConfig{}.OpenAPISchemaFormat(),
-			},
-		},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -10136,7 +10108,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"region": {
@@ -10157,7 +10129,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "k8s.io/api/core/v1.SecretReference"},
+			"k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -10305,7 +10277,7 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to Seed resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"region": {
@@ -10320,7 +10292,7 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -10815,7 +10787,7 @@ func schema_pkg_apis_core_v1beta1_ShootMachineImage(ref common.ReferenceCallback
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the shoot's individual configuration passed to an extension resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"version": {
@@ -10830,7 +10802,7 @@ func schema_pkg_apis_core_v1beta1_ShootMachineImage(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -11334,7 +11306,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the provider-specific configuration for this worker pool.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 					"taints": {
@@ -11395,7 +11367,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProviderConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

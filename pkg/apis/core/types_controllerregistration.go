@@ -16,6 +16,7 @@ package core
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -73,7 +74,7 @@ type ControllerDeployment struct {
 	// Type is the deployment type.
 	Type string
 	// ProviderConfig contains type-specific configuration.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	Policy *ControllerDeploymentPolicy
 	// SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
