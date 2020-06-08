@@ -291,5 +291,21 @@ var _ = Describe("Defaults", func() {
 				Equal(Toleration{Key: SeedTaintProtected}),
 			))
 		})
+
+		It("should default the failSwapOn field", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeTrue()))
+		})
+
+		It("should not default the failSwapOn field", func() {
+			falseVar := false
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
+		})
 	})
 })
