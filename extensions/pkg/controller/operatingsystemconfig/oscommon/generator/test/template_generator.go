@@ -16,6 +16,7 @@ package test
 
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/gobuffalo/packr"
 	"github.com/onsi/ginkgo"
@@ -37,6 +38,7 @@ var DescribeTest = func(g generator.Generator, box packr.Box) func() {
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			cloudInit, _, err := g.Generate(&generator.OperatingSystemConfig{
+				Object: &extensionsv1alpha1.OperatingSystemConfig{},
 				Files: []*generator.File{
 					{
 						Path:        "/foo",
