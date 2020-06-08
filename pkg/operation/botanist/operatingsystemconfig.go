@@ -318,6 +318,9 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		if evictionMaxPodGracePeriod := kubeletConfig.EvictionMaxPodGracePeriod; evictionMaxPodGracePeriod != nil {
 			kubelet["evictionMaxPodGracePeriod"] = *evictionMaxPodGracePeriod
 		}
+		if failSwapOn := kubeletConfig.FailSwapOn; failSwapOn != nil {
+			kubelet["failSwapOn"] = *failSwapOn
+		}
 	}
 
 	workerConfig := map[string]interface{}{

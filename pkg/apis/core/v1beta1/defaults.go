@@ -198,6 +198,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Namespace == v1beta1constants.GardenNamespace {
 		addTolerations(&obj.Spec.Tolerations, Toleration{Key: SeedTaintProtected})
 	}
+
+	if obj.Spec.Kubernetes.Kubelet == nil {
+		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+	}
+	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
+		obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
