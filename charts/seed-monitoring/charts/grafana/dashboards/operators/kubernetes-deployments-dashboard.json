@@ -5,8 +5,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 5,
-  "iteration": 1538572542659,
+  "iteration": 1591604023145,
   "links": [],
   "panels": [
     {
@@ -21,6 +20,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -103,6 +108,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -185,6 +196,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "Bps",
       "gauge": {
         "maxValue": 100,
@@ -268,6 +285,12 @@
       "decimals": null,
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -316,11 +339,13 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "",
+      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_spec_replicas{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "interval": "",
           "intervalFactor": 2,
+          "legendFormat": "",
           "metric": "kube_deployment_spec_replicas",
           "refId": "A",
           "step": 600
@@ -351,6 +376,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -399,11 +430,13 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "",
+      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "min(kube_deployment_status_replicas_available{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "interval": "",
           "intervalFactor": 2,
+          "legendFormat": "",
           "refId": "A",
           "step": 600
         }
@@ -433,6 +466,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -481,10 +520,11 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "",
+      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "max(kube_deployment_status_observed_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_status_observed_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",
           "refId": "A",
@@ -516,6 +556,12 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -564,10 +610,11 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "",
+      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "max(kube_deployment_metadata_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_metadata_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",
           "refId": "A",
@@ -595,7 +642,14 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 9,
@@ -603,6 +657,7 @@
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 1,
       "legend": {
         "avg": false,
@@ -618,6 +673,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -665,6 +723,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Replicas",
       "tooltip": {
@@ -673,7 +732,6 @@
         "sort": 0,
         "value_type": "cumulative"
       },
-      "transparent": false,
       "type": "graph",
       "xaxis": {
         "buckets": null,
@@ -708,6 +766,12 @@
     {
       "columns": [],
       "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -727,12 +791,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "Pod",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -753,6 +819,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -781,11 +848,11 @@
       ],
       "title": "Drill down to to Pod Dashboard",
       "transform": "timeseries_to_rows",
-      "type": "table"
+      "type": "table-old"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 16,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [
     "kubernetes",
@@ -825,15 +892,18 @@
           }
         ],
         "query": "seed,shoot",
+        "skipUrlSync": false,
         "type": "custom"
       },
       {
         "allValue": null,
         "current": {
-          "text": "grafana",
-          "value": "grafana"
+          "selected": false,
+          "text": "aws-lb-readvertiser",
+          "value": "aws-lb-readvertiser"
         },
         "datasource": "prometheus",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Deployment",
@@ -843,6 +913,7 @@
         "query": "label_values(kube_deployment_metadata_generation{type=~\"$type\"}, deployment)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],

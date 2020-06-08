@@ -18,9 +18,9 @@ tests:
   - series: 'process_max_fds{job="kube-apiserver", instance="instance"}'
     values: '100+0x60'
   # KubeApiServerLatency
-  - series: 'apiserver_request_latencies_bucket{verb="POST", le="5000000"}'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="5000000"}'
     values: '100+0x60'
-  - series: 'apiserver_request_latencies_bucket{verb="POST", le="+Inf"}'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="+Inf"}'
     values: '100+0x60'
   # KubeApiServerTooManyAuditlogFailures
   - series: 'apiserver_audit_error_total{plugin="webhook", job="kube-apiserver"}'
