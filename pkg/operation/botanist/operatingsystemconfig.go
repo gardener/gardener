@@ -330,6 +330,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		workerConfig["cri"] = map[string]interface{}{
 			"name": worker.CRI.Name,
 		}
+		downloaderConfig["cri"] = workerConfig["cri"]
 	}
 
 	originalConfig["worker"] = workerConfig
