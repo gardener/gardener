@@ -29,9 +29,6 @@ import (
 const (
 	// ManagedResourceName is the name of the managed resource used to deploy referenced resources to the Seed cluster.
 	ManagedResourceName = "referenced-resources"
-	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
-	// to avoid naming collisions with resources managed by Gardener.
-	ReferencedResourcesPrefix = "ref-"
 )
 
 // DeployReferencedResources reads all referenced resources from the Garden cluster and writes a managed resource to the Seed cluster.
@@ -51,7 +48,7 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 		// Create an unstructured object and append it to the slice
 		unstructuredObj := &unstructured.Unstructured{Object: obj}
 		unstructuredObj.SetNamespace(b.Shoot.SeedNamespace)
-		unstructuredObj.SetName(ReferencedResourcesPrefix + unstructuredObj.GetName())
+		unstructuredObj.SetName(v1beta1constants.ReferencedResourcesPrefix + unstructuredObj.GetName())
 		unstructuredObjs = append(unstructuredObjs, unstructuredObj)
 	}
 

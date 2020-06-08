@@ -19,12 +19,12 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -284,7 +284,7 @@ var _ = Describe("Utils", func() {
 			namespace = "shoot--test--foo"
 			refSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      botanist.ReferencedResourcesPrefix + "foo",
+					Name:      v1beta1constants.ReferencedResourcesPrefix + "foo",
 					Namespace: namespace,
 				},
 				Data: map[string][]byte{
@@ -295,7 +295,7 @@ var _ = Describe("Utils", func() {
 
 		It("should call client.Get and return the result", func() {
 			secret := &corev1.Secret{}
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: botanist.ReferencedResourcesPrefix + ref.Name}, secret).DoAndReturn(
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, secret).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret) error {
 					refSecret.DeepCopyInto(secret)
 					return nil
