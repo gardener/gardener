@@ -15,39 +15,13 @@
 package v1alpha1
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"time"
-
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-var (
-	// DefaultDiscoveryDir is the directory where the discovery and http cache directory reside.
-	DefaultDiscoveryDir string
-	// DefaultDiscoveryCacheDir is the default discovery cache directory.
-	DefaultDiscoveryCacheDir string
-	// DefaultDiscoveryHTTPCacheDir is the default discovery http cache directory.
-	DefaultDiscoveryHTTPCacheDir string
-)
-
-func init() {
-	var err error
-	DefaultDiscoveryDir, err = ioutil.TempDir("", "gardener-discovery")
-	utilruntime.Must(err)
-
-	DefaultDiscoveryCacheDir = filepath.Join(DefaultDiscoveryDir, "cache")
-	DefaultDiscoveryHTTPCacheDir = filepath.Join(DefaultDiscoveryDir, "http-cache")
-
-	utilruntime.Must(os.Mkdir(DefaultDiscoveryCacheDir, 0700))
-	utilruntime.Must(os.Mkdir(DefaultDiscoveryHTTPCacheDir, 0700))
-}
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
@@ -118,16 +92,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.Seed.ShootMonitorPeriod == nil {
 		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
 		obj.Controllers.Seed.ShootMonitorPeriod = &v
-	}
-
-	if obj.Discovery.TTL == nil {
-		obj.Discovery.TTL = &metav1.Duration{Duration: DefaultDiscoveryTTL}
-	}
-	if obj.Discovery.HTTPCacheDir == nil {
-		obj.Discovery.HTTPCacheDir = &DefaultDiscoveryHTTPCacheDir
-	}
-	if obj.Discovery.DiscoveryCacheDir == nil {
-		obj.Discovery.DiscoveryCacheDir = &DefaultDiscoveryCacheDir
 	}
 }
 

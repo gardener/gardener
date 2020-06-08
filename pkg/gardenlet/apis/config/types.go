@@ -41,8 +41,6 @@ type GardenletConfiguration struct {
 	Controllers *GardenletControllerConfiguration
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *LeaderElectionConfiguration
-	// Discovery defines the configuration of the discovery client.
-	Discovery *DiscoveryConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
@@ -235,19 +233,6 @@ type ShootStateSyncControllerConfiguration struct {
 type SeedAPIServerNetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
-}
-
-// DiscoveryConfiguration defines the configuration of how to discover API groups.
-// It allows to set where to store caching data and to specify the TTL of that data.
-type DiscoveryConfiguration struct {
-	// DiscoveryCacheDir is the directory to store discovery cache information.
-	// If unset, the discovery client will use the current working directory.
-	DiscoveryCacheDir *string
-	// HTTPCacheDir is the directory to store discovery HTTP cache information.
-	// If unset, no HTTP caching will be done.
-	HTTPCacheDir *string
-	// TTL is the ttl how long discovery cache information shall be valid.
-	TTL *metav1.Duration
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

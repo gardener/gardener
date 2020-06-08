@@ -47,7 +47,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
-			Expect(obj.Discovery).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(PointTo(Equal("info")))
 			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))

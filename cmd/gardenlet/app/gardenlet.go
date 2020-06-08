@@ -52,12 +52,9 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/discovery"
-	diskcache "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -231,31 +228,6 @@ type Gardenlet struct {
 	HealthManager          healthz.Manager
 }
 
-func discoveryFromGardenletConfiguration(cfg *config.GardenletConfiguration, kubeconfig []byte) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	discoveryCfg := cfg.Discovery
-	var discoveryCacheDir string
-	if discoveryCfg.DiscoveryCacheDir != nil {
-		discoveryCacheDir = *discoveryCfg.DiscoveryCacheDir
-	}
-
-	var httpCacheDir string
-	if discoveryCfg.HTTPCacheDir != nil {
-		httpCacheDir = *discoveryCfg.HTTPCacheDir
-	}
-
-	var ttl time.Duration
-	if discoveryCfg.TTL != nil {
-		ttl = discoveryCfg.TTL.Duration
-	}
-
-	return diskcache.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
-}
-
 // NewGardenlet is the main entry point of instantiating a new Gardenlet.
 func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gardenlet, error) {
 	if cfg == nil {
@@ -306,15 +278,9 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
-	disc, err := discoveryFromGardenletConfiguration(cfg, kubeconfigFromBootstrap)
-	if err != nil {
-		return nil, err
-	}
-
 	k8sGardenClient, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(restCfg),
 		kubernetes.WithClientOptions(client.Options{
-			Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
 			Scheme: kubernetes.GardenScheme,
 		}),
 	)
@@ -369,18 +335,11 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}, nil
 }
 
-func (g *Gardenlet) cleanup() {
-	if err := os.RemoveAll(configv1alpha1.DefaultDiscoveryDir); err != nil {
-		g.Logger.Errorf("Could not cleanup base discovery cache directory: %v", err)
-	}
-}
-
 // Run runs the Gardenlet. This should never exit.
 func (g *Gardenlet) Run(ctx context.Context) error {
 	controllerCtx, controllerCancel := context.WithCancel(ctx)
 
 	defer controllerCancel()
-	defer g.cleanup()
 
 	// Initialize /healthz manager.
 	g.HealthManager = healthz.NewPeriodicHealthz(seedcontroller.LeaseResyncGracePeriodSeconds * time.Second)
@@ -542,7 +501,7 @@ func determineGardenletIdentity() (*gardencorev1beta1.Gardener, string, error) {
 func extractID(line string) string {
 	var (
 		id           string
-		splitBySlash = strings.Split(string(line), "/")
+		splitBySlash = strings.Split(line, "/")
 	)
 
 	if len(splitBySlash) == 0 {

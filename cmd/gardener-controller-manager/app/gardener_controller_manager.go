@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -42,13 +41,10 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/discovery"
-	diskcache "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
@@ -219,31 +215,6 @@ type Gardener struct {
 	LeaderElection         *leaderelection.LeaderElectionConfig
 }
 
-func discoveryFromControllerManagerConfiguration(cfg *config.ControllerManagerConfiguration) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	discoveryCfg := cfg.Discovery
-	var discoveryCacheDir string
-	if discoveryCfg.DiscoveryCacheDir != nil {
-		discoveryCacheDir = *discoveryCfg.DiscoveryCacheDir
-	}
-
-	var httpCacheDir string
-	if discoveryCfg.HTTPCacheDir != nil {
-		httpCacheDir = *discoveryCfg.HTTPCacheDir
-	}
-
-	var ttl time.Duration
-	if discoveryCfg.TTL != nil {
-		ttl = discoveryCfg.TTL.Duration
-	}
-
-	return diskcache.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
-}
-
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
 func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) {
 	if cfg == nil {
@@ -272,16 +243,10 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		return nil, err
 	}
 
-	disc, err := discoveryFromControllerManagerConfiguration(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	k8sGardenClient, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(restCfg),
 		kubernetes.WithClientOptions(
 			client.Options{
-				Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
 				Scheme: kubernetes.GardenScheme,
 			}),
 	)
@@ -316,15 +281,8 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	}, nil
 }
 
-func (g *Gardener) cleanup() {
-	if err := os.RemoveAll(controllermanagerconfigv1alpha1.DefaultDiscoveryDir); err != nil {
-		g.Logger.Errorf("Could not cleanup base discovery cache directory: %v", err)
-	}
-}
-
 // Run runs the Gardener. This should never exit.
 func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
-	defer g.cleanup()
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
 	// Prepare a reusable run function.

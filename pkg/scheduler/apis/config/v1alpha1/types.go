@@ -56,8 +56,6 @@ type SchedulerConfiguration struct {
 	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection,omitempty"`
-	// Discovery defines the configuration of the discovery client.
-	Discovery DiscoveryConfiguration `json:"discovery,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel,omitempty"`
 	// Server defines the configuration of the HTTP server.
@@ -100,22 +98,6 @@ type ShootSchedulerConfiguration struct {
 	RetrySyncPeriod metav1.Duration `json:"retrySyncPeriod,omitempty"`
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
-}
-
-// DiscoveryConfiguration defines the configuration of how to discover API groups.
-// It allows to set where to store caching data and to specify the TTL of that data.
-type DiscoveryConfiguration struct {
-	// DiscoveryCacheDir is the directory to store discovery cache information.
-	// If unset, the discovery client will use the current working directory.
-	// +optional
-	DiscoveryCacheDir *string `json:"discoveryCacheDir,omitempty"`
-	// HTTPCacheDir is the directory to store discovery HTTP cache information.
-	// If unset, no HTTP caching will be done.
-	// +optional
-	HTTPCacheDir *string `json:"httpCacheDir,omitempty"`
-	// TTL is the ttl how long discovery cache information shall be valid.
-	// +optional
-	TTL *metav1.Duration `json:"ttl,omitempty"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election
