@@ -22,13 +22,13 @@ import (
 
 	controllererror "github.com/gardener/gardener/extensions/pkg/controller/error"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-
-	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -350,5 +350,5 @@ func IsMigrated(obj runtime.Object) bool {
 // GetObjectByReference gets an object by the given reference, in the given namespace.
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj runtime.Object) error {
-	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: botanist.ReferencedResourcesPrefix + ref.Name}, obj)
+	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
 }
