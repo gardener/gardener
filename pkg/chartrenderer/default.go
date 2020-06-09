@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 
@@ -49,22 +50,19 @@ func NewForConfig(cfg *rest.Config) (Interface, error) {
 		return nil, err
 	}
 
-	capabilities, err := DiscoverCapabilities(disc)
+	sv, err := disc.ServerVersion()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
 	}
 
-	return &chartRenderer{
-		renderer:     engine.New(),
-		capabilities: capabilities,
-	}, nil
+	return NewWithServerVersion(sv), nil
 }
 
-// New creates a new chart renderer with the given Engine and Capabilities.
-func New(engine *engine.Engine, capabilities *chartutil.Capabilities) Interface {
+// NewWithServerVersion creates a new chart renderer with the given server version.
+func NewWithServerVersion(serverVersion *version.Info) Interface {
 	return &chartRenderer{
-		renderer:     engine,
-		capabilities: capabilities,
+		renderer:     engine.New(),
+		capabilities: &chartutil.Capabilities{KubeVersion: serverVersion},
 	}
 }
 

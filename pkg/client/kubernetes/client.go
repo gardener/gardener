@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -75,6 +76,19 @@ func NewRuntimeClientForConfig(fns ...ConfigFunc) (client.Client, error) {
 		}
 	}
 	return client.New(conf.restConfig, conf.clientOptions)
+}
+
+// NewDirectClient creates a new client.Client which can be used to talk to the API directly (without a cache).
+func NewDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
+	if err := setClientOptionsDefaults(config, &options); err != nil {
+		return nil, err
+	}
+
+	return newDirectClient(config, options)
+}
+
+func newDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
+	return client.New(config, options)
 }
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
@@ -264,12 +278,7 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	c, err := client.New(conf.restConfig, conf.clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	applier, err := NewApplierForConfig(conf.restConfig)
+	c, err := NewDirectClient(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -294,22 +303,7 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	clientSet := &Clientset{
-		config:     conf.restConfig,
-		restMapper: conf.clientOptions.Mapper,
-		restClient: kubernetes.Discovery().RESTClient(),
-
-		applier: applier,
-
-		client: c,
-
-		kubernetes:      kubernetes,
-		gardenCore:      gardenCore,
-		apiregistration: apiRegistration,
-		apiextension:    apiExtension,
-	}
-
-	serverVersion, err := clientSet.kubernetes.Discovery().ServerVersion()
+	serverVersion, err := kubernetes.Discovery().ServerVersion()
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +311,29 @@ func new(conf *config) (Interface, error) {
 	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
 		return nil, err
 	}
-	clientSet.version = serverVersion.GitVersion
+
+	applier := NewApplier(c, conf.clientOptions.Mapper)
+	chartRenderer := chartrenderer.NewWithServerVersion(serverVersion)
+	chartApplier := NewChartApplier(chartRenderer, applier)
+
+	clientSet := &Clientset{
+		config:     conf.restConfig,
+		restMapper: conf.clientOptions.Mapper,
+		restClient: kubernetes.Discovery().RESTClient(),
+
+		applier:       applier,
+		chartRenderer: chartRenderer,
+		chartApplier:  chartApplier,
+
+		client: c,
+
+		kubernetes:      kubernetes,
+		gardenCore:      gardenCore,
+		apiregistration: apiRegistration,
+		apiextension:    apiExtension,
+
+		version: serverVersion.GitVersion,
+	}
 
 	return clientSet, nil
 }

@@ -17,28 +17,29 @@ package botanist_test
 import (
 	"context"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/test/gomega"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/helm/pkg/engine"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/gardener/gardener/test/gomega"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("dns", func() {
@@ -81,15 +82,9 @@ var _ = Describe("dns", func() {
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		seedClient = fake.NewFakeClientWithScheme(s)
-		d := &test.FakeDiscovery{}
-		cap, err := cr.DiscoverCapabilities(d)
-		Expect(err).ToNot(HaveOccurred())
 
-		renderer := cr.New(engine.New(), cap)
-		a, err := test.NewTestApplier(seedClient, d)
-		Expect(err).ToNot(HaveOccurred())
-
-		b.ChartApplierSeed = kubernetes.NewChartApplier(renderer, a)
+		renderer := cr.NewWithServerVersion(&version.Info{})
+		b.ChartApplierSeed = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(b.ChartApplierSeed).NotTo(BeNil(), "should return chart applier")
 
 	})

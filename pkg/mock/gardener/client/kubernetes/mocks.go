@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
@@ -69,10 +70,10 @@ func (mr *MockInterfaceMockRecorder) APIRegistration() *gomock.Call {
 }
 
 // Applier mocks base method
-func (m *MockInterface) Applier() kubernetes.ApplierInterface {
+func (m *MockInterface) Applier() kubernetes.Applier {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Applier")
-	ret0, _ := ret[0].(kubernetes.ApplierInterface)
+	ret0, _ := ret[0].(kubernetes.Applier)
 	return ret0
 }
 
@@ -80,6 +81,34 @@ func (m *MockInterface) Applier() kubernetes.ApplierInterface {
 func (mr *MockInterfaceMockRecorder) Applier() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Applier", reflect.TypeOf((*MockInterface)(nil).Applier))
+}
+
+// ChartApplier mocks base method
+func (m *MockInterface) ChartApplier() kubernetes.ChartApplier {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChartApplier")
+	ret0, _ := ret[0].(kubernetes.ChartApplier)
+	return ret0
+}
+
+// ChartApplier indicates an expected call of ChartApplier
+func (mr *MockInterfaceMockRecorder) ChartApplier() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChartApplier", reflect.TypeOf((*MockInterface)(nil).ChartApplier))
+}
+
+// ChartRenderer mocks base method
+func (m *MockInterface) ChartRenderer() chartrenderer.Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChartRenderer")
+	ret0, _ := ret[0].(chartrenderer.Interface)
+	return ret0
+}
+
+// ChartRenderer indicates an expected call of ChartRenderer
+func (mr *MockInterfaceMockRecorder) ChartRenderer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChartRenderer", reflect.TypeOf((*MockInterface)(nil).ChartRenderer))
 }
 
 // CheckForwardPodPort mocks base method

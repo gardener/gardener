@@ -19,27 +19,27 @@ import (
 	"fmt"
 	"reflect"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/helm/pkg/engine"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	. "github.com/gardener/gardener/pkg/operation/botanist/dns"
-
 	. "github.com/gardener/gardener/test/gomega"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("#DNSEntry", func() {
@@ -69,7 +69,6 @@ var _ = Describe("#DNSEntry", func() {
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
-		d := &test.FakeDiscovery{}
 
 		vals = &EntryValues{
 			Name:    "test-deploy",
@@ -89,14 +88,7 @@ var _ = Describe("#DNSEntry", func() {
 			},
 		}
 
-		cap, err := cr.DiscoverCapabilities(d)
-		Expect(err).ToNot(HaveOccurred())
-
-		renderer := cr.New(engine.New(), cap)
-		a, err := test.NewTestApplier(c, d)
-		Expect(err).ToNot(HaveOccurred())
-
-		ca = kubernetes.NewChartApplier(renderer, a)
+		ca = kubernetes.NewChartApplier(cr.NewWithServerVersion(&version.Info{}), kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
 		defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRoot(), logger, c, &fakeOps{})

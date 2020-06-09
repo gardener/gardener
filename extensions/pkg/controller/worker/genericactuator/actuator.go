@@ -106,10 +106,7 @@ func (a *genericActuator) InjectConfig(config *rest.Config) error {
 		return errors.Wrap(err, "could not create Gardener client")
 	}
 
-	a.chartApplier, err = gardenerkubernetes.NewChartApplierForConfig(config)
-	if err != nil {
-		return errors.Wrap(err, "could not create chart applier")
-	}
+	a.chartApplier = a.gardenerClientset.ChartApplier()
 
 	return nil
 }

@@ -18,20 +18,22 @@ import (
 	"context"
 	"path/filepath"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	"github.com/golang/mock/gomock"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/helm/pkg/engine"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	. "github.com/gardener/gardener/test/gomega"
+
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("chart applier", func() {
@@ -53,22 +55,10 @@ var _ = Describe("chart applier", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 
-		c = fake.NewFakeClient()
-		d := &test.FakeDiscovery{
-			GroupListFn: func() *metav1.APIGroupList {
-				return &metav1.APIGroupList{
-					Groups: []metav1.APIGroup{v1Group},
-				}
-			},
-			ResourceMapFn: func() map[string]*metav1.APIResourceList {
-				return map[string]*metav1.APIResourceList{
-					"v1": {
-						GroupVersion: "v1",
-						APIResources: []metav1.APIResource{configMapAPIResource},
-					},
-				}
-			},
-		}
+		c = fake.NewFakeClientWithScheme(scheme.Scheme)
+
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion})
+		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)
 
 		expectedCM = &corev1.ConfigMap{
 			TypeMeta: configMapTypeMeta,
@@ -81,13 +71,8 @@ var _ = Describe("chart applier", func() {
 			Data: map[string]string{"key": "valz"},
 		}
 
-		cap, err := cr.DiscoverCapabilities(d)
-		Expect(err).ToNot(HaveOccurred())
-
-		renderer := cr.New(engine.New(), cap)
-		a, err := test.NewTestApplier(c, d)
-		Expect(err).ToNot(HaveOccurred())
-		ca = kubernetes.NewChartApplier(renderer, a)
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{})
+		ca = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 	})
 

@@ -17,8 +17,12 @@ package framework
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/pkg/chartrenderer"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	"github.com/mholt/archiver"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
@@ -27,9 +31,6 @@ import (
 	"k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/repo"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -55,18 +56,8 @@ func (f *CommonFramework) RenderAndDeployChart(ctx context.Context, k8sClient ku
 
 // DeployChart deploys it on the test cluster
 func (f *CommonFramework) DeployChart(ctx context.Context, k8sClient kubernetes.Interface, namespace, chartRepoDestination, chartNameToDeploy string, values map[string]interface{}) error {
-	renderer, err := chartrenderer.NewForConfig(k8sClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(k8sClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	chartApplier := kubernetes.NewChartApplier(renderer, applier)
-
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
-	return chartApplier.Apply(ctx, chartPathToRender, namespace, chartNameToDeploy, kubernetes.Values(values), kubernetes.ForceNamespace)
+	return k8sClient.ChartApplier().Apply(ctx, chartPathToRender, namespace, chartNameToDeploy, kubernetes.Values(values), kubernetes.ForceNamespace)
 }
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories

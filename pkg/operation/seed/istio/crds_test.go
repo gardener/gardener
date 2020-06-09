@@ -19,7 +19,6 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
 	. "github.com/gardener/gardener/test/gomega"
@@ -28,9 +27,11 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/helm/pkg/engine"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -50,41 +51,13 @@ var _ = Describe("#CRDs", func() {
 		Expect(apiextensionsv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
-		d := &test.FakeDiscovery{
-			GroupListFn: func() *metav1.APIGroupList {
-				return &metav1.APIGroupList{
-					Groups: []metav1.APIGroup{{
-						Name: "apiextensions.k8s.io",
-						Versions: []metav1.GroupVersionForDiscovery{{
-							GroupVersion: "apiextensions.k8s.io/v1beta1",
-							Version:      "v1beta1",
-						}},
-					}},
-				}
-			},
-			ResourceMapFn: func() map[string]*metav1.APIResourceList {
-				return map[string]*metav1.APIResourceList{
-					"apiextensions.k8s.io/v1beta1": {
-						GroupVersion: "apiextensions.k8s.io/v1beta1",
-						APIResources: []metav1.APIResource{{
-							Name:         "customresourcedefinitions",
-							SingularName: "customresourcedefinition",
-							Namespaced:   false,
-							Kind:         "CustomResourceDefinition",
-						}},
-					},
-				}
-			},
-		}
 
-		cap, err := cr.DiscoverCapabilities(d)
-		Expect(err).ToNot(HaveOccurred())
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1beta1.SchemeGroupVersion})
+		mapper.Add(apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 
-		renderer := cr.New(engine.New(), cap)
-		a, err := test.NewTestApplier(c, d)
-		Expect(err).ToNot(HaveOccurred())
+		renderer := cr.NewWithServerVersion(&version.Info{})
 
-		ca := kubernetes.NewChartApplier(renderer, a)
+		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
 		crd = NewIstioCRD(ca, chartsRootPath, c)

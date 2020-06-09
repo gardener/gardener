@@ -22,9 +22,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
-	"k8s.io/helm/pkg/engine"
 )
 
 const alpinePod = `apiVersion: v1
@@ -51,18 +48,7 @@ var _ = Describe("ChartRenderer", func() {
 	)
 
 	BeforeEach(func() {
-		fakeDiscovery := &fake.FakeDiscovery{
-			Fake: &testing.Fake{},
-			FakedServerVersion: &version.Info{
-				Major: "1",
-				Minor: "16",
-			},
-		}
-
-		capabilities, err := chartrenderer.DiscoverCapabilities(fakeDiscovery)
-		Expect(err).ToNot(HaveOccurred())
-
-		renderer = chartrenderer.New(engine.New(), capabilities)
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{})
 	})
 
 	Describe("#Render", func() {

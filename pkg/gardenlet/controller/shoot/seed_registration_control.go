@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -538,16 +537,6 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		}
 	}
 
-	renderer, err := chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	applier, err := kubernetes.NewApplierForConfig(k8sSeedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	chartApplier := kubernetes.NewChartApplier(renderer, applier)
-
 	// convert config from internal version to v1alpha1 as Helm chart is based on v1alpha1
 	scheme := runtime.NewScheme()
 	if err := config.AddToScheme(scheme); err != nil {
@@ -678,7 +667,7 @@ func deployGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, 
 		return err
 	}
 
-	return chartApplier.Apply(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
+	return k8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
 func deleteGardenlet(ctx context.Context, k8sGardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
