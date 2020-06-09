@@ -15,6 +15,8 @@
 package framework
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -207,6 +209,37 @@ func (f *GardenerFramework) dumpGardenerExtension(extension v1alpha1.Object) {
 	if extension.GetExtensionStatus().GetLastError() != nil {
 		f.Logger.Printf("At %v - last error: %s", extension.GetExtensionStatus().GetLastError().LastUpdateTime, extension.GetExtensionStatus().GetLastError().Description)
 	}
+}
+
+func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string, opts ...client.ListOption) error {
+	pods := &corev1.PodList{}
+	opts = append(opts, client.InNamespace(namespace))
+	if err := k8sClient.Client().List(ctx, pods, opts...); err != nil {
+		return err
+	}
+
+	var result error
+	for _, pod := range pods.Items {
+		if err := f.DumpLogsForPodInNamespace(ctx, ctxIdentifier, k8sClient, namespace, pod.Name); err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+	return result
+}
+
+func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, podNamespace, podName string) error {
+	f.Logger.Infof("%s [NAMESPACE %s] [POD %s] [LOGS]", ctxIdentifier, podNamespace, podName)
+	podIf := k8sClient.Kubernetes().CoreV1().Pods(podNamespace)
+	logs, err := kubernetes.GetPodLogs(podIf, podName, &corev1.PodLogOptions{})
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(logs))
+	for scanner.Scan() {
+		f.Logger.Println(scanner.Text())
+	}
+
+	return nil
 }
 
 // dumpDeploymentInfoForNamespace prints information about all Deployments of a namespace

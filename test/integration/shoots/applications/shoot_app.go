@@ -47,7 +47,7 @@ import (
 
 const (
 	guestbookAppTimeout       = 30 * time.Minute
-	finalizationTimeout       = 5 * time.Minute
+	finalizationTimeout       = 10 * time.Minute
 	downloadKubeconfigTimeout = 600 * time.Second
 	dashboardAvailableTimeout = 60 * time.Minute
 )
