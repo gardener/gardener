@@ -75,7 +75,7 @@ allowedMetrics:
   - apiserver_registered_watchers
   - apiserver_request_count
   - apiserver_request_total
-  - apiserver_request_latencies_bucket
+  - apiserver_request_duration_seconds_bucket
   - etcd_object_counts
   - process_max_fds
   - process_open_fds

@@ -5,6 +5,7 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1591607086411,
   "links": [],
   "panels": [
     {
@@ -16,6 +17,12 @@
       "description": "Shows the rate of all API server requests.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -28,6 +35,7 @@
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 6,
       "isNew": false,
       "legend": {
@@ -114,6 +122,12 @@
       "description": "Shows the request latency of each verb for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -126,6 +140,7 @@
         "x": 12,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 7,
       "isNew": false,
       "legend": {
@@ -213,6 +228,12 @@
       "description": "Shows the request rate per verb for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -225,6 +246,7 @@
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 49,
       "isNew": false,
       "legend": {
@@ -312,6 +334,12 @@
       "dashes": false,
       "datasource": "prometheus",
       "description": "Shows the average rate of requests to the API server.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -320,6 +348,7 @@
         "x": 12,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 51,
       "legend": {
         "avg": false,
@@ -375,6 +404,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:199",
           "decimals": null,
           "format": "short",
           "label": "requests/s",
@@ -382,6 +412,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:200",
           "format": "short",
           "logBase": 1,
           "show": true
@@ -401,6 +432,12 @@
       "description": "Shows the request rate per scope for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -413,6 +450,7 @@
         "x": 0,
         "y": 16
       },
+      "hiddenSeries": false,
       "id": 47,
       "isNew": false,
       "legend": {
@@ -501,6 +539,12 @@
       "description": "Shows the request rate per resource for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -513,6 +557,7 @@
         "x": 0,
         "y": 24
       },
+      "hiddenSeries": false,
       "id": 48,
       "isNew": false,
       "legend": {
@@ -601,6 +646,12 @@
       "description": "Shows the request rate per verb and resource for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -613,6 +664,7 @@
         "x": 0,
         "y": 32
       },
+      "hiddenSeries": false,
       "id": 45,
       "isNew": false,
       "legend": {
@@ -694,7 +746,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 19,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [
     "seed",
@@ -705,6 +757,8 @@
       {
         "allValue": "",
         "current": {
+          "selected": true,
+          "tags": [],
           "text": "All",
           "value": [
             "$__all"
@@ -778,13 +832,14 @@
           }
         ],
         "query": "DELETE,PUT,POST,DELETECOLLECTION,WATCH,GET,LIST,PATCH,CONNECT,UPDATE,CREATE",
+        "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       },
       {
         "allValue": null,
         "current": {
-          "selected": "true",
+          "selected": false,
           "text": "5m",
           "value": "5m"
         },
@@ -796,11 +851,6 @@
         "options": [
           {
             "selected": false,
-            "text": "1m",
-            "value": "1m"
-          },
-          {
-            "selected": false,
             "text": "3m",
             "value": "3m"
           },
@@ -810,7 +860,8 @@
             "value": "5m"
           }
         ],
-        "query": "1m,3m,5m",
+        "query": "3m,5m",
+        "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       }
@@ -822,7 +873,6 @@
   },
   "timepicker": {
     "refresh_intervals": [
-      "5s",
       "10s",
       "30s",
       "1m",

@@ -26,7 +26,7 @@ groups:
   # Some verbs excluded because they are expected to be long-lasting:
   # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
   - alert: KubeApiServerLatency
-    expr: histogram_quantile(0.99, sum without (instance,resource) (apiserver_request_latencies_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"})) / 1e6 > 3.0
+    expr: histogram_quantile(0.99, sum without (instance,resource) (apiserver_request_duration_seconds_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"})) > 3.0
     for: 30m
     labels:
       service: kube-apiserver
@@ -38,15 +38,15 @@ groups:
       summary: Kubernetes API server latency is high
   ### API latency ###
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
+    expr: histogram_quantile(0.99, rate(apiserver_request_duration_seconds_bucket[5m]))
     labels:
       quantile: "0.99"
   - record: apiserver_latency:quantile
-    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
+    expr: histogram_quantile(0.9, rate(apiserver_request_duration_seconds_bucket[5m]))
     labels:
       quantile: "0.9"
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
+    expr: histogram_quantile(0.5, rate(apiserver_request_duration_seconds_bucket[5m]))
     labels:
       quantile: "0.5"
   - alert: KubeApiServerTooManyOpenFileDescriptors
