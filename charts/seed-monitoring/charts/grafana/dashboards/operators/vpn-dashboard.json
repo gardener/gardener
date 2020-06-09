@@ -858,7 +858,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "probe_http_status_code{job=\"vpn-probe-apiserver-proxy\",type=\"seed\"}",
+              "expr": "probe_http_status_code{job=\"tunnel-probe-apiserver-proxy\",type=\"seed\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "API Server Proxy test ({{instance}})",
