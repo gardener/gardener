@@ -96,6 +96,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				Name:    DNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
+				OwnerID: b.Shoot.SeedNamespace,
 			},
 			b.Shoot.SeedNamespace,
 			b.ChartApplierSeed,

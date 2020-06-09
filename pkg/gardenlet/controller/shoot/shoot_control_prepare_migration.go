@@ -239,13 +239,13 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.NginxEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying external domain DNS record",
+		migrateExternalDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating external domain DNS record",
 			Fn:           flow.TaskFn(botanist.MigrateExternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying internal domain DNS record",
+		migrateInternalDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating internal domain DNS record",
 			Fn:           flow.TaskFn(botanist.MigrateInternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
@@ -262,7 +262,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, migrateExternalDNSRecord, migrateInternalDNSRecord, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
