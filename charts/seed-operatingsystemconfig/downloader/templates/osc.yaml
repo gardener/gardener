@@ -15,6 +15,10 @@ metadata:
 spec:
   type: {{ required "type is required" .Values.type }}
   purpose: {{ required "purpose is required" .Values.purpose }}
+  {{- if .Values.providerConfig }}
+  providerConfig:
+{{ .Values.providerConfig | indent 4 }}
+  {{- end }}
   {{- if .Values.cri }}
   criConfig:
     name: {{ .Values.cri.name }}
