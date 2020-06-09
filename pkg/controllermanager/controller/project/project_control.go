@@ -173,14 +173,14 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool,
 	projectLogger.Infof("[PROJECT RECONCILE]")
 
 	if project.DeletionTimestamp != nil {
-		return c.delete(project, projectLogger)
+		return c.delete(context.TODO(), project)
 	}
 
 	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
 		return false, fmt.Errorf("could not add finalizer to Project: %s", err.Error())
 	}
 
-	return false, c.reconcile(project, projectLogger)
+	return false, c.reconcile(context.TODO(), project)
 }
 
 func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {

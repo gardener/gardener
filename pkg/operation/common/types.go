@@ -283,6 +283,11 @@ const (
 	// Deprecated: Use `NamespaceProject` instead.
 	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
 
+	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
+	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
+	// from the namespace will be removed when the project is being deleted.
+	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+
 	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
 	// It influences the size of the initial resource requests/limits.
 	// Possible values are [small, medium, large, xlarge, 2xlarge].

@@ -16,45 +16,39 @@ package project
 
 import (
 	"context"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/common"
 
-	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (c *defaultControl) delete(project *gardencorev1beta1.Project, projectLogger logrus.FieldLogger) (bool, error) {
+func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.Project) (bool, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
-		alreadyDeleted, err := c.deleteNamespace(project, *namespace)
+		released, err := c.releaseNamespace(ctx, project, *namespace)
 		if err != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
 			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 			return false, err
 		}
 
-		if !alreadyDeleted {
+		if !released {
 			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
 			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
 			return true, nil
 		}
 	}
 
-	// Remove finalizer from project resource.
-	projectFinalizers := sets.NewString(project.Finalizers...)
-	projectFinalizers.Delete(gardencorev1beta1.GardenerName)
-	project.Finalizers = projectFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Projects().Update(project); err != nil && !apierrors.IsNotFound(err) {
-		projectLogger.Error(err.Error())
-		return false, err
-	}
-	return false, nil
+	return false, controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), project, gardencorev1beta1.GardenerName)
 }
 
-func (c *defaultControl) deleteNamespace(project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
+func (c *defaultControl) releaseNamespace(ctx context.Context, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace, err := c.namespaceLister.Get(namespaceName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -74,6 +68,33 @@ func (c *defaultControl) deleteNamespace(project *gardencorev1beta1.Project, nam
 		return true, nil
 	}
 
-	err = c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptions...)
+	// If the user wants to keep the namespace in the system even if the project gets deleted then we remove the related
+	// labels, annotations, and owner references and only delete the project.
+	var keepNamespace bool
+	if val, ok := namespace.Annotations[common.NamespaceKeepAfterProjectDeletion]; ok {
+		keepNamespace, _ = strconv.ParseBool(val)
+	}
+
+	if keepNamespace {
+		delete(namespace.Annotations, common.NamespaceProject)
+		delete(namespace.Annotations, common.NamespaceProjectDeprecated)
+		delete(namespace.Annotations, common.NamespaceKeepAfterProjectDeletion)
+		delete(namespace.Labels, common.ProjectName)
+		delete(namespace.Labels, v1beta1constants.GardenRole)
+		delete(namespace.Labels, common.ProjectNameDeprecated)
+		delete(namespace.Labels, v1beta1constants.DeprecatedGardenRole)
+		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {
+			if ownerRef := namespace.OwnerReferences[i]; ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
+				ownerRef.Kind == "Project" &&
+				ownerRef.Name == project.Name &&
+				ownerRef.UID == project.UID {
+				namespace.OwnerReferences = append(namespace.OwnerReferences[:i], namespace.OwnerReferences[i+1:]...)
+			}
+		}
+		err = c.k8sGardenClient.Client().Update(ctx, namespace)
+		return true, err
+	}
+
+	err = c.k8sGardenClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
 	return false, client.IgnoreNotFound(err)
 }
