@@ -29,5 +29,4 @@
 |PrometheusCantScrape|warning|seed|`Prometheus failed to scrape metrics. Instance {{ $labels.instance }}, job {{ $labels.job }}.`|
 |PrometheusConfigurationFailure|warning|seed|`Latest Prometheus configuration is broken and Prometheus is using the previous one.`|
 |VPNShootNoPods|critical|shoot|`vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.`|
-|VPNConnectionDown|critical|shoot|`VPN connection check failed. No communication from control plane (Prometheus pod) to the Shoot workers possible.`|
 |VPNProbeAPIServerProxyFailed|critical|shoot|`The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.`|
