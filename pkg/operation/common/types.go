@@ -375,7 +375,7 @@ const (
 	ManagedResourceShootCoreName = "shoot-core"
 
 	// ManagedResourceCoreNamespaceName is the name of the core namespace managed resource.
-	ManagedResourceCoreNamespaceName = "shoot-core-namespace"
+	ManagedResourceCoreNamespaceName = "shoot-core-namespaces"
 
 	// ManagedResourceAddonsName is the name of the addons managed resource.
 	ManagedResourceAddonsName = "addons"
