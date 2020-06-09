@@ -162,18 +162,23 @@ format:
 .PHONY: test
 test:
 	@./hack/test.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
-	@./hack/test-prometheus.sh
+	$(MAKE) test-prometheus
 
 .PHONY: test-cov
 test-cov:
 	@./hack/test-cover.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
+	$(MAKE) test-prometheus
 
-.PHONY: test-clean
-test-clean:
+.PHONY: test-cov-clean
+test-cov-clean:
 	@./hack/test-cover-clean.sh
+
+.PHONY: test-prometheus
+test-prometheus:
+	@./hack/test-prometheus.sh
 
 .PHONY: verify
 verify: check format test
 
 .PHONY: verify-extended
-verify-extended: install-requirements check-generate check format test-cov test-clean
+verify-extended: install-requirements check-generate check format test-cov test-cov-clean test-prometheus
