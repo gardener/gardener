@@ -15,6 +15,7 @@
     * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
     * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
+* [Network Policies](concepts/network_policies.md)
 
 ## Usage
 
@@ -32,6 +33,7 @@
 * [`ManagedIstio` feature](usage/istio.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
+* [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
 
 ## Proposals
 
@@ -56,7 +58,7 @@
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
-* [Feature Gates in Gardener](development/feature_gates.md)
+* [Network Policies in the Seed Cluster](development/seed_network_policies.md)
 
 ## Extensions
 
@@ -103,6 +105,7 @@
 * [Deploying the Gardener and a Seed into an AKS cluster](deployment/aks.md)
 * [Overwrite image vector](deployment/image_vector.md)
 * [Migration from Gardener `v0` to `v1`](deployment/migration_v0_to_v1.md)
+* [Feature Gates in Gardener](deployment/feature_gates.md)
 
 ## Monitoring
 
