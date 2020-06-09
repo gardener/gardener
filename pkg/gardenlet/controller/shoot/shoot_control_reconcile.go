@@ -269,7 +269,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		waitUntilNetworkIsReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilNetworkIsReady),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Network.Wait),
 			Dependencies: flow.NewTaskIDs(deployNetworking),
 		})
 		deployManagedResources = g.Add(flow.Task{

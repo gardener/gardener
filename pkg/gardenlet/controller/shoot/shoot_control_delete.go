@@ -301,12 +301,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		})
 		destroyNetwork = g.Add(flow.Task{
 			Name:         "Destroying shoot network plugin",
-			Fn:           flow.TaskFn(botanist.DestroyNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Network.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
 		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilNetworkIsDeleted),
+			Fn:           botanist.Shoot.Components.Network.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyNetwork),
 		})
 		destroyWorker = g.Add(flow.Task{

@@ -84,6 +84,9 @@ func New(o *operation.Operation) (*Botanist, error) {
 
 	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
 
+	// Extension CRD components
+	o.Shoot.Components.Network = b.DefaultNetwork(b.K8sSeedClient.Client())
+
 	return b, nil
 }
 
