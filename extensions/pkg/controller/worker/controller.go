@@ -71,10 +71,6 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 			extensionspredicate.IsDeleting(),
 		),
 		extensionspredicate.ShootNotFailed(),
-		extensionspredicate.Or(
-			extensionspredicate.HasOperationAnnotation(),
-			predicate.GenerationChangedPredicate{},
-		),
 	}
 }
 
