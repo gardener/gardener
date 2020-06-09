@@ -9,6 +9,8 @@ osc:
     containerRuntimesBinaryPath: /var/bin/containerruntimes
     names:
       containerd: containerd
+# providerConfig:
+#   some-provider-specific-config
 
 # caBundle: |
 #   root certificates
