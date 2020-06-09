@@ -158,11 +158,11 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			botanistconstants.ManagedResourceLabelKeyOrigin: botanistconstants.ManagedResourceLabelValueGardener,
 		}
 		charts = map[string]managedResourceOptions{
-			"shoot-core":            {false, b.generateCoreAddonsChart},
-			"shoot-core-namespaces": {true, b.generateCoreNamespacesChart},
-			"addons":                {false, b.generateOptionalAddonsChart},
+			common.ManagedResourceShootCoreName:     {false, b.generateCoreAddonsChart},
+			common.ManagedResourceCoreNamespaceName: {true, b.generateCoreNamespacesChart},
+			common.ManagedResourceAddonsName:        {false, b.generateOptionalAddonsChart},
 			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-			"addons-kyma": {false, b.generateTemporaryKymaAddonsChart},
+			common.ManagedResourceKymaName: {false, b.generateTemporaryKymaAddonsChart},
 		}
 	)
 

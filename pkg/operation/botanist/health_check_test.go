@@ -24,9 +24,9 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -57,12 +57,6 @@ func constDeploymentLister(deployments []*appsv1.Deployment) kutil.DeploymentLis
 func constStatefulSetLister(statefulSets []*appsv1.StatefulSet) kutil.StatefulSetLister {
 	return kutil.NewStatefulSetLister(func() ([]*appsv1.StatefulSet, error) {
 		return statefulSets, nil
-	})
-}
-
-func constDaemonSetLister(daemonSets []*appsv1.DaemonSet) kutil.DaemonSetLister {
-	return kutil.NewDaemonSetLister(func() ([]*appsv1.DaemonSet, error) {
-		return daemonSets, nil
 	})
 }
 
@@ -138,21 +132,6 @@ func newEtcd(namespace, name, role string, healthy bool, lastError *string) *dru
 	return etcd
 }
 
-func newDaemonSet(namespace, name, role string, healthy bool) *appsv1.DaemonSet {
-	daemonSet := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if !healthy {
-		daemonSet.Status.DesiredNumberScheduled = 1
-	}
-
-	return daemonSet
-}
-
 func newNode(name string, healthy bool, set labels.Set) *corev1.Node {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,8 +193,7 @@ var _ = Describe("health check", func() {
 			},
 		}
 
-		seedNamespace  = "shoot--foo--bar"
-		shootNamespace = metav1.NamespaceSystem
+		seedNamespace = "shoot--foo--bar"
 
 		// control plane deployments
 		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
@@ -239,38 +217,6 @@ var _ = Describe("health check", func() {
 		requiredControlPlaneEtcds = []*druidv1alpha1.Etcd{
 			etcdMain,
 			etcdEvents,
-		}
-
-		// system component deployments
-		coreDNSDeployment       = newDeployment(shootNamespace, common.CoreDNSDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
-		vpnShootDeployment      = newDeployment(shootNamespace, common.VPNShootDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
-		metricsServerDeployment = newDeployment(shootNamespace, common.MetricsServerDeploymentName, v1beta1constants.GardenRoleSystemComponent, true)
-
-		requiredSystemComponentDeployments = []*appsv1.Deployment{
-			coreDNSDeployment,
-			vpnShootDeployment,
-			metricsServerDeployment,
-		}
-
-		// system component daemon sets
-		kubeProxyDaemonSet           = newDaemonSet(shootNamespace, common.KubeProxyDaemonSetName, v1beta1constants.GardenRoleSystemComponent, true)
-		nodeProblemDetectorDaemonSet = newDaemonSet(shootNamespace, common.NodeProblemDetectorDaemonSetName, v1beta1constants.GardenRoleSystemComponent, true)
-
-		requiredSystemComponentDaemonSets = []*appsv1.DaemonSet{
-			kubeProxyDaemonSet,
-			nodeProblemDetectorDaemonSet,
-		}
-
-		blackboxExporterDeployment = newDeployment(shootNamespace, common.BlackboxExporterDeploymentName, v1beta1constants.GardenRoleMonitoring, true)
-
-		requiredMonitoringSystemComponentDeployments = []*appsv1.Deployment{
-			blackboxExporterDeployment,
-		}
-
-		nodeExporterDaemonSet = newDaemonSet(shootNamespace, common.NodeExporterDaemonSetName, v1beta1constants.GardenRoleMonitoring, true)
-
-		requiredMonitoringSystemComponentDaemonSets = []*appsv1.DaemonSet{
-			nodeExporterDaemonSet,
 		}
 
 		grafanaDeploymentOperators      = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafanaOperators, v1beta1constants.GardenRoleMonitoring, true)
@@ -425,50 +371,111 @@ var _ = Describe("health check", func() {
 			BeNil()),
 	)
 
-	DescribeTable("#CheckSystemComponents",
-		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
+	DescribeTable("#CheckManagedResource",
+		func(conditions []resourcesv1alpha1.ManagedResourceCondition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
-				deploymentLister = constDeploymentLister(deployments)
-				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				mr      = new(resourcesv1alpha1.ManagedResource)
+				checker = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
 			)
 
-			exitCondition, err := checker.CheckSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
-			Expect(err).NotTo(HaveOccurred())
+			if !upToDate {
+				mr.Generation += 1
+			}
+
+			mr.Status.Conditions = conditions
+
+			exitCondition := checker.CheckManagedResource(condition, mr)
 			Expect(exitCondition).To(conditionMatcher)
 		},
-		Entry("all healthy",
-			requiredSystemComponentDeployments,
-			requiredSystemComponentDaemonSets,
+		Entry("no conditions",
+			nil,
+			true,
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, "")),
+		Entry("one true condition, one missing",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
+			},
+			true,
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, string(resourcesv1alpha1.ResourcesHealthy))),
+		Entry("multiple true conditions",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesHealthy,
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
+			},
+			true,
 			BeNil()),
-		Entry("missing required deployment",
-			[]*appsv1.Deployment{
-				coreDNSDeployment,
-				vpnShootDeployment,
+		Entry("one false condition ResourcesApplied",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: resourcesv1alpha1.ConditionFalse,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesHealthy,
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
 			},
-			requiredSystemComponentDaemonSets,
+			true,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("missing required daemon set",
-			requiredSystemComponentDeployments,
-			[]*appsv1.DaemonSet{
-				kubeProxyDaemonSet,
+		Entry("one false condition ResourcesHealthy",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: resourcesv1alpha1.ConditionTrue,
+				},
+				{
+					Type:   resourcesv1alpha1.ResourcesHealthy,
+					Status: resourcesv1alpha1.ConditionFalse,
+				},
 			},
+			true,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("required deployment not healthy",
-			[]*appsv1.Deployment{
-				newDeployment(coreDNSDeployment.Namespace, coreDNSDeployment.Name, roleOf(coreDNSDeployment), false),
-				vpnShootDeployment,
-				metricsServerDeployment,
+		Entry("multiple false conditions with reason & message",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Type:    resourcesv1alpha1.ResourcesApplied,
+					Status:  resourcesv1alpha1.ConditionFalse,
+					Reason:  "fooFailed",
+					Message: "foo is unhealthy",
+				},
+				{
+					Type:    resourcesv1alpha1.ResourcesHealthy,
+					Status:  resourcesv1alpha1.ConditionFalse,
+					Reason:  "barFailed",
+					Message: "bar is unhealthy",
+				},
 			},
-			requiredSystemComponentDaemonSets,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("required daemon set not healthy",
-			requiredSystemComponentDeployments,
-			[]*appsv1.DaemonSet{
-				newDaemonSet(kubeProxyDaemonSet.Namespace, kubeProxyDaemonSet.Name, roleOf(kubeProxyDaemonSet), false),
-				kubeProxyDaemonSet,
+			true,
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "fooFailed", "foo is unhealthy")),
+		Entry("outdated managed resource",
+			[]resourcesv1alpha1.ManagedResourceCondition{
+				{
+					Type:    resourcesv1alpha1.ResourcesApplied,
+					Status:  resourcesv1alpha1.ConditionFalse,
+					Reason:  "fooFailed",
+					Message: "foo is unhealthy",
+				},
+				{
+					Type:    resourcesv1alpha1.ResourcesHealthy,
+					Status:  resourcesv1alpha1.ConditionFalse,
+					Reason:  "barFailed",
+					Message: "bar is unhealthy",
+				},
 			},
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			false,
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.OutdatedStatusError, "outdated")),
 	)
 
 	var (
@@ -578,50 +585,6 @@ var _ = Describe("health check", func() {
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
 	)
 
-	DescribeTable("#CheckMonitoringSystemComponents",
-		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
-			var (
-				deploymentLister = constDeploymentLister(deployments)
-				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
-			)
-
-			exitCondition, err := checker.CheckMonitoringSystemComponents(shootNamespace, isTestingShoot, condition, deploymentLister, daemonSetLister)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
-		},
-		Entry("all healthy",
-			requiredMonitoringSystemComponentDeployments,
-			requiredMonitoringSystemComponentDaemonSets,
-			false,
-			BeNil()),
-		Entry("required deployment missing",
-			[]*appsv1.Deployment{},
-			requiredMonitoringSystemComponentDaemonSets,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("required daemon set missing",
-			requiredMonitoringSystemComponentDeployments,
-			[]*appsv1.DaemonSet{},
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{newDeployment(blackboxExporterDeployment.Namespace, blackboxExporterDeployment.Name, roleOf(blackboxExporterDeployment), false)},
-			requiredMonitoringSystemComponentDaemonSets,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("daemon set unhealthy",
-			requiredMonitoringSystemComponentDeployments,
-			[]*appsv1.DaemonSet{newDaemonSet(nodeExporterDaemonSet.Namespace, nodeExporterDaemonSet.Name, roleOf(nodeExporterDaemonSet), false)},
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("shoot purpose is testing, omit all checks",
-			[]*appsv1.Deployment{},
-			[]*appsv1.DaemonSet{},
-			true,
-			BeNil()),
-	)
-
 	DescribeTable("#CheckMonitoringControlPlane",
 		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
@@ -683,32 +646,6 @@ var _ = Describe("health check", func() {
 			true,
 			true,
 			BeNil()),
-	)
-
-	DescribeTable("#CheckOptionalAddonsSystemComponents",
-		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
-			var (
-				deploymentLister = constDeploymentLister(deployments)
-				daemonSetLister  = constDaemonSetLister(daemonSets)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
-			)
-
-			exitCondition, err := checker.CheckOptionalAddonsSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
-		},
-		Entry("all healthy",
-			nil,
-			nil,
-			BeNil()),
-		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{newDeployment(shootNamespace, "addon", v1beta1constants.GardenRoleOptionalAddon, false)},
-			nil,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("deployment unhealthy",
-			nil,
-			[]*appsv1.DaemonSet{newDaemonSet(shootNamespace, "addon", v1beta1constants.GardenRoleOptionalAddon, false)},
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
