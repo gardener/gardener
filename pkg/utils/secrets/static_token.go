@@ -36,7 +36,7 @@ const (
 type StaticTokenSecretConfig struct {
 	Name string
 
-	Tokens []TokenConfig
+	Tokens map[string]TokenConfig
 }
 
 // TokenConfig contains configuration for a token.
@@ -93,6 +93,25 @@ func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 		Name:   s.Name,
 		Tokens: tokens,
 	}, nil
+}
+
+// GenerateStaticToken computes a random token of length 64.
+func (s *StaticTokenSecretConfig) AppendStaticToken(staticToken *StaticToken) (*StaticToken, error) {
+	for _, tokenConfig := range s.Tokens {
+		token, err := utils.GenerateRandomString(128)
+		if err != nil {
+			return nil, err
+		}
+
+		staticToken.Tokens = append(staticToken.Tokens, Token{
+			Username: tokenConfig.Username,
+			UserID:   tokenConfig.UserID,
+			Groups:   tokenConfig.Groups,
+			Token:    token,
+		})
+	}
+
+	return staticToken, nil
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

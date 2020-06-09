@@ -20,6 +20,9 @@ ingress:
 
 kubernetesVersion: 1.13.1
 
+konnectivityTunnel:
+  enabled: false
+
 namespace:
   uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
 
@@ -27,7 +30,6 @@ podAnnotations: {}
 replicas: 1
 apiserverServiceIP: 100.10.10.10
 port: 9090
-vpnEndpointIP: 192.168.123.1
 
 extensions:
   rules: ""
@@ -297,7 +299,8 @@ rules:
     hvpa:
       enabled: false
       rules: false
-
+    vpn:
+      enaled: false
 alerting:
   auth_type: {}
 #     none:

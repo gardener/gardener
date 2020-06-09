@@ -16,3 +16,6 @@ ports:
 role: operators
 extensions:
   dashboards: ""
+
+konnectivityTunnel:
+  enabled: false

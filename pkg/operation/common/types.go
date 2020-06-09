@@ -23,6 +23,12 @@ import (
 )
 
 const (
+	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
+	VPNTunnel string = "vpn-shoot"
+
+	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
+	KonnectivityTunnel string = "konnectivity-agent"
+
 	// BackupBucketName is a constant for the name of bucket of object storage.
 	BackupBucketName = "bucketName"
 
@@ -203,6 +209,9 @@ const (
 
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
+
+	// KonnectivityServerCertName is the name of the api-proxy konnectivity-server
+	KonnectivityServerCertName = "konnectivity-server"
 
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
@@ -418,6 +427,18 @@ const (
 
 	// VPNSeedImageName is the name of the VPNSeed image.
 	VPNSeedImageName = "vpn-seed"
+
+	// KonnectivityServerImageName is the name of the konnectivity server image.
+	KonnectivityServerImageName = "konnectivity-server"
+
+	// KonnectivityServerUserName is the user name of the konnectivity server used for the token
+	KonnectivityServerUserName = "system:konnectivity-server"
+
+	// KonnectivityServerKubeconfig is the name of the konnectivity-server kubeconfig
+	KonnectivityServerKubeconfig = "konnectivity-server-kubeconfig"
+
+	// KonnectivityAgentImageName is the name of the konnectivity agent image.
+	KonnectivityAgentImageName = "konnectivity-agent"
 
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"

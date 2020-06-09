@@ -31,6 +31,9 @@ spec:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/configmap-audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/secret-oidc-ca.yaml") . | sha256sum }}
         checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/configmap-admission-config.yaml") . | sha256sum }}
+        {{- if .Values.konnectivityTunnel.enabled }}
+        checksum/egress-selection-config: {{ include (print $.Template.BasePath "/configmap-egress-selection.yaml") . | sha256sum }}
+        {{- end}}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -64,6 +67,7 @@ spec:
       tolerations:
       - effect: NoExecute
         operator: Exists
+      {{- if not .Values.konnectivityTunnel.enabled }}
       initContainers:
       - name: set-iptable-rules
         image: {{ index .Values.images "alpine-iptables" }}
@@ -76,6 +80,7 @@ spec:
         volumeMounts:
         - name: modules
           mountPath: /lib/modules
+      {{- end }}
       containers:
       - name: kube-apiserver
         image: {{ index .Values.images "kube-apiserver" }}
@@ -91,6 +96,9 @@ spec:
         {{- else }}
         - /usr/local/bin/kube-apiserver
         {{- end }}
+        {{- if .Values.konnectivityTunnel.enabled }}
+        - --egress-selector-config-file=/etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+        {{- end}}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
         - --allow-privileged=true
@@ -197,6 +205,13 @@ spec:
 {{ toYaml .Values.apiServerResources | indent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if .Values.konnectivityTunnel.enabled }}
+        - name: egress-selection-config
+          mountPath: /etc/kubernetes/konnectivity
+        - name: konnectivity-uds
+          mountPath: /etc/srv/kubernetes/konnectivity-server
+          readOnly: false
+        {{- end }}
         - name: audit-policy-config
           mountPath: /etc/kubernetes/audit
         - name: ca
@@ -238,6 +253,49 @@ spec:
           mountPath: /etc/kubernetes/etcd-encryption-secret
           readOnly: true
         {{- end }}
+      {{- if .Values.konnectivityTunnel.enabled }}
+      - name: konnectivity-server
+        image: {{ index .Values.images "konnectivity-server" }}
+        command:
+          - /proxy-server
+        args:
+        - --uds-name=/etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
+        - --log-file=/var/log/konnectivity-server/info.log
+        - --logtostderr=false
+        - --log-file-max-size=12
+        - --cluster-cert=/certs/konnectivity-server/konnectivity-server.crt
+        - --cluster-key=/certs/konnectivity-server/konnectivity-server.key
+        - --agent-namespace={{ .Values.konnectivityTunnel.agentNamespace }}
+        - --agent-service-account=konnectivity-agent
+        - --kubeconfig=/etc/srv/kubernetes/konnectivity-server-kubeconfig/kubeconfig
+        - --authentication-audience=system:konnectivity-server
+        - --mode=http-connect
+        - --server-count={{ .Values.konnectivityTunnel.serverCount }}
+        - --server-port={{ .Values.konnectivityTunnel.serverPort }}
+        - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
+        - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
+        resources:
+{{ toYaml .Values.konnectivityTunnelResources | indent 10 }}
+        ports:
+          - name: agentport
+            containerPort: {{ .Values.konnectivityTunnel.agentPort }}
+            hostPort: {{ .Values.konnectivityTunnel.agentPort }}
+          - name: adminport
+            containerPort: {{ .Values.konnectivityTunnel.adminPort }}
+            hostPort: {{ .Values.konnectivityTunnel.adminPort }}
+        volumeMounts:
+          - name: konnectivity-server-certs
+            mountPath: /certs/konnectivity-server
+            readOnly: true
+          - name: konnectivity-server-kubeconfig
+            mountPath: /etc/srv/kubernetes/konnectivity-server-kubeconfig
+          - name: konnectivity-uds
+            mountPath: /etc/srv/kubernetes/konnectivity-server
+            readOnly: false
+          - name: konnectivity-server-log
+            mountPath: /var/log/konnectivity-server
+            readOnly: false
+      {{- else }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -282,6 +340,7 @@ spec:
           name: vpn-seed
         - mountPath: /srv/secrets/tlsauth
           name: vpn-seed-tlsauth
+      {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -340,12 +399,28 @@ spec:
       - name: kube-apiserver-admission-config
         configMap:
           name: kube-apiserver-admission-config
+      {{- if .Values.konnectivityTunnel.enabled }}
+      - name: konnectivity-server-certs
+        secret:
+          secretName: konnectivity-server
+      - name: konnectivity-server-kubeconfig
+        secret:
+          secretName: konnectivity-server-kubeconfig
+      - name: konnectivity-uds
+        emptyDir: {}
+      - name: egress-selection-config
+        configMap:
+          name: kube-apiserver-egress-selector-configuration
+      - name: konnectivity-server-log
+        emptyDir: {}
+      {{- else }}
       - name: vpn-seed
         secret:
           secretName: vpn-seed
       - name: vpn-seed-tlsauth
         secret:
           secretName: vpn-seed-tlsauth
+      {{- end }}
       {{- if .Values.enableEtcdEncryption }}
       - name: etcd-encryption-secret
         secret:

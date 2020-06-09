@@ -48,4 +48,9 @@ const (
 	// owner @mvladev
 	// alpha: v1.5.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
+
+	// KonnectivityTunnel enables inverting the connection direction to be shoot->seed instead of seed->shoot (only for Shoots with Kubernetes version >= 1.18).
+	// owner @zanetworker
+	// alpha: v1.6.0
+	KonnectivityTunnel featuregate.Feature = "KonnectivityTunnel"
 )

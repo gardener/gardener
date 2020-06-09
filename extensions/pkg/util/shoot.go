@@ -97,7 +97,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 	return &secret, err
 }
 
-// KubeAPIServerServiceDNS returns a domain name which can be used to contact
+// kubeAPIServerServiceDNS returns a domain name which can be used to contact
 // the Kube-Apiserver deployment of a Shoot within the Seed cluster.
 // e.g. kube-apiserver.shoot--project--prod.svc.cluster.local.
 func kubeAPIServerServiceDNS(namespace string) string {

@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,8 +36,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	prometheusmodel "github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -600,12 +600,32 @@ func (b *Botanist) checkSystemComponents(
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if established, err := b.CheckVPNConnection(ctx, logrus.NewEntry(logger.NewNopLogger())); err != nil || !established {
-		msg := "VPN connection has not been established"
+
+	podsList := &corev1.PodList{}
+	if err := b.K8sShootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
+		return nil, err
+	}
+
+	if len(podsList.Items) == 0 {
+		c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
+		return &c, nil
+	}
+	var (
+		konnectivityHealthCheck = b.Shoot.KonnectivityTunnelEnabled
+		tunnelName              = common.VPNTunnel
+		deployedTunnelName      = podsList.Items[0].Labels["app"]
+	)
+
+	if konnectivityHealthCheck && deployedTunnelName == common.KonnectivityTunnel {
+		tunnelName = common.KonnectivityTunnel
+	}
+
+	if established, err := b.CheckTunnelConnection(ctx, logrus.NewEntry(logger.NewNopLogger()), tunnelName); err != nil || !established {
+		msg := "Tunnel connection has not been established"
 		if err != nil {
 			msg += fmt.Sprintf(" (%+v)", err)
 		}
-		c := checker.FailedCondition(condition, "VPNConnectionBroken", msg)
+		c := checker.FailedCondition(condition, "TunnelConnectionBroken", msg)
 		return &c, nil
 	}
 

@@ -88,6 +88,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		kubeControllerManagerCertDNSNames = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
 		kubeSchedulerCertDNSNames         = dnsNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
 
+		konnectivityServerDNSNames = append([]string{
+			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+		}, dnsNamesForService(common.KonnectivityServerCertName, b.Shoot.SeedNamespace)...)
+
 		etcdCertDNSNames = dnsNamesForEtcd(b.Shoot.SeedNamespace)
 
 		endUserCrtValidity = common.EndUserCrtValidity
@@ -124,7 +128,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 		},
-
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -429,32 +432,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			UsedForSSH: false,
 		},
 
-		// Secret definition for vpn-shoot (OpenVPN server side)
-		&secrets.CertificateSecretConfig{
-			Name: "vpn-shoot",
-
-			CommonName:   "vpn-shoot",
-			Organization: nil,
-			DNSNames:     []string{},
-			IPAddresses:  []net.IP{},
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-
-		// Secret definition for vpn-seed (OpenVPN client side)
-		&secrets.CertificateSecretConfig{
-			Name: "vpn-seed",
-
-			CommonName:   "vpn-seed",
-			Organization: nil,
-			DNSNames:     []string{},
-			IPAddresses:  []net.IP{},
-
-			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
 			Name: common.EtcdServerTLS,
@@ -562,7 +539,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	})
 
-	// Secret definition for dependency-watchdog-internal-probe
+	// Secret definitions for dependency-watchdog-internal and external probes
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
 			Name: common.DependencyWatchdogInternalProbeSecretName,
@@ -579,10 +556,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			ClusterName:  b.Shoot.SeedNamespace,
 			APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(false),
 		},
-	})
-
-	// Secret definition for dependency-watchdog-external-probe
-	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+	}, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
 			Name: common.DependencyWatchdogExternalProbeSecretName,
 
@@ -599,6 +573,57 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 		},
 	})
+
+	if b.Shoot.KonnectivityTunnelEnabled {
+		konnectivityServerToken, err := staticToken.GetTokenForUsername(common.KonnectivityServerUserName)
+		if err != nil {
+			return nil, err
+		}
+
+		// Secret definitions for konnectivity-server and konnectivity Agent
+		secretList = append(secretList,
+			&secrets.ControlPlaneSecretConfig{
+				CertificateSecretConfig: &secrets.CertificateSecretConfig{
+					Name:      common.KonnectivityServerKubeconfig,
+					SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				},
+
+				BasicAuth: basicAuthAPIServer,
+				Token:     konnectivityServerToken,
+
+				KubeConfigRequest: &secrets.KubeConfigRequest{
+					ClusterName:  b.Shoot.SeedNamespace,
+					APIServerURL: fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+				},
+			},
+			&secrets.ControlPlaneSecretConfig{
+				CertificateSecretConfig: &secrets.CertificateSecretConfig{
+					Name:       common.KonnectivityServerCertName,
+					CommonName: common.KonnectivityServerCertName,
+					DNSNames:   konnectivityServerDNSNames,
+
+					CertType:  secrets.ServerCert,
+					SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				},
+			})
+	} else {
+		secretList = append(secretList,
+			// Secret definition for vpn-shoot (OpenVPN server side)
+			&secrets.CertificateSecretConfig{
+				Name:       "vpn-shoot",
+				CommonName: "vpn-shoot",
+				CertType:   secrets.ServerCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+
+			// Secret definition for vpn-seed (OpenVPN client side)
+			&secrets.CertificateSecretConfig{
+				Name:       "vpn-seed",
+				CommonName: "vpn-seed",
+				CertType:   secrets.ClientCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			})
+	}
 
 	loggingEnabled := gardenletfeatures.FeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
@@ -687,7 +712,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 		)
 	}
-
 	return secretList, nil
 }
 
@@ -786,7 +810,13 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.deployOpenVPNTLSAuthSecret(ctx, existingSecretsMap); err != nil {
+	if b.Shoot.KonnectivityTunnelEnabled {
+		err = b.cleanupVPNSecrets(ctx)
+	} else {
+		err = b.deployOpenVPNTLSAuthSecret(ctx, existingSecretsMap)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -988,51 +1018,85 @@ func (b *Botanist) generateBasicAuthAPIServer(ctx context.Context, existingSecre
 func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap map[string]*corev1.Secret) (*secrets.StaticToken, error) {
 	staticTokenConfig := &secrets.StaticTokenSecretConfig{
 		Name: common.StaticTokenSecretName,
-		Tokens: []secrets.TokenConfig{
-			{
+		Tokens: map[string]secrets.TokenConfig{
+			common.KubecfgUsername: {
 				Username: common.KubecfgUsername,
 				UserID:   common.KubecfgUsername,
 				Groups:   []string{user.SystemPrivilegedGroup},
 			},
-			{
+			common.KubeAPIServerHealthCheck: {
 				Username: common.KubeAPIServerHealthCheck,
 				UserID:   common.KubeAPIServerHealthCheck,
 			},
-		},
-	}
+			common.KonnectivityServerUserName: {
+				Username: common.KonnectivityServerUserName,
+				UserID:   common.KonnectivityServerUserName,
+			},
+		}}
 
+	var (
+		newStaticTokenConfig = secrets.StaticTokenSecretConfig{
+			Name:   common.StaticTokenSecretName,
+			Tokens: make(map[string]secrets.TokenConfig),
+		}
+		staticToken *secrets.StaticToken
+	)
 	if existingSecret, ok := existingSecretsMap[staticTokenConfig.Name]; ok {
-		staticToken, err := secrets.LoadStaticTokenFromCSV(staticTokenConfig.Name, existingSecret.Data[secrets.DataKeyStaticTokenCSV])
+		var err error
+		staticToken, err = secrets.LoadStaticTokenFromCSV(staticTokenConfig.Name, existingSecret.Data[secrets.DataKeyStaticTokenCSV])
 		if err != nil {
 			return nil, err
 		}
 
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
-
-		b.Secrets[staticTokenConfig.Name] = existingSecret
-
-		if err := b.storeAPIServerHealthCheckToken(staticToken); err != nil {
-			return nil, err
+		var tokenConfigSet, tokenSet = sets.NewString(), sets.NewString()
+		for _, t := range staticTokenConfig.Tokens {
+			tokenConfigSet.Insert(t.Username)
+		}
+		for _, t := range staticToken.Tokens {
+			tokenSet.Insert(t.Username)
 		}
 
-		return staticToken, nil
+		if diff := tokenConfigSet.Difference(tokenSet); diff.Len() > 0 {
+			for _, tokenKey := range diff.UnsortedList() {
+				newStaticTokenConfig.Tokens[tokenKey] = staticTokenConfig.Tokens[tokenKey]
+			}
+		} else {
+			b.mutex.Lock()
+			defer b.mutex.Unlock()
+
+			b.Secrets[staticTokenConfig.Name] = existingSecret
+
+			if err := b.storeAPIServerHealthCheckToken(staticToken); err != nil {
+				return nil, err
+			}
+
+			return staticToken, nil
+		}
 	}
 
-	staticToken, err := staticTokenConfig.Generate()
+	var err error
+	if len(newStaticTokenConfig.Tokens) > 0 {
+		staticToken, err = newStaticTokenConfig.AppendStaticToken(staticToken)
+	} else {
+		staticToken, err = staticTokenConfig.GenerateStaticToken()
+	}
+
 	if err != nil {
 		return nil, err
 	}
-
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      staticTokenConfig.Name,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: staticToken.SecretData(),
 	}
-	if err := b.K8sSeedClient.Client().Create(ctx, secret); err != nil {
+
+	_, err = controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+		secret.Data = staticToken.SecretData()
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -1041,7 +1105,7 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 
 	b.Secrets[staticTokenConfig.Name] = secret
 
-	staticTokenObj := staticToken.(*secrets.StaticToken)
+	staticTokenObj := staticToken
 
 	if err := b.storeAPIServerHealthCheckToken(staticTokenObj); err != nil {
 		return nil, err
@@ -1148,6 +1212,17 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func (b *Botanist) cleanupVPNSecrets(ctx context.Context) error {
+	// TODO: remove when all Gardener supported versions are >= 1.18
+	vpnSecretNamesToDelete := []string{"vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"}
+	for _, secret := range vpnSecretNamesToDelete {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
 	return nil
 }
 

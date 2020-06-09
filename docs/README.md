@@ -9,11 +9,11 @@
 ## Concepts
 
 * Components
-    * [gardener-apiserver](concepts/apiserver.md)
+    * [Gardener API server](concepts/apiserver.md)
       * [In-Tree admission plugins](concepts/apiserver_admission_plugins.md)
-    * [gardener-scheduler](concepts/scheduler.md)
-    * [gardener-seed-admission-controller](concepts/seed-admission-controller.md)
-    * [gardenlet](concepts/gardenlet.md)
+    * [Gardener Scheduler](concepts/scheduler.md)
+    * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
+    * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 
 ## Usage
@@ -21,7 +21,6 @@
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [Gardener configuration and usage](usage/configuration.md)
-* [`ManagedIstio` feature](usage/istio.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
@@ -30,7 +29,9 @@
 * [Tolerations](usage/tolerations.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
+* [`ManagedIstio` feature](usage/istio.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
+* [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 
 ## Proposals
 
