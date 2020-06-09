@@ -16,7 +16,6 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -25,22 +24,6 @@ const (
 	// EventSchedulingFailed is an event reason for failed scheduling.
 	EventSchedulingFailed = "SchedulingFailed"
 )
-
-// ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct.
-// https://github.com/kubernetes/kubernetes/issues/55890
-// https://github.com/kubernetes-sigs/cluster-api/issues/137
-type ProviderConfig struct {
-	runtime.RawExtension `json:",inline" protobuf:"bytes,1,opt,name=rawExtension"`
-}
-
-// OpenAPISchemaType is used by the kube-openapi generator when constructing
-// the OpenAPI spec of this type.
-// See: https://github.com/kubernetes/kube-openapi/tree/master/pkg/generators
-func (ProviderConfig) OpenAPISchemaType() []string { return []string{"object"} }
-
-// OpenAPISchemaFormat is used by the kube-openapi generator when constructing
-// the OpenAPI spec of this type.
-func (ProviderConfig) OpenAPISchemaFormat() string { return "" }
 
 // ConditionStatus is the status of a condition.
 type ConditionStatus string

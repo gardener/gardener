@@ -55,14 +55,11 @@ func (b *Botanist) DeployNetwork(ctx context.Context) error {
 
 		network.Spec = extensionsv1alpha1.NetworkSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: string(b.Shoot.Info.Spec.Networking.Type),
+				Type:           b.Shoot.Info.Spec.Networking.Type,
+				ProviderConfig: b.Shoot.Info.Spec.Networking.ProviderConfig,
 			},
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
-		}
-
-		if b.Shoot.Info.Spec.Networking.ProviderConfig != nil {
-			network.Spec.ProviderConfig = &b.Shoot.Info.Spec.Networking.ProviderConfig.RawExtension
 		}
 
 		return nil

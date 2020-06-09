@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -220,7 +221,7 @@ type Extension struct {
 	// Type is the type of the extension resource.
 	Type string
 	// ProviderConfig is the configuration passed to extension resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
 	Disabled *bool
 }
@@ -396,7 +397,7 @@ type AdmissionPlugin struct {
 	// Name is the name of the plugin.
 	Name string
 	// Config is the configuration of the plugin.
-	Config *ProviderConfig
+	Config *runtime.RawExtension
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -580,7 +581,7 @@ type Networking struct {
 	// Type identifies the type of the networking plugin.
 	Type string
 	// ProviderConfig is the configuration passed to network resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Pods is the CIDR of the pod network.
 	Pods *string
 	// Nodes is the CIDR of the entire node network.
@@ -658,10 +659,10 @@ type Provider struct {
 	Type string
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
-	ControlPlaneConfig *ProviderConfig
+	ControlPlaneConfig *runtime.RawExtension
 	// InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
-	InfrastructureConfig *ProviderConfig
+	InfrastructureConfig *runtime.RawExtension
 	// Workers is a list of worker groups.
 	Workers []Worker
 }
@@ -691,7 +692,7 @@ type Worker struct {
 	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
 	MaxUnavailable *intstr.IntOrString
 	// ProviderConfig is the provider-specific configuration for this worker pool.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Taints is a list of taints for all the `Node` objects in this worker pool.
 	Taints []corev1.Taint
 	// Volume contains information about the volume type and size.
@@ -726,7 +727,7 @@ type ShootMachineImage struct {
 	// Name is the name of the image.
 	Name string
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 	// Version is the version of the shoot's image.
 	// If version is not provided, it will be defaulted to the latest version from the CloudProfile.
 	Version string
@@ -764,7 +765,7 @@ type ContainerRuntime struct {
 	// Type is the type of the Container Runtime.
 	Type string
 	// ProviderConfig is the configuration passed to the ContainerRuntime resource.
-	ProviderConfig *ProviderConfig
+	ProviderConfig *runtime.RawExtension
 }
 
 var (

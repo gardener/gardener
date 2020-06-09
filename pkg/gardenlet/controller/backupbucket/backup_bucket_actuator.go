@@ -161,11 +161,6 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		},
 	}
 
-	var providerConfig *runtime.RawExtension
-	if a.backupBucket.Spec.ProviderConfig != nil {
-		providerConfig = &a.backupBucket.Spec.ProviderConfig.RawExtension
-	}
-
 	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
@@ -173,7 +168,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 		extensionBackupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           a.backupBucket.Spec.Provider.Type,
-				ProviderConfig: providerConfig,
+				ProviderConfig: a.backupBucket.Spec.ProviderConfig,
 			},
 			Region: a.backupBucket.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
@@ -206,10 +201,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				return fmt.Errorf("expected extensionsv1alpha1.BackupBucket but got %T", backupBucket)
 			}
 
-			var (
-				generatedSecretRef *corev1.SecretReference
-				providerStatus     *gardencorev1beta1.ProviderConfig
-			)
+			var generatedSecretRef *corev1.SecretReference
 
 			if backupBucket.Status.GeneratedSecretRef != nil {
 				generatedSecret, err := common.GetSecretFromSecretRef(ctx, a.seedClient, backupBucket.Status.GeneratedSecretRef)
@@ -244,16 +236,10 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				}
 			}
 
-			if backupBucket.Status.ProviderStatus != nil {
-				providerStatus = &gardencorev1beta1.ProviderConfig{
-					RawExtension: *backupBucket.Status.ProviderStatus,
-				}
-			}
-
-			if generatedSecretRef != nil || providerStatus != nil {
+			if generatedSecretRef != nil || backupBucket.Status.ProviderStatus != nil {
 				_, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient, a.backupBucket, func() error {
 					a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
-					a.backupBucket.Status.ProviderStatus = providerStatus
+					a.backupBucket.Status.ProviderStatus = backupBucket.Status.ProviderStatus
 					return nil
 				})
 				return err

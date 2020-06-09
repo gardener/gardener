@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -101,7 +102,7 @@ type SeedBackup struct {
 	Provider string `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a region name.
 	// +optional
 	Region *string `json:"region,omitempty" protobuf:"bytes,3,opt,name=region"`
@@ -152,7 +153,7 @@ type SeedProvider struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to Seed resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a name of a region.
 	Region string `json:"region" protobuf:"bytes,3,opt,name=region"`
 }

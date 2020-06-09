@@ -17,6 +17,7 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -63,7 +64,7 @@ type ControllerInstallationStatus struct {
 	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// ProviderStatus contains type-specific status.
 	// +optional
-	ProviderStatus *ProviderConfig `json:"providerStatus,omitempty" protobuf:"bytes,2,opt,name=providerStatus"`
+	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty" protobuf:"bytes,2,opt,name=providerStatus"`
 }
 
 const (

@@ -180,13 +180,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
 									Name: "PodNodeSelector",
-									Config: &core.ProviderConfig{
-										RawExtension: runtime.RawExtension{
-											Raw: []byte(`podNodeSelectorPluginConfig:
+									Config: &runtime.RawExtension{
+										Raw: []byte(`podNodeSelectorPluginConfig:
   clusterDefaultNodeSelector: <node-selectors-labels>
   namespace1: <node-selectors-labels>
 	namespace2: <node-selectors-labels>`),
-										},
 									},
 								},
 							},

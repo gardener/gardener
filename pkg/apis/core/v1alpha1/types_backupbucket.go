@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -52,7 +53,7 @@ type BackupBucketSpec struct {
 	Provider BackupBucketProvider `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
-	ProviderConfig *ProviderConfig `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,3,opt,name=secretRef"`
 	// Seed holds the name of the seed allocated to BackupBucket for running controller.
@@ -64,7 +65,7 @@ type BackupBucketSpec struct {
 type BackupBucketStatus struct {
 	// ProviderStatus is the configuration passed to BackupBucket resource.
 	// +optional
-	ProviderStatus *ProviderConfig `json:"providerStatus,omitempty" protobuf:"bytes,1,opt,name=providerStatus"`
+	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty" protobuf:"bytes,1,opt,name=providerStatus"`
 	// LastOperation holds information about the last operation on the BackupBucket.
 	// +optional
 	LastOperation *LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,2,opt,name=lastOperation"`

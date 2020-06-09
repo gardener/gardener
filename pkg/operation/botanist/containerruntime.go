@@ -60,9 +60,7 @@ func (b *Botanist) DeployContainerRuntimeResources(ctx context.Context) error {
 					metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 					toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
 					toApply.Spec.Type = cr.Type
-					if cr.ProviderConfig != nil {
-						toApply.Spec.ProviderConfig = &cr.ProviderConfig.RawExtension
-					}
+					toApply.Spec.ProviderConfig = cr.ProviderConfig
 					toApply.Spec.WorkerPool.Name = workerName
 					toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{gardencorev1beta1constants.LabelWorkerPool: workerName, gardencorev1beta1constants.LabelWorkerPoolDeprecated: workerName}
 					return nil
