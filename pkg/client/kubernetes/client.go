@@ -278,7 +278,7 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	c, err := NewDirectClient(conf.restConfig, conf.clientOptions)
+	c, err := newDirectClient(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -343,12 +343,14 @@ func setConfigDefaults(conf *config) error {
 }
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
-	// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
-	mapper, err := apiutil.NewDynamicRESTMapper(config, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
+	if options.Mapper == nil {
+		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
+		mapper, err := apiutil.NewDynamicRESTMapper(config, apiutil.WithLazyDiscovery)
+		if err != nil {
+			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
+		}
+		options.Mapper = mapper
 	}
-	options.Mapper = mapper
 
 	return nil
 }
