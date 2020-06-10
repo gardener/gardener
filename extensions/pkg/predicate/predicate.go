@@ -166,7 +166,7 @@ func HasOperationAnnotation() predicate.Predicate {
 	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
 }
 
-// LastOperationNotSuccessful is a predicate for unsuccessful last operations for creation events.
+// LastOperationNotSuccessful is a predicate for unsuccessful last operations **only** for creation events.
 func LastOperationNotSuccessful() predicate.Predicate {
 	operationNotSucceeded := func(obj runtime.Object) bool {
 		acc, err := extensions.Accessor(obj)
@@ -184,13 +184,13 @@ func LastOperationNotSuccessful() predicate.Predicate {
 			return operationNotSucceeded(event.Object)
 		},
 		UpdateFunc: func(event event.UpdateEvent) bool {
-			return operationNotSucceeded(event.ObjectNew)
+			return false
 		},
 		GenericFunc: func(event event.GenericEvent) bool {
-			return operationNotSucceeded(event.Object)
+			return false
 		},
 		DeleteFunc: func(event event.DeleteEvent) bool {
-			return operationNotSucceeded(event.Object)
+			return false
 		},
 	}
 }
