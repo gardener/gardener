@@ -12,7 +12,7 @@ There is an additional command for analyzing the code coverage of the tests. Gin
 ```bash
 make test-cov
 open gardener.coverage.html
-make test-clean
+make test-cov-clean
 ```
 
 ## Dependency Management
