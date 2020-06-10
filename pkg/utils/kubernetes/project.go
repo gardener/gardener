@@ -62,7 +62,7 @@ func tryUpdateProject(
 		return
 	})
 	if err != nil {
-		logger.Logger.Errorf("Failed to updated Project %s after %d attempts due to %v", meta.Name, attempt, err)
+		logger.Logger.Errorf("Failed to update Project %s after %d attempts due to %v", meta.Name, attempt, err)
 	}
 
 	return result, err

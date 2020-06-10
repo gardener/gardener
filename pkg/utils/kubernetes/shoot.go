@@ -62,7 +62,7 @@ func tryUpdateShoot(
 		return
 	})
 	if err != nil {
-		logger.Logger.Errorf("Failed to updated Shoot %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
+		logger.Logger.Errorf("Failed to update Shoot %s/%s after %d attempts due to %v", meta.Namespace, meta.Name, attempt, err)
 	}
 	return result, err
 }
