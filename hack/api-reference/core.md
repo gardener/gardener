@@ -6079,6 +6079,35 @@ ProjectPhase
 <p>Phase is the current phase of the project.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>staleSinceTimestamp</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>staleAutoDeleteTimestamp</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted
+because it&rsquo;s stale/unused.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ProjectTolerations">ProjectTolerations

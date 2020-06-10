@@ -1349,6 +1349,15 @@ message ProjectStatus {
 
   // Phase is the current phase of the project.
   optional string phase = 2;
+
+  // StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time staleSinceTimestamp = 3;
+
+  // StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted
+  // because it's stale/unused.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time staleAutoDeleteTimestamp = 4;
 }
 
 // ProjectTolerations contains the tolerations for taints on seed clusters.

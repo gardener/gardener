@@ -4231,9 +4231,23 @@ func schema_pkg_apis_core_v1alpha1_ProjectStatus(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"staleSinceTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"staleAutoDeleteTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted because it's stale/unused.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -9866,9 +9880,23 @@ func schema_pkg_apis_core_v1beta1_ProjectStatus(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"staleSinceTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"staleAutoDeleteTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted because it's stale/unused.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

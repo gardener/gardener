@@ -431,6 +431,10 @@ func Convert_config_PlantControllerConfiguration_To_v1alpha1_PlantControllerConf
 
 func autoConvert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectControllerConfiguration(in *ProjectControllerConfiguration, out *config.ProjectControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
+	out.StaleGracePeriodDays = (*int)(unsafe.Pointer(in.StaleGracePeriodDays))
+	out.StaleExpirationTimeDays = (*int)(unsafe.Pointer(in.StaleExpirationTimeDays))
+	out.StaleSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.StaleSyncPeriod))
 	return nil
 }
 
@@ -441,6 +445,10 @@ func Convert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectController
 
 func autoConvert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(in *config.ProjectControllerConfiguration, out *ProjectControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
+	out.StaleGracePeriodDays = (*int)(unsafe.Pointer(in.StaleGracePeriodDays))
+	out.StaleExpirationTimeDays = (*int)(unsafe.Pointer(in.StaleExpirationTimeDays))
+	out.StaleSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.StaleSyncPeriod))
 	return nil
 }
 

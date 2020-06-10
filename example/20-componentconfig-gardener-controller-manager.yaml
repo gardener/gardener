@@ -23,6 +23,12 @@ controllers:
   shootQuota:
     concurrentSyncs: 5
     syncPeriod: 60m
+  project:
+    concurrentSyncs: 5
+    minimumLifetimeDays: 30
+    staleGracePeriodDays: 14
+    staleExpirationTimeDays: 90
+    staleSyncPeriod: 12h
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

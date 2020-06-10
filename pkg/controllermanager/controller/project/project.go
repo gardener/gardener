@@ -23,6 +23,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -39,17 +40,21 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	control  ControlInterface
+	control      ControlInterface
+	staleControl StaleControlInterface
+
+	config   *config.ControllerManagerConfiguration
 	recorder record.EventRecorder
 
-	projectLister gardencorelisters.ProjectLister
-	projectQueue  workqueue.RateLimitingInterface
-	projectSynced cache.InformerSynced
+	projectLister     gardencorelisters.ProjectLister
+	projectQueue      workqueue.RateLimitingInterface
+	projectStaleQueue workqueue.RateLimitingInterface
+	projectSynced     cache.InformerSynced
 
 	namespaceLister kubecorev1listers.NamespaceLister
 	namespaceSynced cache.InformerSynced
 
-	rolebindingSynced cache.InformerSynced
+	roleBindingSynced cache.InformerSynced
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -58,7 +63,7 @@ type Controller struct {
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <projectInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -67,19 +72,40 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 		projectInformer = gardenCoreV1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
+		shootInformer = gardenCoreV1beta1Informer.Shoots()
+		shootLister   = shootInformer.Lister()
+
+		plantInformer = gardenCoreV1beta1Informer.Plants()
+		plantLister   = plantInformer.Lister()
+
+		backupEntryInformer = gardenCoreV1beta1Informer.BackupEntries()
+		backupEntryLister   = backupEntryInformer.Lister()
+
+		secretBindingInformer = gardenCoreV1beta1Informer.SecretBindings()
+		secretBindingLister   = secretBindingInformer.Lister()
+
+		quotaInformer = gardenCoreV1beta1Informer.Quotas()
+		quotaLister   = quotaInformer.Lister()
+
 		namespaceInformer = corev1Informer.Namespaces()
 		namespaceLister   = namespaceInformer.Lister()
 
-		rolebindingInformer = rbacv1Informer.RoleBindings()
+		secretInformer = corev1Informer.Secrets()
+		secretLister   = secretInformer.Lister()
+
+		roleBindingInformer = rbacv1Informer.RoleBindings()
 	)
 
 	projectController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		control:                NewDefaultControl(clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
+		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, secretLister),
+		config:                 config,
 		recorder:               recorder,
 		projectLister:          projectLister,
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		namespaceLister:        namespaceLister,
 		workerCh:               make(chan int),
 	}
@@ -90,14 +116,14 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 		DeleteFunc: projectController.projectDelete,
 	})
 
-	rolebindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: projectController.rolebindingUpdate,
-		DeleteFunc: projectController.rolebindingDelete,
+	roleBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: projectController.roleBindingUpdate,
+		DeleteFunc: projectController.roleBindingDelete,
 	})
 
 	projectController.projectSynced = projectInformer.Informer().HasSynced
 	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
-	projectController.rolebindingSynced = rolebindingInformer.Informer().HasSynced
+	projectController.roleBindingSynced = roleBindingInformer.Informer().HasSynced
 
 	return projectController
 }
@@ -106,7 +132,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.rolebindingSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.roleBindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -123,18 +149,20 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.reconcileStaleProjectKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.projectQueue.ShutDown()
+	c.projectStaleQueue.ShutDown()
 
 	for {
-		if c.projectQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Project worker and no items left in the queues. Terminated Project controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Project worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.projectQueue.Len())
+		logger.Logger.Debugf("Waiting for %d Project worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.projectQueue.Len()+c.projectStaleQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

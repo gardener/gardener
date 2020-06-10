@@ -3376,6 +3376,8 @@ func autoConvert_core_ProjectSpec_To_v1beta1_ProjectSpec(in *core.ProjectSpec, o
 func autoConvert_v1beta1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, out *core.ProjectStatus, s conversion.Scope) error {
 	out.ObservedGeneration = in.ObservedGeneration
 	out.Phase = core.ProjectPhase(in.Phase)
+	out.StaleSinceTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleSinceTimestamp))
+	out.StaleAutoDeleteTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleAutoDeleteTimestamp))
 	return nil
 }
 
@@ -3387,6 +3389,8 @@ func Convert_v1beta1_ProjectStatus_To_core_ProjectStatus(in *ProjectStatus, out 
 func autoConvert_core_ProjectStatus_To_v1beta1_ProjectStatus(in *core.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
 	out.ObservedGeneration = in.ObservedGeneration
 	out.Phase = ProjectPhase(in.Phase)
+	out.StaleSinceTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleSinceTimestamp))
+	out.StaleAutoDeleteTimestamp = (*metav1.Time)(unsafe.Pointer(in.StaleAutoDeleteTimestamp))
 	return nil
 }
 

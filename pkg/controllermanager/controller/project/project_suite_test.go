@@ -12,16 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package project_test
+package project
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/util/workqueue"
 )
 
 func TestProject(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager Project Controller Suite")
+}
+
+type fakeQueue struct {
+	workqueue.RateLimitingInterface
+	items []string
+}
+
+func (f *fakeQueue) Add(item interface{}) {
+	f.items = append(f.items, item.(string))
+}
+
+func (f *fakeQueue) Len() int {
+	return len(f.items)
 }

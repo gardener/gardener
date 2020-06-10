@@ -41,6 +41,18 @@ data:
       {{- if .Values.global.controller.config.controllers.project }}
       project:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.project.concurrentSyncs is required" .Values.global.controller.config.controllers.project.concurrentSyncs }}
+        {{- if .Values.global.controller.config.controllers.project.minimumLifetimeDays }}
+        minimumLifetimeDays: {{ .Values.global.controller.config.controllers.project.minimumLifetimeDays }}
+        {{- end }}
+        {{- if .Values.global.controller.config.controllers.project.staleGracePeriodDays }}
+        staleGracePeriodDays: {{ .Values.global.controller.config.controllers.project.staleGracePeriodDays }}
+        {{- end }}
+        {{- if .Values.global.controller.config.controllers.project.staleExpirationTimeDays }}
+        staleExpirationTimeDays: {{ .Values.global.controller.config.controllers.project.staleExpirationTimeDays }}
+        {{- end }}
+        {{- if .Values.global.controller.config.controllers.project.staleSyncPeriod }}
+        staleSyncPeriod: {{ .Values.global.controller.config.controllers.project.staleSyncPeriod }}
+        {{- end }}
       {{- end }}
       {{- if .Values.global.controller.config.controllers.quota }}
       quota:

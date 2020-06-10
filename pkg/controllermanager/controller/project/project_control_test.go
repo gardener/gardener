@@ -15,97 +15,105 @@
 package project
 
 import (
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/pointer"
-
-	gardenercore "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("#rolebindingDelete", func() {
-	const (
-		ns = "test"
-	)
+var _ = Describe("Controller", func() {
 	var (
-		c           *Controller
-		indexer     cache.Indexer
-		queue       workqueue.RateLimitingInterface
-		proj        *gardenercore.Project
-		rolebinding *rbacv1.RoleBinding
+		queue1, queue2 *fakeQueue
+		c              *Controller
+
+		projectName = "foo"
 	)
 
 	BeforeEach(func() {
-		// This should not be here!!! Hidden dependency!!!
 		logger.Logger = logger.NewNopLogger()
-
-		indexer = cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-		queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-		proj = &gardenercore.Project{
-			ObjectMeta: metav1.ObjectMeta{Name: "project-1"},
-			Spec: gardenercore.ProjectSpec{
-				Namespace: pointer.StringPtr(ns),
-			},
-		}
-		rolebinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: "role-1", Namespace: ns},
-		}
+		queue1 = &fakeQueue{}
+		queue2 = &fakeQueue{}
 		c = &Controller{
-			projectLister: gardencorelisters.NewProjectLister(indexer),
-			projectQueue:  queue,
+			projectQueue:      queue1,
+			projectStaleQueue: queue2,
 		}
 	})
 
-	AfterEach(func() {
-		queue.ShutDown()
+	Describe("#projectAdd", func() {
+		It("should do nothing because it cannot compute the object key", func() {
+			c.projectAdd("foo")
+
+			Expect(queue1.Len()).To(BeZero())
+		})
+
+		It("should add the object to the projectQueue and projectStaleQueue", func() {
+			obj := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: projectName},
+			}
+
+			c.projectAdd(obj)
+
+			Expect(queue1.Len()).To(Equal(1))
+			Expect(queue1.items[0]).To(Equal(projectName))
+			Expect(queue2.Len()).To(Equal(1))
+			Expect(queue2.items[0]).To(Equal(projectName))
+		})
 	})
 
-	It("should not requeue random rolebinding", func() {
-		Expect(indexer.Add(proj)).ToNot(HaveOccurred())
+	Describe("#projectUpdate", func() {
+		It("should do nothing because new object is not a Project", func() {
+			oldObj := &gardencorev1beta1.Project{}
+			newObj := &gardencorev1beta1.CloudProfile{}
 
-		c.rolebindingDelete(rolebinding)
+			c.projectUpdate(oldObj, newObj)
 
-		Expect(queue.Len()).To(Equal(0), "no items in the queue")
+			Expect(queue1.Len()).To(BeZero())
+		})
+
+		It("should do nothing because generation is equal observed generation", func() {
+			oldObj := &gardencorev1beta1.Project{}
+			newObj := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Generation: 42},
+				Status:     gardencorev1beta1.ProjectStatus{ObservedGeneration: 42},
+			}
+
+			c.projectUpdate(oldObj, newObj)
+
+			Expect(queue1.Len()).To(BeZero())
+		})
+
+		It("should add the new obj to the projectQueue because generation is not equal observed generation", func() {
+			oldObj := &gardencorev1beta1.Project{}
+			newObj := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: projectName, Generation: 43},
+				Status:     gardencorev1beta1.ProjectStatus{ObservedGeneration: 42},
+			}
+
+			c.projectUpdate(oldObj, newObj)
+
+			Expect(queue1.Len()).To(Equal(1))
+			Expect(queue1.items[0]).To(Equal(projectName))
+		})
 	})
 
-	DescribeTable("requeue when rolebinding is",
-		func(rolebindingName string) {
-			rolebinding.Name = rolebindingName
-			Expect(indexer.Add(proj)).ToNot(HaveOccurred())
+	Describe("#projectDelete", func() {
+		It("should do nothing because it cannot compute the object key", func() {
+			c.projectDelete("foo")
 
-			c.rolebindingDelete(rolebinding)
+			Expect(queue1.Len()).To(BeZero())
+		})
 
-			Expect(queue.Len()).To(Equal(1), "only one item in queue")
-			actual, _ := queue.Get()
-			Expect(actual).To(Equal("project-1"))
-		},
+		It("should add the object to the projectQueue", func() {
+			obj := &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: projectName},
+			}
 
-		Entry("project-member", "gardener.cloud:system:project-member"),
-		Entry("project-viewer", "gardener.cloud:system:project-viewer"),
-		Entry("custom role", "gardener.cloud:extension:project:project-1:foo"),
-	)
+			c.projectDelete(obj)
 
-	DescribeTable("no requeue when project is being deleted and rolebinding is",
-		func(rolebindingName string) {
-			now := metav1.Now()
-			proj.DeletionTimestamp = &now
-			rolebinding.Name = rolebindingName
-			Expect(indexer.Add(proj)).ToNot(HaveOccurred())
-
-			c.rolebindingDelete(rolebinding)
-
-			Expect(queue.Len()).To(Equal(0), "no projects in queue")
-		},
-
-		Entry("project-member", "gardener.cloud:system:project-member"),
-		Entry("project-viewer", "gardener.cloud:system:project-viewer"),
-		Entry("custom role", "gardener.cloud:extension:project:project-1:foo"),
-	)
+			Expect(queue1.Len()).To(Equal(1))
+			Expect(queue1.items[0]).To(Equal(projectName))
+		})
+	})
 })
