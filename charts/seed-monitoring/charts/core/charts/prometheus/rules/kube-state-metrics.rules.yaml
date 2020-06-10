@@ -46,4 +46,4 @@ groups:
     expr: sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)
 
   - record: shoot:node_operating_system:sum
-    expr: sum(kube_node_info) by (os_image)
+    expr: sum(kube_node_info) by (os_image, kernel_version)
