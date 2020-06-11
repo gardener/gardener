@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -23,7 +24,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -127,12 +129,12 @@ type MaintenanceControlInterface interface {
 // NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
 // implements the documented semantics for maintaining Shoots. You should use an instance returned from
 // NewDefaultMaintenanceControl() for any scenario other than testing.
-func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) MaintenanceControlInterface {
-	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenCoreInformers, config, recorder}
+func NewDefaultMaintenanceControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) MaintenanceControlInterface {
+	return &defaultMaintenanceControl{clientMap, k8sGardenCoreInformers, config, recorder}
 }
 
 type defaultMaintenanceControl struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.Interface
 	config                 config.ShootMaintenanceControllerConfiguration
 	recorder               record.EventRecorder
@@ -140,6 +142,7 @@ type defaultMaintenanceControl struct {
 
 func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, key string) error {
 	var (
+		ctx         = context.TODO()
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 		handleError = func(msg string) {
@@ -167,8 +170,13 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
 	}
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	// Update the Shoot resource object.
-	_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+	_, err = kutil.TryUpdateShoot(gardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		if !apiequality.Semantic.DeepEqual(shootObj.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}

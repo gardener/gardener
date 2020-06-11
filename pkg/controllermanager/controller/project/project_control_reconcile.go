@@ -24,6 +24,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,9 +49,18 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		err        error
 	)
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
+		return fmt.Errorf("could not add finalizer to Project: %w", err)
+	}
+
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
 	// an unset .spec.namespace field (which would result in trying to create another namespace again).
-	project, err = c.k8sGardenClient.GardenCore().CoreV1beta1().Projects().Get(project.Name, metav1.GetOptions{})
+	project, err = gardenClient.GardenCore().CoreV1beta1().Projects().Get(project.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -59,35 +70,35 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 
 	// If the project has no phase yet then we update it to be 'pending'.
 	if len(project.Status.Phase) == 0 {
-		if _, err := c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectPending)); err != nil {
+		if _, err := c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectPending)); err != nil {
 			return err
 		}
 	}
 
 	// We reconcile the namespace for the project: If the .spec.namespace is set then we try to claim it, if it is not
 	// set then we create a new namespace with a random hash value.
-	namespace, err := c.reconcileNamespaceForProject(project)
+	namespace, err := c.reconcileNamespaceForProject(gardenClient, project)
 	if err != nil {
 		c.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 	c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		project, err = kutils.TryUpdateProject(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
+		project, err = kutils.TryUpdateProject(gardenClient.GardenCore(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
 			project.Spec.Namespace = &namespace.Name
 			return project, nil
 		})
 		if err != nil {
 			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-			_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+			_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
 			if err := retryutils.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
-				if err := c.k8sGardenClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
+				if err := gardenClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
 					if apierrors.IsNotFound(err) {
 						return retryutils.Ok()
 					}
@@ -141,7 +152,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		})
 	}
 
-	if err := c.k8sGardenClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
+	if err := gardenClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":       project.Name,
 			"uid":        project.UID,
@@ -152,19 +163,19 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		},
 	})); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
-		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 
 	// Delete all remaining/stale extension clusterroles and rolebindings
-	if err := deleteStaleExtensionRoles(ctx, c.k8sGardenClient.Client(), extensionRoles, project.Name, namespace.Name); err != nil {
+	if err := deleteStaleExtensionRoles(ctx, gardenClient.Client(), extensionRoles, project.Name, namespace.Name); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
-		_, _ = c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 
 	// Update the project status to mark it as 'ready'.
-	if _, err := c.updateProjectStatus(project.ObjectMeta, func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
+	if _, err := c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
 		project.Status.Phase = gardencorev1beta1.ProjectReady
 		project.Status.ObservedGeneration = generation
 		return project, nil
@@ -176,7 +187,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 	return nil
 }
 
-func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1.Project) (*corev1.Namespace, error) {
+func (c *defaultControl) reconcileNamespaceForProject(gardenClient kubernetes.Interface, project *gardencorev1beta1.Project) (*corev1.Namespace, error) {
 	var (
 		namespaceName = project.Spec.Namespace
 
@@ -194,11 +205,11 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := c.k8sGardenClient.Client().Create(context.TODO(), obj)
+		err := gardenClient.Client().Create(context.TODO(), obj)
 		return obj, err
 	}
 
-	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+	namespace, err := kutils.TryUpdateNamespace(gardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
 		labels := namespaceLabelsFromProject(project)
 		labelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
 		if !apiequality.Semantic.DeepDerivative(labels, ns.Labels) && !apiequality.Semantic.DeepDerivative(labelsDeprecated, ns.Labels) {
@@ -229,7 +240,7 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardencorev1beta1
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := c.k8sGardenClient.Client().Create(context.TODO(), obj)
+		err := gardenClient.Client().Create(context.TODO(), obj)
 		return obj, err
 	}
 

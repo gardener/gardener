@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -35,7 +35,7 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control  ControlInterface
@@ -54,7 +54,7 @@ type Controller struct {
 // NewSecretBindingController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <secretBindingInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewSecretBindingController(clientMap clientmap.ClientMap, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -66,9 +66,9 @@ func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInfo
 	)
 
 	secretBindingController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
+		control:                NewDefaultControl(clientMap, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
 		recorder:               recorder,
 		secretBindingLister:    secretBindingLister,
 		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),

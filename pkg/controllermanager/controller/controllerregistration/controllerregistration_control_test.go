@@ -21,6 +21,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
@@ -268,6 +271,7 @@ func (c *fakeControllerRegistrationLister) Get(string) (*gardencorev1beta1.Contr
 var _ = Describe("ControllerRegistrationControl", func() {
 	var (
 		ctrl                   *gomock.Controller
+		clientMap              clientmap.ClientMap
 		k8sGardenClient        *mock.MockInterface
 		k8sGardenRuntimeClient *mockclient.MockClient
 
@@ -285,11 +289,13 @@ var _ = Describe("ControllerRegistrationControl", func() {
 		k8sGardenClient = mock.NewMockInterface(ctrl)
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 
+		clientMap = fake.NewClientMap().AddClient(keys.ForGarden(), k8sGardenClient)
+
 		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 		controllerInstallationInformer := gardenCoreInformerFactory.Core().V1beta1().ControllerInstallations()
 		controllerInstallationLister := controllerInstallationInformer.Lister()
 
-		d = &defaultControllerRegistrationControl{k8sGardenClient, controllerInstallationLister}
+		d = &defaultControllerRegistrationControl{clientMap, controllerInstallationLister}
 		obj = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: controllerRegistrationName,

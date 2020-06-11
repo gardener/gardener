@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -37,7 +37,7 @@ const FinalizerName = "core.gardener.cloud/controllerregistration"
 
 // Controller controls ControllerRegistration.
 type Controller struct {
-	k8sGardenClient kubernetes.Interface
+	clientMap clientmap.ClientMap
 
 	controllerRegistrationControl     ControlInterface
 	controllerRegistrationSeedControl RegistrationSeedControlInterface
@@ -64,11 +64,10 @@ type Controller struct {
 
 // NewController instantiates a new ControllerRegistration controller.
 func NewController(
-	k8sGardenClient kubernetes.Interface,
+	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	secrets map[string]*corev1.Secret,
 ) *Controller {
-
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
@@ -94,11 +93,11 @@ func NewController(
 	)
 
 	controller := &Controller{
-		k8sGardenClient: k8sGardenClient,
+		clientMap: clientMap,
 
-		controllerRegistrationControl:     NewDefaultControllerRegistrationControl(k8sGardenClient, controllerInstallationLister),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(k8sGardenClient, secrets, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
-		seedControl:                       NewDefaultSeedControl(k8sGardenClient, controllerInstallationLister),
+		controllerRegistrationControl:     NewDefaultControllerRegistrationControl(clientMap, controllerInstallationLister),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(clientMap, secrets, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
+		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
 
 		backupBucketLister:           backupBucketLister,
 		controllerRegistrationLister: controllerRegistrationLister,

@@ -26,6 +26,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
@@ -44,12 +47,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
-	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
@@ -158,7 +159,7 @@ func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 	}
 	kubernetes.UseCachedRuntimeClients = controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
-	gardener, err := NewGardener(o.config)
+	gardener, err := NewGardener(ctx, o.config)
 	if err != nil {
 		return err
 	}
@@ -209,7 +210,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener controller manager.
 type Gardener struct {
 	Config                 *config.ControllerManagerConfiguration
-	K8sGardenClient        kubernetes.Interface
+	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory    informers.SharedInformerFactory
 	Logger                 *logrus.Logger
@@ -218,7 +219,7 @@ type Gardener struct {
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
-func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) {
+func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration) (*Gardener, error) {
 	if cfg == nil {
 		return nil, errors.New("config is required")
 	}
@@ -245,19 +246,18 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		return nil, err
 	}
 
-	k8sGardenClient, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(restCfg),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.GardenScheme,
-			}),
-	)
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
+		WithPlantClientMapBuilder(clientmapbuilder.NewPlantClientMapBuilder()).
+		WithLogger(logger).
+		Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
 	}
-	k8sGardenClientLeaderElection, err := k8s.NewForConfig(restCfg)
+
+	k8sGardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	// Set up leader election if enabled and prepare event recorder.
@@ -266,7 +266,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardener-controller-manager")
 	)
 	if cfg.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, cfg.LeaderElection.LockObjectNamespace, cfg.LeaderElection.LockObjectName, k8sGardenClientLeaderElection, recorder)
+		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, cfg.LeaderElection.LockObjectNamespace, cfg.LeaderElection.LockObjectName, k8sGardenClient.Kubernetes(), recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		Config:                 cfg,
 		Logger:                 logger,
 		Recorder:               recorder,
-		K8sGardenClient:        k8sGardenClient,
+		ClientMap:              clientMap,
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
 		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
@@ -296,6 +296,11 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 			shootInformer   = shoots.Informer()
 		)
 
+		k8sGardenClient, err := g.ClientMap.GetClient(ctx, keys.ForGarden())
+		if err != nil {
+			panic(fmt.Errorf("failed to get garden client: %+v", err))
+		}
+
 		g.K8sGardenCoreInformers.Start(ctx.Done())
 		if !cache.WaitForCacheSync(ctx.Done(), projectInformer.HasSynced, shootInformer.HasSynced) {
 			panic("Timed out waiting for Garden caches to sync")
@@ -307,7 +312,7 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 			WithBindAddress(g.Config.Server.HTTPS.BindAddress).
 			WithPort(g.Config.Server.HTTPS.Port).
 			WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
-			WithHandler("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projects.Lister(), shoots.Lister())).
+			WithHandler("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient, projects.Lister(), shoots.Lister())).
 			WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
 			Build().
 			Start(ctx)
@@ -359,7 +364,7 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 func (g *Gardener) startControllers(ctx context.Context) {
 	controller.NewGardenControllerFactory(
-		g.K8sGardenClient,
+		g.ClientMap,
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,
 		g.Config,

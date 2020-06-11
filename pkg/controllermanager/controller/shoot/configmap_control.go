@@ -16,7 +16,9 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -69,6 +71,13 @@ func (c *Controller) reconcileConfigMapKey(key string) error {
 }
 
 func (c *Controller) reconcileShootsReferringConfigMap(configMap *corev1.ConfigMap) error {
+	ctx := context.TODO()
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	shoots, err := c.shootLister.Shoots(configMap.Namespace).List(labels.Everything())
 	if err != nil {
 		return err
@@ -90,7 +99,7 @@ func (c *Controller) reconcileShootsReferringConfigMap(configMap *corev1.ConfigM
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
 				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
 				// send empty patch to let the admission plugin add the config map resource version
-				if err := kubernetes.SubmitEmptyPatch(context.TODO(), c.k8sGardenClient.Client(), shoot); err != nil {
+				if err := kubernetes.SubmitEmptyPatch(context.TODO(), gardenClient.Client(), shoot); err != nil {
 					return err
 				}
 			}

@@ -15,8 +15,7 @@
 package plant
 
 import (
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -24,11 +23,10 @@ import (
 )
 
 type defaultPlantControl struct {
-	k8sGardenClient kubernetes.Interface
-	plantLister     gardencorelisters.PlantLister
-	secretsLister   kubecorev1listers.SecretLister
-	recorder        record.EventRecorder
-	config          *config.ControllerManagerConfiguration
+	clientMap     clientmap.ClientMap
+	secretsLister kubecorev1listers.SecretLister
+	recorder      record.EventRecorder
+	config        *config.ControllerManagerConfiguration
 }
 
 // StatusCloudInfo contains the cloud info for the plant status

@@ -16,14 +16,13 @@ package project
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -145,15 +144,14 @@ type ControlInterface interface {
 // implements the documented semantics for Projects. updater is the UpdaterInterface used
 // to update the status of Projects. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, updater UpdaterInterface, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, updater, namespaceLister}
+func NewDefaultControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
+	return &defaultControl{clientMap, k8sGardenCoreInformers, recorder, namespaceLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	recorder               record.EventRecorder
-	updater                UpdaterInterface
 	namespaceLister        kubecorev1listers.NamespaceLister
 }
 
@@ -176,15 +174,11 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool,
 		return c.delete(context.TODO(), project)
 	}
 
-	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
-		return false, fmt.Errorf("could not add finalizer to Project: %s", err.Error())
-	}
-
 	return false, c.reconcile(context.TODO(), project)
 }
 
-func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
-	project, err := kutils.TryUpdateProjectStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, objectMeta, transform)
+func (c *defaultControl) updateProjectStatus(g gardencore.Interface, objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
+	project, err := kutils.TryUpdateProjectStatus(g, retry.DefaultRetry, objectMeta, transform)
 	if err != nil {
 		newProjectLogger(project).Errorf("Error updating the status of the project: %q", err.Error())
 	}

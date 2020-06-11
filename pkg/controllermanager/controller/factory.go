@@ -16,10 +16,12 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
@@ -45,17 +47,17 @@ import (
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
 	cfg                    *config.ControllerManagerConfiguration
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory
 	recorder               record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
 		cfg:                    cfg,
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		k8sInformers:           kubeInformerFactory,
 		recorder:               recorder,
@@ -86,6 +88,15 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
 	)
 
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+	}
+
+	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		panic(fmt.Errorf("failed to get garden client: %+v", err))
+	}
+
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		panic("Timed out waiting for Garden core caches to sync")
@@ -99,22 +110,22 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
 	runtime.Must(err)
 
-	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
+	runtime.Must(garden.BootstrapCluster(k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)
-		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, secrets)
-		csrController                    = csrcontroller.NewCSRController(f.k8sGardenClient, f.k8sInformers, f.recorder)
-		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.recorder)
-		plantController                  = plantcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
-		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
+		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, secrets)
+		csrController                    = csrcontroller.NewCSRController(f.clientMap, f.k8sInformers, f.recorder)
+		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
+		plantController                  = plantcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
+		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 	)
 
 	// Initialize the Controller metrics collection.

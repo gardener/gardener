@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 
 	"github.com/robfig/cron"
@@ -81,7 +81,7 @@ func LocationLogger(logger logrus.FieldLogger, location *time.Location) logrus.F
 }
 
 // ComputeHibernationSchedule computes the HibernationSchedule for the given Shoot.
-func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
+func ComputeHibernationSchedule(clientMap clientmap.ClientMap, logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
 	var (
 		schedules           = getShootHibernationSchedules(shoot)
 		locationToSchedules = GroupHibernationSchedulesByLocation(schedules)
@@ -103,7 +103,7 @@ func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.Field
 					return nil, err
 				}
 
-				cr.Schedule(start, NewHibernationJob(client, cronLogger, shoot, true))
+				cr.Schedule(start, NewHibernationJob(clientMap, cronLogger, shoot, true))
 				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(TimeNow().UTC()))
 			}
 
@@ -113,7 +113,7 @@ func ComputeHibernationSchedule(client gardencore.Interface, logger logrus.Field
 					return nil, err
 				}
 
-				cr.Schedule(end, NewHibernationJob(client, cronLogger, shoot, false))
+				cr.Schedule(end, NewHibernationJob(clientMap, cronLogger, shoot, false))
 				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(TimeNow().UTC()))
 			}
 		}
@@ -220,7 +220,7 @@ func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key st
 		return nil
 	}
 
-	schedule, err := ComputeHibernationSchedule(c.k8sGardenClient.GardenCore(), logger, shoot)
+	schedule, err := ComputeHibernationSchedule(c.clientMap, logger, shoot)
 	if err != nil {
 		return err
 	}

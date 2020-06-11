@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -37,7 +37,7 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                      *config.ControllerManagerConfiguration
@@ -62,10 +62,9 @@ type Controller struct {
 	workerCh               chan int
 }
 
-// NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
-// holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
-// event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+// NewShootController takes a ClientMap, a GardenerInformerFactory, a KubernetesInformerFactory, a
+// ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
+func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -78,13 +77,13 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 	)
 
 	shootController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 
 		config:                      config,
 		recorder:                    recorder,
-		maintenanceControl:          NewDefaultMaintenanceControl(k8sGardenClient, gardenCoreV1beta1Informer, config.Controllers.ShootMaintenance, recorder),
-		quotaControl:                NewDefaultQuotaControl(k8sGardenClient, gardenCoreV1beta1Informer),
+		maintenanceControl:          NewDefaultMaintenanceControl(clientMap, gardenCoreV1beta1Informer, config.Controllers.ShootMaintenance, recorder),
+		quotaControl:                NewDefaultQuotaControl(clientMap, gardenCoreV1beta1Informer),
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 
 		shootLister:     shootLister,
