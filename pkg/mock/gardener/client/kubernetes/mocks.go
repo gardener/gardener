@@ -15,6 +15,7 @@ import (
 	rest "k8s.io/client-go/rest"
 	clientset0 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	reflect "reflect"
+	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -83,6 +84,20 @@ func (mr *MockInterfaceMockRecorder) Applier() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Applier", reflect.TypeOf((*MockInterface)(nil).Applier))
 }
 
+// Cache mocks base method
+func (m *MockInterface) Cache() cache.Cache {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cache")
+	ret0, _ := ret[0].(cache.Cache)
+	return ret0
+}
+
+// Cache indicates an expected call of Cache
+func (mr *MockInterfaceMockRecorder) Cache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cache", reflect.TypeOf((*MockInterface)(nil).Cache))
+}
+
 // ChartApplier mocks base method
 func (m *MockInterface) ChartApplier() kubernetes.ChartApplier {
 	m.ctrl.T.Helper()
@@ -137,6 +152,20 @@ func (m *MockInterface) Client() client.Client {
 func (mr *MockInterfaceMockRecorder) Client() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockInterface)(nil).Client))
+}
+
+// DirectClient mocks base method
+func (m *MockInterface) DirectClient() client.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DirectClient")
+	ret0, _ := ret[0].(client.Client)
+	return ret0
+}
+
+// DirectClient indicates an expected call of DirectClient
+func (mr *MockInterfaceMockRecorder) DirectClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectClient", reflect.TypeOf((*MockInterface)(nil).DirectClient))
 }
 
 // ForwardPodPort mocks base method
@@ -224,6 +253,18 @@ func (mr *MockInterfaceMockRecorder) RESTMapper() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*MockInterface)(nil).RESTMapper))
 }
 
+// Start mocks base method
+func (m *MockInterface) Start(arg0 <-chan struct{}) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start", arg0)
+}
+
+// Start indicates an expected call of Start
+func (mr *MockInterfaceMockRecorder) Start(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockInterface)(nil).Start), arg0)
+}
+
 // Version mocks base method
 func (m *MockInterface) Version() string {
 	m.ctrl.T.Helper()
@@ -236,4 +277,18 @@ func (m *MockInterface) Version() string {
 func (mr *MockInterfaceMockRecorder) Version() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockInterface)(nil).Version))
+}
+
+// WaitForCacheSync mocks base method
+func (m *MockInterface) WaitForCacheSync(arg0 <-chan struct{}) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForCacheSync", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// WaitForCacheSync indicates an expected call of WaitForCacheSync
+func (mr *MockInterfaceMockRecorder) WaitForCacheSync(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCacheSync", reflect.TypeOf((*MockInterface)(nil).WaitForCacheSync), arg0)
 }

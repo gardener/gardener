@@ -66,6 +66,13 @@ func (in *SchedulerConfiguration) DeepCopyInto(out *SchedulerConfiguration) {
 	in.LeaderElection.DeepCopyInto(&out.LeaderElection)
 	out.Server = in.Server
 	in.Schedulers.DeepCopyInto(&out.Schedulers)
+	if in.FeatureGates != nil {
+		in, out := &in.FeatureGates, &out.FeatureGates
+		*out = make(map[string]bool, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

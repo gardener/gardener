@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -93,33 +94,6 @@ func init() {
 		gardencorescheme.AddToScheme,
 	)
 	utilruntime.Must(plantSchemeBuilder.AddToScheme(PlantScheme))
-
-}
-
-// Clientset is a struct containing the configuration for the respective Kubernetes
-// cluster, the collection of Kubernetes clients <Clientset> containing all REST clients
-// for the built-in Kubernetes API groups, and the Garden which is a REST clientset
-// for the Garden API group.
-// The RESTClient itself is a normal HTTP client for the respective Kubernetes cluster,
-// allowing requests to arbitrary URLs.
-// The version string contains only the major/minor part in the form <major>.<minor>.
-type Clientset struct {
-	config     *rest.Config
-	restMapper meta.RESTMapper
-	restClient rest.Interface
-
-	applier       Applier
-	chartApplier  ChartApplier
-	chartRenderer chartrenderer.Interface
-
-	client client.Client
-
-	kubernetes      kubernetesclientset.Interface
-	gardenCore      gardencoreclientset.Interface
-	apiextension    apiextensionsclientset.Interface
-	apiregistration apiregistrationclientset.Interface
-
-	version string
 }
 
 // MergeFunc determines how oldOj is merged into new oldObj.
@@ -140,13 +114,20 @@ type Interface interface {
 	RESTMapper() meta.RESTMapper
 	RESTClient() rest.Interface
 
+	// Client returns the ClientSet's controller-runtime client. This client should be used by default, as it carries
+	// a cache, which uses SharedIndexInformers to keep up-to-date.
 	Client() client.Client
+	// DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
+	// (without using a cache).
+	DirectClient() client.Client
+	// Cache returns the ClientSet's controller-runtime cache. It can be used to get Informers for arbitrary objects.
+	Cache() cache.Cache
 
-	// Applier returns an Applier which uses the clientset's client.
+	// Applier returns an Applier which uses the ClientSet's client.
 	Applier() Applier
 	// ChartRenderer returns a ChartRenderer populated with the cluster's Capabilities.
 	ChartRenderer() chartrenderer.Interface
-	// ChartApplier returns a ChartApplier using the clientset's ChartRenderer and Applier.
+	// ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
 	ChartApplier() ChartApplier
 
 	Kubernetes() kubernetesclientset.Interface
@@ -160,4 +141,10 @@ type Interface interface {
 
 	// Version returns the server version of the targeted Kubernetes cluster.
 	Version() string
+
+	// Start starts the cache of the ClientSet's controller-runtime client and returns immediately.
+	// It must be called first before using the client to retrieve objects from the API server.
+	Start(stopCh <-chan struct{})
+	// WaitForCacheSync waits for the cache of the ClientSet's controller-runtime client to be synced.
+	WaitForCacheSync(stopCh <-chan struct{}) bool
 }

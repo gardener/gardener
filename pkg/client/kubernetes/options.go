@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	"errors"
+	"time"
 
 	"k8s.io/client-go/rest"
 	baseconfig "k8s.io/component-base/config"
@@ -25,6 +26,7 @@ import (
 type config struct {
 	clientOptions client.Options
 	restConfig    *rest.Config
+	cacheResync   *time.Duration
 }
 
 // ConfigFunc is a function that mutates a Config struct.
@@ -60,6 +62,14 @@ func WithClientConnectionOptions(cfg baseconfig.ClientConnectionConfiguration) C
 func WithClientOptions(opt client.Options) ConfigFunc {
 	return func(config *config) error {
 		config.clientOptions = opt
+		return nil
+	}
+}
+
+// WithCacheResyncPeriod returns a ConfigFunc that set the client's cache's resync period to the given duration.
+func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
+	return func(config *config) error {
+		config.cacheResync = &resync
 		return nil
 	}
 }

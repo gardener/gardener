@@ -108,7 +108,7 @@ func GetPodLogs(podInterface corev1client.PodInterface, name string, options *co
 // ForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
 // the <local> port. If <local> equals zero, a free port will be chosen randomly.
 // It returns the stop channel which must be closed when the port forward connection should be terminated.
-func (c *Clientset) ForwardPodPort(namespace, name string, local, remote int) (chan struct{}, error) {
+func (c *clientSet) ForwardPodPort(namespace, name string, local, remote int) (chan struct{}, error) {
 	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (c *Clientset) ForwardPodPort(namespace, name string, local, remote int) (c
 // CheckForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
 // the <local> port. If <local> equals zero, a free port will be chosen randomly.
 // It returns true if the port forward connection has been established successfully or false otherwise.
-func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote int) error {
+func (c *clientSet) CheckForwardPodPort(namespace, name string, local, remote int) error {
 	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
 	if err != nil {
 		return fmt.Errorf("could not setup pod port forwarding: %v", err)
@@ -141,7 +141,7 @@ func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote in
 	}
 }
 
-func (c *Clientset) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {
+func (c *clientSet) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {
 	var (
 		stopChan  = make(chan struct{}, 1)
 		readyChan = make(chan struct{}, 1)

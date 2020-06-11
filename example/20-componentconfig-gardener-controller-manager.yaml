@@ -41,3 +41,5 @@ server:
     tls:
       serverCertPath: dev/tls/gardener-controller-manager.crt
       serverKeyPath: dev/tls/gardener-controller-manager.key
+featureGates:
+  CachedRuntimeClients: true

@@ -15,73 +15,140 @@
 package kubernetes
 
 import (
+	"sync"
+
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/logger"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Applier returns the Applier of this Clientset.
-func (c *Clientset) Applier() Applier {
+// clientSet is a struct containing the configuration for the respective Kubernetes
+// cluster, the collection of Kubernetes clients <ClientSet> containing all REST clients
+// for the built-in Kubernetes API groups, and the Garden which is a REST clientSet
+// for the Garden API group.
+// The RESTClient itself is a normal HTTP client for the respective Kubernetes cluster,
+// allowing requests to arbitrary URLs.
+// The version string contains only the major/minor part in the form <major>.<minor>.
+type clientSet struct {
+	config     *rest.Config
+	restMapper meta.RESTMapper
+	restClient rest.Interface
+
+	applier       Applier
+	chartApplier  ChartApplier
+	chartRenderer chartrenderer.Interface
+
+	// client is the default controller-runtime client which uses SharedIndexInformers to keep its cache in sync
+	client client.Client
+	// directClient is a client which can be used to make requests directly to the API server instead of reading from
+	// the client's cache
+	directClient client.Client
+	// cache is the client's cache
+	cache cache.Cache
+
+	// startOnce guards starting the cache only once
+	startOnce sync.Once
+
+	kubernetes      kubernetes.Interface
+	gardenCore      gardencoreclientset.Interface
+	apiextension    apiextensionclientset.Interface
+	apiregistration apiregistrationclientset.Interface
+
+	version string
+}
+
+// Applier returns the Applier of this ClientSet.
+func (c *clientSet) Applier() Applier {
 	return c.applier
 }
 
 // ChartRenderer returns a ChartRenderer populated with the cluster's Capabilities.
-func (c *Clientset) ChartRenderer() chartrenderer.Interface {
+func (c *clientSet) ChartRenderer() chartrenderer.Interface {
 	return c.chartRenderer
 }
 
-// ChartApplier returns a ChartApplier using the clientset's ChartRenderer and Applier.
-func (c *Clientset) ChartApplier() ChartApplier {
+// ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
+func (c *clientSet) ChartApplier() ChartApplier {
 	return c.chartApplier
 }
 
 // RESTConfig will return the config attribute of the Client object.
-func (c *Clientset) RESTConfig() *rest.Config {
+func (c *clientSet) RESTConfig() *rest.Config {
 	return c.config
 }
 
-// Client returns the client of this Clientset.
-func (c *Clientset) Client() client.Client {
+// Client returns the controller-runtime client of this ClientSet.
+func (c *clientSet) Client() client.Client {
 	return c.client
 }
 
-// RESTMapper returns the restMapper of this Clientset.
-func (c *Clientset) RESTMapper() meta.RESTMapper {
+// DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
+// (without using a cache).
+func (c *clientSet) DirectClient() client.Client {
+	return c.directClient
+}
+
+// Cache returns the ClientSet's controller-runtime cache. It can be used to get Informers for arbitrary objects.
+func (c *clientSet) Cache() cache.Cache {
+	return c.cache
+}
+
+// RESTMapper returns the restMapper of this ClientSet.
+func (c *clientSet) RESTMapper() meta.RESTMapper {
 	return c.restMapper
 }
 
 // Kubernetes will return the kubernetes attribute of the Client object.
-func (c *Clientset) Kubernetes() kubernetes.Interface {
+func (c *clientSet) Kubernetes() kubernetes.Interface {
 	return c.kubernetes
 }
 
 // GardenCore will return the gardenCore attribute of the Client object.
-func (c *Clientset) GardenCore() gardencoreclientset.Interface {
+func (c *clientSet) GardenCore() gardencoreclientset.Interface {
 	return c.gardenCore
 }
 
-// APIExtension will return the apiextensionsClientset attribute of the Client object.
-func (c *Clientset) APIExtension() apiextensionclientset.Interface {
+// APIExtension will return the apiextensions attribute of the Client object.
+func (c *clientSet) APIExtension() apiextensionclientset.Interface {
 	return c.apiextension
 }
 
 // APIRegistration will return the apiregistration attribute of the Client object.
-func (c *Clientset) APIRegistration() apiregistrationclientset.Interface {
+func (c *clientSet) APIRegistration() apiregistrationclientset.Interface {
 	return c.apiregistration
 }
 
 // RESTClient will return the restClient attribute of the Client object.
-func (c *Clientset) RESTClient() rest.Interface {
+func (c *clientSet) RESTClient() rest.Interface {
 	return c.restClient
 }
 
 // Version returns the GitVersion of the Kubernetes client stored on the object.
-func (c *Clientset) Version() string {
+func (c *clientSet) Version() string {
 	return c.version
+}
+
+// Start starts the cache of the ClientSet's controller-runtime client and returns immediately.
+// It must be called first before using the client to retrieve objects from the API server.
+func (c *clientSet) Start(stopCh <-chan struct{}) {
+	c.startOnce.Do(func() {
+		go func() {
+			if err := c.cache.Start(stopCh); err != nil {
+				logger.Logger.Errorf("cache.Start returned error, which should never happen, ignoring.")
+			}
+		}()
+	})
+}
+
+// WaitForCacheSync waits for the cache of the ClientSet's controller-runtime client to be synced.
+func (c *clientSet) WaitForCacheSync(stopCh <-chan struct{}) bool {
+	return c.cache.WaitForCacheSync(stopCh)
 }

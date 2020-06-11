@@ -32,13 +32,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/gardenlet/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
@@ -167,9 +168,10 @@ func run(ctx context.Context, o *Options) error {
 	}
 
 	// Add feature flags
-	if err := features.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+	if err := gardenletfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
+	kubernetes.UseCachedRuntimeClients = gardenletfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
 	gardenlet, err := NewGardenlet(ctx, o.config)
 	if err != nil {
@@ -237,7 +239,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Initialize logger
 	logger := logger.NewLogger(*cfg.LogLevel)
 	logger.Info("Starting Gardenlet...")
-	logger.Infof("Feature Gates: %s", features.FeatureGate.String())
+	logger.Infof("Feature Gates: %s", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {

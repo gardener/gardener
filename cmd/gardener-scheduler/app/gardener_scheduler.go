@@ -25,6 +25,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler"
@@ -33,6 +34,7 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	"github.com/gardener/gardener/pkg/server"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -96,6 +98,12 @@ func (o *Options) run(ctx context.Context) error {
 		o.config = c
 	}
 
+	// Add feature flags
+	if err := schedulerfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
+	}
+	kubernetes.UseCachedRuntimeClients = schedulerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
+
 	gardener, err := NewGardenerScheduler(o.config)
 	if err != nil {
 		return err
@@ -150,6 +158,7 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 	// Initialize logger
 	logger := logger.NewLogger(cfg.LogLevel)
 	logger.Info("Starting Gardener scheduler ...")
+	logger.Infof("Feature Gates: %s", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.

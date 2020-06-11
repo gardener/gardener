@@ -29,8 +29,9 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
-	"github.com/gardener/gardener/pkg/controllermanager/features"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllermanager/server/handlers/webhooks"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
@@ -152,9 +153,10 @@ func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 	}
 
 	// Add feature flags
-	if err := features.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+	if err := controllermanagerfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
+	kubernetes.UseCachedRuntimeClients = controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
 	gardener, err := NewGardener(o.config)
 	if err != nil {
@@ -224,7 +226,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	// Initialize logger
 	logger := logger.NewLogger(cfg.LogLevel)
 	logger.Info("Starting Gardener controller manager...")
-	logger.Infof("Feature Gates: %s", features.FeatureGate.String())
+	logger.Infof("Feature Gates: %s", controllermanagerfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {

@@ -61,4 +61,10 @@ const (
 	// owner @mvladev
 	// alpha: v1.7.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
+
+	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
+	// If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache.
+	// owner @tim-ebert
+	// alpha: v1.7.0
+	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 )
