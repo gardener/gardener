@@ -93,9 +93,9 @@ func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error)
 // Secret in an existing Kubernetes cluster. This cluster will be accessed by the <k8sClient>. It will
 // read the Secret <secretName> in <namespace>. The Secret must contain a field "kubeconfig" which will
 // be used.
-func NewClientFromSecret(k8sClient Interface, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
+func NewClientFromSecret(ctx context.Context, c client.Client, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
 	secret := &corev1.Secret{}
-	if err := k8sClient.Client().Get(context.TODO(), kutil.Key(namespace, secretName), secret); err != nil {
+	if err := c.Get(ctx, kutil.Key(namespace, secretName), secret); err != nil {
 		return nil, err
 	}
 	return NewClientFromSecretObject(secret, fns...)
