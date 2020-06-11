@@ -607,9 +607,17 @@ func (b *Botanist) checkSystemComponents(
 	}
 
 	if len(podsList.Items) == 0 {
+		// If the cluster is still not reconciled by this version of Gardener, fall back and check explicitly for the vpn pod
+		if err := b.K8sShootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": common.VPNTunnel}); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(podsList.Items) == 0 {
 		c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
 		return &c, nil
 	}
+
 	var (
 		konnectivityHealthCheck = b.Shoot.KonnectivityTunnelEnabled
 		tunnelName              = common.VPNTunnel
