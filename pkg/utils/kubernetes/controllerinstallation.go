@@ -62,7 +62,7 @@ func tryUpdateControllerInstallation(
 		return
 	})
 	if err != nil {
-		logger.Logger.Errorf("Failed to updated ControllerInstallation %s after %d attempts due to %v", meta.Name, attempt, err)
+		logger.Logger.Errorf("Failed to update ControllerInstallation %s after %d attempts due to %v", meta.Name, attempt, err)
 	}
 	return result, err
 }

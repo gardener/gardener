@@ -810,12 +810,19 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPat
 	return allErrs
 }
 
+const (
+	// maxWorkerNameLength is a constant for the maximum length for worker name.
+	maxWorkerNameLength = 15
+
+	// maxVolumeNameLength is a constant for the maximum length for data volume name.
+	maxVolumeNameLength = 15
+)
+
 // ValidateWorker validates the worker object.
 func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
-	maxWorkerNameLength := 15
 	if len(worker.Name) > maxWorkerNameLength {
 		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), worker.Name, maxWorkerNameLength))
 	}
@@ -886,7 +893,6 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 			} else {
 				volName := *volume.Name
 				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
-				maxVolumeNameLength := 15
 				if len(volName) > maxVolumeNameLength {
 					allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volName, maxVolumeNameLength))
 				}

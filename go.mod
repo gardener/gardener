@@ -57,7 +57,7 @@ require (
 	k8s.io/kubelet v0.17.6
 	k8s.io/metrics v0.17.6
 	k8s.io/utils v0.0.0-20200327001022-6496210b90e8
-	sigs.k8s.io/controller-runtime v0.5.4
+	sigs.k8s.io/controller-runtime v0.5.5
 	sigs.k8s.io/yaml v1.1.0
 )
 
